@@ -1,0 +1,24 @@
+{
+  "name": "蘑菇守林 SPOREGUARD",
+  "short_name": "蘑菇守林",
+  "description": "奇幻森林植物策略塔防游戏",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0B1210",
+  "theme_color": "#0B1210",
+  "icons": [
+    {
+      "src": "images/icons/icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/icons/icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

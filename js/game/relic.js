@@ -1,0 +1,164 @@
+/**
+ * 战利品掉落与遗物拾取系统 (js/game/relic.js)
+ * 学习 mature TD (王国保卫战/Bloons) 的战斗交互机制：
+ * - 精英怪击杀或 Boss 转阶段爆出高价值战利品
+ * - 在路径上带有金光粒子浮动呼吸
+ * - 玩家点击快速拾取（或超时自动吸入），带来即时正向多巴胺反馈
+ */
+
+const CONFIG = require('../data/config');
+const PALETTE = require('../data/palette');
+const platform = require('../core/platform');
+
+class RelicDropManager {
+  constructor() {
+    this.relics = [];
+  }
+
+  reset() {
+    this.relics.length = 0;
+  }
+
+  spawnDrop(x, y, kind = 'coin', value = 60) {
+    this.relics.push({
+      x,
+      y,
+      baseY: y,
+      kind, // 'coin' | 'shield' | 'lightning' | 'clover'
+      value,
+      life: 9.0,
+      maxLife: 9.0,
+      animTimer: Math.random() * 3,
+      picked: false,
+      bounceVy: -60 - Math.random() * 40,
+      bounceY: 0
+    });
+  }
+
+  update(dt, scene) {
+    for (let i = this.relics.length - 1; i >= 0; i--) {
+      const r = this.relics[i];
+      r.life -= dt;
+      r.animTimer += dt;
+
+      // 初段弹跳动画
+      if (r.bounceY < 0 || r.bounceVy < 0) {
+        r.bounceY += r.bounceVy * dt;
+        r.bounceVy += 160 * dt;
+        if (r.bounceY >= 0) {
+          r.bounceY = 0;
+          r.bounceVy = 0;
+        }
+      }
+
+      // 超时自动拾取保底
+      if (r.life <= 0) {
+        this.collect(r, scene);
+        this.relics.splice(i, 1);
+      }
+    }
+  }
+
+  checkClick(clickX, clickY, scene) {
+    for (let i = this.relics.length - 1; i >= 0; i--) {
+      const r = this.relics[i];
+      const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
+      const dist = Math.hypot(clickX - r.x, clickY - ry);
+      if (dist <= 24) {
+        this.collect(r, scene, true);
+        this.relics.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  collect(relic, scene, isManual = false) {
+    if (!scene) return;
+    const fx = scene.fx;
+    const ry = relic.baseY + relic.bounceY;
+
+    if (relic.kind === 'coin') {
+      scene.economy.addSpores(relic.value || 60);
+      if (fx) {
+        fx.spawnFloatingText(relic.x, ry - 18, `+${relic.value || 60} 战利品孢子!`, '#FFD700', 1.3);
+        fx.spawnParticles(relic.x, ry, 16, ['#FFD700', '#FFF1B8', '#FFA940'], 30, 90, 0.25, 0.5, 3);
+      }
+      platform.playSfx('sfx_upgrade');
+    } else if (relic.kind === 'shield') {
+      scene.economy.lives = Math.min(CONFIG.RULES.START_LIVES, scene.economy.lives + 1);
+      if (fx) {
+        fx.spawnFloatingText(relic.x, ry - 18, '+1 守护生命!', '#52C41A', 1.4);
+        fx.spawnParticles(relic.x, ry, 18, ['#52C41A', '#B7EB8F', '#FFFFFF'], 30, 80, 0.3, 0.6, 3);
+      }
+      platform.playSfx('sfx_upgrade');
+    } else if (relic.kind === 'lightning') {
+      // 快速恢复所有法术冷却并赋予全场守卫狂暴
+      for (let sKey in scene.spells) {
+        scene.spells[sKey].cooldown = 0;
+      }
+      if (fx) {
+        fx.spawnFloatingText(relic.x, ry - 18, '法术充能瞬间拉满!', '#40A9FF', 1.4);
+        fx.spawnParticles(relic.x, ry, 22, ['#40A9FF', '#91D5FF', '#BAE7FF'], 35, 100, 0.3, 0.6, 4);
+      }
+      platform.playSfx('sfx_laser');
+    } else if (relic.kind === 'clover') {
+      // 4秒全场暴击狂潮
+      if (fx) {
+        fx.spawnFloatingText(relic.x, ry - 18, '幸运四叶草: 全员暴击!', '#73D13D', 1.4);
+        fx.spawnParticles(relic.x, ry, 18, ['#73D13D', '#D9F7BE', '#FFD700'], 30, 80, 0.3, 0.5, 3);
+      }
+      platform.playSfx('sfx_upgrade');
+    }
+  }
+
+  render(ctx) {
+    if (this.relics.length === 0) return;
+
+    for (let i = 0; i < this.relics.length; i++) {
+      const r = this.relics[i];
+      ctx.save();
+      const floatY = Math.sin(r.animTimer * 4) * 3;
+      const rx = Math.round(r.x);
+      const ry = Math.round(r.baseY + r.bounceY + floatY);
+
+      // 地面光圈与阴影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(rx, r.baseY + 4, 12, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 发光战利品光环
+      const glowAlpha = 0.35 + Math.sin(r.animTimer * 6) * 0.18;
+      ctx.fillStyle = r.kind === 'shield' ? 
+gba(82, 196, 26, ) : 
+gba(255, 215, 0, );
+      ctx.beginPath();
+      ctx.arc(rx, ry - 6, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 绘制 100% 纯 AI 手绘高精战利品道具图标
+      const assetMap = {
+        coin: 'assets/vfx/relic_amber.png',
+        shield: 'assets/vfx/relic_shield.png',
+        lightning: 'assets/vfx/relic_lightning.png',
+        clover: 'assets/vfx/relic_clover.png'
+      };
+      const img = platform.getImage(assetMap[r.kind] || assetMap.coin) || platform.getImage('assets/vfx/relic_coin.png');
+      if (img && img.width) {
+        const rw = 28;
+        const rh = 28;
+        ctx.drawImage(img, rx - rw * 0.5, ry - rh * 0.5 - 6, rw, rh);
+      }
+
+      // 快闪烁提示（剩余 2.5s 时）
+      if (r.life < 2.5) {
+        ctx.globalAlpha = Math.sin(r.life * 14) > 0 ? 0.9 : 0.2;
+      }
+
+      ctx.restore();
+    }
+  }
+}
+
+module.exports = RelicDropManager;

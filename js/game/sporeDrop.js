@@ -1,0 +1,177 @@
+/**
+ * 植物大战僵尸式即时点击收集系统 (js/game/sporeDrop.js)
+ * 学习 PvZ 阳光掉落与即时微操点击反馈：
+ * 1. 战场自然凝结的晨露金孢（每 4~7 秒随风飘落一枚）
+ * 2. 灵光菇收获时迸发的跳跃金露球
+ * 3. 击败精英怪物或 Boss 阶段转换时爆出的丰收金孢囊
+ * 玩家点击即爆，爆出金币声效与浮动文字，增加玩家战场微操 APM 与即时正向反馈！
+ */
+
+const CONFIG = require('../data/config');
+const PALETTE = require('../data/palette');
+const platform = require('../core/platform');
+
+const TILE_SIZE = CONFIG.RESOLUTION.TILE_SIZE; // 32
+
+class SporeDropManager {
+  constructor() {
+    this.drops = [];
+    this.naturalSpawnTimer = 5.0;
+    this.animTimeSec = 0;
+  }
+
+  reset() {
+    this.drops.length = 0;
+    this.naturalSpawnTimer = 4.5;
+  }
+
+  spawnDrop(x, y, spores = 15, isGold = true, floatDist = 28) {
+    this.drops.push({
+      x,
+      y: y - 12,
+      targetY: y,
+      spores,
+      isGold,
+      life: 7.0,
+      maxLife: 7.0,
+      animTimer: Math.random() * Math.PI * 2,
+      scale: 0.2,
+      vy: 24,
+      collected: false
+    });
+  }
+
+  update(dt, map, economy, fx) {
+    this.animTimeSec += dt;
+
+    // 自然掉落晨露金孢 (PvZ 阳光飘落机制)
+    this.naturalSpawnTimer -= dt;
+    if (this.naturalSpawnTimer <= 0) {
+      this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
+      // 随机落于地图草地视野内 (x: 180..760, y: 80..400)
+      const rx = 180 + Math.random() * 580;
+      const ry = 80 + Math.random() * 320;
+      this.spawnDrop(rx, ry, 15, true, 40);
+    }
+
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i];
+      d.animTimer += dt;
+      d.life -= dt;
+
+      // 弹跳降落
+      if (d.y < d.targetY) {
+        d.y = Math.min(d.targetY, d.y + d.vy * dt * 2.5);
+      }
+      if (d.scale < 1.0) {
+        d.scale = Math.min(1.0, d.scale + dt * 4.5);
+      }
+
+      // 到期自然淡出
+      if (d.life <= 0) {
+        this.drops.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * 点击/触控检测（PvZ 点击拾取阳光机制）
+   * @param {number} mx 屏幕逻辑坐标 X
+   * @param {number} my 屏幕逻辑坐标 Y
+   * @returns {boolean} 是否成功点击收集
+   */
+  handlePointerDown(mx, my, economy, fx) {
+    const hitRadius = 28;
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i];
+      const bob = Math.sin(d.animTimer * 4) * 3;
+      const dy = d.y + bob;
+      const dist = Math.hypot(mx - d.x, my - dy);
+
+      if (dist <= hitRadius) {
+        // 成功点击拾取！
+        if (economy) {
+          economy.addSpores(d.spores);
+        }
+        if (fx) {
+          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 孢子!`, '#FFE58F', 1.35);
+          fx.spawnParticles(d.x, dy, 16, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 25, 60, 0.25, 0.5, 3);
+          if (fx.spawnShockwave) {
+            fx.spawnShockwave(d.x, dy, 26, '#FFE58F');
+          }
+        }
+        platform.playSfx('sfx_coin');
+        this.drops.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  render(ctx) {
+    if (this.drops.length === 0) return;
+
+    for (let i = 0; i < this.drops.length; i++) {
+      const d = this.drops[i];
+      const bob = Math.sin(d.animTimer * 4) * 3;
+      const dx = d.x;
+      const dy = d.y + bob;
+
+      // 闪烁警示：当剩余寿命不足 2 秒时平滑渐隐闪烁
+      if (d.life < 2.0) {
+        const blink = Math.sin(d.life * 14);
+        if (blink < -0.2) continue;
+      }
+
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.scale(d.scale, d.scale);
+
+      // 1. 地面微弱柔金阴影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 10 - bob, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. 外层阳光金色微波光晕
+      const pulse = 1.0 + Math.sin(d.animTimer * 6) * 0.08;
+      ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 16 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. 剔透琥珀金孢球本体
+      const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 12);
+      grad.addColorStop(0, '#FFFDF5');
+      grad.addColorStop(0.35, '#FFE58F');
+      grad.addColorStop(0.85, '#FAAD14');
+      grad.addColorStop(1, '#D48806');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // 4. 高光萌斑与星芒
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(-3.5, -3.5, 2.5, 0, Math.PI * 2);
+      ctx.arc(3.5, 3.5, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 5. 内部微缩幼芽/孢子核
+      ctx.fillStyle = '#AD6800';
+      ctx.beginPath();
+      ctx.arc(0, 1, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+}
+
+module.exports = SporeDropManager;

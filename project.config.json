@@ -1,0 +1,21 @@
+{
+  "description": "《蘑菇守林》(Sporeguard) 2D 像素风塔防微信小游戏工程",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": false,
+    "minified": true,
+    "newFeature": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "compileType": "game",
+  "libVersion": "2.32.0",
+  "appid": "touristappid",
+  "projectname": "sporeguard",
+  "condition": {}
+}

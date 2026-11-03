@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="蘑菇守林" />
+  <meta name="theme-color" content="#0B1210" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="images/icons/icon_192.png" />
+  <title>《蘑菇守林》- 奇幻森林策略塔防</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Serif+SC:wght@700;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #0B1210;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      font-family: "Noto Serif SC", "ZCOOL XiaoWei", "Cinzel", "Microsoft YaHei UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+    }
+    #gameCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: pointer;
+    }
+
+    /* 手机端便捷操作与安装栏 */
+    #mobileAppToolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: linear-gradient(180deg, rgba(11, 18, 16, 0.96) 0%, rgba(15, 28, 24, 0.88) 100%);
+      border-bottom: 1px solid rgba(211, 242, 97, 0.25);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      z-index: 10000;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: transform 0.3s ease;
+    }
+    #mobileAppToolbar.hidden {
+      transform: translateY(-100%);
+      pointer-events: none;
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #FFE58F;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    .toolbar-left .app-icon {
+      font-size: 18px;
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tb-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      outline: none;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .tb-install {
+      background: linear-gradient(135deg, #52C41A 0%, #389E0D 100%);
+      color: #FFFFFF;
+      border-color: rgba(183, 235, 143, 0.6);
+      box-shadow: 0 2px 8px rgba(82, 196, 26, 0.35);
+    }
+    .tb-install:active { transform: scale(0.95); }
+    .tb-download {
+      background: linear-gradient(135deg, #1890FF 0%, #096DD9 100%);
+      color: #FFFFFF;
+      border-color: rgba(145, 213, 255, 0.5);
+    }
+    .tb-download:active { transform: scale(0.95); }
+    .tb-fs {
+      background: rgba(255, 255, 255, 0.12);
+      color: #D3F261;
+      border-color: rgba(211, 242, 97, 0.3);
+    }
+    .tb-close {
+      background: transparent;
+      color: #8C8C8C;
+      font-size: 14px;
+      padding: 0 6px;
+      border-radius: 50%;
+      height: 24px;
+      width: 24px;
+    }
+
+    /* 悬浮唤醒图标 (工具栏收起时显示) */
+    #floatingAppBadge {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(15, 28, 24, 0.85);
+      border: 1px solid rgba(211, 242, 97, 0.4);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 9999;
+      transition: transform 0.2s;
+    }
+    #floatingAppBadge:active { transform: scale(0.9); }
+
+    /* iOS / 浏览器快捷「添加到主屏幕」指导弹窗 */
+    #iosInstallModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 20000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #iosInstallModal.active {
+      display: flex;
+    }
+    .modal-card {
+      width: 100%;
+      max-width: 380px;
+      background: #14211D;
+      border: 1px solid #D3F261;
+      border-radius: 16px;
+      padding: 20px;
+      color: #F6FFED;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8);
+      text-align: left;
+    }
+    .modal-card h3 {
+      font-size: 16px;
+      color: #FFE58F;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .step-num {
+      background: #389E0D;
+      color: #fff;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .modal-note {
+      font-size: 11px;
+      color: #A0D911;
+      background: rgba(160, 217, 17, 0.12);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+    .modal-close-btn {
+      width: 100%;
+      height: 36px;
+      background: #52C41A;
+      border: none;
+      border-radius: 18px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- 手机端顶部菜单 -->
+  <div id="mobileAppToolbar">
+    <div class="toolbar-left">
+      <span class="app-icon">🍄</span>
+      <span>蘑菇保卫战</span>
+    </div>
+    <div class="toolbar-actions">
+      <button id="btnPwaInstall" class="tb-btn tb-install">📲 安装为手机App</button>
+      <a id="btnDownloadPkg" href="sporeguard_mobile.zip" download="蘑菇保卫战_手机离线版.zip" class="tb-btn tb-download">📥 下载安装包</a>
+      <button id="btnFullscreen" class="tb-btn tb-fs">⛶ 全屏</button>
+      <button id="btnCloseToolbar" class="tb-btn tb-close" title="收起">✕</button>
+    </div>
+  </div>
+
+  <div id="floatingAppBadge" style="display:none;" title="打开安装与全屏菜单">🍄</div>
+
+  <!-- 安装到手机桌面教程弹窗 -->
+  <div id="iosInstallModal">
+    <div class="modal-card">
+      <h3>📲 安装为手机桌面 App (无需电脑开机)</h3>
+      <div class="step-item">
+        <span class="step-num">1</span>
+        <span>在手机浏览器（Safari / Chrome / 微信外部打开）中点击底部的 <b>「分享」图标 ⬆️</b> 或菜单「···」。</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">2</span>
+        <span>上滑菜单选项，找到并点击 <b>「添加到主屏幕」📱</b>。</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">3</span>
+        <span>点击右上角 <b>「添加」</b>，手机桌面即可生成专属《蘑菇保卫战》图标！</span>
+      </div>
+      <div class="modal-note">
+        ✨ <b>离线单机特性</b>：添加到主屏幕后，全部地图与美术资源将永久保存在手机中。即使以后电脑关机或手机在地铁、飞行模式断网，也能像原生 App 一样秒开单机畅玩！
+      </div>
+      <button id="btnModalClose" class="modal-close-btn">我知道了，开始游戏</button>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    /**
+     * 浏览器端微信小游戏 (wx.*) 平台适配桥接层与移动端旋转/自适应
+     */
+    (function () {
+      window.__ERRORS__ = [];
+      window.addEventListener('error', function (e) {
+        window.__ERRORS__.push(String(e.message) + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+        document.title = 'ERR ' + window.__ERRORS__.join(' | ');
+      });
+
+      const canvas = document.getElementById('gameCanvas');
+      window.__BROWSER_CANVAS__ = canvas;
+      window.__IS_BROWSER_SHIM__ = true;
+      window.GameGlobal = window;
+
+      const touchStartListeners = [];
+      const touchMoveListeners = [];
+      const touchEndListeners = [];
+      const keyDownListeners = [];
+      const resizeListeners = [];
+      const hideListeners = [];
+      const showListeners = [];
+
+      let persistentDict = {};
+      try {
+        if (window.name && window.name.indexOf('{') === 0) {
+          persistentDict = JSON.parse(window.name);
+        }
+      } catch (e) {
+        persistentDict = {};
+      }
+
+      // 移动端智能旋转与自适应：竖屏时画布置于满屏并旋转 90 度，彻底消除黑边
+      window.__ROTATED_90__ = false;
+      function updateCanvasLayout() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && Math.max(window.innerWidth, window.innerHeight) < 1200);
+        const isPortrait = window.innerHeight > window.innerWidth;
+
+        if (isMobile && isPortrait) {
+          window.__ROTATED_90__ = true;
+          canvas.style.position = 'fixed';
+          canvas.style.top = '50%';
+          canvas.style.left = '50%';
+          canvas.style.width = window.innerHeight + 'px';
+          canvas.style.height = window.innerWidth + 'px';
+          canvas.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+          canvas.style.transformOrigin = 'center center';
+        } else {
+          window.__ROTATED_90__ = false;
+          canvas.style.position = 'static';
+          canvas.style.top = 'auto';
+          canvas.style.left = 'auto';
+          canvas.style.width = '100vw';
+          canvas.style.height = '100vh';
+          canvas.style.transform = 'none';
+        }
+      }
+      updateCanvasLayout();
+
+      let mainCanvasHandedOut = false;
+      if (typeof window.wx === 'undefined') {
+        window.wx = {
+          createCanvas: function () {
+            if (!mainCanvasHandedOut) {
+              mainCanvasHandedOut = true;
+              return canvas;
+            }
+            return document.createElement('canvas');
+          },
+          createImage: function () {
+            return new Image();
+          },
+          getSystemInfoSync: function () {
+            if (window.__ROTATED_90__) {
+              return {
+                windowWidth: window.innerHeight,
+                windowHeight: window.innerWidth,
+                pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+                platform: 'browser'
+              };
+            }
+            return {
+              windowWidth: window.innerWidth || 960,
+              windowHeight: window.innerHeight || 540,
+              pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+              platform: 'browser'
+            };
+          },
+          onWindowResize: function (cb) {
+            if (typeof cb === 'function') resizeListeners.push(cb);
+          },
+          onTouchStart: function (cb) {
+            if (typeof cb === 'function') touchStartListeners.push(cb);
+          },
+          onTouchMove: function (cb) {
+            if (typeof cb === 'function') touchMoveListeners.push(cb);
+          },
+          onTouchEnd: function (cb) {
+            if (typeof cb === 'function') touchEndListeners.push(cb);
+          },
+          onKeyDown: function (cb) {
+            if (typeof cb === 'function') keyDownListeners.push(cb);
+          },
+          onHide: function (cb) {
+            if (typeof cb === 'function') hideListeners.push(cb);
+          },
+          onShow: function (cb) {
+            if (typeof cb === 'function') showListeners.push(cb);
+          },
+          getStorageSync: function (key) {
+            return persistentDict[key];
+          },
+          setStorageSync: function (key, value) {
+            persistentDict[key] = value;
+            try {
+              window.name = JSON.stringify(persistentDict);
+            } catch (e) {}
+          },
+          loadSubpackage: function (opts) {
+            if (opts && typeof opts.success === 'function') {
+              setTimeout(() => opts.success(), 0);
+            }
+          },
+          createInnerAudioContext: function () {
+            const audio = new Audio();
+            return {
+              set src(v) { audio.src = v; },
+              get src() { return audio.src; },
+              set loop(v) { audio.loop = Boolean(v); },
+              get loop() { return audio.loop; },
+              set volume(v) { audio.volume = Math.max(0, Math.min(1, v)); },
+              get volume() { return audio.volume; },
+              play: function () {
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') p.catch(function () {});
+              },
+              pause: function () {
+                try { audio.pause(); } catch (e) {}
+              },
+              stop: function () {
+                try { audio.pause(); audio.currentTime = 0; } catch (e) {}
+              },
+              seek: function (sec) {
+                try { audio.currentTime = sec; } catch (e) {}
+              }
+            };
+          }
+        };
+      }
+
+      // 坐标映射转换（当画布置于竖屏旋转 90 度时，触摸与点击坐标映射到旋转后的画表面积）
+      function mapClientCoords(cx, cy) {
+        if (window.__ROTATED_90__) {
+          return {
+            clientX: cy,
+            clientY: window.innerWidth - cx
+          };
+        }
+        return { clientX: cx, clientY: cy };
+      }
+
+      function mapTouchEvent(e) {
+        const touches = [];
+        for (let i = 0; i < e.touches.length; i++) {
+          const t = e.touches[i];
+          const m = mapClientCoords(t.clientX, t.clientY);
+          touches.push({ clientX: m.clientX, clientY: m.clientY, identifier: t.identifier });
+        }
+        const changedTouches = [];
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          const m = mapClientCoords(t.clientX, t.clientY);
+          changedTouches.push({ clientX: m.clientX, clientY: m.clientY, identifier: t.identifier });
+        }
+        return { touches, changedTouches, preventDefault: () => {} };
+      }
+
+      let isMouseDown = false;
+      canvas.addEventListener('mousedown', function (e) {
+        isMouseDown = true;
+        const m = mapClientCoords(e.clientX, e.clientY);
+        const ev = { touches: [m], changedTouches: [m] };
+        touchStartListeners.forEach(function (fn) { fn(ev); });
+      });
+      window.addEventListener('mousemove', function (e) {
+        const m = mapClientCoords(e.clientX, e.clientY);
+        const ev = { touches: [m], changedTouches: [m] };
+        touchMoveListeners.forEach(function (fn) { fn(ev); });
+      });
+      window.addEventListener('mouseup', function (e) {
+        if (!isMouseDown) return;
+        isMouseDown = false;
+        const m = mapClientCoords(e.clientX, e.clientY);
+        const ev = { touches: [], changedTouches: [m] };
+        touchEndListeners.forEach(function (fn) { fn(ev); });
+      });
+
+      canvas.addEventListener('touchstart', function (e) {
+        e.preventDefault();
+        const ev = mapTouchEvent(e);
+        touchStartListeners.forEach(function (fn) { fn(ev); });
+      }, { passive: false });
+      canvas.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        const ev = mapTouchEvent(e);
+        touchMoveListeners.forEach(function (fn) { fn(ev); });
+      }, { passive: false });
+      canvas.addEventListener('touchend', function (e) {
+        e.preventDefault();
+        const ev = mapTouchEvent(e);
+        touchEndListeners.forEach(function (fn) { fn(ev); });
+      }, { passive: false });
+
+      window.addEventListener('keydown', function (e) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].indexOf(e.code) !== -1) {
+          e.preventDefault();
+        }
+        keyDownListeners.forEach(function (fn) { fn({ key: e.key, code: e.code }); });
+      });
+
+      function onScreenResize() {
+        updateCanvasLayout();
+        const info = window.wx.getSystemInfoSync();
+        resizeListeners.forEach(function (fn) { fn(info); });
+      }
+      window.addEventListener('resize', onScreenResize);
+      window.addEventListener('orientationchange', function () {
+        setTimeout(onScreenResize, 160);
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          hideListeners.forEach(function (fn) { fn(); });
+        } else {
+          showListeners.forEach(function (fn) { fn(); });
+        }
+      });
+      window.addEventListener('blur', function () {
+        hideListeners.forEach(function (fn) { fn(); });
+      });
+
+      // PWA 注册与安装管理
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const btn = document.getElementById('btnPwaInstall');
+        if (btn) btn.innerText = '📲 一键安装App';
+      });
+
+      // 菜单按钮交互绑定
+      window.addEventListener('DOMContentLoaded', function () {
+        const toolbar = document.getElementById('mobileAppToolbar');
+        const badge = document.getElementById('floatingAppBadge');
+        const modal = document.getElementById('iosInstallModal');
+
+        // 安装按钮点击
+        const btnInstall = document.getElementById('btnPwaInstall');
+        if (btnInstall) {
+          btnInstall.addEventListener('click', function () {
+            if (deferredPrompt) {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+              });
+            } else {
+              modal.classList.add('active');
+            }
+          });
+        }
+
+        // 全屏按钮点击
+        const btnFs = document.getElementById('btnFullscreen');
+        if (btnFs) {
+          btnFs.addEventListener('click', function () {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+              document.exitFullscreen().catch(() => {});
+            }
+          });
+        }
+
+        // 收起菜单
+        const btnClose = document.getElementById('btnCloseToolbar');
+        if (btnClose) {
+          btnClose.addEventListener('click', function () {
+            toolbar.classList.add('hidden');
+            badge.style.display = 'flex';
+          });
+        }
+
+        // 点击悬浮球恢复菜单
+        if (badge) {
+          badge.addEventListener('click', function () {
+            toolbar.classList.remove('hidden');
+            badge.style.display = 'none';
+          });
+        }
+
+        // 关闭指引弹窗
+        const btnModalClose = document.getElementById('btnModalClose');
+        if (btnModalClose) {
+          btnModalClose.addEventListener('click', function () {
+            modal.classList.remove('active');
+          });
+        }
+
+        // 注册 Service Worker 实现 100% 离线运行
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
+          navigator.serviceWorker.register('sw.js').then(function () {
+            console.log('Sporeguard ServiceWorker Registered successfully');
+          }).catch(function (err) {
+            console.log('SW reg error:', err);
+          });
+        }
+      });
+    })();
+  </script>
+
+<!-- 加载打包好的纯前端脚本 -->
+  <script src="bundle.js?v=20261103_2"></script>
+
+  <script>
+    // 自动化测试与截图钩子（仅在 hash 带 #battle=mapX 或 #sim=mapX 时触发）
+    (function () {
+      const simMatch = /#sim=(map\d)&strat=(\w+)&max=(\d+)/.exec(location.hash);
+      if (simMatch) {
+        function runSim() {
+          if (!window.__SPOREGUARD__ || !window.__SPOREGUARD__.scene) {
+            setTimeout(runSim, 50);
+            return;
+          }
+          try {
+            const mapId = simMatch[1];
+            const strategy = simMatch[2];
+            const maxSteps = parseInt(simMatch[3], 10);
+            const S = window.__SPOREGUARD__.scene;
+            const storage = window.require('js/save/storage');
+            storage.markGuideSeen();
+            S.startLevel(mapId);
+
+            // 策略定义：按波次阶段分批部署与进化
+            const buildQueue = [];
+            const upgradeQueue = [];
+
+            if (strategy === 'optimal') {
+              if (mapId === 'map1') {
+                // 先铺设基础防线
+                buildQueue.push(['watch', 5, 3], ['thorn', 7, 10], ['mist', 7, 6], ['burst', 11, 10]);
+                // 早期强化：优先长刺与破甲减速
+                upgradeQueue.push([7, 10, 'lv1'], [7, 10, 'b2'], [5, 3, 'lv1'], [7, 6, 'lv1'], [11, 10, 'lv1']);
+                // 中期防线补充与特化
+                buildQueue.push(['watch', 16, 4], ['burst', 11, 4]);
+                upgradeQueue.push([7, 6, 'a2'], [7, 6, 'a3'], [7, 10, 'b3']);
+                upgradeQueue.push([11, 10, 'b2'], [11, 10, 'b3'], [5, 3, 'a2'], [5, 3, 'a3']);
+                upgradeQueue.push([16, 4, 'lv1'], [16, 4, 'b2'], [16, 4, 'b3']);
+              } else if (mapId === 'map2') {
+                buildQueue.push(['watch', 5, 3], ['mist', 8, 3], ['thorn', 10, 11], ['burst', 8, 8]);
+                upgradeQueue.push([5, 3, 'lv1'], [8, 3, 'lv1'], [10, 11, 'lv1'], [8, 8, 'lv1']);
+                buildQueue.push(['watch', 13, 4], ['mist', 11, 7], ['burst', 17, 7]);
+                upgradeQueue.push([5, 3, 'a2'], [5, 3, 'a3'], [8, 3, 'a2'], [8, 3, 'a3']);
+                upgradeQueue.push([10, 11, 'b2'], [10, 11, 'b3'], [8, 8, 'b2'], [8, 8, 'b3']);
+                upgradeQueue.push([13, 4, 'lv1'], [13, 4, 'b2'], [13, 4, 'b3']);
+              } else if (mapId === 'map3') {
+                buildQueue.push(['thorn', 4, 3], ['mist', 7, 5], ['thorn', 8, 3], ['burst', 11, 5]);
+                upgradeQueue.push([4, 3, 'lv1'], [7, 5, 'lv1'], [8, 3, 'lv1'], [11, 5, 'lv1']);
+                buildQueue.push(['watch', 12, 3], ['watch', 13, 8], ['burst', 9, 11]);
+                upgradeQueue.push([4, 3, 'b2'], [4, 3, 'b3'], [7, 5, 'a2'], [7, 5, 'a3']);
+                upgradeQueue.push([12, 3, 'lv1'], [12, 3, 'a2'], [12, 3, 'a3']);
+                upgradeQueue.push([11, 5, 'b2'], [11, 5, 'b3'], [13, 8, 'lv1'], [13, 8, 'b2'], [13, 8, 'b3']);
+              }
+            } else if (strategy === 'standard') {
+              if (mapId === 'map1') {
+                buildQueue.push(['watch', 5, 3], ['thorn', 7, 10], ['mist', 7, 6]);
+                upgradeQueue.push([5, 3, 'lv1'], [7, 6, 'lv1'], [7, 10, 'lv1']);
+                buildQueue.push(['burst', 11, 10]);
+                upgradeQueue.push([5, 3, 'a2'], [7, 10, 'b2']);
+              } else if (mapId === 'map2') {
+                buildQueue.push(['watch', 5, 3], ['mist', 8, 3], ['thorn', 10, 11]);
+                upgradeQueue.push([5, 3, 'lv1'], [8, 3, 'lv1'], [10, 11, 'lv1']);
+                buildQueue.push(['burst', 8, 8]);
+                upgradeQueue.push([5, 3, 'a2'], [8, 8, 'lv1']);
+              } else if (mapId === 'map3') {
+                buildQueue.push(['thorn', 4, 3], ['mist', 7, 5], ['watch', 12, 3]);
+                upgradeQueue.push([4, 3, 'lv1'], [7, 5, 'lv1'], [12, 3, 'lv1']);
+                buildQueue.push(['burst', 11, 5]);
+                upgradeQueue.push([4, 3, 'b2'], [11, 5, 'lv1']);
+              }
+            } else if (strategy === 'risky') {
+              buildQueue.push(['watch', 5, 3], ['thorn', 7, 10]);
+              upgradeQueue.push([5, 3, 'lv1']);
+            }
+
+            let peakEnemies = 0;
+            let peakBullets = 0;
+            let peakParticles = 0;
+            let exitReason = 'max_steps_reached';
+            let finalStep = 0;
+
+            for (let step = 0; step < maxSteps; step++) {
+              finalStep = step;
+              if (S.state === 'SETTLEMENT') {
+                exitReason = S.settlementResult.victory ? 'victory' : 'defeat';
+                break;
+              }
+
+              // 尝试建造队列
+              if (buildQueue.length > 0) {
+                const b = buildQueue[0];
+                const baseCost = window.require('js/data/towers').TOWERS[b[0]].nodes.base.cost;
+                if (S.economy.canAfford(baseCost) && S.map.canBuildAt(b[1], b[2])) {
+                  S.selectedBuildTowerId = b[0];
+                  if (S.towerManager.buildTower(b[0], b[1], b[2], S.map, S.economy, S.fx)) {
+                    buildQueue.shift();
+                  }
+                }
+              }
+
+              // 尝试升级队列
+              if (upgradeQueue.length > 0) {
+                const u = upgradeQueue[0];
+                const tw = S.towerManager.getTowerAt(u[0], u[1]);
+                if (tw) {
+                  const nodeDef = tw.def.nodes[u[2]];
+                  if (nodeDef && S.economy.canAfford(nodeDef.cost)) {
+                    if (S.towerManager.upgradeTower(tw, u[2], S.economy, S.fx)) {
+                      upgradeQueue.shift();
+                    }
+                  }
+                }
+              }
+
+              // 备战期提前召唤
+              if (S.waveManager.isPrepPhase() && S.waveManager.prepTimerSec > 0) {
+                S.callWaveEarly();
+              }
+
+              S.fx.update(1 / 60, true, false);
+              S.fixedStep(1 / 60);
+
+              const curEnemies = S.enemyManager.getAliveEnemies().length;
+              const curBullets = S.bulletManager.bulletPool.getActiveCount();
+              const curParticles = S.fx.particlePool.getActiveCount();
+              if (curEnemies > peakEnemies) peakEnemies = curEnemies;
+              if (curBullets > peakBullets) peakBullets = curBullets;
+              if (curParticles > peakParticles) peakParticles = curParticles;
+            }
+
+            const qaRes = {
+              mapId: mapId,
+              strategy: strategy,
+              victory: S.settlementResult.victory,
+              stars: S.settlementResult.stars,
+              remainingSeeds: S.economy.seeds,
+              finalSpores: S.economy.spores,
+              totalKills: S.economy.totalKills,
+              logicalTimeSec: Math.round(S.logicalCombatTimeSec * 10) / 10,
+              waveReached: S.waveManager.currentWaveIndex,
+              totalWaves: S.waveManager.totalWaves,
+              finalStep: finalStep,
+              exitReason: exitReason,
+              peakEnemies: peakEnemies,
+              peakBullets: peakBullets,
+              peakParticles: peakParticles,
+              crashes: window.__ERRORS__.length,
+              errors: window.__ERRORS__
+            };
+
+            const div = document.createElement('div');
+            div.id = '__QA_RESULT__';
+            div.textContent = JSON.stringify(qaRes);
+            document.body.appendChild(div);
+            document.title = 'QA_DONE ' + mapId + ' ' + (qaRes.victory ? 'WIN' : 'LOSE') + ' stars=' + qaRes.stars;
+          } catch (e) {
+            const div = document.createElement('div');
+            div.id = '__QA_RESULT__';
+            div.textContent = JSON.stringify({ error: e.message, stack: e.stack });
+            document.body.appendChild(div);
+            document.title = 'QA_ERROR ' + e.message;
+          }
+        }
+        setTimeout(runSim, 100);
+        return;
+      }
+
+      if (location.hash === '#test_web') {
+        setTimeout(function () {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.economy.spores += 500;
+            const t = S.towerManager.buildTower('watch', 5, 3, S.map, S.economy, S.fx);
+            S.towerManager.applyWeb(t, 3, S.fx);
+            const ctx = window.__BROWSER_CANVAS__.getContext('2d');
+            S.render(ctx);
+            document.title = 'TEST_WEB_OK isWebbed=' + t.isWebbed;
+          } catch (e) {
+            document.title = 'TEST_WEB_ERR ' + e.message;
+          }
+        }, 200);
+        return;
+      }
+
+      if (location.hash === '#levels') {
+        setTimeout(function () {
+          window.__SPOREGUARD__.scene.enterLevelSelect();
+        }, 200);
+        return;
+      }
+
+      if (location.hash === '#drag_preview') {
+        setTimeout(function () {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            const ctx = window.__BROWSER_CANVAS__.getContext('2d');
+            S.render(ctx); // 先跑一帧布局并注册按钮
+            // 模拟手指/鼠标按压第2张卡牌（毒雾菇），并向上拖拽至有效仙女环格 (col 8, row 6)
+            S.ui.handlePointerDown(430, 490, S);
+            S.ui.handlePointerMove(432, 238, S);
+            S.render(ctx); // 渲染包含拖拽全息光环与悬浮投影的当前帧
+            document.title = 'DRAG_PREVIEW_OK dragging=' + S.ui.isDragging + ' target=' + S.ui.draggingTowerId;
+          } catch (e) {
+            document.title = 'DRAG_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#drag_invalid') {
+        setTimeout(function () {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            const ctx = window.__BROWSER_CANVAS__.getContext('2d');
+            S.render(ctx);
+            // 模拟将爆裂菇卡牌拖拽到道路格 (col 6, row 5) 上，触发暗红荆棘禁咒警告环
+            S.ui.handlePointerDown(650, 490, S);
+            S.ui.handlePointerMove(368, 206, S);
+            S.render(ctx);
+            document.title = 'DRAG_INVALID_OK dragging=' + S.ui.isDragging + ' target=' + S.ui.draggingTowerId;
+          } catch (e) {
+            document.title = 'DRAG_INVALID_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#drag_drop') {
+        setTimeout(function () {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            const ctx = window.__BROWSER_CANVAS__.getContext('2d');
+            S.render(ctx);
+            S.ui.handlePointerDown(430, 490, S);
+            S.ui.handlePointerMove(432, 238, S);
+            S.ui.handlePointerUp(432, 238, S);
+            S.render(ctx);
+            const built = Boolean(S.towerManager.getTowerAt(8, 6));
+            document.title = 'DRAG_DROP_OK built=' + built;
+          } catch (e) {
+            document.title = 'DRAG_DROP_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      const m = /#battle=(map\d)(?:&steps=(\d+))?(?:&inspect=(\d+))?(?:&upgrade=(\d+))?/.exec(location.hash);
+      if (!m) return;
+      setTimeout(function () {
+        try {
+          const S = window.__SPOREGUARD__.scene;
+          window.require('js/save/storage').markGuideSeen();
+          S.startLevel(m[1]);
+          const plan = {
+            map1: [['watch', 5, 3], ['mist', 7, 6], ['thorn', 7, 10], ['burst', 11, 10], ['lumina', 9, 8]],
+            map2: [['watch', 5, 3], ['mist', 8, 3], ['burst', 8, 8], ['thorn', 10, 11]],
+            map3: [['watch', 4, 3], ['mist', 8, 3], ['thorn', 3, 5], ['burst', 7, 5]]
+          }[m[1]];
+          S.economy.spores += 600;
+          plan.forEach(function (p) {
+            S.selectedBuildTowerId = p[0];
+            S.selectedTile = { col: p[1], row: p[2] };
+            S.tryBuildOnSelectedTile();
+          });
+          if (m[3] && m[3] !== 'none') {
+            const selIdx = parseInt(m[3], 10);
+            const targetPlan = plan[selIdx] || plan[0];
+            S.selectedTile = { col: targetPlan[1], row: targetPlan[2] };
+            S.ui.inspectorOpen = true;
+            if (m[4]) { S.tryUpgradeSelectedTower('lv1'); }
+          } else {
+            S.selectedTile = { col: -1, row: -1 };
+            S.ui.inspectorOpen = false;
+          }
+          S.callWaveEarly();
+          const steps = parseInt(m[2] || '900', 10);
+          for (let i = 0; i < steps; i++) {
+            S.fx.update(1 / 60, true, false);
+            S.ui.update(1 / 60);
+            S.fixedStep(1 / 60);
+          }
+          S.fx.banner.active = false;
+          document.title = 'OK enemies=' + S.enemyManager.getAliveEnemies().length + ' spores=' + S.economy.spores + ' seeds=' + S.economy.seeds;
+        } catch (err) {
+          document.title = 'TEST_ERR: ' + err.message + ' @ ' + (err.stack ? err.stack.replace(/\n/g, ' -> ') : '');
+        }
+      }, 300);
+
+      
+      if (location.hash === '#test_codex_dismiss') {
+        function checkDismiss() {
+          if (!window.__SPOREGUARD__ || !window.__SPOREGUARD__.scene) {
+            setTimeout(checkDismiss, 50);
+            return;
+          }
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            S.startLevel('map1');
+            S.ui.showGuideModal = true;
+            // Render one frame so buttons are registered!
+            S.ui.renderGuideModal(S.ctx || document.getElementById('gameCanvas').getContext('2d'));
+
+            // Test 1: modal is open
+            if (!S.ui.showGuideModal) throw new Error('Modal should be open initially');
+            // Test 2: simulate click on play button (x = 700, y = 470)
+            S.ui.handlePointerDown(700, 470, S);
+            if (S.ui.showGuideModal) throw new Error('Modal should close after clicking play button');
+            
+            // Test 3: reopen and simulate click on [x] (x = 850, y = 50)
+            S.ui.showGuideModal = true;
+            S.ui.renderGuideModal(S.ctx || document.getElementById('gameCanvas').getContext('2d'));
+            S.ui.handlePointerDown(850, 50, S);
+            if (S.ui.showGuideModal) throw new Error('Modal should close after clicking close button');
+
+            // Test 4: reopen and simulate click outside (x = 20, y = 20)
+            S.ui.showGuideModal = true;
+            S.ui.handlePointerDown(20, 20, S);
+            if (S.ui.showGuideModal) throw new Error('Modal should close after clicking outside modal');
+
+            document.title = 'DISMISS_TEST_PASSED';
+          } catch (e) {
+            document.title = 'DISMISS_ERR: ' + e.message;
+          }
+        }
+        checkDismiss();
+        return;
+      }
+
+      if (location.hash === '#test_hero_hud') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.hero.moveTo(280, 180, S.fx);
+            document.title = 'HERO_OK level=' + S.hero.level + ' hp=' + S.hero.hp + ' seeds=' + S.awakeningSeeds;
+          } catch (e) {
+            document.title = 'HERO_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#test_codex_tab0') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.ui.showGuideModal = true;
+            S.ui.codexTab = 0;
+            S.ui.codexSelectedTower = 'watch';
+            document.title = 'CODEX_TAB0_OK';
+          } catch (e) {
+            document.title = 'CODEX_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#test_codex_tab1') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.ui.showGuideModal = true;
+            S.ui.codexTab = 1;
+            S.ui.codexSelectedEnemy = 'weaver';
+            document.title = 'CODEX_TAB1_OK';
+          } catch (e) {
+            document.title = 'CODEX_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#test_codex_tab2') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.ui.showGuideModal = true;
+            S.ui.codexTab = 2;
+            document.title = 'CODEX_TAB2_OK';
+          } catch (e) {
+            document.title = 'CODEX_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#test_endless') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.startEndlessMode();
+            document.title = 'ENDLESS_OK wave=' + S.waveManager.currentWaveIndex + ' isEndless=' + S.isEndlessMode;
+          } catch (e) {
+            document.title = 'ENDLESS_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+    })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
