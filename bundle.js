@@ -2773,7 +2773,7 @@ function updateViewport() {
     const info = wx.getSystemInfoSync();
     sw = info.windowWidth || sw;
     sh = info.windowHeight || sh;
-    dpr = Math.min(info.pixelRatio || 1, 2);
+    dpr = Math.min(info.pixelRatio || (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1, 3);
   }
 
   viewport.screenWidth = sw;
@@ -2794,6 +2794,7 @@ function updateViewport() {
   }
   if (mainCtx) {
     mainCtx.imageSmoothingEnabled = true;
+    mainCtx.imageSmoothingQuality = 'high';
   }
 }
 
@@ -2820,7 +2821,8 @@ function beginFrame() {
   const dpr = viewport.dpr;
   mainCtx.setTransform(1, 0, 0, 1, 0, 0);
   mainCtx.imageSmoothingEnabled = true;
-  mainCtx.fillStyle = '#000000';
+  mainCtx.fillStyle = '#09120F';
+  mainCtx.imageSmoothingQuality = 'high';
   mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
   mainCtx.save();

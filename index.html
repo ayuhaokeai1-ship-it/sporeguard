@@ -38,7 +38,13 @@
       display: block;
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
+      object-fit: contain;
       cursor: pointer;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: auto;
+      touch-action: none;
+      -webkit-touch-callout: none;
     }
 
     /* 手机端便捷操作与安装栏 */
@@ -129,20 +135,25 @@
     #floatingAppBadge {
       position: fixed;
       top: 8px;
-      left: 8px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(15, 28, 24, 0.85);
-      border: 1px solid rgba(211, 242, 97, 0.4);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      right: 12px;
+      left: auto;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 14px;
+      background: rgba(15, 28, 24, 0.90);
+      border: 1px solid rgba(211, 242, 97, 0.5);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      gap: 5px;
+      color: #FFE58F;
+      font-size: 12px;
+      font-weight: bold;
       cursor: pointer;
       z-index: 9999;
-      transition: transform 0.2s;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: transform 0.2s, background 0.2s;
     }
     #floatingAppBadge:active { transform: scale(0.9); }
 
@@ -224,6 +235,97 @@
       margin-top: 16px;
       cursor: pointer;
     }
+  
+    /* 手机竖屏横转沉浸指引蒙层 */
+    #orientationOverlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 30000;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 16, 12, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #orientationOverlay.visible {
+      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .orient-card {
+      background: linear-gradient(180deg, #17291F 0%, #0D1813 100%);
+      border: 2px solid #52C41A;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 24px 18px;
+      width: 90%;
+      max-width: 320px;
+      margin: auto;
+      box-sizing: border-box;
+      text-align: center;
+      color: #F6FFED;
+    }
+    .orient-phone-anim {
+      display: inline-block;
+      margin-bottom: 12px;
+      animation: orientRotate 2.4s ease-in-out infinite;
+    }
+    @keyframes orientRotate {
+      0% { transform: rotate(0deg); }
+      35% { transform: rotate(90deg); }
+      70% { transform: rotate(90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .orient-title {
+      font-size: 19px;
+      color: #FFD666;
+      margin-bottom: 8px;
+      font-weight: bold;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .orient-sub {
+      font-size: 13px;
+      color: #B7EB8F;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+    .orient-btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .orient-btn {
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 19px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .orient-btn-primary {
+      background: linear-gradient(135deg, #52C41A 0%, #237804 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4);
+    }
+    .orient-btn-primary:active { transform: scale(0.95); }
+    .orient-btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #D9D9D9;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .orient-btn-secondary:active { transform: scale(0.95); }
+
   </style>
 </head>
 <body>
@@ -241,7 +343,7 @@
     </div>
   </div>
 
-  <div id="floatingAppBadge" style="display:none;" title="打开安装与全屏菜单">🍄</div>
+  <div id="floatingAppBadge" style="display:none;" title="打开安装与全屏菜单">🍄 菜单</div>
 
   <!-- 安装到手机桌面教程弹窗 -->
   <div id="iosInstallModal">
@@ -301,30 +403,28 @@
         persistentDict = {};
       }
 
-      // 移动端智能旋转与自适应：竖屏时画布置于满屏并旋转 90 度，彻底消除黑边
-      window.__ROTATED_90__ = false;
-      function updateCanvasLayout() {
+      // 移动端全景高清自适应：不进行暴力旋转，支持自然横屏与竖屏居中自适应
+      let portraitDismissed = false;
+      function checkOrientationOverlay() {
+        const overlay = document.getElementById('orientationOverlay');
+        if (!overlay) return;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && Math.max(window.innerWidth, window.innerHeight) < 1200);
         const isPortrait = window.innerHeight > window.innerWidth;
-
-        if (isMobile && isPortrait) {
-          window.__ROTATED_90__ = true;
-          canvas.style.position = 'fixed';
-          canvas.style.top = '50%';
-          canvas.style.left = '50%';
-          canvas.style.width = window.innerHeight + 'px';
-          canvas.style.height = window.innerWidth + 'px';
-          canvas.style.transform = 'translate(-50%, -50%) rotate(90deg)';
-          canvas.style.transformOrigin = 'center center';
+        if (isMobile && isPortrait && !portraitDismissed) {
+          overlay.classList.add('visible');
         } else {
-          window.__ROTATED_90__ = false;
-          canvas.style.position = 'static';
-          canvas.style.top = 'auto';
-          canvas.style.left = 'auto';
-          canvas.style.width = '100vw';
-          canvas.style.height = '100vh';
-          canvas.style.transform = 'none';
+          overlay.classList.remove('visible');
         }
+      }
+
+      function updateCanvasLayout() {
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100vw';
+        canvas.style.height = (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px';
+        canvas.style.transform = 'none';
+        checkOrientationOverlay();
       }
       updateCanvasLayout();
 
@@ -342,18 +442,12 @@
             return new Image();
           },
           getSystemInfoSync: function () {
-            if (window.__ROTATED_90__) {
-              return {
-                windowWidth: window.innerHeight,
-                windowHeight: window.innerWidth,
-                pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-                platform: 'browser'
-              };
-            }
+            const w = window.innerWidth || 960;
+            const h = window.innerHeight || 540;
             return {
-              windowWidth: window.innerWidth || 960,
-              windowHeight: window.innerHeight || 540,
-              pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+              windowWidth: w,
+              windowHeight: h,
+              pixelRatio: Math.min(window.devicePixelRatio || 1, 3),
               platform: 'browser'
             };
           },
@@ -421,12 +515,6 @@
 
       // 坐标映射转换（当画布置于竖屏旋转 90 度时，触摸与点击坐标映射到旋转后的画表面积）
       function mapClientCoords(cx, cy) {
-        if (window.__ROTATED_90__) {
-          return {
-            clientX: cy,
-            clientY: window.innerWidth - cx
-          };
-        }
         return { clientX: cx, clientY: cy };
       }
 
@@ -577,6 +665,44 @@
           });
         }
 
+        // 竖屏提示交互绑定
+        const btnDismiss = document.getElementById('btnDismissOrient');
+        if (btnDismiss) {
+          btnDismiss.addEventListener('click', function () {
+            portraitDismissed = true;
+            checkOrientationOverlay();
+          });
+        }
+        const btnFsOrient = document.getElementById('btnFsOrient');
+        if (btnFsOrient) {
+          btnFsOrient.addEventListener('click', function () {
+            portraitDismissed = true;
+            checkOrientationOverlay();
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            }
+            if (screen.orientation && screen.orientation.lock) {
+              screen.orientation.lock('landscape').catch(() => {});
+            }
+          });
+        }
+
+        // 移动端默认隐藏顶栏，使用轻量右上角悬浮球，不遮挡游戏波次、生命与金币
+        function checkToolbarMode() {
+          const isMobileOrNarrow = window.innerWidth < 960 || window.innerHeight < 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (isMobileOrNarrow) {
+            toolbar.classList.add('hidden');
+            badge.style.display = 'flex';
+          } else {
+            toolbar.classList.remove('hidden');
+            badge.style.display = 'none';
+          }
+        }
+        checkToolbarMode();
+        checkOrientationOverlay();
+        window.addEventListener('resize', () => { checkToolbarMode(); checkOrientationOverlay(); });
+        window.addEventListener('orientationchange', () => { checkToolbarMode(); checkOrientationOverlay(); });
+
         // 注册 Service Worker 实现 100% 离线运行
         if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
           navigator.serviceWorker.register('sw.js').then(function () {
@@ -590,7 +716,7 @@
   </script>
 
 <!-- 加载打包好的纯前端脚本 -->
-  <script src="bundle.js?v=20261103_2"></script>
+  <script src="bundle.js"></script>
 
   <script>
     // 自动化测试与截图钩子（仅在 hash 带 #battle=mapX 或 #sim=mapX 时触发）
@@ -844,7 +970,11 @@
 
       const m = /#battle=(map\d)(?:&steps=(\d+))?(?:&inspect=(\d+))?(?:&upgrade=(\d+))?/.exec(location.hash);
       if (!m) return;
-      setTimeout(function () {
+      function runBattle() {
+        if (!window.__SPOREGUARD__ || !window.__SPOREGUARD__.scene) {
+          setTimeout(runBattle, 50);
+          return;
+        }
         try {
           const S = window.__SPOREGUARD__.scene;
           window.require('js/save/storage').markGuideSeen();
@@ -882,7 +1012,8 @@
         } catch (err) {
           document.title = 'TEST_ERR: ' + err.message + ' @ ' + (err.stack ? err.stack.replace(/\n/g, ' -> ') : '');
         }
-      }, 300);
+      }
+      runBattle();
 
       
       if (location.hash === '#test_codex_dismiss') {
@@ -1012,5 +1143,26 @@
       });
     }
   </script>
+
+  <!-- 手机竖屏横转指引蒙层 -->
+  <div id="orientationOverlay">
+    <div class="orient-card">
+      <div class="orient-phone-anim">
+        <svg viewBox="0 0 64 64" width="60" height="60" fill="none">
+          <rect x="18" y="10" width="28" height="44" rx="5" stroke="#73D13D" stroke-width="2.5" fill="rgba(82, 196, 26, 0.15)"/>
+          <circle cx="32" cy="48" r="2.5" fill="#73D13D"/>
+          <path d="M48 24 C55 28, 55 36, 48 40" stroke="#FFD666" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 3"/>
+          <path d="M48 40 L44 38 M48 40 L49 35" stroke="#FFD666" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 class="orient-title">🌲 建议旋转至横屏游玩 🌲</h3>
+      <p class="orient-sub">旋转手机横屏可解锁 1080P 超高清全景林地视界与最佳战术操作体验。</p>
+      <div class="orient-btn-group">
+        <button id="btnDismissOrient" class="orient-btn orient-btn-secondary">保持竖屏直接玩</button>
+        <button id="btnFsOrient" class="orient-btn orient-btn-primary">⛶ 进入全屏横屏</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
