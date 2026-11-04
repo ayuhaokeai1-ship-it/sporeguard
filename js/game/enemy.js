@@ -448,6 +448,10 @@ class EnemyManager {
     if (economy) {
       economy.registerKill(enemy, finalDamage, combatTimeSec, fx);
     }
+    const cj = this.combatJuice || (this.scene ? this.scene.combatJuice : null);
+    if (cj) {
+      cj.recordKill(enemy.threat || 1);
+    }
 
     // 7.2 裂殖虫死亡时在死亡位置生成 2 只幼体，从死亡点继续前进
     // Volatile Pod Suicide Acid Splash

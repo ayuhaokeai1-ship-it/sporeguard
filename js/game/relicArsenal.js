@@ -184,8 +184,8 @@ class RelicArsenalSystem {
    * 绘制顶部神器徽章状态栏
    */
   renderHudRelicBadges(ctx, startX, startY) {
-    const bSize = 22;
-    const gap = 5;
+    const bSize = 20;
+    const gap = 3;
 
     ctx.save();
     for (let i = 0; i < this.equippedRelicIds.length; i++) {
@@ -197,7 +197,7 @@ class RelicArsenalSystem {
       const by = startY;
 
       // 边框底色
-      ctx.fillStyle = 'rgba(15, 20, 16, 0.85)';
+      ctx.fillStyle = 'rgba(15, 20, 16, 0.88)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(bx, by, bSize, bSize, 4) : ctx.rect(bx, by, bSize, bSize);
       ctx.fill();

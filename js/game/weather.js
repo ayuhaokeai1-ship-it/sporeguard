@@ -272,19 +272,19 @@ class WeatherManager {
   renderWeatherHudBadge(ctx, x, y) {
     ctx.save();
     const badges = {
-      sunny: { icon: '☀️', text: '初晴 +25%经济', color: '#52C41A', border: 'rgba(115, 209, 61, 0.6)' },
-      rain: { icon: '🌧️', text: '雷暴 天霆轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.6)' },
-      mist: { icon: '🌫️', text: '浓雾 远射+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.6)' },
-      blood_moon: { icon: '🩸', text: '血月 双倍孢子', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
+      sunny: { icon: '☀️', text: '初晴+25%', color: '#52C41A', border: 'rgba(115, 209, 61, 0.7)' },
+      rain: { icon: '🌧️', text: '暴雨轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.7)' },
+      mist: { icon: '🌫️', text: '浓雾+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.7)' },
+      blood_moon: { icon: '🩸', text: '血月双倍', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
     };
 
     const b = badges[this.currentWeather] || badges.sunny;
-    const bw = 108;
-    const bh = 22;
+    const bw = 96;
+    const bh = 24;
 
-    ctx.fillStyle = 'rgba(18, 12, 6, 0.82)';
+    ctx.fillStyle = 'rgba(18, 12, 6, 0.88)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 11) : ctx.rect(x, y, bw, bh);
+    ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 12) : ctx.rect(x, y, bw, bh);
     ctx.fill();
 
     ctx.strokeStyle = b.border;
@@ -292,7 +292,7 @@ class WeatherManager {
     ctx.stroke();
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = 'bold 10.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${b.icon} ${b.text}`, x + bw * 0.5, y + bh * 0.5);

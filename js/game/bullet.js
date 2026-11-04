@@ -360,6 +360,9 @@ class BulletManager {
           const isVulnerable = (tgt.armorReduction > 0 || tgt.markTimer > 0 || tgt.residualSlowTimer > 0);
           const finalCrit = b.isCrit || isVulnerable;
           const finalBonus = b.damageBonus + (isVulnerable ? 0.35 : 0);
+          if (finalCrit && this.combatJuice) {
+            this.combatJuice.triggerCrit(tgt.x, tgt.y, b.baseDamage * 1.8, fx);
+          }
           if (isVulnerable && fx) {
             fx.spawnFloatingText(tgt.x, tgt.y - 18, '弱点贯穿!', '#6FE8FF', 1.15);
           }
@@ -465,6 +468,10 @@ class BulletManager {
         b.y = b.startY + (b.targetY - b.startY) * prog - arcHeight;
 
         if (prog >= 1) {
+          if (this.combatJuice) {
+            this.combatJuice.addTrauma(0.32);
+            this.combatJuice.triggerShockwave(b.targetX, b.targetY, b.splashRadiusPx * 1.25, 'rgba(255, 140, 0, 0.82)');
+          }
           const effRadius = b.splashRadiusPx * (b.hasToxicBurst ? 1.4 : 1.0);
           const r2 = effRadius * effRadius;
           if (economy) {

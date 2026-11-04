@@ -23,7 +23,7 @@ class CombatAnalyticsSystem {
       reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#FF4D4F', icon: 'assets/vfx/vfx_hit_spark.png' }
     };
 
-    this.toggleBtnRect = { x: 880, y: 16, w: 76, h: 26 };
+    this.toggleBtnRect = { x: 598, y: 12, w: 58, h: 32 };
   }
 
   reset() {
@@ -73,7 +73,7 @@ class CombatAnalyticsSystem {
     this.toggleBtnRect.y = y;
 
     ctx.save();
-    ctx.fillStyle = this.isOpen ? 'rgba(82, 196, 26, 0.88)' : 'rgba(25, 36, 28, 0.82)';
+    ctx.fillStyle = this.isOpen ? 'rgba(82, 196, 26, 0.88)' : 'rgba(25, 36, 28, 0.88)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h, 6) : ctx.rect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h);
     ctx.fill();
@@ -86,7 +86,7 @@ class CombatAnalyticsSystem {
     ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.isOpen ? '✖ 关闭战报' : '📊 战况DPS', x + this.toggleBtnRect.w * 0.5, y + this.toggleBtnRect.h * 0.5);
+    ctx.fillText(this.isOpen ? '✖ 关闭' : '📊 战报', x + this.toggleBtnRect.w * 0.5, y + this.toggleBtnRect.h * 0.5);
     ctx.restore();
   }
 

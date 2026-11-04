@@ -234,6 +234,10 @@ class TowerManager {
     }
 
     if (candidates.length === 0) return null;
+    if (this.tacticalTargeting) {
+      const chosen = this.tacticalTargeting.pickTarget(tower, candidates.map(c => c.enemy), map);
+      if (chosen) return chosen;
+    }
 
     const prio = tower.priority;
 
@@ -623,6 +627,11 @@ class TowerManager {
         watchNode.critChance = (watchNode.critChance || 0) + 0.20;
       }
       bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
+      if (this.mushroomMastery && this.mushroomMastery.hasMastery('watch', 'watch_m2')) {
+        if (Math.random() < 0.22) {
+          bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
+        }
+      }
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'mist') {
       bulletManager.spawnMistCloud(target.x, target.y, node);
@@ -750,6 +759,9 @@ class TowerManager {
         platform.recordDrawCall(1);
       } else {
         const drawn = drawTowerSprite(ctx, t.typeId, t.nodeId, t.animState, t.animFrame, tileX, tileY);
+      if (t.isSelected && this.tacticalTargeting) {
+        this.tacticalTargeting.renderSelectedTacticalBadge(ctx, t, false);
+      }
         if (!drawn) {
           ctx.fillStyle = t.branch === 'A' ? PALETTE.BRANCH_A : (t.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.MUSHROOM_CAP);
           ctx.fillRect(tileX + 4, tileY - 8, 24, 36);

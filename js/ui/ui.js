@@ -864,17 +864,17 @@ class UiManager {
 
     // 1.25 顶部居中：自然天候生态实时徽章 (晴空 / 雷雨 / 迷雾 / 血月) - 独立 X:464 槽位
     if (scene.weather) {
-      scene.weather.renderTopWeatherBadge(ctx, 464, 12);
+      scene.weather.renderTopWeatherBadge(ctx, 390, 14);
     }
 
     // 1.35 顶部居中偏右：远古神器状态栏 (4大装备神器) - 独立 X:540 槽位
     if (scene.relicArsenal) {
-      scene.relicArsenal.renderHudRelicBadges(ctx, 540, 14);
+      scene.relicArsenal.renderHudRelicBadges(ctx, 496, 15);
     }
 
     // 1.4 顶部战况实时DPS分析按钮 - 独立 X:610 槽位
     if (scene.combatAnalytics) {
-      scene.combatAnalytics.renderToggleButton(ctx, 610, 12);
+      scene.combatAnalytics.renderToggleButton(ctx, 598, 12);
     }
 
     // 1.5 战术成就达成即时滑入横幅 (Kingdom Rush 20大成就)
@@ -1000,15 +1000,15 @@ class UiManager {
 
     const barX = 10;
     const barY = 8;
-    const barW = 448;
-    const barH = 46;
+    const barW = 370;
+    const barH = 44;
 
-    // 顶部 AI 雕刻木纹藤蔓横梁 (限制于 X:10..458 范围，坚决不与天气、神器、倍速发生重叠)
+    // 顶部 AI 雕刻木纹藤蔓横梁 (严格限制于 X:10..380 范围，为天气、神器、战报留出充裕空间)
     this.drawAiFrame(ctx, 'top_bar', barX, barY, barW, barH, 0.98);
 
     // (A) 生命种子胶囊槽
     ctx.save();
-    roundRectPath(ctx, barX + 14, barY + 9, 86, 28, 14);
+    roundRectPath(ctx, barX + 8, barY + 8, 72, 28, 14);
     ctx.fillStyle = 'rgba(20, 12, 6, 0.55)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(230, 187, 96, 0.45)';
@@ -1016,21 +1016,21 @@ class UiManager {
     ctx.stroke();
 
     const seedScale = 1 + (this.seedPopTimer > 0 ? Math.sin((this.seedPopTimer / 0.28) * Math.PI) * 0.22 : 0);
-    drawUiIcon(ctx, 16, 'seed', barX + 20, barY + 10, 24);
-    ctx.translate(barX + 64, barY + 23);
+    drawUiIcon(ctx, 16, 'seed', barX + 12, barY + 9, 22);
+    ctx.translate(barX + 52, barY + 22);
     ctx.scale(seedScale, seedScale);
     drawArtText(ctx, String(seeds), 0, 0, {
       style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 16,
+      size: 15,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.6
+      strokeWidth: 1.5
     });
     ctx.restore();
 
     // (B) 黄金孢子胶囊槽
     ctx.save();
-    roundRectPath(ctx, barX + 104, barY + 9, 106, 28, 14);
+    roundRectPath(ctx, barX + 84, barY + 8, 88, 28, 14);
     ctx.fillStyle = 'rgba(20, 12, 6, 0.55)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(230, 187, 96, 0.45)';
@@ -1038,12 +1038,12 @@ class UiManager {
     ctx.stroke();
 
     const sporeScale = 1 + (this.sporePopTimer > 0 ? Math.sin((this.sporePopTimer / 0.24) * Math.PI) * 0.22 : 0);
-    drawUiIcon(ctx, 16, 'spore', barX + 110, barY + 10, 24);
-    ctx.translate(barX + 164, barY + 23);
+    drawUiIcon(ctx, 16, 'spore', barX + 88, barY + 9, 22);
+    ctx.translate(barX + 138, barY + 22);
     ctx.scale(sporeScale, sporeScale);
     drawArtText(ctx, String(spores), 0, 0, {
       style: 'gold',
-      size: 16,
+      size: 15,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 1.8
@@ -1053,17 +1053,17 @@ class UiManager {
     // (C) 波次进度与状态铭牌
     const waveMgr = scene.waveManager;
     ctx.save();
-    roundRectPath(ctx, barX + 214, barY + 9, 114, 28, 14);
+    roundRectPath(ctx, barX + 176, barY + 8, 96, 28, 14);
     ctx.fillStyle = 'rgba(20, 12, 6, 0.58)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(230, 187, 96, 0.45)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawUiIcon(ctx, 16, 'skull', barX + 218, barY + 11, 22);
-    drawArtText(ctx, `${waveMgr.currentWaveIndex}/${waveMgr.totalWaves}`, barX + 258, barY + 23, {
+    drawUiIcon(ctx, 16, 'skull', barX + 180, barY + 10, 20);
+    drawArtText(ctx, `${waveMgr.currentWaveIndex}/${waveMgr.totalWaves}`, barX + 220, barY + 22, {
       style: 'parchment',
-      size: 12.5,
+      size: 12,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 1.2
@@ -1072,19 +1072,19 @@ class UiManager {
     const statusTag = waveMgr.isPrepPhase()
       ? `${Math.ceil(waveMgr.prepTimerSec)}s`
       : '迎战';
-    drawArtText(ctx, statusTag, barX + 314, barY + 23, {
+    drawArtText(ctx, statusTag, barX + 262, barY + 22, {
       style: waveMgr.isPrepPhase() ? 'azure' : 'crimson',
-      size: 11,
+      size: 10.5,
       align: 'right',
       baseline: 'middle',
       strokeWidth: 1.2
     });
     ctx.restore();
 
-    // (D) 备战期「提前迎敌」号角按钮 或 战斗期「下波预告」胶囊 (严格限制于 barX + 332 开始，宽 112)
-    const callX = barX + 332;
-    const callY = barY + 7;
-    const callW = 110;
+    // (D) 备战期「提前迎敌」号角按钮 或 战斗期「下波预告」胶囊 (紧随其后 X: 276..364)
+    const callX = barX + 276;
+    const callY = barY + 6;
+    const callW = 88;
     const callH = 32;
 
     if (waveMgr.isPrepPhase()) {
@@ -1099,12 +1099,12 @@ class UiManager {
         callY,
         callW,
         callH,
-        `迎敌 +${earlyBonus}`,
+        `提前 +${earlyBonus}`,
         {
           skin: 'btn_green',
-          font: `bold 11.5px ${CN_FONT}`,
+          font: `bold 11px ${CN_FONT}`,
           iconKey: 'horn',
-          iconSize: 18
+          iconSize: 16
         },
         () => {
           scene.callWaveEarly();
@@ -1116,18 +1116,18 @@ class UiManager {
       this.drawAiFrame(ctx, 'btn_wood', callX, callY, callW, callH, 0.92);
       if (summary.length > 0) {
         const first = summary[0];
-        drawEnemySprite(ctx, first.type, 'walk', 0, callX + 16, callY + 16, false);
-        drawArtText(ctx, `×${first.count}`, callX + 36, callY + 16, {
+        drawEnemySprite(ctx, first.type, 'walk', 0, callX + 14, callY + 16, false);
+        drawArtText(ctx, `×${first.count}`, callX + 32, callY + 16, {
           style: 'parchment',
-          size: 11,
+          size: 10.5,
           align: 'left',
           baseline: 'middle',
-          strokeWidth: 1.2
+          strokeWidth: 1.0
         });
       } else {
-        drawArtText(ctx, '波次激战中', callX + callW * 0.5, callY + 16, {
+        drawArtText(ctx, '波次激战', callX + callW * 0.5, callY + 16, {
           style: 'gold',
-          size: 11,
+          size: 10.5,
           align: 'center',
           baseline: 'middle',
           strokeWidth: 1.0
@@ -1141,16 +1141,16 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_zen',
-      672,
+      668,
       12,
-      58,
+      52,
       34,
       '纯净[H]',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
+        font: `bold 10.5px ${CN_FONT}`,
         iconKey: 'guide',
-        iconSize: 16
+        iconSize: 15
       },
       () => {
         this.toggleZenMode(scene.fx);
@@ -1161,16 +1161,16 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_speed',
-      734,
+      724,
       12,
-      52,
+      50,
       34,
       `${scene.speedMultiplier}×速`,
       {
         skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
+        font: `bold 10.5px ${CN_FONT}`,
         iconKey: 'speed',
-        iconSize: 16
+        iconSize: 15
       },
       () => {
         scene.cycleSpeed();
@@ -1181,16 +1181,16 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_pause',
-      790,
+      778,
       12,
-      48,
+      50,
       34,
       '暂停',
       {
         skin: 'btn_wood',
         font: `bold 11px ${CN_FONT}`,
         iconKey: 'pause',
-        iconSize: 16
+        iconSize: 15
       },
       () => {
         scene.pauseGame();
@@ -1201,16 +1201,16 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_guide',
-      842,
+      832,
       12,
-      48,
+      50,
       34,
       '图鉴',
       {
         skin: 'btn_wood',
         font: `bold 11px ${CN_FONT}`,
         iconKey: 'guide',
-        iconSize: 16
+        iconSize: 15
       },
       () => {
         platform.playSfx('sfx_click');
@@ -1223,16 +1223,16 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_settings',
-      894,
+      886,
       12,
-      52,
+      54,
       34,
       '设置',
       {
         skin: 'btn_wood',
         font: `bold 11px ${CN_FONT}`,
         iconKey: 'settings',
-        iconSize: 16
+        iconSize: 15
       },
       () => {
         platform.playSfx('sfx_click');
@@ -1423,15 +1423,7 @@ class UiManager {
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    // 托盘金线微光与分区指示
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(14, baseY + 60);
-    ctx.lineTo(946, baseY + 60);
-    ctx.stroke();
-
-    // 区域垂直分割金线
+    // 区域垂直分割金线 (不绘制贯穿文字的水平横线，确保全部文字清晰利落)
     ctx.strokeStyle = 'rgba(198, 143, 69, 0.40)';
     ctx.beginPath();
     ctx.moveTo(140, baseY + 6);
@@ -1448,11 +1440,19 @@ class UiManager {
     // =========================================================================
     const isHeroRallying = scene.activeHeroRally || (hero && hero.isSelected);
     const hx = 18;
-    const hy = baseY + 14;
-    const hw = 44;
-    const hh = 44;
+    const hy = baseY + 16;
+    const hw = 42;
+    const hh = 42;
 
     ctx.save();
+    drawArtText(ctx, '远古树人', 74, baseY + 8, {
+      style: 'gold',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+
     // 英雄头像底框
     roundRectPath(ctx, hx, hy, hw, hh, 8);
     ctx.fillStyle = 'rgba(10, 14, 10, 0.95)';
@@ -1467,11 +1467,11 @@ class UiManager {
       ctx.drawImage(heroImg, hx + 2, hy + 2, hw - 4, hh - 4);
     }
 
-    // 等级标
-    roundRectPath(ctx, hx - 2, hy - 4, 20, 13, 3);
+    // 等级标 (精致角标)
+    roundRectPath(ctx, hx - 2, hy - 4, 22, 13, 3);
     ctx.fillStyle = '#8C5E2A';
     ctx.fill();
-    drawArtText(ctx, 'Lv.' + (hero ? hero.level : 1), hx + 8, hy + 2, {
+    drawArtText(ctx, 'Lv.' + (hero ? hero.level : 1), hx + 9, hy + 2.5, {
       style: 'gold',
       size: 9,
       align: 'center',
@@ -1481,20 +1481,20 @@ class UiManager {
 
     // 右侧生命/经验条与大招 [F]
     if (hero) {
-      const barX = hx + 50;
-      const barW = 66;
+      const barX = hx + 48;
+      const barW = 68;
 
       // 血条
       const hpRatio = Math.max(0, hero.hp / hero.maxHp);
-      roundRectPath(ctx, barX, hy + 2, barW, 8, 3);
+      roundRectPath(ctx, barX, hy + 1, barW, 9, 3);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       ctx.fill();
-      roundRectPath(ctx, barX, hy + 2, barW * hpRatio, 8, 3);
+      roundRectPath(ctx, barX, hy + 1, barW * hpRatio, 9, 3);
       ctx.fillStyle = hero.state === 'dead' ? '#8C2D29' : (hpRatio > 0.4 ? '#52C41A' : '#FF4D4F');
       ctx.fill();
-      drawArtText(ctx, hero.hp + '/' + hero.maxHp, barX + barW * 0.5, hy + 6, {
+      drawArtText(ctx, hero.hp + '/' + hero.maxHp, barX + barW * 0.5, hy + 5.5, {
         style: 'parchment',
-        size: 7.5,
+        size: 8,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.5
@@ -1509,9 +1509,9 @@ class UiManager {
       ctx.fillStyle = '#1890FF';
       ctx.fill();
 
-      // 大招冷却快捷键 [F]
+      // 大招快捷键 [F]
       const skillOnCd = hero.skillCooldown > 0 || hero.state === 'dead';
-      roundRectPath(ctx, barX, hy + 20, barW, 22, 4);
+      roundRectPath(ctx, barX, hy + 20, barW, 21, 4);
       ctx.fillStyle = skillOnCd ? 'rgba(30, 20, 15, 0.85)' : 'rgba(24, 75, 40, 0.95)';
       ctx.fill();
       ctx.strokeStyle = skillOnCd ? '#5E3E26' : '#FFD700';
@@ -1521,9 +1521,9 @@ class UiManager {
       const cdText = skillOnCd
         ? (hero.state === 'dead' ? ('复活 ' + Math.ceil(hero.reviveTimer) + 's') : ('大招 ' + Math.ceil(hero.skillCooldown) + 's'))
         : '大招 [F] 撼地!';
-      drawArtText(ctx, cdText, barX + barW * 0.5, hy + 31, {
+      drawArtText(ctx, cdText, barX + barW * 0.5, hy + 30.5, {
         style: skillOnCd ? 'dim' : 'gold',
-        size: 8.5,
+        size: 9,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.8
@@ -1539,9 +1539,9 @@ class UiManager {
     };
     const curStCfg = stanceConfig[curStance] || stanceConfig.guardian;
     const stX = hx;
-    const stY = baseY + 64;
+    const stY = baseY + 63;
     const stW = 116;
-    const stH = 20;
+    const stH = 21;
 
     roundRectPath(ctx, stX, stY, stW, stH, 4);
     ctx.fillStyle = 'rgba(26, 18, 12, 0.88)';
@@ -1550,7 +1550,7 @@ class UiManager {
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    drawArtText(ctx, '[Z] ' + curStCfg.label, stX + stW * 0.5, stY + 10, {
+    drawArtText(ctx, '[Z] ' + curStCfg.label, stX + stW * 0.5, stY + 10.5, {
       style: 'gold',
       size: 9.5,
       align: 'center',
@@ -1572,7 +1572,7 @@ class UiManager {
     });
 
     if (hero) {
-      this.registerButton('hero_f_ult', hx + 50, hy + 20, 66, 22, () => {
+      this.registerButton('hero_f_ult', hx + 48, hy + 20, 68, 21, () => {
         scene.hero.castUltimateSkill(scene.enemyManager, scene.fx);
       });
     }
@@ -1595,7 +1595,7 @@ class UiManager {
 
     drawArtText(ctx, '自然神术', 220, baseY + 8, {
       style: 'gold',
-      size: 10,
+      size: 9.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.8
@@ -1615,7 +1615,7 @@ class UiManager {
       const isCasting = scene.activeSpellCasting === item.id || (item.id === 'rally' && scene.activeRallyTargeting);
 
       const bx = spStartX + sIdx * (spGemW + spGap);
-      const by = baseY + 18;
+      const by = baseY + 16;
 
       ctx.save();
       // 法术底盘圆形宝石
@@ -1635,7 +1635,7 @@ class UiManager {
         ctx.drawImage(spellImg, bx + 5, by + 5, spGemW - 10, spGemH - 10);
       }
 
-      // 快捷键角标
+      // 快捷键角标 [Q/W/E/R]
       roundRectPath(ctx, bx - 2, by - 2, 13, 12, 3);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
       ctx.fill();
@@ -1662,8 +1662,8 @@ class UiManager {
         });
       }
 
-      // 底部名称与消耗标签
-      drawArtText(ctx, item.name, bx + spGemW * 0.5, baseY + 60, {
+      // 底部名称与消耗标签（清晰利落，无任何杂线干扰）
+      drawArtText(ctx, item.name, bx + spGemW * 0.5, baseY + 58, {
         style: disabled ? 'dim' : 'gold',
         size: 9.5,
         align: 'center',
@@ -1672,7 +1672,7 @@ class UiManager {
       });
 
       const costText = item.cost > 0 ? (item.cost + '孢') : item.tip;
-      drawArtText(ctx, costText, bx + spGemW * 0.5, baseY + 74, {
+      drawArtText(ctx, costText, bx + spGemW * 0.5, baseY + 72, {
         style: affordable ? 'parchment' : 'crimson',
         size: 8.5,
         align: 'center',
@@ -1681,7 +1681,7 @@ class UiManager {
       });
       ctx.restore();
 
-      this.registerButton('dock_spell_' + item.id, bx, by, spGemW, deckH - 24, () => {
+      this.registerButton('dock_spell_' + item.id, bx, by, spGemW, deckH - 20, () => {
         if (item.id === 'rally') {
           scene.startRallyTargeting();
         } else {
@@ -1691,7 +1691,7 @@ class UiManager {
     }
 
     // =========================================================================
-    // [分区 3] 5 大蘑菇守卫者战术卡牌舱 (X: 306..720) - 100% 真实 AI 手绘蘑菇原画
+    // [分区 3] 5 大蘑菇守卫者战术卡牌舱 (X: 306..720) - 100% 官方正版 AI 手绘原画
     // =========================================================================
     const cardW = 76;
     const cardH = 82;
@@ -1740,9 +1740,6 @@ class UiManager {
       ctx.lineWidth = isSelected ? 2 : 1.2;
       ctx.stroke();
 
-      // 卡牌立绘：【核心修复】彻底杜绝圆环准星！100% 渲染纯正 AI 手绘蘑菇守卫者动态角色原画！
-      drawTowerSprite(ctx, tId, 'base', 0, cx + cardW * 0.5, cy + 38, false);
-
       // 卡牌名称
       drawArtText(ctx, i18n.t(def.nameKey), cx + cardW * 0.5, cy + 9, {
         style: isSelected ? 'gold' : (affordable ? 'parchment' : 'dim'),
@@ -1763,6 +1760,15 @@ class UiManager {
         baseline: 'middle',
         strokeWidth: 0.8
       });
+
+      // 【核心修复：守卫UI显示】优先读取真实 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png！
+      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
+      if (cardArtImg && cardArtImg.width) {
+        ctx.drawImage(cardArtImg, cx + 16, cy + 16, 44, 48);
+      } else {
+        // 兜底绘制真实动画精灵
+        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + (cardW - 32) * 0.5, cy + 32);
+      }
 
       // 底部孢子消耗胶囊
       roundRectPath(ctx, cx + 8, cy + cardH - 18, cardW - 16, 15, 6);
@@ -1809,7 +1815,7 @@ class UiManager {
       strokeWidth: 1.0
     });
 
-    drawArtText(ctx, '返还70%', shvX + shvW * 0.5, shvY + 44, {
+    drawArtText(ctx, '返还70%', shvX + shvW * 0.5, shvY + 42, {
       style: 'gold',
       size: 10,
       align: 'center',
@@ -1817,10 +1823,10 @@ class UiManager {
       strokeWidth: 0.8
     });
 
-    roundRectPath(ctx, shvX + 6, shvY + 58, shvW - 12, 15, 3);
+    roundRectPath(ctx, shvX + 6, shvY + 56, shvW - 12, 16, 3);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fill();
-    drawArtText(ctx, '空格键', shvX + shvW * 0.5, shvY + 65.5, {
+    drawArtText(ctx, '空格键', shvX + shvW * 0.5, shvY + 64, {
       style: 'azure',
       size: 9,
       align: 'center',
@@ -1864,13 +1870,13 @@ class UiManager {
 
     drawArtText(ctx, '古种 ×' + (scene.awakeningSeeds || 0), awkX + 68, awkY + 36, {
       style: (scene.awakeningSeeds > 0) ? 'gold' : 'dim',
-      size: 11,
+      size: 11.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.8
     });
 
-    drawArtText(ctx, (scene.awakeningSeeds > 0 ? '超载全屏觉醒' : '精英敌人掉落'), awkX + 68, awkY + 54, {
+    drawArtText(ctx, (scene.awakeningSeeds > 0 ? '超载全屏觉醒' : '精英敌人掉落'), awkX + 68, awkY + 56, {
       style: isAwkTargeting ? 'azure' : 'parchment',
       size: 8.5,
       align: 'center',

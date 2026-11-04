@@ -151,6 +151,8 @@ function handleKeyDown(rawKey) {
     emitAction('hero_ultimate');
   } else if (key === 'keyz' || key === 'z') {
     emitAction('cycle_hero_stance');
+  } else if (key === 'keym' || key === 'm') {
+    emitAction('toggle_mastery');
   } else if (key === 'keyt' || key === 't') {
     emitAction('toggle_shovel');
   } else if (key === 'keyh' || key === 'h') {

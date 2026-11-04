@@ -21,6 +21,9 @@ const ElementalReactionSystem = require('../game/elementalReactions');
 const HeroSkillSystem = require('../game/heroSkills');
 const CombatAnalyticsSystem = require('../game/combatAnalytics');
 const RelicArsenalSystem = require('../game/relicArsenal');
+const { TacticalTargetingSystem } = require('../game/tacticalTargeting');
+const CombatJuiceEngine = require('../game/combatJuice');
+const { MushroomMasterySystem } = require('../game/mushroomMastery');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -66,12 +69,30 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
+    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.combatJuice = new CombatJuiceEngine();
+    this.mushroomMastery = new MushroomMasterySystem();
+    this.towerManager.scene = this;
+    this.towerManager.tacticalTargeting = this.tacticalTargeting;
+    this.towerManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.combatJuice = this.combatJuice;
+    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
     this.elementalReactions = new ElementalReactionSystem();
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
+    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.combatJuice = new CombatJuiceEngine();
+    this.mushroomMastery = new MushroomMasterySystem();
+    this.towerManager.scene = this;
+    this.towerManager.tacticalTargeting = this.tacticalTargeting;
+    this.towerManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.combatJuice = this.combatJuice;
+    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
@@ -132,6 +153,15 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
+    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.combatJuice = new CombatJuiceEngine();
+    this.mushroomMastery = new MushroomMasterySystem();
+    this.towerManager.scene = this;
+    this.towerManager.tacticalTargeting = this.tacticalTargeting;
+    this.towerManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.combatJuice = this.combatJuice;
+    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
@@ -151,6 +181,15 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
+    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.combatJuice = new CombatJuiceEngine();
+    this.mushroomMastery = new MushroomMasterySystem();
+    this.towerManager.scene = this;
+    this.towerManager.tacticalTargeting = this.tacticalTargeting;
+    this.towerManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.combatJuice = this.combatJuice;
+    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
@@ -194,6 +233,15 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
+    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.combatJuice = new CombatJuiceEngine();
+    this.mushroomMastery = new MushroomMasterySystem();
+    this.towerManager.scene = this;
+    this.towerManager.tacticalTargeting = this.tacticalTargeting;
+    this.towerManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.combatJuice = this.combatJuice;
+    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
@@ -686,12 +734,23 @@ class SceneController {
           }
         }
       } else if (act.type === 'cycle_speed') {
+        if (this.state === 'BATTLE') {
+          this.cycleSpeed();
+        }
       } else if (act.type === 'toggle_zen_mode') {
         if (this.state === 'BATTLE') {
           this.ui.toggleZenMode(this.fx);
         }
+      } else if (act.type === 'cycle_priority') {
         if (this.state === 'BATTLE') {
-          this.cycleSpeed();
+          const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
+          if (tw && this.tacticalTargeting) {
+            this.tacticalTargeting.cycleMode(tw.uid || `${tw.col}_${tw.row}`, this.fx, tw.x, tw.y);
+          }
+        }
+      } else if (act.type === 'toggle_mastery') {
+        if (this.mushroomMastery) {
+          this.mushroomMastery.togglePanel();
         }
       } else if (act.type === 'toggle_pause') {
         if (this.ui.showSettingsModal || this.ui.showGuideModal) {
@@ -964,6 +1023,10 @@ class SceneController {
     }
     this.fx.renderMapFx(ctx);
     this.sporeDropManager.render(ctx);
+    if (this.combatJuice) {
+      this.combatJuice.renderFx(ctx);
+      this.combatJuice.renderStreakWidget(ctx);
+    }
 
     ctx.restore();
 
