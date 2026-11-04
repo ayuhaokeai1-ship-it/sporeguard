@@ -595,6 +595,8 @@ class BulletManager {
    */
   renderBullets(ctx) {
     const bullets = this.bulletPool.getActiveList();
+    const hitSparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+
     for (let i = 0; i < bullets.length; i++) {
       const b = bullets[i];
 
@@ -602,16 +604,16 @@ class BulletManager {
       let drawW = 32, drawH = 32;
       if (b.kind === 'watch') {
         vfxPath = 'assets/vfx/proj_watch_arrow.png';
-        drawW = 32; drawH = 9; // 真实飞矢手绘长宽比
+        drawW = 34; drawH = 10;
       } else if (b.kind === 'thorn') {
         vfxPath = 'assets/vfx/vfx_spikes.png';
         drawW = 28; drawH = 28;
       } else if (b.kind === 'burst') {
         vfxPath = 'assets/vfx/proj_burst_shell.png';
-        drawW = 28; drawH = 28;
+        drawW = 30; drawH = 30;
       } else if (b.kind === 'lumina') {
         vfxPath = 'assets/vfx/item_golden_spore.png';
-        drawW = 20; drawH = 20;
+        drawW = 22; drawH = 22;
       }
 
       const vfxImg = vfxPath ? platform.getImage(vfxPath) : null;
@@ -619,46 +621,62 @@ class BulletManager {
         ctx.save();
         ctx.translate(Math.round(b.x), Math.round(b.y));
 
-        // 瞭望菇飞矢：沿飞行角朝向精准破空，带有轻微星蓝破风微粒
         if (b.kind === 'watch') {
           ctx.rotate(b.angle);
-          // 箭羽微弱发光
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 尾部极微弱星尘拖尾（取代突兀粗长白线）
+          // 巡林金矢尾部轻灵仙尘微粒拖尾 (Fairy Dust Motes)
           ctx.save();
-          const backX = b.x - Math.cos(b.angle) * 16;
-          const backY = b.y - Math.sin(b.angle) * 16;
-          ctx.fillStyle = 'rgba(110, 232, 255, 0.42)';
+          const backX = b.x - Math.cos(b.angle) * 14;
+          const backY = b.y - Math.sin(b.angle) * 14;
+          ctx.fillStyle = 'rgba(255, 235, 140, 0.55)';
           ctx.beginPath();
-          ctx.arc(backX, backY, 1.8, 0, Math.PI * 2);
+          ctx.arc(backX, backY, 2.0, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           continue;
         }
 
-        // 爆裂重炮：在空中旋转翻滚
         if (b.kind === 'burst') {
-          const rot = b.flightTimer * 12;
+          const rot = b.flightTimer * 14;
           ctx.rotate(rot);
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
           continue;
         }
 
-        // 其他投射物
+        if (b.kind === 'lumina') {
+          // 灵光真菌与捕蝇草圣光法球：环绕星辉神圣光冕与琉璃微光
+          const rot = (b.life || 0) * 8;
+          ctx.rotate(rot);
+          ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+          ctx.restore();
+
+          // 纯自然圣光微光外晕
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+
         ctx.rotate(b.angle);
         ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
         ctx.restore();
         continue;
       }
 
-      if (!drawProjectileSprite(ctx, b.spriteKey, b.x, b.y, b.angle, 1.0)) {
-        ctx.fillStyle = b.branchColor;
-        ctx.fillRect(Math.round(b.x - 4), Math.round(b.y - 4), 8, 8);
-        platform.recordDrawCall(1);
-      }
+      // 若尚未解码完毕，以纯自然优雅灵种光斑过渡，绝无生硬矩形
+      ctx.save();
+      ctx.fillStyle = b.branchColor || '#FFD700';
+      ctx.beginPath();
+      ctx.arc(Math.round(b.x), Math.round(b.y), 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      platform.recordDrawCall(1);
     }
   }
 }

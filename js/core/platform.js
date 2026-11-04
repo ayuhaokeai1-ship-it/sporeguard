@@ -228,37 +228,57 @@ function recordDrawCall(count) {
 /**
  * 图片资源加载（支持透明 PNG 图集）
  */
+const pendingImages = {};
+
 function loadImage(path) {
-  if (imageCache[path]) {
+  if (imageCache[path] && (imageCache[path].complete || imageCache[path].width > 0)) {
     return Promise.resolve(imageCache[path]);
   }
-  return new Promise((resolve) => {
-    let img = null;
-    if (typeof wx !== 'undefined' && typeof wx.createImage === 'function') {
-      img = wx.createImage();
-    } else if (typeof Image !== 'undefined') {
-      img = new Image();
+  if (pendingImages[path]) {
+    return pendingImages[path];
+  }
+  const p = new Promise((resolve) => {
+    let img = imageCache[path];
+    if (!img) {
+      if (typeof wx !== 'undefined' && typeof wx.createImage === 'function') {
+        img = wx.createImage();
+      } else if (typeof Image !== 'undefined') {
+        img = new Image();
+      }
     }
     if (!img) {
       resolve(null);
       return;
     }
+    // 立即登记入缓存，确保当前帧与后续帧同步引用同一 Image 实例，杜绝每帧重复创建 DOM 对象
+    imageCache[path] = img;
     img.onload = () => {
-      imageCache[path] = img;
+      delete pendingImages[path];
       resolve(img);
     };
     img.onerror = () => {
+      delete pendingImages[path];
       resolve(null);
     };
-    img.src = path;
+    if (!img.src || img.src === '') {
+      img.src = path;
+    }
+    if (img.complete && img.width > 0) {
+      delete pendingImages[path];
+      resolve(img);
+    }
   });
+  pendingImages[path] = p;
+  return p;
 }
 
 function getImage(path) {
-  if (imageCache[path]) {
-    return imageCache[path];
+  if (!path || typeof path !== 'string') return null;
+  const cached = imageCache[path];
+  if (cached && (cached.complete || cached.width > 0)) {
+    return cached;
   }
-  if (path && typeof path === 'string') {
+  if (!cached && !pendingImages[path]) {
     loadImage(path);
   }
   return imageCache[path] || null;

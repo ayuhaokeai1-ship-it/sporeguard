@@ -361,32 +361,53 @@ class ElementalReactionSystem {
   }
 
   render(ctx, animTimeSec) {
-    // 1. 渲染超导电弧自然闪电链条
+    // 1. 渲染雷木元素电弧与超导共鸣（100% AI 手绘粒子与电光灵核，彻底废除直条折线与生硬激光）
     if (this.chainArcs.length > 0) {
+      const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+      const lightImg = platform.getImage('assets/vfx/relic_lightning.png');
+      const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png');
+
       ctx.save();
       for (let i = 0; i < this.chainArcs.length; i++) {
         const arc = this.chainArcs[i];
         const alpha = Math.max(0, arc.life / arc.maxLife);
-        ctx.strokeStyle = `rgba(105, 192, 255, ${alpha * 0.9})`;
-        ctx.lineWidth = 2.2;
+        const midX = (arc.x1 + arc.x2) * 0.5 + Math.sin(animTimeSec * 18 + i) * 12;
+        const midY = (arc.y1 + arc.y2) * 0.5 + Math.cos(animTimeSec * 18 + i) * 10 - 6;
+
+        // (A) 超导能量流柔和外晕曲线（自然贝塞尔弧形，绝无直条生硬感）
+        ctx.strokeStyle = 
+gba(105, 192, 255, );
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.moveTo(arc.x1, arc.y1);
-
-        // 闪电折线抖动
-        const midX = (arc.x1 + arc.x2) * 0.5 + (Math.random() - 0.5) * 16;
-        const midY = (arc.y1 + arc.y2) * 0.5 + (Math.random() - 0.5) * 16;
-        ctx.lineTo(midX, midY);
-        ctx.lineTo(arc.x2, arc.y2);
+        ctx.quadraticCurveTo(midX, midY, arc.x2, arc.y2);
         ctx.stroke();
 
-        // 核心白亮光
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.95})`;
-        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = 
+gba(186, 231, 255, );
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
         ctx.moveTo(arc.x1, arc.y1);
-        ctx.lineTo(midX, midY);
-        ctx.lineTo(arc.x2, arc.y2);
+        ctx.quadraticCurveTo(midX, midY, arc.x2, arc.y2);
         ctx.stroke();
+
+        // (B) 沿弧线流动 AI 手绘闪电灵核
+        if (lightImg && lightImg.width) {
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.90;
+          ctx.drawImage(lightImg, midX - 10, midY - 10, 20, 20);
+          ctx.restore();
+        }
+
+        // (C) 起点与终点 AI 手绘冲击火花 (100% AI Hand-Painted Hit Sparks)
+        if (sparkImg && sparkImg.width) {
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.85;
+          const spkSize = 22;
+          ctx.drawImage(sparkImg, arc.x1 - spkSize * 0.5, arc.y1 - spkSize * 0.5, spkSize, spkSize);
+          ctx.drawImage(sparkImg, arc.x2 - spkSize * 0.5, arc.y2 - spkSize * 0.5, spkSize, spkSize);
+          ctx.restore();
+        }
       }
       ctx.restore();
     }

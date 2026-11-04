@@ -345,7 +345,12 @@ class GameMap {
     // 1. 优先绘制 AI 预合成的完整 16:9 全景手绘战场画卷 (960x540，无任何拼接裁切)
     if (atlasImg && MAP_ATLAS_LAYOUT.sceneBg) {
       const sb = MAP_ATLAS_LAYOUT.sceneBg;
-      drawSubImage(ctx, atlasImg, sb.x, sb.y, sb.w, sb.h, -160, -30, 960, 540);
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+      const bgX = -mv.OFFSET_X / mv.SCALE;
+      const bgY = -mv.OFFSET_Y / mv.SCALE;
+      const bgW = (CONFIG.RESOLUTION.LOGICAL_WIDTH || 960) / mv.SCALE;
+      const bgH = (CONFIG.RESOLUTION.LOGICAL_HEIGHT || 540) / mv.SCALE;
+      drawSubImage(ctx, atlasImg, sb.x, sb.y, sb.w, sb.h, bgX, bgY, bgW, bgH);
     } else {
       ctx.fillStyle = this.mapData.parallaxColors[0] || PALETTE.GROUND_DARKEST;
       ctx.fillRect(0, 0, CONFIG.LAYOUT.MAP.WIDTH, CONFIG.LAYOUT.MAP.HEIGHT);
@@ -437,36 +442,38 @@ class GameMap {
     }
   }
 
-  renderRouteGuides(ctx, animTimeSec) {
-    // 空中航线：超低透明微光引导（仅 0.08 透明度，柔和微风质感，绝不突兀）
-    const airPts = this.airRoute.points;
-    if (airPts.length > 1) {
+    renderRouteGuides(ctx, animTimeSec) {
+    // 100% 纯自然灵性仙尘航线：摒弃任何生硬刺目的矢量虚线，采用若隐若现的微光孢子微粒飘散引导 (Fairy Spore Motes)
+    const airSamples = this.airRoute.samples;
+    if (airSamples && airSamples.length > 0) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(110, 232, 255, 0.08)';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([4, 8]);
-      ctx.lineDashOffset = -Math.round((animTimeSec * 16) % 12);
-      ctx.beginPath();
-      ctx.moveTo(airPts[0].x, airPts[0].y);
-      for (let i = 1; i < airPts.length; i++) {
-        ctx.lineTo(airPts[i].x, airPts[i].y);
+      const numMotes = 12;
+      for (let i = 0; i < numMotes; i++) {
+        const t = ((animTimeSec * 0.18 + i / numMotes) % 1.0);
+        const dist = t * this.airRoute.totalLengthPx;
+        const pos = sampleRouteAtDistance(this.airRoute, dist);
+        const motePulse = 0.5 + Math.sin(animTimeSec * 4 + i) * 0.4;
+        ctx.fillStyle = 'rgba(186, 231, 255, ' + (0.16 * motePulse) + ')';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 2.0 * motePulse, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.stroke();
       ctx.restore();
       platform.recordDrawCall(1);
     }
 
-    // 侧翼地穴暗影微粒（极柔和的自然暗紫荧光孢子飘散，彻底移除生硬的人工几何虚线框）
-    if (this.groundRoute2 && this.groundRoute2.points.length > 1) {
-      const g2Pts = this.groundRoute2.points;
+    // 伏行突袭地道：采用若隐若现的紫晶灵气与暗影地脉微光符文脉冲，绝无生硬几何描边
+    if (this.groundRoute2 && this.groundRoute2.samples && this.groundRoute2.samples.length > 0) {
       ctx.save();
-      for (let p = 0; p < g2Pts.length - 1; p++) {
-        const segT = (animTimeSec * 0.3 + p * 0.25) % 1.0;
-        const px = g2Pts[p].x + (g2Pts[p + 1].x - g2Pts[p].x) * segT;
-        const py = g2Pts[p].y + (g2Pts[p + 1].y - g2Pts[p].y) * segT;
-        ctx.fillStyle = 'rgba(180, 120, 255, 0.25)';
+      const numFlankNodes = 8;
+      for (let j = 0; j < numFlankNodes; j++) {
+        const t2 = ((animTimeSec * 0.14 + j / numFlankNodes) % 1.0);
+        const dist2 = t2 * this.groundRoute2.totalLengthPx;
+        const pos2 = sampleRouteAtDistance(this.groundRoute2, dist2);
+        const flankPulse = 0.5 + Math.sin(animTimeSec * 5 + j * 2) * 0.5;
+        ctx.fillStyle = 'rgba(211, 173, 247, ' + (0.18 * flankPulse) + ')';
         ctx.beginPath();
-        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.arc(pos2.x, pos2.y, 2.2 * flankPulse, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();

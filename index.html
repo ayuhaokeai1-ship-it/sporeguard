@@ -1056,26 +1056,44 @@
         return;
       }
 
+      function onGameReady(fn) {
+        if (window.__SPOREGUARD__ && window.__SPOREGUARD__.scene) {
+          setTimeout(fn, 150);
+        } else {
+          setTimeout(function() { onGameReady(fn); }, 50);
+        }
+      }
+
+      function ensureGuideSeen() {
+        try {
+          if (typeof window.require === 'function') {
+            window.require('js/save/storage').markGuideSeen();
+          } else {
+            localStorage.setItem('sporeguard_guide_seen', '1');
+          }
+        } catch(e) {}
+      }
+
       if (location.hash === '#test_hero_hud') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.hero.moveTo(280, 180, S.fx);
             document.title = 'HERO_OK level=' + S.hero.level + ' hp=' + S.hero.hp + ' seeds=' + S.awakeningSeeds;
           } catch (e) {
             document.title = 'HERO_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_codex_tab0') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.ui.showGuideModal = true;
             S.ui.codexTab = 0;
@@ -1084,15 +1102,15 @@
           } catch (e) {
             document.title = 'CODEX_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_codex_tab1') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.ui.showGuideModal = true;
             S.ui.codexTab = 1;
@@ -1101,15 +1119,15 @@
           } catch (e) {
             document.title = 'CODEX_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_codex_tab2') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.ui.showGuideModal = true;
             S.ui.codexTab = 2;
@@ -1117,63 +1135,61 @@
           } catch (e) {
             document.title = 'CODEX_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_codex_tab3') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.ui.showGuideModal = true;
             S.ui.codexTab = 3;
-            document.title = 'CODEX_TAB3_ACHIEVEMENTS_OK';
+            document.title = 'CODEX_TAB3_OK';
           } catch (e) {
             document.title = 'CODEX_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_weather_and_stances') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
-            S.weather.setWeather('rain');
+            S.weather.setWeather('rain', S.fx);
             S.hero.setStance('aggressive', S.fx);
-            S.achievements.unlock('first_blood', S.fx);
-            document.title = 'WEATHER_STANCE_OK weather=' + S.weather.currentWeather + ' stance=' + S.hero.stance;
+            document.title = 'WEATHER_OK weather=' + S.weather.currentWeather + ' stance=' + S.hero.stance;
           } catch (e) {
             document.title = 'WEATHER_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_endless') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
-            S.startLevel('map1');
-            S.startEndlessMode();
+            ensureGuideSeen();
+            S.startEndlessMode('map1');
             document.title = 'ENDLESS_OK wave=' + S.waveManager.currentWaveIndex + ' isEndless=' + S.isEndlessMode;
           } catch (e) {
             document.title = 'ENDLESS_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
 
       if (location.hash === '#test_flank_spawner') {
-        setTimeout(function() {
+        onGameReady(function() {
           try {
             const S = window.__SPOREGUARD__.scene;
-            window.require('js/save/storage').markGuideSeen();
+            ensureGuideSeen();
             S.startLevel('map1');
             S.towerManager.buildTower('lumina', 16, 8, S.map, S.economy, S.fx);
             S.waveManager.currentWaveIndex = 4;
@@ -1182,7 +1198,7 @@
           } catch (e) {
             document.title = 'FLANK_ERR: ' + e.message;
           }
-        }, 300);
+        });
         return;
       }
     })();

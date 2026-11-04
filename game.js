@@ -19,6 +19,14 @@ function bootstrapGame() {
 
   const loop = new GameLoop(scene);
 
+  const g = typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof globalThis !== 'undefined' ? globalThis : window);
+  g.__SPOREGUARD__ = {
+    scene,
+    loop,
+    platform,
+    input
+  };
+
   // 预加载主包透明 PNG 精灵图集、UI图集、标题背景原画、AI 范围特效法阵与地图分包
   const vfxAssets = [
     'assets/vfx/range_watch_sniper.png',
@@ -96,7 +104,7 @@ function bootstrapGame() {
 
   loop.start();
 
-  const g = typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof globalThis !== 'undefined' ? globalThis : window);
+  g = typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof globalThis !== 'undefined' ? globalThis : window);
   g.__SPOREGUARD__ = {
     scene,
     loop,

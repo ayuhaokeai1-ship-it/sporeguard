@@ -91,6 +91,13 @@ class ForestHero {
 
     // 飞刺投射物队列（游侠姿态远程射击）
     this.activeThornProjectiles = [];
+    this.activeTraps = [];            // 游侠巡林隐秘真菌陷阱
+    this.activeSpears = [];           // 游侠贯穿金矛飞矢
+    this.bloodlustStacks = 0;         // 狂斧杀意叠加层数
+    this.bloodlustTimer = 0;          // 杀意消退计时器
+    this.brambleShieldHp = 0;         // 石肤荆棘护盾当前吸收值
+    this.brambleShieldMax = 320;      // 护盾上限
+    this.stanceAbilityCooldown = 0;   // 姿态战术微操冷却
   }
 
   /**
@@ -329,11 +336,160 @@ class ForestHero {
     return true;
   }
 
+  /**
+   * 触发当前姿态的独占微操神技 (Kingdom Rush Stance Micro Ability)
+   */
+  castStanceAbility(enemyManager, fx = null) {
+    if (this.state === 'dead' || this.stanceAbilityCooldown > 0) return false;
+    this.stanceAbilityCooldown = 8.0;
+
+    if (this.stance === 'guardian') {
+      this.brambleShieldHp = this.brambleShieldMax;
+      platform.playSfx('sfx_upgrade');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 28, '荆棘玄武壁! 吸收320伤害', '#40A9FF', 1.5);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 75, '#40A9FF');
+        fx.spawnParticles(this.x, this.y, 22, ['#40A9FF', '#91D5FF', '#FFFFFF', '#52C41A'], 35, 90, 0.3, 0.65, 4.5);
+      }
+      return true;
+    } else if (this.stance === 'aggressive') {
+      platform.playSfx('sfx_hit');
+      if (fx) {
+        fx.triggerScreenShake(4.0, 0.28);
+        fx.spawnFloatingText(this.x, this.y - 28, '狂风乱舞·落叶断空!', '#FF4D4F', 1.4);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 90, '#FF4D4F');
+        fx.spawnParticles(this.x, this.y, 35, ['#FF4D4F', '#FFA39E', '#FFD700', '#D4380D'], 50, 160, 0.25, 0.6, 5);
+      }
+      if (enemyManager) {
+        const targets = enemyManager.getAliveEnemies();
+        const cleaveDmg = Math.round(this.atkDamage * 2.2);
+        for (let i = 0; i < targets.length; i++) {
+          const e = targets[i];
+          if (!e.isFlying && Math.hypot(e.x - this.x, e.y - this.y) <= 90) {
+            enemyManager.applyDamage(e, cleaveDmg, true, 'physical', fx, null);
+            e.activeSlow = 0.85;
+            e.residualSlowTimer = 2.0;
+          }
+        }
+      }
+      return true;
+    } else if (this.stance === 'scout') {
+      platform.playSfx('sfx_place');
+      this.deployScoutTrap(this.x - 18, this.y + 6, fx);
+      this.deployScoutTrap(this.x + 18, this.y - 6, fx);
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 28, '布设隐秘巡林陷阱!', '#52C41A', 1.4);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  deployScoutTrap(x, y, fx = null) {
+    this.activeTraps.push({
+      x: x,
+      y: y,
+      triggerRadius: 24,
+      damage: 160 + this.level * 40,
+      rootDuration: 3.0,
+      lifeTimer: 35.0
+    });
+    if (fx) {
+      fx.spawnParticles(x, y, 8, ['#52C41A', '#B7EB8F', '#FFD700'], 15, 40, 0.2, 0.4, 3);
+    }
+  }
+
+  throwGoldenSpear(target, fx = null) {
+    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    this.activeSpears.push({
+      x: this.x,
+      y: this.y - 12,
+      targetEnemy: target,
+      angle: angle,
+      speed: 460,
+      pierceLeft: 3,
+      damage: Math.round(this.atkDamage * 1.4)
+    });
+    platform.playSfx('sfx_shoot');
+    if (fx) {
+      fx.spawnParticles(this.x, this.y - 12, 6, ['#FFD700', '#52C41A'], 20, 50, 0.15, 0.3, 3);
+    }
+  }
+
   update(dt, enemyManager, fx = null) {
     this.animTimer += dt;
     if (this.rallyMarkerTimer > 0) this.rallyMarkerTimer = Math.max(0, this.rallyMarkerTimer - dt);
     if (this.levelUpGlowTimer > 0) this.levelUpGlowTimer = Math.max(0, this.levelUpGlowTimer - dt);
     if (this.skillCooldown > 0) this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    if (this.stanceAbilityCooldown > 0) this.stanceAbilityCooldown = Math.max(0, this.stanceAbilityCooldown - dt);
+
+    // 游侠巡林隐秘真菌地雷更新
+    for (let tIdx = this.activeTraps.length - 1; tIdx >= 0; tIdx--) {
+      const trap = this.activeTraps[tIdx];
+      trap.lifeTimer -= dt;
+      if (trap.lifeTimer <= 0) {
+        this.activeTraps.splice(tIdx, 1);
+        continue;
+      }
+      if (enemyManager) {
+        const alive = enemyManager.getAliveEnemies();
+        let triggered = false;
+        for (let eIdx = 0; eIdx < alive.length; eIdx++) {
+          const e = alive[eIdx];
+          if (!e.isFlying && e.state !== 'death' && Math.hypot(e.x - trap.x, e.y - trap.y) <= trap.triggerRadius) {
+            triggered = true;
+            enemyManager.applyDamage(e, trap.damage, true, 'magic', fx, null);
+            e.activeSlow = 0.95;
+            e.residualSlowValue = 0.90;
+            e.residualSlowTimer = trap.rootDuration;
+            if (fx) {
+              fx.spawnFloatingText(trap.x, trap.y - 18, '巡林陷阱触发·剧毒缚足!', '#52C41A', 1.3);
+              fx.spawnParticles(trap.x, trap.y, 16, ['#52C41A', '#73D13D', '#FFD700'], 35, 80, 0.25, 0.5, 4);
+            }
+            platform.playSfx('sfx_thorn');
+            break;
+          }
+        }
+        if (triggered) {
+          this.activeTraps.splice(tIdx, 1);
+        }
+      }
+    }
+
+    // 游侠贯穿金矛弹道更新
+    for (let sIdx = this.activeSpears.length - 1; sIdx >= 0; sIdx--) {
+      const spr = this.activeSpears[sIdx];
+      spr.x += Math.cos(spr.angle) * spr.speed * dt;
+      spr.y += Math.sin(spr.angle) * spr.speed * dt;
+
+      if (spr.x < 0 || spr.x > 640 || spr.y < 0 || spr.y > 480) {
+        this.activeSpears.splice(sIdx, 1);
+        continue;
+      }
+
+      if (enemyManager) {
+        const alive = enemyManager.getAliveEnemies();
+        for (let eIdx = 0; eIdx < alive.length; eIdx++) {
+          const e = alive[eIdx];
+          if (e.state !== 'death' && Math.hypot(e.x - spr.x, e.y - spr.y) <= 16) {
+            enemyManager.applyDamage(e, spr.damage, false, 'pierce', fx, null);
+            e.activeSlow = 0.45;
+            e.residualSlowTimer = 2.0;
+            if (fx) {
+              const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+              if (sparkImg && sparkImg.width) {
+                fx.spawnParticles(spr.x, spr.y, 6, ['#FFD700', '#FFFFFF', '#52C41A'], 20, 60, 0.2, 0.4, 3.5);
+              }
+            }
+            spr.pierceLeft--;
+            if (spr.pierceLeft <= 0) {
+              this.activeSpears.splice(sIdx, 1);
+              break;
+            }
+          }
+        }
+      }
+    }
 
     // 不灭战魂狂暴计时器
     if (this.undyingTimer > 0) {
@@ -522,6 +678,49 @@ class ForestHero {
   }
 
   render(ctx, animTimeSec) {
+    // 渲染地面游侠巡林真菌陷阱 (Scout Fungal Traps)
+    if (this.activeTraps && this.activeTraps.length > 0) {
+      const dewImg = platform.getImage('assets/vfx/prop_dew.png');
+      ctx.save();
+      for (let t = 0; t < this.activeTraps.length; t++) {
+        const tr = this.activeTraps[t];
+        const pulse = 0.85 + Math.sin(animTimeSec * 6 + t) * 0.15;
+        if (dewImg && dewImg.width) {
+          ctx.drawImage(dewImg, tr.x - 10, tr.y - 10, 20, 20);
+        } else {
+          ctx.fillStyle = 'rgba(82, 196, 26, 0.65)';
+          ctx.beginPath();
+          ctx.arc(tr.x, tr.y, 6 * pulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(115, 209, 61, ' + (0.5 * pulse) + ')';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, tr.triggerRadius * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 渲染空中飞行的游侠贯穿金矛 (Flying Golden Spears)
+    if (this.activeSpears && this.activeSpears.length > 0) {
+      const spearImg = platform.getImage('assets/vfx/guard_spear.png');
+      ctx.save();
+      for (let s = 0; s < this.activeSpears.length; s++) {
+        const spr = this.activeSpears[s];
+        ctx.save();
+        ctx.translate(spr.x, spr.y);
+        ctx.rotate(spr.angle);
+        if (spearImg && spearImg.width) {
+          ctx.drawImage(spearImg, -18, -6, 36, 12);
+        } else {
+          ctx.fillStyle = '#FFD700';
+          ctx.fillRect(-12, -2, 24, 4);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
     if (this.state === 'dead') {
       // 阵亡墓碑与复活倒计时光圈
       ctx.save();
@@ -595,39 +794,57 @@ class ForestHero {
     }
     ctx.restore();
 
-    // 3. 英雄本体立绘绘制
+    // 3. 英雄本体（100% AI 手绘远古橡木树人原画，全生命周期绝无任何矢量褐方块兜底）
     ctx.save();
     const heroImg = platform.getImage('assets/vfx/hero_oak.png');
-    const walkBob = (this.state === 'walk') ? Math.sin(this.animTimer * 12) * 2.5 : 0;
-    const heroW = 46, heroH = 46;
+    const walkBob = (this.state === 'walk') ? Math.sin(this.animTimer * 12) * 2.8 : 0;
+    const breatheBob = (this.state === 'idle') ? Math.sin(animTimeSec * 3.5) * 1.5 : 0;
+    const heroW = 54, heroH = 54;
+
+    ctx.translate(Math.round(this.x), Math.round(this.y - walkBob - breatheBob));
+    if (this.facingLeft) ctx.scale(-1, 1);
+
+    // 3.0 战术姿态环绕光环与守护灵气
+    if (this.stance === 'guardian') {
+      const shieldImg = platform.getImage('assets/vfx/guard_shield.png');
+      if (shieldImg && shieldImg.width) {
+        ctx.save();
+        const rot = animTimeSec * 2.0;
+        const orbitX = Math.cos(rot) * 22;
+        const orbitY = Math.sin(rot) * 10 - 18;
+        ctx.globalAlpha = 0.85;
+        ctx.drawImage(shieldImg, orbitX - 10, orbitY - 12, 20, 24);
+        ctx.restore();
+      }
+    } else if (this.stance === 'aggressive') {
+      ctx.save();
+      const bladeGlint = Math.sin(animTimeSec * 8) * 0.25 + 0.75;
+      ctx.globalAlpha = bladeGlint * 0.45;
+      const slashVfx = platform.getImage('assets/vfx/vfx_hero_slash.png');
+      if (slashVfx && slashVfx.width) {
+        ctx.drawImage(slashVfx, -28, -38, 56, 44);
+      }
+      ctx.restore();
+    } else if (this.stance === 'scout') {
+      const spearImg = platform.getImage('assets/vfx/guard_spear.png');
+      if (spearImg && spearImg.width) {
+        ctx.save();
+        ctx.translate(-14, -22);
+        ctx.rotate(0.35);
+        ctx.globalAlpha = 0.90;
+        ctx.drawImage(spearImg, -6, -18, 12, 36);
+        ctx.restore();
+      }
+    }
 
     if (heroImg && heroImg.width) {
-      ctx.translate(this.x, this.y - walkBob);
-      if (this.facingLeft) ctx.scale(-1, 1);
-      ctx.drawImage(heroImg, -heroW * 0.5, -heroH * 0.8, heroW, heroH);
+      ctx.drawImage(heroImg, -heroW * 0.5, -heroH * 0.82, heroW, heroH);
     } else {
-      // 优雅古典树人战士矢量兜底
-      ctx.translate(this.x, this.y - walkBob);
-      if (this.facingLeft) ctx.scale(-1, 1);
-      
-      // 树皮身躯
-      ctx.fillStyle = '#5C4028';
-      ctx.fillRect(-10, -28, 20, 26);
-      // 翡翠青苔肩甲
-      ctx.fillStyle = '#389E0D';
-      ctx.beginPath();
-      ctx.arc(-8, -26, 6, 0, Math.PI * 2);
-      ctx.arc(8, -26, 6, 0, Math.PI * 2);
-      ctx.fill();
-      // 金色符文巨剑
-      ctx.fillStyle = '#FFE58F';
-      ctx.fillRect(10, -32, 5, 28);
-      ctx.fillRect(7, -12, 11, 4);
-      // 眼睛
-      ctx.fillStyle = '#FFA940';
-      ctx.beginPath();
-      ctx.arc(3, -22, 2, 0, Math.PI * 2);
-      ctx.fill();
+      // 优雅平滑过渡：即使极端网络首帧未解码，也绝对展示神圣金色古树灵种，杜绝一切丑陋方块
+      const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png');
+      if (sporeImg && sporeImg.width) {
+        ctx.drawImage(sporeImg, -16, -26, 32, 32);
+      }
     }
     ctx.restore();
 
