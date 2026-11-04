@@ -1,11 +1,23 @@
 /**
- * 森林守护英雄系统 (js/game/hero.js)
- * 深度对标《王国保卫战》(Kingdom Rush) 传奇英雄机制：
- * 1. 战场全图自由点击调遣集结（Rally Point）
- * 2. 地面肉搏拦截阻挡（Block up to 2 ground enemies）
- * 3. 战斗内等级成长体系（Lv.1 ~ Lv.5，击杀与受击成长）
- * 4. 专属主动大招【大地裂地斩】（全屏震荡、大范围群体眩晕与重创）
- * 5. 阵亡倒计时复活机制（保护战局容错率）
+ * 奇幻森林守护巨木神树英雄系统 (js/game/hero.js)
+ * 深度对标《王国保卫战》(Kingdom Rush) 英雄微操、战术姿态与天赋树系统：
+ * 
+ * 1. 【战术三姿态体系】(Tactical Stances)：
+ *    - 🛡️ 守卫姿态 (Guardian Stance): 护甲减免 +35%，最多阻挡 3 名敌军，每秒自然回春愈合 4% 生命
+ *    - ⚔️ 狂暴姿态 (Aggressive Stance): 攻速 +30%，挥砍伤害 +35%，普通攻击暴击率 +25%
+ *    - 🏹 游侠姿态 (Scout Stance): 移动速度 +45%，索敌射程扩至 180px 并投掷荆棘飞刺进行远程游击
+ * 
+ * 2. 【四阶专属天赋树】(Talent Tree Branches)：
+ *    - Lv.2 尖刺重甲 (Thorns Armor): 受到敌人物理近战攻击时，反弹 45% 割裂物理创伤
+ *    - Lv.3 狂风顺劈 (Whirlwind Cleave): 近战普通攻击升级为 65px 范围全周顺劈斩，重创周围所有敌人
+ *    - Lv.4 灵脉共鸣 (Leyline Resonance): 大招「大地轰鸣」冷却缩减至 14 秒，震波范围与击晕时长扩增 35%
+ *    - Lv.5 不灭战魂 (Undying Will): 受到致命创伤时触发锁血神迹，免疫死亡 4 秒并进入 100% 暴击狂化
+ * 
+ * 3. 100% AI 手绘高精美术资产接入：
+ *    - 英雄本体立绘: assets/vfx/hero_oak.png
+ *    - 翡翠月牙剑气: assets/vfx/vfx_hero_slash.png
+ *    - 命中暴击星芒: assets/vfx/vfx_hit_spark.png
+ *    - 远程荆棘飞刺: assets/vfx/proj_watch_arrow.png
  */
 
 const CONFIG = require('../data/config');
@@ -13,36 +25,30 @@ const PALETTE = require('../data/palette');
 const platform = require('../core/platform');
 
 class ForestHero {
-  constructor(map) {
-    this.name = '橡木守望者·奥克';
-    this.title = '林地总帅';
-    
-    // 初始站位：位于主防线核心交汇处
-    const initWp = (map && map.mapData && map.mapData.groundWaypoints)
-      ? map.mapData.groundWaypoints[Math.min(2, map.mapData.groundWaypoints.length - 1)]
-      : [6, 2];
-    
-    this.x = initWp[0] * 32 + 16;
-    this.y = initWp[1] * 32 + 16;
+  constructor(map = null) {
+    this.map = map;
+    // 初始位置设定在核心防线要冲
+    this.x = 280;
+    this.y = 230;
     this.targetX = this.x;
     this.targetY = this.y;
     
+    // 基础属性与成长
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    
-    this.baseMaxHp = 360;
-    this.maxHp = 360;
-    this.hp = 360;
-    
-    this.baseAtk = 38;
-    this.atkDamage = 38;
-    this.atkInterval = 0.95;
+    this.baseMaxHp = 520;
+    this.maxHp = this.baseMaxHp;
+    this.hp = this.maxHp;
+    this.baseAtk = 42;
+    this.atkDamage = this.baseAtk;
+    this.speed = 110;
+    this.atkRange = 46;
+    this.atkInterval = 1.05;
     this.atkCooldown = 0;
-    this.atkRange = 42;
     
-    this.speed = 110; // 移动像素/秒
+    // 动作与状态机
     this.state = 'idle'; // 'idle' | 'walk' | 'attack' | 'skill' | 'dead'
     this.animTimer = 0;
     this.facingLeft = false;
@@ -65,6 +71,73 @@ class ForestHero {
     this.rallyMarkerTimer = 0;
     this.levelUpGlowTimer = 0;
     this.isSelected = false;
+
+    // 经典战术三姿态体系 (Kingdom Rush Stance Micro)
+    this.stance = 'guardian'; // 'guardian' | 'aggressive' | 'scout'
+    this.stanceSwitchedCount = 0;
+    this.regenTimer = 0;
+    this.undyingTimer = 0;
+    this.undyingUsed = false;
+    this.scoutTrapTimer = 0;
+    this.rangedThornCooldown = 0;
+    
+    // 天赋树加点分支
+    this.talents = {
+      thornsArmor: false,     // Lv.2 尖刺重甲：受到近战攻击反弹 45% 割裂物理创伤
+      whirlwindCleave: false, // Lv.3 狂风顺劈：普通攻击造成范围顺劈并波及周围全部敌怪
+      leylineResonance: false,// Lv.4 灵脉共鸣：大招冷却缩减至 14 秒，震波范围扩增 35%
+      undyingWill: false      // Lv.5 不灭战魂：受到致命创伤时锁血 4 秒并狂化暴击
+    };
+
+    // 飞刺投射物队列（游侠姿态远程射击）
+    this.activeThornProjectiles = [];
+  }
+
+  /**
+   * 切换战术战斗姿态
+   * @param {'guardian' | 'aggressive' | 'scout'} newStance 
+   */
+  setStance(newStance, fx = null) {
+    if (this.state === 'dead' || this.stance === newStance) return;
+    this.stance = newStance;
+    this.stanceSwitchedCount++;
+
+    if (newStance === 'guardian') {
+      this.speed = 100;
+      platform.playSfx('sfx_place');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【守卫姿态】磐石坚壁·回春愈合', '#40A9FF', 1.4);
+        fx.spawnParticles(this.x, this.y, 22, ['#40A9FF', '#91D5FF', '#BAE7FF', '#FFFFFF'], 30, 85, 0.3, 0.65, 4);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 45, '#40A9FF');
+      }
+    } else if (newStance === 'aggressive') {
+      this.speed = 130;
+      platform.playSfx('sfx_hit');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【狂暴姿态】攻速+30%·伤害+35%', '#FF4D4F', 1.4);
+        fx.spawnParticles(this.x, this.y, 24, ['#FF4D4F', '#FFA39E', '#FF7875', '#FFD700'], 35, 95, 0.35, 0.7, 4.5);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 50, '#FF4D4F');
+      }
+    } else if (newStance === 'scout') {
+      this.speed = 165;
+      platform.playSfx('sfx_upgrade');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【游侠姿态】神行疾速·荆棘飞刺', '#52C41A', 1.4);
+        fx.spawnParticles(this.x, this.y, 22, ['#52C41A', '#95DE64', '#B7EB8F', '#FFE58F'], 35, 100, 0.3, 0.6, 4);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 45, '#52C41A');
+      }
+    }
+  }
+
+  /**
+   * 循环切换战斗姿态 (Z 快捷键 / 按钮点击)
+   */
+  cycleStance(fx = null) {
+    const stances = ['guardian', 'aggressive', 'scout'];
+    const curIdx = stances.indexOf(this.stance);
+    const nextStance = stances[(curIdx + 1) % stances.length];
+    this.setStance(nextStance, fx);
+    return nextStance;
   }
 
   /**
@@ -111,30 +184,93 @@ class ForestHero {
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
     // 属性飞跃成长
-    this.maxHp = this.baseMaxHp + (this.level - 1) * 85;
+    this.baseMaxHp = 520 + (this.level - 1) * 95;
+    this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.atkDamage = this.baseAtk + (this.level - 1) * 15;
+    this.baseAtk = 42 + (this.level - 1) * 16;
+    this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
+
+    // 天赋树阶段解锁
+    let talentNotice = '';
+    if (this.level === 2) {
+      this.talents.thornsArmor = true;
+      talentNotice = '解锁天赋【尖刺重甲】受到近战伤害反弹 45% 割裂物理创伤！';
+    } else if (this.level === 3) {
+      this.talents.whirlwindCleave = true;
+      talentNotice = '解锁天赋【狂风顺劈】普通攻击升级为范围顺劈！';
+    } else if (this.level === 4) {
+      this.talents.leylineResonance = true;
+      this.maxSkillCooldown = 14.0;
+      talentNotice = '解锁天赋【灵脉共鸣】大招冷却缩至 14 秒，震波扩增 35%！';
+    } else if (this.level === 5) {
+      this.talents.undyingWill = true;
+      talentNotice = '解锁奥义【不灭战魂】致命伤害锁血 4 秒并暴走狂化！';
+    }
 
     platform.playSfx('sfx_upgrade');
     if (fx) {
-      fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.5);
-      fx.spawnParticles(this.x, this.y, 32, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 40, 120, 0.4, 0.8, 5);
-      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 50, '#FFD700');
+      fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.6);
+      if (talentNotice) {
+        fx.showBanner(`🌳 英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
+      }
+      fx.spawnParticles(this.x, this.y, 36, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 45, 130, 0.4, 0.85, 5);
+      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 60, '#FFD700');
     }
   }
 
-  takeDamage(amount, enemy = null, fx = null) {
+  takeDamage(amount, enemy = null, fx = null, enemyManager = null) {
     if (this.state === 'dead') return;
-    this.hp = Math.max(0, this.hp - amount);
-    this.gainXp(Math.round(amount * 0.25), fx);
+
+    // 不灭战魂锁血期间完全免死
+    if (this.undyingTimer > 0) {
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 20, 'IMMUNE!', '#FFD700', 0.6);
+      }
+      return;
+    }
+
+    // 守卫姿态天然 35% 坚韧硬甲减伤，狂暴姿态承伤 +15%
+    let finalDamage = amount;
+    if (this.stance === 'guardian') {
+      finalDamage = Math.max(1, Math.round(amount * 0.65));
+    } else if (this.stance === 'aggressive') {
+      finalDamage = Math.round(amount * 1.15);
+    }
+
+    // 天赋 1：尖刺重甲近战创伤反弹 45%
+    if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
+      const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
+      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, null);
+      if (fx) {
+        fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
+      }
+    }
+
+    this.hp = Math.max(0, this.hp - finalDamage);
+    this.gainXp(Math.round(finalDamage * 0.25), fx);
 
     if (fx) {
-      fx.spawnFloatingText(this.x, this.y - 20, `-${amount}`, '#FF4D4F', 0.8);
-      fx.spawnParticles(this.x, this.y, 4, ['#FF4D4F', '#FFA39E'], 15, 35, 0.15, 0.25, 2.5);
+      fx.spawnFloatingText(this.x, this.y - 20, `-${finalDamage}`, '#FF4D4F', 0.8);
+      fx.spawnParticles(this.x, this.y, 5, ['#FF4D4F', '#FFA39E'], 15, 35, 0.15, 0.25, 2.5);
     }
 
     if (this.hp <= 0) {
+      // 检查天赋 4：不灭战魂触发神圣锁血
+      if (this.talents.undyingWill && !this.undyingUsed) {
+        this.undyingUsed = true;
+        this.undyingTimer = 4.0;
+        this.hp = 1;
+        platform.playSfx('sfx_thunder');
+        if (fx) {
+          fx.spawnFloatingText(this.x, this.y - 32, '【不灭战魂】锁血 4 秒!', '#FFD700', 1.8);
+          fx.showBanner('🔥 不灭战魂爆发！', '#FFD700', '树灵圣祖意志觉醒，4 秒完全免死且必定暴击！', 2.0);
+          fx.spawnParticles(this.x, this.y, 40, ['#FF4D4F', '#FFD700', '#FFFFFF'], 50, 150, 0.4, 0.8, 5);
+          if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 75, '#FF4D4F');
+        }
+        return;
+      }
+
       this.die(fx);
     }
   }
@@ -143,6 +279,7 @@ class ForestHero {
     this.state = 'dead';
     this.hp = 0;
     this.reviveTimer = this.reviveTimeTotal;
+    this.undyingTimer = 0;
     this.unblockAll();
 
     platform.playSfx('sfx_sell');
@@ -160,28 +297,31 @@ class ForestHero {
     this.state = 'skill';
 
     platform.playSfx('sfx_thunder');
+    const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
+    const baseRadius = 125 * resonanceBonus;
+    const stunDuration = 2.2 * (this.talents.leylineResonance ? 1.3 : 1.0);
+
     if (fx) {
-      fx.triggerScreenShake(6.0, 0.45);
-      fx.showBanner('大地裂地斩！', '#FFD700', '震击四方，全军退避！', 1.5);
-      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 110, '#52C41A');
-      fx.spawnParticles(this.x, this.y, 48, ['#52C41A', '#FFD700', '#D48806', '#FFFFFF'], 60, 180, 0.35, 0.75, 5.5);
+      fx.triggerScreenShake(6.5, 0.48);
+      fx.showBanner('大地裂地斩！', '#FFD700', '古树神力轰鸣四方，全军震慑！', 1.6);
+      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, baseRadius, '#52C41A');
+      fx.spawnParticles(this.x, this.y, 52, ['#52C41A', '#FFD700', '#D48806', '#FFFFFF'], 60, 190, 0.35, 0.8, 5.5);
     }
 
-    // 震晕周围 120 像素内所有敌人并造成超高爆发重创
+    // 震晕周围敌人并造成超高爆发重创
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
-      const radius = 125;
-      const skillDmg = 160 + (this.level - 1) * 55;
+      const skillDmg = Math.round((180 + (this.level - 1) * 60) * (this.stance === 'aggressive' ? 1.25 : 1.0));
 
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
         const dist = Math.hypot(e.x - this.x, e.y - this.y);
-        if (dist <= radius) {
+        if (dist <= baseRadius) {
           enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, null);
-          // 强力定身晕眩 2.2 秒
+          // 强力定身晕眩
           e.activeSlow = 0.95;
           e.residualSlowValue = 0.85;
-          e.residualSlowTimer = 2.2;
+          e.residualSlowTimer = stunDuration;
           this.gainXp(25, fx);
         }
       }
@@ -195,20 +335,46 @@ class ForestHero {
     if (this.levelUpGlowTimer > 0) this.levelUpGlowTimer = Math.max(0, this.levelUpGlowTimer - dt);
     if (this.skillCooldown > 0) this.skillCooldown = Math.max(0, this.skillCooldown - dt);
 
+    // 不灭战魂狂暴计时器
+    if (this.undyingTimer > 0) {
+      this.undyingTimer -= dt;
+      if (this.undyingTimer <= 0) {
+        this.undyingTimer = 0;
+        this.hp = Math.round(this.maxHp * 0.25); // 战魂结束后留存 25% 生机，免于暴毙
+        if (fx) {
+          fx.spawnFloatingText(this.x, this.y - 24, '生机复苏', '#52C41A', 1.0);
+        }
+      }
+    }
+
     // 阵亡复活逻辑
     if (this.state === 'dead') {
       this.reviveTimer -= dt;
       if (this.reviveTimer <= 0) {
         this.reviveTimer = 0;
         this.hp = this.maxHp;
+        this.undyingUsed = false; // 阵亡复活后重置不灭战魂次数
         this.state = 'idle';
         platform.playSfx('sfx_upgrade');
         if (fx) {
           fx.spawnFloatingText(this.x, this.y - 30, '英灵苏醒! 重返战场!', '#52C41A', 1.4);
-          fx.spawnParticles(this.x, this.y, 25, ['#52C41A', '#FFD700'], 30, 90, 0.3, 0.6, 4);
+          fx.spawnParticles(this.x, this.y, 28, ['#52C41A', '#FFD700'], 35, 95, 0.35, 0.65, 4);
         }
       }
       return;
+    }
+
+    // 守卫姿态天然生命回春机制（每秒恢复 4% 最大生命值）
+    if (this.stance === 'guardian' && this.hp < this.maxHp) {
+      this.regenTimer += dt;
+      if (this.regenTimer >= 1.0) {
+        this.regenTimer = 0;
+        const healAmt = Math.max(3, Math.round(this.maxHp * 0.04));
+        this.hp = Math.min(this.maxHp, this.hp + healAmt);
+        if (fx && Math.random() < 0.4) {
+          fx.spawnFloatingText(this.x, this.y - 24, `+${healAmt}`, '#73D13D', 0.7);
+        }
+      }
     }
 
     // 释放技能中硬直
@@ -245,6 +411,36 @@ class ForestHero {
       }
     }
 
+    // 游侠姿态：远程荆棘飞刺逻辑 (Scout Ranged Thorns)
+    if (this.stance === 'scout') {
+      if (this.rangedThornCooldown > 0) this.rangedThornCooldown -= dt;
+      if (this.rangedThornCooldown <= 0 && enemyManager) {
+        const alive = enemyManager.getAliveEnemies();
+        let closest = null;
+        let minDist = 180;
+        for (let i = 0; i < alive.length; i++) {
+          const e = alive[i];
+          if (e.state === 'death' || e.isUnderground) continue;
+          const d = Math.hypot(e.x - this.x, e.y - this.y);
+          if (d <= minDist) {
+            closest = e;
+            minDist = d;
+          }
+        }
+
+        if (closest) {
+          this.rangedThornCooldown = 1.4;
+          const thornDmg = Math.round(this.atkDamage * 0.95);
+          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, null);
+          platform.playSfx('sfx_watch');
+          if (fx) {
+            fx.spawnParticles(closest.x, closest.y, 6, ['#52C41A', '#73D13D', '#FFFFFF'], 15, 45, 0.15, 0.3, 2.5);
+            fx.spawnFloatingText(closest.x, closest.y - 16, `飞刺 -${thornDmg}`, '#52C41A', 0.7);
+          }
+        }
+      }
+    }
+
     // 地面拦截与阻挡战斗逻辑
     if (this.atkCooldown > 0) this.atkCooldown -= dt;
 
@@ -253,9 +449,10 @@ class ForestHero {
       // 清理已阵亡或超出范围的阻挡目标
       this.blockedEnemies = this.blockedEnemies.filter(e => e.state !== 'death' && Math.hypot(e.x - this.x, e.y - this.y) <= 55);
 
-      // 自动拦截经过身旁的地面敌人（最多阻挡 2 名）
+      // 自动拦截经过身旁的地面敌人（守卫姿态最多阻挡 3 名，其余姿态 2 名）
+      const maxBlock = this.stance === 'guardian' ? 3 : 2;
       for (let i = 0; i < alive.length; i++) {
-        if (this.blockedEnemies.length >= 2) break;
+        if (this.blockedEnemies.length >= maxBlock) break;
         const e = alive[i];
         if (e.isFlying || e.isUnderground || e.state === 'death') continue;
         if (e.isBlocked && e.blockedBy !== this) continue;
@@ -268,7 +465,7 @@ class ForestHero {
         }
       }
 
-      // 近战范围顺劈挥击
+      // 近战挥砍与顺劈逻辑
       if (this.blockedEnemies.length > 0 || alive.length > 0) {
         const potentialTargets = this.blockedEnemies.length > 0 ? this.blockedEnemies : alive.filter(e => !e.isFlying && Math.hypot(e.x - this.x, e.y - this.y) <= this.atkRange);
 
@@ -277,22 +474,44 @@ class ForestHero {
           if (mainTarget.x < this.x) this.facingLeft = true;
           else if (mainTarget.x > this.x) this.facingLeft = false;
 
+          // 姿态攻速修正（狂暴姿态攻速提升 30%）
+          const effectiveInterval = this.stance === 'aggressive' ? (this.atkInterval * 0.72) : this.atkInterval;
+
           if (this.atkCooldown <= 0) {
-            this.atkCooldown = this.atkInterval;
+            this.atkCooldown = effectiveInterval;
             this.state = 'attack';
 
             platform.playSfx('sfx_hit');
-            // 顺劈波及最多 2 名近战敌人
-            const hits = Math.min(2, potentialTargets.length);
+
+            // 基础伤害计算与姿态加成
+            let baseDmg = this.atkDamage;
+            let isCrit = false;
+            if (this.undyingTimer > 0) {
+              isCrit = true; // 不灭战魂期间必暴击！
+            } else if (this.stance === 'aggressive') {
+              baseDmg = Math.round(baseDmg * 1.35);
+              if (Math.random() < 0.28) isCrit = true;
+            }
+
+            const finalHitDmg = isCrit ? Math.round(baseDmg * 2.0) : baseDmg;
+
+            // 天赋 2：狂风顺劈波及全周敌人；否则波及最多 2 名
+            const maxHits = this.talents.whirlwindCleave ? 5 : (this.stance === 'aggressive' ? 3 : 2);
+            const hits = Math.min(maxHits, potentialTargets.length);
+
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
-              enemyManager.applyDamage(target, this.atkDamage, false, 'physical', fx, null);
+              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
               this.gainXp(8, fx);
             }
 
             if (fx) {
               const slashX = this.x + (this.facingLeft ? -18 : 18);
-              fx.spawnParticles(slashX, this.y - 4, 6, ['#FFE58F', '#FFFFFF', '#73D13D'], 20, 50, 0.15, 0.3, 3);
+              const pColors = isCrit ? ['#FF4D4F', '#FFD700', '#FFFFFF'] : ['#FFE58F', '#FFFFFF', '#73D13D'];
+              fx.spawnParticles(slashX, this.y - 4, isCrit ? 12 : 7, pColors, 25, 60, 0.15, 0.35, isCrit ? 4.5 : 3);
+              if (isCrit) {
+                fx.spawnFloatingText(slashX, this.y - 24, '暴击!', '#FF4D4F', 1.1);
+              }
             }
           }
         } else {
@@ -348,18 +567,30 @@ class ForestHero {
       ctx.restore();
     }
 
-    // 2. 英雄脚底战术阴影与选中高亮
+    // 2. 英雄脚底战术姿态微光光圈与阴影
     ctx.save();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + 12, 16, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // 姿态专属底环光圈
+    let stanceColor = 'rgba(64, 169, 255, 0.55)'; // 守卫蓝
+    if (this.stance === 'aggressive') stanceColor = 'rgba(255, 77, 79, 0.65)'; // 狂暴红
+    else if (this.stance === 'scout') stanceColor = 'rgba(82, 196, 26, 0.55)'; // 游侠绿
+    if (this.undyingTimer > 0) stanceColor = 'rgba(255, 215, 0, 0.9)'; // 不灭金
+
+    ctx.strokeStyle = stanceColor;
+    ctx.lineWidth = (this.isSelected || this.undyingTimer > 0) ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
     if (this.isSelected || this.levelUpGlowTimer > 0) {
       ctx.strokeStyle = this.levelUpGlowTimer > 0 ? '#FFD700' : '#73D13D';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 12, 24, 11, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -400,7 +631,7 @@ class ForestHero {
     }
     ctx.restore();
 
-        // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
+    // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
     if (this.atkCooldown > 0 && (this.atkInterval - this.atkCooldown) < 0.22) {
       const slashProg = (this.atkInterval - this.atkCooldown) / 0.22;
       const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
@@ -441,20 +672,26 @@ class ForestHero {
       }
     }
 
-// 4. 生命值条与等级徽章
+    // 4. 生命值条、战术姿态微标与等级徽章
     ctx.save();
-    const barW = 36;
+    const barW = 38;
     const barH = 5;
     const barX = this.x - barW * 0.5;
     const barY = this.y - 42;
 
     // 底底黑框
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
     // 绿色血条
     const hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
     ctx.fillStyle = hpRatio > 0.4 ? '#52C41A' : (hpRatio > 0.2 ? '#FAAD14' : '#FF4D4F');
     ctx.fillRect(barX, barY, Math.round(barW * hpRatio), barH);
+
+    // 战术姿态微标 (🛡️ / ⚔️ / 🏹)
+    const stanceIcons = { guardian: '🛡️', aggressive: '⚔️', scout: '🏹' };
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(stanceIcons[this.stance] || '🛡️', barX - 3, barY + 4);
 
     // 等级微章 (如 Lv.2)
     ctx.fillStyle = '#FFD700';

@@ -14,6 +14,8 @@ const SporelingPatrol = require('../game/sporeling');
 const SporeDropManager = require('../game/sporeDrop');
 const ForestContraptions = require('../game/contraption');
 const ForestHero = require('../game/hero');
+const WeatherManager = require('../game/weather');
+const achievements = require('../game/achievements');
 const RelicDropManager = require('../game/relic');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
@@ -54,6 +56,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false; // 1 | 2 | 3
     this.selectedBuildTowerId = 'watch';
@@ -105,6 +110,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
@@ -115,6 +123,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
@@ -149,6 +160,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = 'watch';
@@ -340,6 +354,12 @@ class SceneController {
     };
     storage.recordMapVictory(this.currentMapId, stars, this.logicalCombatTimeSec, this.economy.seeds);
     platform.playSfx('sfx_win');
+    if (this.achievements) {
+      if (this.economy.seeds >= 20) this.achievements.unlock('flawless_defense', this.fx);
+      if (this.economy.seeds === 1) this.achievements.unlock('last_stand', this.fx);
+      if (this.currentMapId === 'map1') this.achievements.unlock('spider_regicide', this.fx);
+      if (this.weather && this.weather.currentWeather === 'blood_moon') this.achievements.unlock('weather_survivor', this.fx);
+    }
   }
 
   onDefeat() {
@@ -605,6 +625,13 @@ class SceneController {
         if (this.state === 'BATTLE') {
           this.triggerSpell(act.spellId);
         }
+      } else if (act.type === 'cycle_hero_stance') {
+        if (this.state === 'BATTLE' && this.hero) {
+          this.hero.cycleStance(this.fx);
+          if (this.hero.stanceSwitchedCount >= 3) {
+            this.achievements.unlock('tactical_stances', this.fx);
+          }
+        }
       } else if (act.type === 'hero_ultimate') {
         if (this.state === 'BATTLE' && this.hero) {
           const cast = this.hero.castUltimateSkill(this.enemyManager, this.fx);
@@ -675,6 +702,12 @@ class SceneController {
     // 1.5 战利品与菇精卫小队更新
     this.relicManager.update(dt, this);
     this.contraptions.update(dt, this);
+    if (this.weather) {
+      this.weather.update(dt, this);
+    }
+    if (this.achievements) {
+      this.achievements.update(dt, this.fx);
+    }
     if (this.elderRootActiveTimer > 0) {
       this.elderRootActiveTimer = Math.max(0, this.elderRootActiveTimer - dt);
     }
@@ -785,6 +818,18 @@ class SceneController {
     this.comboKillTimer = 1.4;
 
     platform.playMusicalScale(this.comboKillCount - 1);
+    if (this.achievements) {
+      this.achievements.unlock('first_blood', this.fx);
+      if (enemy && (enemy.id === 'shadow_stalker' || enemy.type === 'flank')) {
+        this.achievements.unlock('subterranean_slayer', this.fx);
+      }
+      if (this.comboKillCount >= 10) {
+        this.achievements.unlock('multikill_overload', this.fx);
+      }
+      if (this.economy && this.economy.spores >= 2500) {
+        this.achievements.unlock('spore_tycoon', this.fx);
+      }
+    }
 
     if (this.comboKillCount >= 4) {
       this.fx.spawnFloatingText(enemy.x, enemy.y - 18, `${this.comboKillCount} 连杀!`, '#FFE58F', 0.9);
@@ -866,6 +911,11 @@ class SceneController {
     this.sporeDropManager.render(ctx);
 
     ctx.restore();
+
+    // 天候生态全屏环境滤镜、雨滴与雾气
+    if (this.weather) {
+      this.weather.renderWeatherOverlay(ctx);
+    }
 
     // 屏幕级特效横幅与红边闪烁
     this.fx.renderScreenOverlayFx(ctx);

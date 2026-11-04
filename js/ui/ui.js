@@ -798,6 +798,16 @@ class UiManager {
     // 1. 左上角：深色木质资源栏 + 波次状态与提前召唤号角
     this.renderTopResourceBar(ctx, scene);
 
+    // 1.25 顶部居中：自然天候生态实时徽章 (晴空 / 雷雨 / 迷雾 / 血月)
+    if (scene.weather) {
+      scene.weather.renderTopWeatherBadge(ctx, 426, 16);
+    }
+
+    // 1.5 战术成就达成即时滑入横幅 (Kingdom Rush 20大成就)
+    if (scene.achievements) {
+      scene.achievements.renderToast(ctx);
+    }
+
     // 侧翼突袭动态警报横幅 (Flank Incursion Banner)
     if (scene.flankAlertTimer > 0) {
       ctx.save();
@@ -1357,6 +1367,60 @@ class UiManager {
       } else {
         scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击退精英虫怪获取)!', '#FF4D4F', 1.2);
         platform.playSfx('sfx_sell');
+      }
+    });
+
+    // 3.5 战术三姿态微操按键 [Z] (守卫 🛡️ / 狂暴 ⚔️ / 游侠 🏹)
+    const zx = dockX + 246;
+    const zy = heroBarY + 16;
+    const curStance = hero ? hero.stance : 'guardian';
+    const stanceMeta = {
+      guardian: { icon: '🛡️', name: '守卫', color: '#40A9FF', border: '#1890FF' },
+      aggressive: { icon: '⚔️', name: '狂暴', color: '#FF4D4F', border: '#F5222D' },
+      scout: { icon: '🏹', name: '游侠', color: '#52C41A', border: '#389E0D' }
+    };
+    const sm = stanceMeta[curStance] || stanceMeta.guardian;
+
+    ctx.save();
+    roundRectPath(ctx, zx, zy, 46, 40, 10);
+    ctx.fillStyle = 'rgba(20, 15, 12, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = sm.border;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sm.icon, zx + 23, zy + 15);
+
+    drawArtText(ctx, sm.name, zx + 23, zy + 28, {
+      style: 'gold',
+      size: 10,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+
+    // 快捷键角标 [Z]
+    roundRectPath(ctx, zx - 2, zy - 4, 16, 14, 4);
+    ctx.fillStyle = sm.border;
+    ctx.fill();
+    drawArtText(ctx, 'Z', zx + 6, zy + 3, {
+      style: 'gold',
+      size: 9,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+    ctx.restore();
+
+    this.registerButton('hero_stance_btn', zx, zy, 46, 40, () => {
+      if (scene.hero) {
+        scene.hero.cycleStance(scene.fx);
+        if (scene.hero.stanceSwitchedCount >= 3 && scene.achievements) {
+          scene.achievements.unlock('tactical_stances', scene.fx);
+        }
       }
     });
 
@@ -2729,12 +2793,13 @@ class UiManager {
     const tabs = [
       { id: 0, label: '🌲 守林神树卫士 (5/5)' },
       { id: 1, label: '🐛 暗黑虫潮首领 (16/16)' },
-      { id: 2, label: '📜 领袖战术心得' }
+      { id: 2, label: '📜 领袖战术心得' },
+      { id: 3, label: '🏆 战术成就殿堂 (20)' }
     ];
     const tabY = my + 40;
-    const tabW = 230;
+    const tabW = 180;
     const tabH = 32;
-    const tabStartX = mx + (mw - tabs.length * tabW - (tabs.length - 1) * 12) * 0.5;
+    const tabStartX = mx + (mw - tabs.length * tabW - (tabs.length - 1) * 10) * 0.5;
 
     for (let i = 0; i < tabs.length; i++) {
       const tb = tabs[i];
@@ -2772,8 +2837,10 @@ class UiManager {
       this.renderCodexGuardiansTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     } else if (this.codexTab === 1) {
       this.renderCodexBestiaryTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
-    } else {
+    } else if (this.codexTab === 2) {
       this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+    } else {
+      this.renderCodexAchievementsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     }
 
     // 4. 底部右下角核心主交互按钮：进入林地·开启保卫战
@@ -3304,6 +3371,95 @@ class UiManager {
     }
     ctx.restore();
     platform.recordDrawCall(1);
+  }
+
+  /**
+   * 篇章 4：战术成就殿堂 (Kingdom Rush 20 大勋章殿堂)
+   */
+  renderCodexAchievementsTab(ctx, x, y, w, h) {
+    ctx.save();
+    roundRectPath(ctx, x, y, w, h, 14);
+    ctx.fillStyle = 'rgba(238, 222, 185, 0.98)';
+    ctx.fill();
+    ctx.strokeStyle = '#8C5E2A';
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+
+    const achManager = require('../game/achievements');
+    const allList = achManager.getAllAchievements();
+    const unlockedCount = achManager.getUnlockedCount();
+    const totalCount = achManager.getTotalCount();
+    const totalStars = achManager.totalStarsEarned || 0;
+
+    // 顶部统计栏
+    roundRectPath(ctx, x + 12, y + 10, w - 24, 34, 8);
+    ctx.fillStyle = 'rgba(59, 39, 24, 0.95)';
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    drawArtText(ctx, '🏆 战术成就殿堂：已达成 ' + unlockedCount + ' / ' + totalCount + ' 项 · 获得荣誉星级：⭐ ' + totalStars + ' / 30', x + (w * 0.5), y + 27, {
+      style: 'gold',
+      size: 13,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.0
+    });
+
+    // 20 项成就以 2 列 × 10 行网格自适应展示
+    const cardW = (w - 32) * 0.5;
+    const cardH = 28;
+    const startY = y + 50;
+
+    for (let i = 0; i < allList.length; i++) {
+      const a = allList[i];
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const cx = x + 12 + col * (cardW + 8);
+      const cy = startY + row * (cardH + 4);
+
+      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
+      ctx.fillStyle = a.unlocked ? 'rgba(255, 250, 235, 0.95)' : 'rgba(70, 50, 35, 0.50)';
+      ctx.fill();
+      ctx.strokeStyle = a.unlocked ? '#FFD700' : 'rgba(140, 94, 42, 0.40)';
+      ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
+      ctx.stroke();
+
+      // 图标
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(a.icon, cx + 16, cy + 14);
+
+      // 标题
+      drawArtText(ctx, a.title, cx + 32, cy + 9, {
+        style: a.unlocked ? 'ink' : 'parchment',
+        size: 11,
+        align: 'left',
+        baseline: 'middle',
+        strokeWidth: 0
+      });
+
+      // 描述简述
+      ctx.fillStyle = a.unlocked ? '#5E3E26' : '#8C8C8C';
+      ctx.font = '9px ' + CN_FONT;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const shortDesc = a.desc.length > 21 ? a.desc.slice(0, 21) + '...' : a.desc;
+      ctx.fillText(shortDesc, cx + 32, cy + 21);
+
+      // 右侧星级与状态
+      drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 14, {
+        style: a.unlocked ? 'emerald' : 'parchment',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.6
+      });
+    }
+
+    ctx.restore();
   }
 }
 

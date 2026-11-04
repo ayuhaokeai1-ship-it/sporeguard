@@ -149,6 +149,8 @@ function handleKeyDown(rawKey) {
     emitAction('cycle_speed');
   } else if (key === 'keyf' || key === 'f') {
     emitAction('hero_ultimate');
+  } else if (key === 'keyz' || key === 'z') {
+    emitAction('cycle_hero_stance');
   } else if (key === 'keyt' || key === 't') {
     emitAction('toggle_shovel');
   } else if (key === 'escape') {

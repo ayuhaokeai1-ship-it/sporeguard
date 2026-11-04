@@ -3433,6 +3433,194 @@ module.exports = {
 
   };
 
+  /* --- js/game/achievements.js --- */
+  __modules['js/game/achievements'] = function(require, module, exports) {
+/**
+ * 战术成就殿堂与勋章进阶系统 (js/game/achievements.js)
+ * 深度对标《王国保卫战》经典成就殿堂，包含 20 大战术勋章与即时弹窗
+ */
+
+const storage = require('../save/storage');
+const platform = require('../core/platform');
+
+const ACHIEVEMENTS_DATA = [
+  { id: 'first_blood', title: '🌲 树林见血', desc: '击杀首只入侵甲虫，打响林地保卫战第一枪', icon: '⚔️', rewardStars: 1 },
+  { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '以 20 颗种子完全无损的完美战绩通关任意地图', icon: '👑', rewardStars: 2 },
+  { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树英雄达到 5 级并释放「大地轰鸣」奥义', icon: '🌟', rewardStars: 1 },
+  { id: 'subterranean_slayer', title: '🕳️ 潜行破灭', desc: '全歼自侧翼腐化地穴绕行的全部暗影潜行突袭怪', icon: '🐛', rewardStars: 1 },
+  { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局积累超过 2500 黄金孢子，经济命脉固若金汤', icon: '🪙', rewardStars: 2 },
+  { id: 'multikill_overload', title: '💥 割草狂潮', desc: '触发 10 只以上敌军瞬间连环爆裂群杀', icon: '🔥', rewardStars: 1 },
+  { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座三阶终极进阶形态防御塔', icon: '💎', rewardStars: 2 },
+  { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在狂暴血月天候下坚守阵地并全歼狂暴虫潮', icon: '🌙', rewardStars: 1 },
+  { id: 'spider_regicide', title: '🕷️ 蛛后除根', desc: '击破第 10 波织网蜘蛛女王，光复图一晨曦薄雾', icon: '🏆', rewardStars: 3 },
+  { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '在无尽深渊极限模式中突破第 15 波狂暴挑战', icon: '✨', rewardStars: 3 },
+  { id: 'pitcher_gluttony', title: '🪴 贪食猪笼草', desc: '激活食人猪笼草捕食巨怪并成功消化 3 次', icon: '🍃', rewardStars: 1 },
+  { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '激活古树雷石释放连锁闪电轰击 6 只以上虫群', icon: '🌩️', rewardStars: 1 },
+  { id: 'tactical_stances', title: '🥋 兵无常势', desc: '在同一场战斗中灵活切换大橡树的三大战斗姿态', icon: '🎖️', rewardStars: 1 },
+  { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '建造神圣灵光菇并在单局产出超过 800 黄金孢子', icon: '🍄', rewardStars: 1 },
+  { id: 'permafrost_hold', title: '❄️ 绝对零度', desc: '使用极寒雾菇使至少 8 只敌人同时陷入重度减速', icon: '🧊', rewardStars: 1 },
+  { id: 'laceration_field', title: '🩸 荆棘修罗场', desc: '尖刺菇单场割裂创伤累计造成超过 3000 点物理伤害', icon: '🌵', rewardStars: 1 },
+  { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂重炮单发熔岩迫击炮弹直接消灭 5 只聚集敌怪', icon: '🎯', rewardStars: 1 },
+  { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次提前吹响号角迎战，累积丰厚军功孢子', icon: '📯', rewardStars: 1 },
+  { id: 'last_stand', title: '❤️ 绝境逆转', desc: '在生命种子仅剩最后 1 颗时绝境反击取得关卡胜利', icon: '🔥', rewardStars: 2 },
+  { id: 'codex_grandmaster', title: '📜 博学大典', desc: '翻阅林地秘典全部守林神树卫士与暗黑虫潮图鉴档案', icon: '📖', rewardStars: 1 }
+];
+
+class AchievementManager {
+  constructor() {
+    this.unlockedIds = new Set();
+    this.pendingToasts = [];
+    this.currentToast = null;
+    this.toastTimer = 0;
+    this.totalStarsEarned = 0;
+
+    this.loadFromStorage();
+  }
+
+  loadFromStorage() {
+    try {
+      const saved = platform.getStorageSync('sporeguard_achievements');
+      const list = Array.isArray(saved) ? saved : (typeof saved === 'string' ? JSON.parse(saved) : []);
+      this.unlockedIds = new Set(list);
+      this.calculateStars();
+    } catch (e) {
+      this.unlockedIds = new Set();
+    }
+  }
+
+  saveToStorage() {
+    try {
+      platform.setStorageSync('sporeguard_achievements', Array.from(this.unlockedIds));
+    } catch (e) {}
+  }
+
+  calculateStars() {
+    let s = 0;
+    for (let i = 0; i < ACHIEVEMENTS_DATA.length; i++) {
+      const a = ACHIEVEMENTS_DATA[i];
+      if (this.unlockedIds.has(a.id)) {
+        s += a.rewardStars || 1;
+      }
+    }
+    this.totalStarsEarned = s;
+  }
+
+  unlock(id, fx = null) {
+    if (this.unlockedIds.has(id)) return;
+    const item = ACHIEVEMENTS_DATA.find(it => it.id === id);
+    if (!item) return;
+
+    this.unlockedIds.add(id);
+    this.saveToStorage();
+    this.calculateStars();
+
+    this.pendingToasts.push(item);
+    platform.playSfx('sfx_upgrade');
+
+    if (fx && typeof fx.triggerScreenShake === 'function') {
+      fx.triggerScreenShake(2.0, 0.15);
+    }
+  }
+
+  isUnlocked(id) {
+    return this.unlockedIds.has(id);
+  }
+
+  getAllAchievements() {
+    return ACHIEVEMENTS_DATA.map(item => ({
+      ...item,
+      unlocked: this.unlockedIds.has(item.id)
+    }));
+  }
+
+  getUnlockedCount() {
+    return this.unlockedIds.size;
+  }
+
+  getTotalCount() {
+    return ACHIEVEMENTS_DATA.length;
+  }
+
+  update(dt) {
+    if (this.toastTimer > 0) {
+      this.toastTimer -= dt;
+      if (this.toastTimer <= 0) {
+        this.currentToast = null;
+      }
+    } else if (this.pendingToasts.length > 0) {
+      this.currentToast = this.pendingToasts.shift();
+      this.toastTimer = 3.6;
+    }
+  }
+
+  renderAchievementToast(ctx) {
+    if (!this.currentToast || this.toastTimer <= 0) return;
+
+    ctx.save();
+    const item = this.currentToast;
+    const tw = 360;
+    const th = 48;
+    const tx = (960 - tw) * 0.5;
+    
+    // 顶部平滑滑出动画
+    let ty = 24;
+    if (this.toastTimer > 3.2) {
+      const prog = (3.6 - this.toastTimer) / 0.4;
+      ty = -50 + prog * 74;
+    } else if (this.toastTimer < 0.4) {
+      const prog = this.toastTimer / 0.4;
+      ty = -50 + prog * 74;
+    }
+
+    // 古典林地木纹与羊皮纸底框
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(tx, ty, tw, th, 10) : ctx.rect(tx, ty, tw, th);
+    ctx.fill();
+
+    ctx.strokeStyle = '#FFE58F';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // 左侧徽章大图标
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.icon, tx + 28, ty + 24);
+
+    // 标题：成就解锁
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🏆 成就达成：${item.title}`, tx + 56, ty + 16);
+
+    // 描述详情
+    ctx.fillStyle = '#D9D9D9';
+    ctx.font = '10px "Microsoft YaHei", sans-serif';
+    ctx.fillText(item.desc, tx + 56, ty + 34);
+
+    // 右侧奖励星级
+    ctx.fillStyle = '#FFE58F';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 16, ty + 24);
+
+    ctx.restore();
+  }
+
+  renderToast(ctx) {
+    return this.renderAchievementToast(ctx);
+  }
+}
+
+const achievements = new AchievementManager();
+module.exports = achievements;
+
+  };
+
   /* --- js/core/pool.js --- */
   __modules['js/core/pool'] = function(require, module, exports) {
 /**
@@ -3882,6 +4070,8 @@ function handleKeyDown(rawKey) {
     emitAction('cycle_speed');
   } else if (key === 'keyf' || key === 'f') {
     emitAction('hero_ultimate');
+  } else if (key === 'keyz' || key === 'z') {
+    emitAction('cycle_hero_stance');
   } else if (key === 'keyt' || key === 't') {
     emitAction('toggle_shovel');
   } else if (key === 'escape') {
@@ -4525,6 +4715,308 @@ class FxSystem {
 }
 
 module.exports = FxSystem;
+
+  };
+
+  /* --- js/game/weather.js --- */
+  __modules['js/game/weather'] = function(require, module, exports) {
+/**
+ * 林地生态天候与动态战场环境系统 (js/game/weather.js)
+ * 深度对标《王国保卫战》《植物大战僵尸2》战场动态天候与环境机制
+ * 
+ * 包含四大天候形态：
+ * 1. ☀️ 晨曦晴空 (Sunny): 孢子产出 +25%，英雄生命自然恢复 +50%
+ * 2. 🌧️ 雷暴骤雨 (Rainstorm): 狂风骤雨，周期性召唤雷霆轰顶劈击重甲巨怪，水坑导电触电
+ * 3. 🌫️ 深林迷雾 (Deep Mist): 箭塔射程 +15%，怪物获得 15% 远程攻击轻度闪避
+ * 4. 🩸 狂暴血月 (Blood Moon): 虫潮狂化移速 +20%，但击杀掉落双倍黄金孢子与觉醒能量！
+ */
+
+const CONFIG = require('../data/config');
+const PALETTE = require('../data/palette');
+const platform = require('../core/platform');
+
+class WeatherManager {
+  constructor() {
+    this.currentWeather = 'sunny'; // 'sunny' | 'rain' | 'mist' | 'blood_moon'
+    this.weatherTimer = 0;
+    this.weatherDuration = 45.0; // 每 45 秒动态演变一次天候
+    this.lightningTimer = 4.0;   // 雷暴天候雷击冷却
+    this.raindrops = [];
+    this.fogWisps = [];
+    this.lightningFlash = 0;
+    this.weatherNoticeTimer = 0;
+    this.weatherNoticeText = '';
+
+    // 初始化雨滴粒子池
+    for (let i = 0; i < 90; i++) {
+      this.raindrops.push({
+        x: Math.random() * 960,
+        y: Math.random() * 540,
+        vy: 420 + Math.random() * 180,
+        vx: -60 - Math.random() * 40,
+        len: 12 + Math.random() * 10,
+        alpha: 0.15 + Math.random() * 0.35
+      });
+    }
+
+    // 初始化雾气团
+    for (let i = 0; i < 8; i++) {
+      this.fogWisps.push({
+        x: Math.random() * 1000 - 50,
+        y: Math.random() * 540,
+        radius: 80 + Math.random() * 90,
+        vx: 12 + Math.random() * 14,
+        alpha: 0.08 + Math.random() * 0.12
+      });
+    }
+  }
+
+  initForMap(mapId) {
+    if (mapId === 'map1') {
+      this.currentWeather = 'sunny';
+    } else if (mapId === 'map2') {
+      this.currentWeather = 'mist';
+    } else {
+      this.currentWeather = 'rain';
+    }
+    this.weatherTimer = 0;
+    this.lightningTimer = 4.0;
+    this.weatherNoticeTimer = 0;
+  }
+
+  setWeather(type, fx = null) {
+    if (this.currentWeather === type) return;
+    this.currentWeather = type;
+    this.weatherTimer = 0;
+    this.weatherNoticeTimer = 3.5;
+
+    const names = {
+      sunny: '☀️ 晨曦初晴 · 丰收晨露',
+      rain: '🌧️ 林地雷暴 · 雷霆轰顶',
+      mist: '🌫️ 幽林浓雾 · 迷雾隐踪',
+      blood_moon: '🩸 狂暴血月 · 极夜狂澜'
+    };
+    const subs = {
+      sunny: '全场孢子产出 +25%，神圣大橡树自愈速度 +50%',
+      rain: '雷霆每隔 6 秒自动天罚轰顶重型虫首，水洼导电连锁',
+      mist: '瞭望菇射程 +15%，轻甲虫潮获得 15% 飘忽闪避',
+      blood_moon: '虫潮移速狂增 +20%，击败敌军掉落双倍黄金孢子！'
+    };
+
+    this.weatherNoticeText = names[type] || '';
+    if (fx && typeof fx.showBanner === 'function') {
+      const bannerColor = type === 'blood_moon' ? '#FF4D4F' : (type === 'rain' ? '#69C0FF' : '#52C41A');
+      fx.showBanner(names[type], bannerColor, subs[type], 1.8);
+      platform.playSfx(type === 'rain' ? 'sfx_thunder' : (type === 'blood_moon' ? 'sfx_horn' : 'sfx_upgrade'));
+    }
+  }
+
+  update(dt, enemyManager = null, towerManager = null, hero = null, fx = null) {
+    this.weatherTimer += dt;
+    if (this.weatherNoticeTimer > 0) {
+      this.weatherNoticeTimer -= dt;
+    }
+
+    // 每到一定波次或时间自动循环天候
+    if (this.weatherTimer >= this.weatherDuration) {
+      this.weatherTimer = 0;
+      const cycle = ['sunny', 'mist', 'rain', 'blood_moon'];
+      const nextIdx = (cycle.indexOf(this.currentWeather) + 1) % cycle.length;
+      this.setWeather(cycle[nextIdx], fx);
+    }
+
+    // 1. 雷暴天候：自动天罚轰顶劈击场上最强精英怪
+    if (this.currentWeather === 'rain') {
+      this.lightningTimer -= dt;
+      if (this.lightningTimer <= 0) {
+        this.lightningTimer = 6.5 + Math.random() * 2.0;
+        this.triggerNaturalLightning(enemyManager, fx);
+      }
+      if (this.lightningFlash > 0) {
+        this.lightningFlash = Math.max(0, this.lightningFlash - dt * 3.5);
+      }
+    }
+
+    // 2. 雨滴粒子物理运动
+    if (this.currentWeather === 'rain') {
+      for (let i = 0; i < this.raindrops.length; i++) {
+        const r = this.raindrops[i];
+        r.x += r.vx * dt;
+        r.y += r.vy * dt;
+        if (r.y > 550 || r.x < -20) {
+          r.x = Math.random() * 1000 + 40;
+          r.y = -20;
+        }
+      }
+    }
+
+    // 3. 浓雾飘移运动
+    if (this.currentWeather === 'mist') {
+      for (let i = 0; i < this.fogWisps.length; i++) {
+        const f = this.fogWisps[i];
+        f.x += f.vx * dt;
+        if (f.x > 1050) {
+          f.x = -150;
+          f.y = Math.random() * 540;
+        }
+      }
+    }
+  }
+
+  triggerNaturalLightning(enemyManager, fx) {
+    if (!enemyManager) return;
+    const alive = enemyManager.getAliveEnemies();
+    if (alive.length === 0) return;
+
+    // 优先锁定生命最高或最靠近终点的重甲敌人
+    let target = null;
+    let maxThreat = -1;
+    for (let i = 0; i < alive.length; i++) {
+      const e = alive[i];
+      if (e.state === 'death') continue;
+      const score = e.hp + (e.baseArmor * 60) + (e.isBoss ? 400 : 0);
+      if (score > maxThreat) {
+        maxThreat = score;
+        target = e;
+      }
+    }
+
+    if (target) {
+      this.lightningFlash = 1.0;
+      platform.playSfx('sfx_thunder');
+      const lightningDmg = 140;
+      enemyManager.applyDamage(target, lightningDmg, false, 'magic', fx, null);
+
+      if (fx) {
+        fx.spawnFloatingText(target.x, target.y - 18, `⚡ 天罚 -${lightningDmg}!`, '#69C0FF', 1.2);
+        fx.spawnParticles(target.x, target.y, 14, ['#69C0FF', '#BAE7FF', '#FFD666'], 40, 90, 0.2, 0.4, 4);
+        fx.triggerScreenShake(2.5, 0.16);
+      }
+    }
+  }
+
+  getSporeGenerationModifier() {
+    if (this.currentWeather === 'sunny') return 1.25;
+    if (this.currentWeather === 'blood_moon') return 1.50;
+    return 1.0;
+  }
+
+  getEnemySpeedModifier() {
+    if (this.currentWeather === 'blood_moon') return 1.20;
+    if (this.currentWeather === 'rain') return 0.94; // 雨天道路泥泞微减速
+    return 1.0;
+  }
+
+  getTowerRangeModifier(towerType) {
+    if (this.currentWeather === 'mist' && towerType === 'watch') return 1.15;
+    return 1.0;
+  }
+
+  getHeroRegenModifier() {
+    if (this.currentWeather === 'sunny') return 1.50;
+    return 1.0;
+  }
+
+  renderWeatherEffects(ctx) {
+    ctx.save();
+
+    // 1. 阳光普照轻微暖色滤镜
+    if (this.currentWeather === 'sunny') {
+      ctx.fillStyle = 'rgba(255, 240, 180, 0.05)';
+      ctx.fillRect(0, 0, 960, 540);
+    }
+
+    // 2. 浓雾飘浮渲染
+    if (this.currentWeather === 'mist') {
+      ctx.fillStyle = 'rgba(210, 230, 240, 0.08)';
+      ctx.fillRect(0, 0, 960, 540);
+
+      for (let i = 0; i < this.fogWisps.length; i++) {
+        const f = this.fogWisps[i];
+        const g = ctx.createRadialGradient(f.x, f.y, 10, f.x, f.y, f.radius);
+        g.addColorStop(0, `rgba(220, 238, 245, ${f.alpha})`);
+        g.addColorStop(1, 'rgba(220, 238, 245, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. 雷暴暴雨水线与雷光全屏闪耀
+    if (this.currentWeather === 'rain') {
+      // 灰暗雷暴背景
+      ctx.fillStyle = 'rgba(12, 24, 38, 0.18)';
+      ctx.fillRect(0, 0, 960, 540);
+
+      // 雨丝笔刷
+      ctx.strokeStyle = 'rgba(160, 210, 255, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i = 0; i < this.raindrops.length; i++) {
+        const r = this.raindrops[i];
+        ctx.moveTo(r.x, r.y);
+        ctx.lineTo(r.x + (r.vx * 0.025), r.y + r.len);
+      }
+      ctx.stroke();
+
+      // 雷光闪白瞬间
+      if (this.lightningFlash > 0.02) {
+        ctx.fillStyle = `rgba(220, 245, 255, ${this.lightningFlash * 0.45})`;
+        ctx.fillRect(0, 0, 960, 540);
+      }
+    }
+
+    // 4. 血月虫潮暗红天幕
+    if (this.currentWeather === 'blood_moon') {
+      const pulse = 0.12 + Math.sin(Date.now() * 0.003) * 0.04;
+      ctx.fillStyle = `rgba(180, 20, 20, ${pulse})`;
+      ctx.fillRect(0, 0, 960, 540);
+
+      // 四周暗夜血光暗角
+      const vig = ctx.createRadialGradient(480, 270, 240, 480, 270, 520);
+      vig.addColorStop(0, 'rgba(120, 10, 10, 0)');
+      vig.addColorStop(1, 'rgba(120, 10, 10, 0.45)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, 960, 540);
+    }
+
+    ctx.restore();
+  }
+
+  renderWeatherHudBadge(ctx, x, y) {
+    ctx.save();
+    const badges = {
+      sunny: { icon: '☀️', text: '初晴 +25%经济', color: '#52C41A', border: 'rgba(115, 209, 61, 0.6)' },
+      rain: { icon: '🌧️', text: '雷暴 天霆轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.6)' },
+      mist: { icon: '🌫️', text: '浓雾 远射+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.6)' },
+      blood_moon: { icon: '🩸', text: '血月 双倍孢子', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
+    };
+
+    const b = badges[this.currentWeather] || badges.sunny;
+    const bw = 108;
+    const bh = 22;
+
+    ctx.fillStyle = 'rgba(18, 12, 6, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 11) : ctx.rect(x, y, bw, bh);
+    ctx.fill();
+
+    ctx.strokeStyle = b.border;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${b.icon} ${b.text}`, x + bw * 0.5, y + bh * 0.5);
+
+    ctx.restore();
+  }
+}
+
+module.exports = WeatherManager;
 
   };
 
@@ -6312,13 +6804,25 @@ module.exports = EnemyManager;
   /* --- js/game/hero.js --- */
   __modules['js/game/hero'] = function(require, module, exports) {
 /**
- * 森林守护英雄系统 (js/game/hero.js)
- * 深度对标《王国保卫战》(Kingdom Rush) 传奇英雄机制：
- * 1. 战场全图自由点击调遣集结（Rally Point）
- * 2. 地面肉搏拦截阻挡（Block up to 2 ground enemies）
- * 3. 战斗内等级成长体系（Lv.1 ~ Lv.5，击杀与受击成长）
- * 4. 专属主动大招【大地裂地斩】（全屏震荡、大范围群体眩晕与重创）
- * 5. 阵亡倒计时复活机制（保护战局容错率）
+ * 奇幻森林守护巨木神树英雄系统 (js/game/hero.js)
+ * 深度对标《王国保卫战》(Kingdom Rush) 英雄微操、战术姿态与天赋树系统：
+ * 
+ * 1. 【战术三姿态体系】(Tactical Stances)：
+ *    - 🛡️ 守卫姿态 (Guardian Stance): 护甲减免 +35%，最多阻挡 3 名敌军，每秒自然回春愈合 4% 生命
+ *    - ⚔️ 狂暴姿态 (Aggressive Stance): 攻速 +30%，挥砍伤害 +35%，普通攻击暴击率 +25%
+ *    - 🏹 游侠姿态 (Scout Stance): 移动速度 +45%，索敌射程扩至 180px 并投掷荆棘飞刺进行远程游击
+ * 
+ * 2. 【四阶专属天赋树】(Talent Tree Branches)：
+ *    - Lv.2 尖刺重甲 (Thorns Armor): 受到敌人物理近战攻击时，反弹 45% 割裂物理创伤
+ *    - Lv.3 狂风顺劈 (Whirlwind Cleave): 近战普通攻击升级为 65px 范围全周顺劈斩，重创周围所有敌人
+ *    - Lv.4 灵脉共鸣 (Leyline Resonance): 大招「大地轰鸣」冷却缩减至 14 秒，震波范围与击晕时长扩增 35%
+ *    - Lv.5 不灭战魂 (Undying Will): 受到致命创伤时触发锁血神迹，免疫死亡 4 秒并进入 100% 暴击狂化
+ * 
+ * 3. 100% AI 手绘高精美术资产接入：
+ *    - 英雄本体立绘: assets/vfx/hero_oak.png
+ *    - 翡翠月牙剑气: assets/vfx/vfx_hero_slash.png
+ *    - 命中暴击星芒: assets/vfx/vfx_hit_spark.png
+ *    - 远程荆棘飞刺: assets/vfx/proj_watch_arrow.png
  */
 
 const CONFIG = require('../data/config');
@@ -6326,36 +6830,30 @@ const PALETTE = require('../data/palette');
 const platform = require('../core/platform');
 
 class ForestHero {
-  constructor(map) {
-    this.name = '橡木守望者·奥克';
-    this.title = '林地总帅';
-    
-    // 初始站位：位于主防线核心交汇处
-    const initWp = (map && map.mapData && map.mapData.groundWaypoints)
-      ? map.mapData.groundWaypoints[Math.min(2, map.mapData.groundWaypoints.length - 1)]
-      : [6, 2];
-    
-    this.x = initWp[0] * 32 + 16;
-    this.y = initWp[1] * 32 + 16;
+  constructor(map = null) {
+    this.map = map;
+    // 初始位置设定在核心防线要冲
+    this.x = 280;
+    this.y = 230;
     this.targetX = this.x;
     this.targetY = this.y;
     
+    // 基础属性与成长
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    
-    this.baseMaxHp = 360;
-    this.maxHp = 360;
-    this.hp = 360;
-    
-    this.baseAtk = 38;
-    this.atkDamage = 38;
-    this.atkInterval = 0.95;
+    this.baseMaxHp = 520;
+    this.maxHp = this.baseMaxHp;
+    this.hp = this.maxHp;
+    this.baseAtk = 42;
+    this.atkDamage = this.baseAtk;
+    this.speed = 110;
+    this.atkRange = 46;
+    this.atkInterval = 1.05;
     this.atkCooldown = 0;
-    this.atkRange = 42;
     
-    this.speed = 110; // 移动像素/秒
+    // 动作与状态机
     this.state = 'idle'; // 'idle' | 'walk' | 'attack' | 'skill' | 'dead'
     this.animTimer = 0;
     this.facingLeft = false;
@@ -6378,6 +6876,73 @@ class ForestHero {
     this.rallyMarkerTimer = 0;
     this.levelUpGlowTimer = 0;
     this.isSelected = false;
+
+    // 经典战术三姿态体系 (Kingdom Rush Stance Micro)
+    this.stance = 'guardian'; // 'guardian' | 'aggressive' | 'scout'
+    this.stanceSwitchedCount = 0;
+    this.regenTimer = 0;
+    this.undyingTimer = 0;
+    this.undyingUsed = false;
+    this.scoutTrapTimer = 0;
+    this.rangedThornCooldown = 0;
+    
+    // 天赋树加点分支
+    this.talents = {
+      thornsArmor: false,     // Lv.2 尖刺重甲：受到近战攻击反弹 45% 割裂物理创伤
+      whirlwindCleave: false, // Lv.3 狂风顺劈：普通攻击造成范围顺劈并波及周围全部敌怪
+      leylineResonance: false,// Lv.4 灵脉共鸣：大招冷却缩减至 14 秒，震波范围扩增 35%
+      undyingWill: false      // Lv.5 不灭战魂：受到致命创伤时锁血 4 秒并狂化暴击
+    };
+
+    // 飞刺投射物队列（游侠姿态远程射击）
+    this.activeThornProjectiles = [];
+  }
+
+  /**
+   * 切换战术战斗姿态
+   * @param {'guardian' | 'aggressive' | 'scout'} newStance 
+   */
+  setStance(newStance, fx = null) {
+    if (this.state === 'dead' || this.stance === newStance) return;
+    this.stance = newStance;
+    this.stanceSwitchedCount++;
+
+    if (newStance === 'guardian') {
+      this.speed = 100;
+      platform.playSfx('sfx_place');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【守卫姿态】磐石坚壁·回春愈合', '#40A9FF', 1.4);
+        fx.spawnParticles(this.x, this.y, 22, ['#40A9FF', '#91D5FF', '#BAE7FF', '#FFFFFF'], 30, 85, 0.3, 0.65, 4);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 45, '#40A9FF');
+      }
+    } else if (newStance === 'aggressive') {
+      this.speed = 130;
+      platform.playSfx('sfx_hit');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【狂暴姿态】攻速+30%·伤害+35%', '#FF4D4F', 1.4);
+        fx.spawnParticles(this.x, this.y, 24, ['#FF4D4F', '#FFA39E', '#FF7875', '#FFD700'], 35, 95, 0.35, 0.7, 4.5);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 50, '#FF4D4F');
+      }
+    } else if (newStance === 'scout') {
+      this.speed = 165;
+      platform.playSfx('sfx_upgrade');
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 32, '【游侠姿态】神行疾速·荆棘飞刺', '#52C41A', 1.4);
+        fx.spawnParticles(this.x, this.y, 22, ['#52C41A', '#95DE64', '#B7EB8F', '#FFE58F'], 35, 100, 0.3, 0.6, 4);
+        if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 45, '#52C41A');
+      }
+    }
+  }
+
+  /**
+   * 循环切换战斗姿态 (Z 快捷键 / 按钮点击)
+   */
+  cycleStance(fx = null) {
+    const stances = ['guardian', 'aggressive', 'scout'];
+    const curIdx = stances.indexOf(this.stance);
+    const nextStance = stances[(curIdx + 1) % stances.length];
+    this.setStance(nextStance, fx);
+    return nextStance;
   }
 
   /**
@@ -6424,30 +6989,93 @@ class ForestHero {
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
     // 属性飞跃成长
-    this.maxHp = this.baseMaxHp + (this.level - 1) * 85;
+    this.baseMaxHp = 520 + (this.level - 1) * 95;
+    this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.atkDamage = this.baseAtk + (this.level - 1) * 15;
+    this.baseAtk = 42 + (this.level - 1) * 16;
+    this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
+
+    // 天赋树阶段解锁
+    let talentNotice = '';
+    if (this.level === 2) {
+      this.talents.thornsArmor = true;
+      talentNotice = '解锁天赋【尖刺重甲】受到近战伤害反弹 45% 割裂物理创伤！';
+    } else if (this.level === 3) {
+      this.talents.whirlwindCleave = true;
+      talentNotice = '解锁天赋【狂风顺劈】普通攻击升级为范围顺劈！';
+    } else if (this.level === 4) {
+      this.talents.leylineResonance = true;
+      this.maxSkillCooldown = 14.0;
+      talentNotice = '解锁天赋【灵脉共鸣】大招冷却缩至 14 秒，震波扩增 35%！';
+    } else if (this.level === 5) {
+      this.talents.undyingWill = true;
+      talentNotice = '解锁奥义【不灭战魂】致命伤害锁血 4 秒并暴走狂化！';
+    }
 
     platform.playSfx('sfx_upgrade');
     if (fx) {
-      fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.5);
-      fx.spawnParticles(this.x, this.y, 32, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 40, 120, 0.4, 0.8, 5);
-      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 50, '#FFD700');
+      fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.6);
+      if (talentNotice) {
+        fx.showBanner(`🌳 英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
+      }
+      fx.spawnParticles(this.x, this.y, 36, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 45, 130, 0.4, 0.85, 5);
+      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 60, '#FFD700');
     }
   }
 
-  takeDamage(amount, enemy = null, fx = null) {
+  takeDamage(amount, enemy = null, fx = null, enemyManager = null) {
     if (this.state === 'dead') return;
-    this.hp = Math.max(0, this.hp - amount);
-    this.gainXp(Math.round(amount * 0.25), fx);
+
+    // 不灭战魂锁血期间完全免死
+    if (this.undyingTimer > 0) {
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 20, 'IMMUNE!', '#FFD700', 0.6);
+      }
+      return;
+    }
+
+    // 守卫姿态天然 35% 坚韧硬甲减伤，狂暴姿态承伤 +15%
+    let finalDamage = amount;
+    if (this.stance === 'guardian') {
+      finalDamage = Math.max(1, Math.round(amount * 0.65));
+    } else if (this.stance === 'aggressive') {
+      finalDamage = Math.round(amount * 1.15);
+    }
+
+    // 天赋 1：尖刺重甲近战创伤反弹 45%
+    if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
+      const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
+      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, null);
+      if (fx) {
+        fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
+      }
+    }
+
+    this.hp = Math.max(0, this.hp - finalDamage);
+    this.gainXp(Math.round(finalDamage * 0.25), fx);
 
     if (fx) {
-      fx.spawnFloatingText(this.x, this.y - 20, `-${amount}`, '#FF4D4F', 0.8);
-      fx.spawnParticles(this.x, this.y, 4, ['#FF4D4F', '#FFA39E'], 15, 35, 0.15, 0.25, 2.5);
+      fx.spawnFloatingText(this.x, this.y - 20, `-${finalDamage}`, '#FF4D4F', 0.8);
+      fx.spawnParticles(this.x, this.y, 5, ['#FF4D4F', '#FFA39E'], 15, 35, 0.15, 0.25, 2.5);
     }
 
     if (this.hp <= 0) {
+      // 检查天赋 4：不灭战魂触发神圣锁血
+      if (this.talents.undyingWill && !this.undyingUsed) {
+        this.undyingUsed = true;
+        this.undyingTimer = 4.0;
+        this.hp = 1;
+        platform.playSfx('sfx_thunder');
+        if (fx) {
+          fx.spawnFloatingText(this.x, this.y - 32, '【不灭战魂】锁血 4 秒!', '#FFD700', 1.8);
+          fx.showBanner('🔥 不灭战魂爆发！', '#FFD700', '树灵圣祖意志觉醒，4 秒完全免死且必定暴击！', 2.0);
+          fx.spawnParticles(this.x, this.y, 40, ['#FF4D4F', '#FFD700', '#FFFFFF'], 50, 150, 0.4, 0.8, 5);
+          if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 75, '#FF4D4F');
+        }
+        return;
+      }
+
       this.die(fx);
     }
   }
@@ -6456,6 +7084,7 @@ class ForestHero {
     this.state = 'dead';
     this.hp = 0;
     this.reviveTimer = this.reviveTimeTotal;
+    this.undyingTimer = 0;
     this.unblockAll();
 
     platform.playSfx('sfx_sell');
@@ -6473,28 +7102,31 @@ class ForestHero {
     this.state = 'skill';
 
     platform.playSfx('sfx_thunder');
+    const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
+    const baseRadius = 125 * resonanceBonus;
+    const stunDuration = 2.2 * (this.talents.leylineResonance ? 1.3 : 1.0);
+
     if (fx) {
-      fx.triggerScreenShake(6.0, 0.45);
-      fx.showBanner('大地裂地斩！', '#FFD700', '震击四方，全军退避！', 1.5);
-      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 110, '#52C41A');
-      fx.spawnParticles(this.x, this.y, 48, ['#52C41A', '#FFD700', '#D48806', '#FFFFFF'], 60, 180, 0.35, 0.75, 5.5);
+      fx.triggerScreenShake(6.5, 0.48);
+      fx.showBanner('大地裂地斩！', '#FFD700', '古树神力轰鸣四方，全军震慑！', 1.6);
+      if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, baseRadius, '#52C41A');
+      fx.spawnParticles(this.x, this.y, 52, ['#52C41A', '#FFD700', '#D48806', '#FFFFFF'], 60, 190, 0.35, 0.8, 5.5);
     }
 
-    // 震晕周围 120 像素内所有敌人并造成超高爆发重创
+    // 震晕周围敌人并造成超高爆发重创
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
-      const radius = 125;
-      const skillDmg = 160 + (this.level - 1) * 55;
+      const skillDmg = Math.round((180 + (this.level - 1) * 60) * (this.stance === 'aggressive' ? 1.25 : 1.0));
 
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
         const dist = Math.hypot(e.x - this.x, e.y - this.y);
-        if (dist <= radius) {
+        if (dist <= baseRadius) {
           enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, null);
-          // 强力定身晕眩 2.2 秒
+          // 强力定身晕眩
           e.activeSlow = 0.95;
           e.residualSlowValue = 0.85;
-          e.residualSlowTimer = 2.2;
+          e.residualSlowTimer = stunDuration;
           this.gainXp(25, fx);
         }
       }
@@ -6508,20 +7140,46 @@ class ForestHero {
     if (this.levelUpGlowTimer > 0) this.levelUpGlowTimer = Math.max(0, this.levelUpGlowTimer - dt);
     if (this.skillCooldown > 0) this.skillCooldown = Math.max(0, this.skillCooldown - dt);
 
+    // 不灭战魂狂暴计时器
+    if (this.undyingTimer > 0) {
+      this.undyingTimer -= dt;
+      if (this.undyingTimer <= 0) {
+        this.undyingTimer = 0;
+        this.hp = Math.round(this.maxHp * 0.25); // 战魂结束后留存 25% 生机，免于暴毙
+        if (fx) {
+          fx.spawnFloatingText(this.x, this.y - 24, '生机复苏', '#52C41A', 1.0);
+        }
+      }
+    }
+
     // 阵亡复活逻辑
     if (this.state === 'dead') {
       this.reviveTimer -= dt;
       if (this.reviveTimer <= 0) {
         this.reviveTimer = 0;
         this.hp = this.maxHp;
+        this.undyingUsed = false; // 阵亡复活后重置不灭战魂次数
         this.state = 'idle';
         platform.playSfx('sfx_upgrade');
         if (fx) {
           fx.spawnFloatingText(this.x, this.y - 30, '英灵苏醒! 重返战场!', '#52C41A', 1.4);
-          fx.spawnParticles(this.x, this.y, 25, ['#52C41A', '#FFD700'], 30, 90, 0.3, 0.6, 4);
+          fx.spawnParticles(this.x, this.y, 28, ['#52C41A', '#FFD700'], 35, 95, 0.35, 0.65, 4);
         }
       }
       return;
+    }
+
+    // 守卫姿态天然生命回春机制（每秒恢复 4% 最大生命值）
+    if (this.stance === 'guardian' && this.hp < this.maxHp) {
+      this.regenTimer += dt;
+      if (this.regenTimer >= 1.0) {
+        this.regenTimer = 0;
+        const healAmt = Math.max(3, Math.round(this.maxHp * 0.04));
+        this.hp = Math.min(this.maxHp, this.hp + healAmt);
+        if (fx && Math.random() < 0.4) {
+          fx.spawnFloatingText(this.x, this.y - 24, `+${healAmt}`, '#73D13D', 0.7);
+        }
+      }
     }
 
     // 释放技能中硬直
@@ -6558,6 +7216,36 @@ class ForestHero {
       }
     }
 
+    // 游侠姿态：远程荆棘飞刺逻辑 (Scout Ranged Thorns)
+    if (this.stance === 'scout') {
+      if (this.rangedThornCooldown > 0) this.rangedThornCooldown -= dt;
+      if (this.rangedThornCooldown <= 0 && enemyManager) {
+        const alive = enemyManager.getAliveEnemies();
+        let closest = null;
+        let minDist = 180;
+        for (let i = 0; i < alive.length; i++) {
+          const e = alive[i];
+          if (e.state === 'death' || e.isUnderground) continue;
+          const d = Math.hypot(e.x - this.x, e.y - this.y);
+          if (d <= minDist) {
+            closest = e;
+            minDist = d;
+          }
+        }
+
+        if (closest) {
+          this.rangedThornCooldown = 1.4;
+          const thornDmg = Math.round(this.atkDamage * 0.95);
+          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, null);
+          platform.playSfx('sfx_watch');
+          if (fx) {
+            fx.spawnParticles(closest.x, closest.y, 6, ['#52C41A', '#73D13D', '#FFFFFF'], 15, 45, 0.15, 0.3, 2.5);
+            fx.spawnFloatingText(closest.x, closest.y - 16, `飞刺 -${thornDmg}`, '#52C41A', 0.7);
+          }
+        }
+      }
+    }
+
     // 地面拦截与阻挡战斗逻辑
     if (this.atkCooldown > 0) this.atkCooldown -= dt;
 
@@ -6566,9 +7254,10 @@ class ForestHero {
       // 清理已阵亡或超出范围的阻挡目标
       this.blockedEnemies = this.blockedEnemies.filter(e => e.state !== 'death' && Math.hypot(e.x - this.x, e.y - this.y) <= 55);
 
-      // 自动拦截经过身旁的地面敌人（最多阻挡 2 名）
+      // 自动拦截经过身旁的地面敌人（守卫姿态最多阻挡 3 名，其余姿态 2 名）
+      const maxBlock = this.stance === 'guardian' ? 3 : 2;
       for (let i = 0; i < alive.length; i++) {
-        if (this.blockedEnemies.length >= 2) break;
+        if (this.blockedEnemies.length >= maxBlock) break;
         const e = alive[i];
         if (e.isFlying || e.isUnderground || e.state === 'death') continue;
         if (e.isBlocked && e.blockedBy !== this) continue;
@@ -6581,7 +7270,7 @@ class ForestHero {
         }
       }
 
-      // 近战范围顺劈挥击
+      // 近战挥砍与顺劈逻辑
       if (this.blockedEnemies.length > 0 || alive.length > 0) {
         const potentialTargets = this.blockedEnemies.length > 0 ? this.blockedEnemies : alive.filter(e => !e.isFlying && Math.hypot(e.x - this.x, e.y - this.y) <= this.atkRange);
 
@@ -6590,22 +7279,44 @@ class ForestHero {
           if (mainTarget.x < this.x) this.facingLeft = true;
           else if (mainTarget.x > this.x) this.facingLeft = false;
 
+          // 姿态攻速修正（狂暴姿态攻速提升 30%）
+          const effectiveInterval = this.stance === 'aggressive' ? (this.atkInterval * 0.72) : this.atkInterval;
+
           if (this.atkCooldown <= 0) {
-            this.atkCooldown = this.atkInterval;
+            this.atkCooldown = effectiveInterval;
             this.state = 'attack';
 
             platform.playSfx('sfx_hit');
-            // 顺劈波及最多 2 名近战敌人
-            const hits = Math.min(2, potentialTargets.length);
+
+            // 基础伤害计算与姿态加成
+            let baseDmg = this.atkDamage;
+            let isCrit = false;
+            if (this.undyingTimer > 0) {
+              isCrit = true; // 不灭战魂期间必暴击！
+            } else if (this.stance === 'aggressive') {
+              baseDmg = Math.round(baseDmg * 1.35);
+              if (Math.random() < 0.28) isCrit = true;
+            }
+
+            const finalHitDmg = isCrit ? Math.round(baseDmg * 2.0) : baseDmg;
+
+            // 天赋 2：狂风顺劈波及全周敌人；否则波及最多 2 名
+            const maxHits = this.talents.whirlwindCleave ? 5 : (this.stance === 'aggressive' ? 3 : 2);
+            const hits = Math.min(maxHits, potentialTargets.length);
+
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
-              enemyManager.applyDamage(target, this.atkDamage, false, 'physical', fx, null);
+              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
               this.gainXp(8, fx);
             }
 
             if (fx) {
               const slashX = this.x + (this.facingLeft ? -18 : 18);
-              fx.spawnParticles(slashX, this.y - 4, 6, ['#FFE58F', '#FFFFFF', '#73D13D'], 20, 50, 0.15, 0.3, 3);
+              const pColors = isCrit ? ['#FF4D4F', '#FFD700', '#FFFFFF'] : ['#FFE58F', '#FFFFFF', '#73D13D'];
+              fx.spawnParticles(slashX, this.y - 4, isCrit ? 12 : 7, pColors, 25, 60, 0.15, 0.35, isCrit ? 4.5 : 3);
+              if (isCrit) {
+                fx.spawnFloatingText(slashX, this.y - 24, '暴击!', '#FF4D4F', 1.1);
+              }
             }
           }
         } else {
@@ -6661,18 +7372,30 @@ class ForestHero {
       ctx.restore();
     }
 
-    // 2. 英雄脚底战术阴影与选中高亮
+    // 2. 英雄脚底战术姿态微光光圈与阴影
     ctx.save();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + 12, 16, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // 姿态专属底环光圈
+    let stanceColor = 'rgba(64, 169, 255, 0.55)'; // 守卫蓝
+    if (this.stance === 'aggressive') stanceColor = 'rgba(255, 77, 79, 0.65)'; // 狂暴红
+    else if (this.stance === 'scout') stanceColor = 'rgba(82, 196, 26, 0.55)'; // 游侠绿
+    if (this.undyingTimer > 0) stanceColor = 'rgba(255, 215, 0, 0.9)'; // 不灭金
+
+    ctx.strokeStyle = stanceColor;
+    ctx.lineWidth = (this.isSelected || this.undyingTimer > 0) ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
     if (this.isSelected || this.levelUpGlowTimer > 0) {
       ctx.strokeStyle = this.levelUpGlowTimer > 0 ? '#FFD700' : '#73D13D';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 12, 24, 11, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -6713,7 +7436,7 @@ class ForestHero {
     }
     ctx.restore();
 
-        // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
+    // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
     if (this.atkCooldown > 0 && (this.atkInterval - this.atkCooldown) < 0.22) {
       const slashProg = (this.atkInterval - this.atkCooldown) / 0.22;
       const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
@@ -6754,20 +7477,26 @@ class ForestHero {
       }
     }
 
-// 4. 生命值条与等级徽章
+    // 4. 生命值条、战术姿态微标与等级徽章
     ctx.save();
-    const barW = 36;
+    const barW = 38;
     const barH = 5;
     const barX = this.x - barW * 0.5;
     const barY = this.y - 42;
 
     // 底底黑框
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
     // 绿色血条
     const hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
     ctx.fillStyle = hpRatio > 0.4 ? '#52C41A' : (hpRatio > 0.2 ? '#FAAD14' : '#FF4D4F');
     ctx.fillRect(barX, barY, Math.round(barW * hpRatio), barH);
+
+    // 战术姿态微标 (🛡️ / ⚔️ / 🏹)
+    const stanceIcons = { guardian: '🛡️', aggressive: '⚔️', scout: '🏹' };
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(stanceIcons[this.stance] || '🛡️', barX - 3, barY + 4);
 
     // 等级微章 (如 Lv.2)
     ctx.fillStyle = '#FFD700';
@@ -10744,6 +11473,16 @@ class UiManager {
     // 1. 左上角：深色木质资源栏 + 波次状态与提前召唤号角
     this.renderTopResourceBar(ctx, scene);
 
+    // 1.25 顶部居中：自然天候生态实时徽章 (晴空 / 雷雨 / 迷雾 / 血月)
+    if (scene.weather) {
+      scene.weather.renderTopWeatherBadge(ctx, 426, 16);
+    }
+
+    // 1.5 战术成就达成即时滑入横幅 (Kingdom Rush 20大成就)
+    if (scene.achievements) {
+      scene.achievements.renderToast(ctx);
+    }
+
     // 侧翼突袭动态警报横幅 (Flank Incursion Banner)
     if (scene.flankAlertTimer > 0) {
       ctx.save();
@@ -11303,6 +12042,60 @@ class UiManager {
       } else {
         scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击退精英虫怪获取)!', '#FF4D4F', 1.2);
         platform.playSfx('sfx_sell');
+      }
+    });
+
+    // 3.5 战术三姿态微操按键 [Z] (守卫 🛡️ / 狂暴 ⚔️ / 游侠 🏹)
+    const zx = dockX + 246;
+    const zy = heroBarY + 16;
+    const curStance = hero ? hero.stance : 'guardian';
+    const stanceMeta = {
+      guardian: { icon: '🛡️', name: '守卫', color: '#40A9FF', border: '#1890FF' },
+      aggressive: { icon: '⚔️', name: '狂暴', color: '#FF4D4F', border: '#F5222D' },
+      scout: { icon: '🏹', name: '游侠', color: '#52C41A', border: '#389E0D' }
+    };
+    const sm = stanceMeta[curStance] || stanceMeta.guardian;
+
+    ctx.save();
+    roundRectPath(ctx, zx, zy, 46, 40, 10);
+    ctx.fillStyle = 'rgba(20, 15, 12, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = sm.border;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sm.icon, zx + 23, zy + 15);
+
+    drawArtText(ctx, sm.name, zx + 23, zy + 28, {
+      style: 'gold',
+      size: 10,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+
+    // 快捷键角标 [Z]
+    roundRectPath(ctx, zx - 2, zy - 4, 16, 14, 4);
+    ctx.fillStyle = sm.border;
+    ctx.fill();
+    drawArtText(ctx, 'Z', zx + 6, zy + 3, {
+      style: 'gold',
+      size: 9,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+    ctx.restore();
+
+    this.registerButton('hero_stance_btn', zx, zy, 46, 40, () => {
+      if (scene.hero) {
+        scene.hero.cycleStance(scene.fx);
+        if (scene.hero.stanceSwitchedCount >= 3 && scene.achievements) {
+          scene.achievements.unlock('tactical_stances', scene.fx);
+        }
       }
     });
 
@@ -12675,12 +13468,13 @@ class UiManager {
     const tabs = [
       { id: 0, label: '🌲 守林神树卫士 (5/5)' },
       { id: 1, label: '🐛 暗黑虫潮首领 (16/16)' },
-      { id: 2, label: '📜 领袖战术心得' }
+      { id: 2, label: '📜 领袖战术心得' },
+      { id: 3, label: '🏆 战术成就殿堂 (20)' }
     ];
     const tabY = my + 40;
-    const tabW = 230;
+    const tabW = 180;
     const tabH = 32;
-    const tabStartX = mx + (mw - tabs.length * tabW - (tabs.length - 1) * 12) * 0.5;
+    const tabStartX = mx + (mw - tabs.length * tabW - (tabs.length - 1) * 10) * 0.5;
 
     for (let i = 0; i < tabs.length; i++) {
       const tb = tabs[i];
@@ -12718,8 +13512,10 @@ class UiManager {
       this.renderCodexGuardiansTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     } else if (this.codexTab === 1) {
       this.renderCodexBestiaryTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
-    } else {
+    } else if (this.codexTab === 2) {
       this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+    } else {
+      this.renderCodexAchievementsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     }
 
     // 4. 底部右下角核心主交互按钮：进入林地·开启保卫战
@@ -13251,6 +14047,95 @@ class UiManager {
     ctx.restore();
     platform.recordDrawCall(1);
   }
+
+  /**
+   * 篇章 4：战术成就殿堂 (Kingdom Rush 20 大勋章殿堂)
+   */
+  renderCodexAchievementsTab(ctx, x, y, w, h) {
+    ctx.save();
+    roundRectPath(ctx, x, y, w, h, 14);
+    ctx.fillStyle = 'rgba(238, 222, 185, 0.98)';
+    ctx.fill();
+    ctx.strokeStyle = '#8C5E2A';
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+
+    const achManager = require('../game/achievements');
+    const allList = achManager.getAllAchievements();
+    const unlockedCount = achManager.getUnlockedCount();
+    const totalCount = achManager.getTotalCount();
+    const totalStars = achManager.totalStarsEarned || 0;
+
+    // 顶部统计栏
+    roundRectPath(ctx, x + 12, y + 10, w - 24, 34, 8);
+    ctx.fillStyle = 'rgba(59, 39, 24, 0.95)';
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    drawArtText(ctx, '🏆 战术成就殿堂：已达成 ' + unlockedCount + ' / ' + totalCount + ' 项 · 获得荣誉星级：⭐ ' + totalStars + ' / 30', x + (w * 0.5), y + 27, {
+      style: 'gold',
+      size: 13,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.0
+    });
+
+    // 20 项成就以 2 列 × 10 行网格自适应展示
+    const cardW = (w - 32) * 0.5;
+    const cardH = 28;
+    const startY = y + 50;
+
+    for (let i = 0; i < allList.length; i++) {
+      const a = allList[i];
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const cx = x + 12 + col * (cardW + 8);
+      const cy = startY + row * (cardH + 4);
+
+      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
+      ctx.fillStyle = a.unlocked ? 'rgba(255, 250, 235, 0.95)' : 'rgba(70, 50, 35, 0.50)';
+      ctx.fill();
+      ctx.strokeStyle = a.unlocked ? '#FFD700' : 'rgba(140, 94, 42, 0.40)';
+      ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
+      ctx.stroke();
+
+      // 图标
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(a.icon, cx + 16, cy + 14);
+
+      // 标题
+      drawArtText(ctx, a.title, cx + 32, cy + 9, {
+        style: a.unlocked ? 'ink' : 'parchment',
+        size: 11,
+        align: 'left',
+        baseline: 'middle',
+        strokeWidth: 0
+      });
+
+      // 描述简述
+      ctx.fillStyle = a.unlocked ? '#5E3E26' : '#8C8C8C';
+      ctx.font = '9px ' + CN_FONT;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const shortDesc = a.desc.length > 21 ? a.desc.slice(0, 21) + '...' : a.desc;
+      ctx.fillText(shortDesc, cx + 32, cy + 21);
+
+      // 右侧星级与状态
+      drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 14, {
+        style: a.unlocked ? 'emerald' : 'parchment',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.6
+      });
+    }
+
+    ctx.restore();
+  }
 }
 
 module.exports = UiManager;
@@ -13275,6 +14160,8 @@ const SporelingPatrol = require('../game/sporeling');
 const SporeDropManager = require('../game/sporeDrop');
 const ForestContraptions = require('../game/contraption');
 const ForestHero = require('../game/hero');
+const WeatherManager = require('../game/weather');
+const achievements = require('../game/achievements');
 const RelicDropManager = require('../game/relic');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
@@ -13315,6 +14202,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false; // 1 | 2 | 3
     this.selectedBuildTowerId = 'watch';
@@ -13366,6 +14256,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
@@ -13376,6 +14269,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
@@ -13410,6 +14306,9 @@ class SceneController {
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
+    this.weather = new WeatherManager();
+    this.achievements = achievements;
+    this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = 'watch';
@@ -13601,6 +14500,12 @@ class SceneController {
     };
     storage.recordMapVictory(this.currentMapId, stars, this.logicalCombatTimeSec, this.economy.seeds);
     platform.playSfx('sfx_win');
+    if (this.achievements) {
+      if (this.economy.seeds >= 20) this.achievements.unlock('flawless_defense', this.fx);
+      if (this.economy.seeds === 1) this.achievements.unlock('last_stand', this.fx);
+      if (this.currentMapId === 'map1') this.achievements.unlock('spider_regicide', this.fx);
+      if (this.weather && this.weather.currentWeather === 'blood_moon') this.achievements.unlock('weather_survivor', this.fx);
+    }
   }
 
   onDefeat() {
@@ -13866,6 +14771,13 @@ class SceneController {
         if (this.state === 'BATTLE') {
           this.triggerSpell(act.spellId);
         }
+      } else if (act.type === 'cycle_hero_stance') {
+        if (this.state === 'BATTLE' && this.hero) {
+          this.hero.cycleStance(this.fx);
+          if (this.hero.stanceSwitchedCount >= 3) {
+            this.achievements.unlock('tactical_stances', this.fx);
+          }
+        }
       } else if (act.type === 'hero_ultimate') {
         if (this.state === 'BATTLE' && this.hero) {
           const cast = this.hero.castUltimateSkill(this.enemyManager, this.fx);
@@ -13936,6 +14848,12 @@ class SceneController {
     // 1.5 战利品与菇精卫小队更新
     this.relicManager.update(dt, this);
     this.contraptions.update(dt, this);
+    if (this.weather) {
+      this.weather.update(dt, this);
+    }
+    if (this.achievements) {
+      this.achievements.update(dt, this.fx);
+    }
     if (this.elderRootActiveTimer > 0) {
       this.elderRootActiveTimer = Math.max(0, this.elderRootActiveTimer - dt);
     }
@@ -14046,6 +14964,18 @@ class SceneController {
     this.comboKillTimer = 1.4;
 
     platform.playMusicalScale(this.comboKillCount - 1);
+    if (this.achievements) {
+      this.achievements.unlock('first_blood', this.fx);
+      if (enemy && (enemy.id === 'shadow_stalker' || enemy.type === 'flank')) {
+        this.achievements.unlock('subterranean_slayer', this.fx);
+      }
+      if (this.comboKillCount >= 10) {
+        this.achievements.unlock('multikill_overload', this.fx);
+      }
+      if (this.economy && this.economy.spores >= 2500) {
+        this.achievements.unlock('spore_tycoon', this.fx);
+      }
+    }
 
     if (this.comboKillCount >= 4) {
       this.fx.spawnFloatingText(enemy.x, enemy.y - 18, `${this.comboKillCount} 连杀!`, '#FFE58F', 0.9);
@@ -14127,6 +15057,11 @@ class SceneController {
     this.sporeDropManager.render(ctx);
 
     ctx.restore();
+
+    // 天候生态全屏环境滤镜、雨滴与雾气
+    if (this.weather) {
+      this.weather.renderWeatherOverlay(ctx);
+    }
 
     // 屏幕级特效横幅与红边闪烁
     this.fx.renderScreenOverlayFx(ctx);

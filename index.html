@@ -1120,6 +1120,39 @@
         return;
       }
 
+      if (location.hash === '#test_codex_tab3') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.ui.showGuideModal = true;
+            S.ui.codexTab = 3;
+            document.title = 'CODEX_TAB3_ACHIEVEMENTS_OK';
+          } catch (e) {
+            document.title = 'CODEX_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
+      if (location.hash === '#test_weather_and_stances') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.weather.setWeather('rain');
+            S.hero.setStance('aggressive', S.fx);
+            S.achievements.unlock('first_blood', S.fx);
+            document.title = 'WEATHER_STANCE_OK weather=' + S.weather.currentWeather + ' stance=' + S.hero.stance;
+          } catch (e) {
+            document.title = 'WEATHER_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
+
       if (location.hash === '#test_endless') {
         setTimeout(function() {
           try {
