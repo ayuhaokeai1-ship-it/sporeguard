@@ -323,7 +323,8 @@ class BulletManager {
             combatTimeSec,
             map,
             economy,
-            fx
+            fx,
+            'lumina'
           );
           tgt.activeSlow = Math.max(tgt.activeSlow || 0, 0.35);
           tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 2.0);
@@ -371,7 +372,8 @@ class BulletManager {
             combatTimeSec,
             map,
             economy,
-            fx
+            fx,
+            'watch'
           );
           if (fx) {
             fx.onSingleHit(tgt.x, tgt.y, b.branchColor);

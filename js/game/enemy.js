@@ -31,8 +31,21 @@ class EnemyManager {
   constructor() {
     this.flyingWebs = [];
     this.relicManager = null;
+    const self = this;
     this.pool = new ObjectPool(
       () => ({
+        takeDamage(amount, fx = null, dType = 'nature') {
+          if (this.state === 'death' || this.hp <= 0) return;
+          const dmg = Math.max(1, Math.round(amount));
+          this.hp -= dmg;
+          this.whiteFlashFrames = 2;
+          if (fx) {
+            fx.spawnDamageText(Math.round(this.x), Math.round(this.y - 14), '-' + dmg, '#FF4D4F');
+          }
+          if (this.hp <= 0) {
+            self.killEnemy(this, fx);
+          }
+        },
         uid: 0,
         type: 'beetle',
         def: ENEMIES.beetle,
@@ -238,7 +251,7 @@ class EnemyManager {
    * 原始伤害 = 基础伤害 × (1 + 增伤合计) × 暴击倍率 × 标记倍率
    * 实际伤害 = max(原始伤害 − 护甲, 原始伤害 × 20%)
    */
-  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx) {
+  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx, damageType = 'watch') {
     if (!enemy || enemy.state === 'death') return { dealt: 0, killed: false };
 
     // Burrower underground evasion vs unearthing
@@ -297,18 +310,19 @@ class EnemyManager {
     enemy.hp -= actualDamage;
     const isKilled = enemy.hp <= 0;
 
+    const dType = damageType || (appliesMark ? 'watch' : 'burst');
     if (this.scene) {
       if (this.scene.combatAnalytics) {
-        this.scene.combatAnalytics.recordDamage(damageType || 'watch', Math.round(actualDamage), isKilled);
+        this.scene.combatAnalytics.recordDamage(dType, Math.round(actualDamage), isKilled);
       }
       if (this.scene.elementalReactions) {
         let elem = null;
-        if (damageType === 'fire' || damageType === 'splash') elem = 'pyro';
-        else if (damageType === 'water' || damageType === 'nature') elem = 'hydro';
-        else if (damageType === 'shock' || damageType === 'magic') elem = 'electro';
-        else if (damageType === 'frost' || damageType === 'mist') elem = 'cryo';
-        else if (damageType === 'poison' || damageType === 'toxic') elem = 'toxic';
-        else if (damageType === 'pierce') elem = 'dendro';
+        if (dType === 'fire' || dType === 'splash' || dType === 'burst') elem = 'pyro';
+        else if (dType === 'water' || dType === 'nature' || dType === 'lumina') elem = 'hydro';
+        else if (dType === 'shock' || dType === 'magic') elem = 'electro';
+        else if (dType === 'frost' || dType === 'mist') elem = 'cryo';
+        else if (dType === 'poison' || dType === 'toxic' || dType === 'thorn') elem = 'toxic';
+        else if (dType === 'pierce' || dType === 'watch') elem = 'dendro';
 
         if (elem) {
           this.scene.elementalReactions.applyElement(enemy, elem, Math.round(actualDamage), this.scene);
