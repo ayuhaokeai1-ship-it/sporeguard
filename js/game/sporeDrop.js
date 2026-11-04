@@ -127,49 +127,33 @@ class SporeDropManager {
       ctx.translate(dx, dy);
       ctx.scale(d.scale, d.scale);
 
-      // 1. 地面微弱柔金阴影
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      // 1. 地面微光阴影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
       ctx.beginPath();
-      ctx.ellipse(0, 10 - bob, 10, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 12 - bob, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. 外层阳光金色微波光晕
-      const pulse = 1.0 + Math.sin(d.animTimer * 6) * 0.08;
-      ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
-      ctx.beginPath();
-      ctx.arc(0, 0, 16 * pulse, 0, Math.PI * 2);
-      ctx.fill();
+      // 2. 纯手绘神圣黄金孢子明珠 (100% AI Hand-Painted Golden Spore Pearl)
+      const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png');
+      if (sporeImg && sporeImg.width) {
+        const pulse = 1.0 + Math.sin(d.animTimer * 5) * 0.08;
+        const dw = 32 * pulse;
+        const dh = 34 * pulse;
 
-      // 3. 剔透琥珀金孢球本体
-      const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 12);
-      grad.addColorStop(0, '#FFFDF5');
-      grad.addColorStop(0.35, '#FFE58F');
-      grad.addColorStop(0.85, '#FAAD14');
-      grad.addColorStop(1, '#D48806');
+        // 背后柔和金色晨曦光晕
+        const glowGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 22 * pulse);
+        glowGrad.addColorStop(0, 'rgba(255, 235, 140, 0.45)');
+        glowGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, 11, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      // 4. 高光萌斑与星芒
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(-3.5, -3.5, 2.5, 0, Math.PI * 2);
-      ctx.arc(3.5, 3.5, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 5. 内部微缩幼芽/孢子核
-      ctx.fillStyle = '#AD6800';
-      ctx.beginPath();
-      ctx.arc(0, 1, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
+        ctx.drawImage(sporeImg, -dw * 0.5, -dh * 0.5, dw, dh);
+        ctx.restore();
+        continue;
+      }
+ctx.restore();
     }
   }
 }

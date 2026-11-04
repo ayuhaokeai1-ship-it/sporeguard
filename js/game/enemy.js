@@ -954,26 +954,44 @@ class EnemyManager {
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
         if (flashWhite) {
-          ctx.globalAlpha = 0.85;
-          ctx.fillStyle = '#FFFFFF';
+          ctx.filter = 'brightness(1.4)';
         }
         ctx.drawImage(cImg, e.x - customW * 0.5, e.y - customH * 0.5 - walkBob - jumpOffsetY, customW, customH);
         ctx.restore();
-        // Skip default atlas drawn
+
+        // 受击火花星芒 (100% AI Hand-Painted Hit Spark)
+        if (flashWhite) {
+          const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+          if (sparkImg && sparkImg.width) {
+            ctx.save();
+            ctx.drawImage(sparkImg, e.x - 16, e.y - 16 - walkBob, 32, 32);
+            ctx.restore();
+          }
+        }
         return;
       }
     }
 
-    const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, flashWhite);
+    // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
+    const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
     if (!drawn) {
       const sz = (e.def.artSize.width || 12) * 2;
-      ctx.fillStyle = flashWhite ? PALETTE.UI_TEXT : e.tintColor;
+      ctx.fillStyle = e.tintColor;
       ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
       platform.recordDrawCall(1);
     }
 
+    // 命中火花迸发
+    if (flashWhite) {
+      const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+      if (sparkImg && sparkImg.width) {
+        ctx.save();
+        ctx.drawImage(sparkImg, e.x - 16, e.y - 16, 32, 32);
+        ctx.restore();
+      }
+    }
+
     if (e.isElite && e.state !== 'death') {
-      // 绘制精英怪金色微冠冕与光环
       ctx.save();
       ctx.fillStyle = '#FFD700';
       ctx.strokeStyle = '#FFFFFF';
@@ -992,7 +1010,7 @@ class EnemyManager {
     }
     if (e.state === 'death') return;
 
-    // 绘制头顶状态图标（标记、破甲、减速）
+    // 头部状态图标（标记、破甲、减速）
     const topY = e.y - e.def.artSize.height - 8;
     if (e.markTimer > 0) {
       const mKey = (Math.floor(e.markTimer * 6) % 2 === 0) ? 'mark_icon_0' : 'mark_icon_1';
@@ -1001,18 +1019,33 @@ class EnemyManager {
       drawProjectileSprite(ctx, 'armor_break_icon', e.x, topY - 8, 0, 0.6);
     }
 
-    // 绘制像素生命条（受伤或首领始终显示）
+    // 受到伤害后显示精致微缩血条 (Refined Fantasy Micro Health Bar)
     if (e.hp < e.maxHp || e.isBoss) {
-      const barW = e.isBoss ? 48 : 22;
-      const barH = e.isBoss ? 5 : 3;
+      const barW = e.isBoss ? 46 : 24;
+      const barH = e.isBoss ? 5 : 3.5;
       const bx = Math.round(e.x - barW * 0.5);
       const by = Math.round(topY);
       const ratio = Math.max(0, Math.min(1, e.hp / e.maxHp));
 
-      ctx.fillStyle = PALETTE.UI_PANEL_SOLID;
+      ctx.save();
+      // 1. 微黑木纹托底与轻微圆角
+      ctx.fillStyle = 'rgba(18, 12, 6, 0.85)';
       ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-      ctx.fillStyle = e.isBoss ? PALETTE.UPGRADE_LV1 : (e.isFlying ? PALETTE.BRANCH_A : PALETTE.UI_SEED);
-      ctx.fillRect(bx, by, Math.max(1, Math.round(barW * ratio)), barH);
+
+      // 2. 动态血量渐变填充 (绿 -> 橙 -> 红)
+      if (ratio > 0) {
+        const fillW = Math.max(2, Math.round(barW * ratio));
+        let hpColor = '#52C41A';
+        if (ratio < 0.28) hpColor = '#FF4D4F';
+        else if (ratio < 0.58) hpColor = '#FAAD14';
+
+        if (e.isBoss) hpColor = '#FA8C16';
+        else if (e.isFlying) hpColor = '#13C2C2';
+
+        ctx.fillStyle = hpColor;
+        ctx.fillRect(bx, by, fillW, barH);
+      }
+      ctx.restore();
       platform.recordDrawCall(1);
     }
   }

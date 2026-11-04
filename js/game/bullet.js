@@ -599,25 +599,54 @@ class BulletManager {
       let vfxPath = null;
       let drawW = 32, drawH = 32;
       if (b.kind === 'watch') {
-        vfxPath = 'assets/vfx/vfx_needle.png';
-        drawW = 38; drawH = 20;
+        vfxPath = 'assets/vfx/proj_watch_arrow.png';
+        drawW = 32; drawH = 9; // 真实飞矢手绘长宽比
       } else if (b.kind === 'thorn') {
         vfxPath = 'assets/vfx/vfx_spikes.png';
         drawW = 28; drawH = 28;
       } else if (b.kind === 'burst') {
-        vfxPath = 'assets/vfx/vfx_bomb.png';
-        drawW = 26; drawH = 26;
+        vfxPath = 'assets/vfx/proj_burst_shell.png';
+        drawW = 28; drawH = 28;
       } else if (b.kind === 'lumina') {
-        vfxPath = 'assets/vfx/relic_amber.png';
-        drawW = 22; drawH = 22;
+        vfxPath = 'assets/vfx/item_golden_spore.png';
+        drawW = 20; drawH = 20;
       }
 
       const vfxImg = vfxPath ? platform.getImage(vfxPath) : null;
-      if (vfxImg) {
+      if (vfxImg && vfxImg.width) {
         ctx.save();
         ctx.translate(Math.round(b.x), Math.round(b.y));
-        const rot = b.kind === 'burst' ? (b.flightTimer * 14) : b.angle;
-        ctx.rotate(rot);
+
+        // 瞭望菇飞矢：沿飞行角朝向精准破空，带有轻微星蓝破风微粒
+        if (b.kind === 'watch') {
+          ctx.rotate(b.angle);
+          // 箭羽微弱发光
+          ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+          ctx.restore();
+
+          // 尾部极微弱星尘拖尾（取代突兀粗长白线）
+          ctx.save();
+          const backX = b.x - Math.cos(b.angle) * 16;
+          const backY = b.y - Math.sin(b.angle) * 16;
+          ctx.fillStyle = 'rgba(110, 232, 255, 0.42)';
+          ctx.beginPath();
+          ctx.arc(backX, backY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+
+        // 爆裂重炮：在空中旋转翻滚
+        if (b.kind === 'burst') {
+          const rot = b.flightTimer * 12;
+          ctx.rotate(rot);
+          ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+          ctx.restore();
+          continue;
+        }
+
+        // 其他投射物
+        ctx.rotate(b.angle);
         ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
         ctx.restore();
         continue;

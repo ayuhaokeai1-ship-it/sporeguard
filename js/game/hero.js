@@ -400,7 +400,48 @@ class ForestHero {
     }
     ctx.restore();
 
-    // 4. 生命值条与等级徽章
+        // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
+    if (this.atkCooldown > 0 && (this.atkInterval - this.atkCooldown) < 0.22) {
+      const slashProg = (this.atkInterval - this.atkCooldown) / 0.22;
+      const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
+      if (slashImg && slashImg.width) {
+        ctx.save();
+        const slashDir = this.facingLeft ? -1 : 1;
+        ctx.translate(this.x + slashDir * 20, this.y - 14);
+        ctx.scale(slashDir, 1);
+        ctx.globalAlpha = Math.max(0, 1 - slashProg * 0.7);
+        const slashW = 46 + slashProg * 14;
+        const slashH = 40 + slashProg * 10;
+        ctx.drawImage(slashImg, -slashW * 0.4, -slashH * 0.5, slashW, slashH);
+        ctx.restore();
+      }
+    }
+
+    // 3.2 大招大地轰鸣双向爆发 (Earthshaker Cleave Wave)
+    if (this.isCastingSkill && this.skillCastTimer > 0) {
+      const skillProg = 1 - (this.skillCastTimer / 0.55);
+      const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
+      if (slashImg && slashImg.width) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - skillProg * 0.8);
+        const bigW = 72 * (0.8 + skillProg * 0.5);
+        const bigH = 64 * (0.8 + skillProg * 0.5);
+        // 向左挥斩
+        ctx.save();
+        ctx.translate(this.x - 28 * (1 + skillProg), this.y - 8);
+        ctx.scale(-1, 1);
+        ctx.drawImage(slashImg, -bigW * 0.5, -bigH * 0.5, bigW, bigH);
+        ctx.restore();
+        // 向右挥斩
+        ctx.save();
+        ctx.translate(this.x + 28 * (1 + skillProg), this.y - 8);
+        ctx.drawImage(slashImg, -bigW * 0.5, -bigH * 0.5, bigW, bigH);
+        ctx.restore();
+        ctx.restore();
+      }
+    }
+
+// 4. 生命值条与等级徽章
     ctx.save();
     const barW = 36;
     const barH = 5;

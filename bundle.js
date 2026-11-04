@@ -6208,26 +6208,44 @@ class EnemyManager {
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
         if (flashWhite) {
-          ctx.globalAlpha = 0.85;
-          ctx.fillStyle = '#FFFFFF';
+          ctx.filter = 'brightness(1.4)';
         }
         ctx.drawImage(cImg, e.x - customW * 0.5, e.y - customH * 0.5 - walkBob - jumpOffsetY, customW, customH);
         ctx.restore();
-        // Skip default atlas drawn
+
+        // 受击火花星芒 (100% AI Hand-Painted Hit Spark)
+        if (flashWhite) {
+          const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+          if (sparkImg && sparkImg.width) {
+            ctx.save();
+            ctx.drawImage(sparkImg, e.x - 16, e.y - 16 - walkBob, 32, 32);
+            ctx.restore();
+          }
+        }
         return;
       }
     }
 
-    const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, flashWhite);
+    // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
+    const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
     if (!drawn) {
       const sz = (e.def.artSize.width || 12) * 2;
-      ctx.fillStyle = flashWhite ? PALETTE.UI_TEXT : e.tintColor;
+      ctx.fillStyle = e.tintColor;
       ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
       platform.recordDrawCall(1);
     }
 
+    // 命中火花迸发
+    if (flashWhite) {
+      const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+      if (sparkImg && sparkImg.width) {
+        ctx.save();
+        ctx.drawImage(sparkImg, e.x - 16, e.y - 16, 32, 32);
+        ctx.restore();
+      }
+    }
+
     if (e.isElite && e.state !== 'death') {
-      // 绘制精英怪金色微冠冕与光环
       ctx.save();
       ctx.fillStyle = '#FFD700';
       ctx.strokeStyle = '#FFFFFF';
@@ -6246,7 +6264,7 @@ class EnemyManager {
     }
     if (e.state === 'death') return;
 
-    // 绘制头顶状态图标（标记、破甲、减速）
+    // 头部状态图标（标记、破甲、减速）
     const topY = e.y - e.def.artSize.height - 8;
     if (e.markTimer > 0) {
       const mKey = (Math.floor(e.markTimer * 6) % 2 === 0) ? 'mark_icon_0' : 'mark_icon_1';
@@ -6255,18 +6273,33 @@ class EnemyManager {
       drawProjectileSprite(ctx, 'armor_break_icon', e.x, topY - 8, 0, 0.6);
     }
 
-    // 绘制像素生命条（受伤或首领始终显示）
+    // 受到伤害后显示精致微缩血条 (Refined Fantasy Micro Health Bar)
     if (e.hp < e.maxHp || e.isBoss) {
-      const barW = e.isBoss ? 48 : 22;
-      const barH = e.isBoss ? 5 : 3;
+      const barW = e.isBoss ? 46 : 24;
+      const barH = e.isBoss ? 5 : 3.5;
       const bx = Math.round(e.x - barW * 0.5);
       const by = Math.round(topY);
       const ratio = Math.max(0, Math.min(1, e.hp / e.maxHp));
 
-      ctx.fillStyle = PALETTE.UI_PANEL_SOLID;
+      ctx.save();
+      // 1. 微黑木纹托底与轻微圆角
+      ctx.fillStyle = 'rgba(18, 12, 6, 0.85)';
       ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-      ctx.fillStyle = e.isBoss ? PALETTE.UPGRADE_LV1 : (e.isFlying ? PALETTE.BRANCH_A : PALETTE.UI_SEED);
-      ctx.fillRect(bx, by, Math.max(1, Math.round(barW * ratio)), barH);
+
+      // 2. 动态血量渐变填充 (绿 -> 橙 -> 红)
+      if (ratio > 0) {
+        const fillW = Math.max(2, Math.round(barW * ratio));
+        let hpColor = '#52C41A';
+        if (ratio < 0.28) hpColor = '#FF4D4F';
+        else if (ratio < 0.58) hpColor = '#FAAD14';
+
+        if (e.isBoss) hpColor = '#FA8C16';
+        else if (e.isFlying) hpColor = '#13C2C2';
+
+        ctx.fillStyle = hpColor;
+        ctx.fillRect(bx, by, fillW, barH);
+      }
+      ctx.restore();
       platform.recordDrawCall(1);
     }
   }
@@ -6680,7 +6713,48 @@ class ForestHero {
     }
     ctx.restore();
 
-    // 4. 生命值条与等级徽章
+        // 3.1 挥砍剑气特效 (100% AI Hand-Painted Emerald Slash Wave)
+    if (this.atkCooldown > 0 && (this.atkInterval - this.atkCooldown) < 0.22) {
+      const slashProg = (this.atkInterval - this.atkCooldown) / 0.22;
+      const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
+      if (slashImg && slashImg.width) {
+        ctx.save();
+        const slashDir = this.facingLeft ? -1 : 1;
+        ctx.translate(this.x + slashDir * 20, this.y - 14);
+        ctx.scale(slashDir, 1);
+        ctx.globalAlpha = Math.max(0, 1 - slashProg * 0.7);
+        const slashW = 46 + slashProg * 14;
+        const slashH = 40 + slashProg * 10;
+        ctx.drawImage(slashImg, -slashW * 0.4, -slashH * 0.5, slashW, slashH);
+        ctx.restore();
+      }
+    }
+
+    // 3.2 大招大地轰鸣双向爆发 (Earthshaker Cleave Wave)
+    if (this.isCastingSkill && this.skillCastTimer > 0) {
+      const skillProg = 1 - (this.skillCastTimer / 0.55);
+      const slashImg = platform.getImage('assets/vfx/vfx_hero_slash.png');
+      if (slashImg && slashImg.width) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - skillProg * 0.8);
+        const bigW = 72 * (0.8 + skillProg * 0.5);
+        const bigH = 64 * (0.8 + skillProg * 0.5);
+        // 向左挥斩
+        ctx.save();
+        ctx.translate(this.x - 28 * (1 + skillProg), this.y - 8);
+        ctx.scale(-1, 1);
+        ctx.drawImage(slashImg, -bigW * 0.5, -bigH * 0.5, bigW, bigH);
+        ctx.restore();
+        // 向右挥斩
+        ctx.save();
+        ctx.translate(this.x + 28 * (1 + skillProg), this.y - 8);
+        ctx.drawImage(slashImg, -bigW * 0.5, -bigH * 0.5, bigW, bigH);
+        ctx.restore();
+        ctx.restore();
+      }
+    }
+
+// 4. 生命值条与等级徽章
     ctx.save();
     const barW = 36;
     const barH = 5;
@@ -7301,49 +7375,33 @@ class SporeDropManager {
       ctx.translate(dx, dy);
       ctx.scale(d.scale, d.scale);
 
-      // 1. 地面微弱柔金阴影
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      // 1. 地面微光阴影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
       ctx.beginPath();
-      ctx.ellipse(0, 10 - bob, 10, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 12 - bob, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. 外层阳光金色微波光晕
-      const pulse = 1.0 + Math.sin(d.animTimer * 6) * 0.08;
-      ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
-      ctx.beginPath();
-      ctx.arc(0, 0, 16 * pulse, 0, Math.PI * 2);
-      ctx.fill();
+      // 2. 纯手绘神圣黄金孢子明珠 (100% AI Hand-Painted Golden Spore Pearl)
+      const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png');
+      if (sporeImg && sporeImg.width) {
+        const pulse = 1.0 + Math.sin(d.animTimer * 5) * 0.08;
+        const dw = 32 * pulse;
+        const dh = 34 * pulse;
 
-      // 3. 剔透琥珀金孢球本体
-      const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 12);
-      grad.addColorStop(0, '#FFFDF5');
-      grad.addColorStop(0.35, '#FFE58F');
-      grad.addColorStop(0.85, '#FAAD14');
-      grad.addColorStop(1, '#D48806');
+        // 背后柔和金色晨曦光晕
+        const glowGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 22 * pulse);
+        glowGrad.addColorStop(0, 'rgba(255, 235, 140, 0.45)');
+        glowGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, 11, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      // 4. 高光萌斑与星芒
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(-3.5, -3.5, 2.5, 0, Math.PI * 2);
-      ctx.arc(3.5, 3.5, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 5. 内部微缩幼芽/孢子核
-      ctx.fillStyle = '#AD6800';
-      ctx.beginPath();
-      ctx.arc(0, 1, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
+        ctx.drawImage(sporeImg, -dw * 0.5, -dh * 0.5, dw, dh);
+        ctx.restore();
+        continue;
+      }
+ctx.restore();
     }
   }
 }
@@ -8479,25 +8537,54 @@ class BulletManager {
       let vfxPath = null;
       let drawW = 32, drawH = 32;
       if (b.kind === 'watch') {
-        vfxPath = 'assets/vfx/vfx_needle.png';
-        drawW = 38; drawH = 20;
+        vfxPath = 'assets/vfx/proj_watch_arrow.png';
+        drawW = 32; drawH = 9; // 真实飞矢手绘长宽比
       } else if (b.kind === 'thorn') {
         vfxPath = 'assets/vfx/vfx_spikes.png';
         drawW = 28; drawH = 28;
       } else if (b.kind === 'burst') {
-        vfxPath = 'assets/vfx/vfx_bomb.png';
-        drawW = 26; drawH = 26;
+        vfxPath = 'assets/vfx/proj_burst_shell.png';
+        drawW = 28; drawH = 28;
       } else if (b.kind === 'lumina') {
-        vfxPath = 'assets/vfx/relic_amber.png';
-        drawW = 22; drawH = 22;
+        vfxPath = 'assets/vfx/item_golden_spore.png';
+        drawW = 20; drawH = 20;
       }
 
       const vfxImg = vfxPath ? platform.getImage(vfxPath) : null;
-      if (vfxImg) {
+      if (vfxImg && vfxImg.width) {
         ctx.save();
         ctx.translate(Math.round(b.x), Math.round(b.y));
-        const rot = b.kind === 'burst' ? (b.flightTimer * 14) : b.angle;
-        ctx.rotate(rot);
+
+        // 瞭望菇飞矢：沿飞行角朝向精准破空，带有轻微星蓝破风微粒
+        if (b.kind === 'watch') {
+          ctx.rotate(b.angle);
+          // 箭羽微弱发光
+          ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+          ctx.restore();
+
+          // 尾部极微弱星尘拖尾（取代突兀粗长白线）
+          ctx.save();
+          const backX = b.x - Math.cos(b.angle) * 16;
+          const backY = b.y - Math.sin(b.angle) * 16;
+          ctx.fillStyle = 'rgba(110, 232, 255, 0.42)';
+          ctx.beginPath();
+          ctx.arc(backX, backY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+
+        // 爆裂重炮：在空中旋转翻滚
+        if (b.kind === 'burst') {
+          const rot = b.flightTimer * 12;
+          ctx.rotate(rot);
+          ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+          ctx.restore();
+          continue;
+        }
+
+        // 其他投射物
+        ctx.rotate(b.angle);
         ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
         ctx.restore();
         continue;
