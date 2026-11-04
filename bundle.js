@@ -4098,12 +4098,16 @@ function handleKeyDown(rawKey) {
     emitAction('select_tower_slot', { slot: 4 });
   } else if (key === 'enter') {
     emitAction('confirm_tile', { col: gridCursor.col, row: gridCursor.row });
-  } else if (key === 'space' || key === ' ' || key === 'keyg' || key === 'g') {
+  } else if (key === 'space' || key === ' ') {
     if (gridCursor.active) {
       emitAction('confirm_tile', { col: gridCursor.col, row: gridCursor.row });
     } else {
       emitAction('toggle_awakening');
     }
+  } else if (key === 'keyg' || key === 'g') {
+    emitAction('hero_battlecry');
+  } else if (key === 'keyv' || key === 'v') {
+    emitAction('hero_leyline');
   } else if (key === 'keyq' || key === 'q') {
     emitAction('trigger_spell', { spellId: 'rain' });
   } else if (key === 'keyw' || key === 'w') {
@@ -7152,6 +7156,9 @@ class ForestHero {
 
     // 守卫姿态天然 35% 坚韧硬甲减伤，狂暴姿态承伤 +15%
     let finalDamage = amount;
+    if (this.transcendence) {
+      finalDamage = this.transcendence.onHeroTakeDamage(finalDamage, enemyManager, fx);
+    }
     if (this.stance === 'guardian') {
       finalDamage = Math.max(1, Math.round(amount * 0.65));
     } else if (this.stance === 'aggressive') {
@@ -7571,6 +7578,9 @@ class ForestHero {
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
               enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
+            if (this.transcendence) {
+              this.transcendence.onHeroHitTarget(target, enemyManager, fx);
+            }
               this.gainXp(8, fx);
             }
 
@@ -10598,6 +10608,776 @@ module.exports = {
 
   };
 
+  /* --- js/game/heroTranscendence.js --- */
+  __modules['js/game/heroTranscendence'] = function(require, module, exports) {
+/**
+ * 远古树灵领袖·登阶超载与神圣天赋树系统 (js/game/heroTranscendence.js)
+ * 深度借鉴《Kingdom Rush: Frontiers / Vengeance》与《Bloons TD 6》英雄升级与登阶成长机制：
+ * 
+ * 1. 领袖四大神圣天赋登阶 (Hero Transcendence Perks):
+ *    - Perk 1: 【荆棘缚魂 (Root Prison)】(Lv.2 解锁)
+ *      肉搏接怪或顺劈时，50% 概率自地底喷涌出远古荆棘根须定身目标 2.0 秒，并附加持续撕裂流血剧痛 (28 DPS)。
+ *    - Perk 2: 【古木磐石 (Ancient Bark & Thorns)】(Lv.3 解锁)
+ *      领袖获得全类型伤害 30% 绝对减免，受创时向四周 90px 震荡喷发环形木刺，反弹 25% 真实伤害。
+ *    - Perk 3: 【天崩地裂 (Cataclysmic Rupture)】(Lv.4 解锁)
+ *      [F] 大招撼地重击范围扩大 45%，并在地面留下 3 道持续 4 秒的灼热地脉熔火裂隙，经行敌怪减速 70% 并承受持续灼烧。
+ *    - Perk 4: 【荒野庇护圣域 (Sanctuary of the Wilds)】(Lv.5 解锁)
+ *      当生命值低于 35% 时自动引爆翡翠神圣护盾，瞬间治疗 50% 最大生命值，并令周围 3 格内所有蘑菇守卫攻速提升 40%，持续 6 秒。
+ * 
+ * 2. 战场主动微操战术号令 (Active Tactical Commands):
+ *    - [F] 撼地重击 (Earthshaker Quake): 巨幅范围震击，群体眩晕 2.5s。
+ *    - [G] 守卫集结战吼 (Rallying Battlecry): 召集全图孢子小守卫瞬移至身边，获得双倍护甲与狂暴暴击。
+ *    - [V] 灵脉过载灌注 (Leyline Overload): 选定一座防御塔灌注远古自然神力，使其 8 秒内攻速与射程提升 50%。
+ * 
+ * 3. 实时战场浮动光冕与战术徽记 (Hero Transcendence HUD & Rune Rings)
+ */
+
+const CONFIG = require('../data/config');
+const platform = require('../core/platform');
+
+class HeroTranscendence {
+  constructor(hero) {
+    this.hero = hero;
+    this.animTime = 0;
+    
+    // 登阶天赋状态
+    this.perks = {
+      rootPrison: { unlocked: false, minLevel: 2, name: '荆棘缚魂', icon: '🌿', desc: '近战命中50%定身2秒+流血撕裂' },
+      ancientBark: { unlocked: false, minLevel: 3, name: '古木磐石', icon: '🛡️', desc: '减伤30%且受击反震反弹木刺' },
+      cataclysmicRupture: { unlocked: false, minLevel: 4, name: '天崩地裂', icon: '🌋', desc: '大招范围+45%并生成地脉熔隙' },
+      sanctuaryWilds: { unlocked: false, minLevel: 5, name: '荒野圣域', icon: '✨', desc: '残血触发神圣屏障自愈+守卫狂暴' }
+    };
+
+    // 圣域冷却与持续计时
+    this.sanctuaryCooldown = 0;
+    this.sanctuaryActiveTimer = 0;
+
+    // 地脉熔隙实体队列 (Cataclysmic Fissures)
+    this.fissures = [];
+
+    // 技能战术号令冷却
+    this.commandCooldowns = {
+      battlecry: 0,
+      leylineSurge: 0
+    };
+  }
+
+  update(dt, enemyManager, sporelingPatrol, towerManager, fx = null) {
+    this.animTime += dt;
+
+    // 检查并更新当前英雄等级对应的天赋解锁
+    const curLvl = this.hero ? this.hero.level : 1;
+    for (const key in this.perks) {
+      const perk = this.perks[key];
+      if (curLvl >= perk.minLevel && !perk.unlocked) {
+        perk.unlocked = true;
+        if (fx && this.hero) {
+          fx.spawnFloatingText(this.hero.x, this.hero.y - 36, `🌟 天赋登阶: ${perk.name}!`, '#FFD700', 1.3);
+          fx.spawnParticles(this.hero.x, this.hero.y, 24, ['#FFD700', '#52C41A', '#BAE7FF', '#FFFFFF'], 35, 110, 0.3, 0.7, 4.5);
+        }
+        platform.playSfx('sfx_upgrade');
+      }
+    }
+
+    // 冷却倒计时
+    if (this.sanctuaryCooldown > 0) this.sanctuaryCooldown -= dt;
+    if (this.commandCooldowns.battlecry > 0) this.commandCooldowns.battlecry -= dt;
+    if (this.commandCooldowns.leylineSurge > 0) this.commandCooldowns.leylineSurge -= dt;
+
+    // 荒野圣域持续效果
+    if (this.sanctuaryActiveTimer > 0) {
+      this.sanctuaryActiveTimer -= dt;
+      // 强化周围防御塔
+      if (towerManager && this.hero) {
+        const hx = this.hero.x;
+        const hy = this.hero.y;
+        for (let i = 0; i < towerManager.towers.length; i++) {
+          const t = towerManager.towers[i];
+          if (Math.hypot(t.x - hx, t.y - hy) <= 120) {
+            t.superchargeTimer = Math.max(t.superchargeTimer || 0, 1.0);
+          }
+        }
+      }
+    }
+
+    // Perk 4 检查：生命低于 35% 自动引爆荒野圣域
+    if (this.perks.sanctuaryWilds.unlocked && this.sanctuaryCooldown <= 0 && this.hero) {
+      if (this.hero.state !== 'dead' && this.hero.hp < this.hero.maxHp * 0.35) {
+        this.triggerSanctuary(fx);
+      }
+    }
+
+    // 更新地脉熔火裂隙实体
+    for (let i = this.fissures.length - 1; i >= 0; i--) {
+      const fis = this.fissures[i];
+      fis.life -= dt;
+      fis.tickTimer = (fis.tickTimer || 0) + dt;
+
+      if (fis.tickTimer >= 0.5) {
+        fis.tickTimer = 0;
+        if (enemyManager) {
+          const alive = enemyManager.getAliveEnemies();
+          for (let e = 0; e < alive.length; e++) {
+            const tgt = alive[e];
+            if (!tgt.isFlying && Math.hypot(tgt.x - fis.x, tgt.y - fis.y) <= fis.radius) {
+              tgt.hp -= 26;
+              tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.2);
+              tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.65);
+              if (fx) {
+                fx.spawnParticles(tgt.x, tgt.y, 3, ['#FF4D4F', '#FFA940', '#5C4028'], 15, 35, 0.15, 0.3, 2);
+              }
+              if (tgt.hp <= 0) {
+                enemyManager.killEnemy(tgt, fx);
+              }
+            }
+          }
+        }
+      }
+
+      if (fis.life <= 0) {
+        this.fissures.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * 触发荒野圣域爆发
+   */
+  triggerSanctuary(fx = null) {
+    if (!this.hero) return;
+    this.sanctuaryCooldown = 45.0; // 45 秒大招内置冷却
+    this.sanctuaryActiveTimer = 6.0;
+
+    const healAmount = Math.round(this.hero.maxHp * 0.50);
+    this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + healAmount);
+
+    if (fx) {
+      fx.spawnFloatingText(this.hero.x, this.hero.y - 32, `圣域爆发! +${healAmount} HP`, '#73D13D', 1.4);
+      fx.spawnParticles(this.hero.x, this.hero.y, 45, ['#52C41A', '#B7EB8F', '#FFD700', '#FFFFFF'], 50, 180, 0.4, 0.9, 6.0);
+      if (fx.triggerScreenShake) fx.triggerScreenShake(4.0, 0.4);
+    }
+    platform.playSfx('sfx_win');
+  }
+
+  /**
+   * 领袖普攻命中敌人触发登阶被动
+   */
+  onHeroHitTarget(target, enemyManager, fx = null) {
+    if (!target || target.hp <= 0) return;
+
+    // Perk 1: 荆棘缚魂 (Root Prison)
+    if (this.perks.rootPrison.unlocked && Math.random() < 0.50) {
+      target.isRooted = true;
+      target.rootTimer = 2.0;
+      target.residualSlowTimer = 2.0;
+      target.residualSlowValue = 0.95;
+      target.bleedTimer = 2.5;
+      target.bleedDps = 28;
+
+      if (fx) {
+        fx.spawnFloatingText(target.x, target.y - 16, '荆棘缚魂!', '#52C41A', 0.9);
+        fx.spawnParticles(target.x, target.y, 8, ['#52C41A', '#389E0D', '#8C6842'], 18, 45, 0.2, 0.4, 3);
+      }
+    }
+  }
+
+  /**
+   * 领袖遭受伤害触发登阶反伤与格挡
+   */
+  onHeroTakeDamage(rawDamage, enemyManager, fx = null) {
+    let finalDamage = rawDamage;
+
+    // Perk 2: 古木磐石 (Ancient Bark & Thorns)
+    if (this.perks.ancientBark.unlocked) {
+      finalDamage = Math.max(1, Math.round(rawDamage * 0.70)); // 30% 减伤
+      const reflectDmg = Math.max(5, Math.round(rawDamage * 0.25));
+
+      if (enemyManager && this.hero) {
+        const alive = enemyManager.getAliveEnemies();
+        const hx = this.hero.x;
+        const hy = this.hero.y;
+        for (let i = 0; i < alive.length; i++) {
+          const e = alive[i];
+          if (!e.isFlying && Math.hypot(e.x - hx, e.y - hy) <= 90) {
+            e.hp -= reflectDmg;
+            if (fx) {
+              fx.spawnParticles(e.x, e.y, 2, ['#8C6842', '#D48806'], 12, 30, 0.15, 0.25, 2);
+            }
+            if (e.hp <= 0) {
+              enemyManager.killEnemy(e, fx);
+            }
+          }
+        }
+      }
+
+      if (fx && this.hero) {
+        fx.spawnFloatingText(this.hero.x, this.hero.y - 20, '坚毅减免!', '#BAE7FF', 0.7);
+      }
+    }
+
+    return finalDamage;
+  }
+
+  /**
+   * [F] 大招撼地重击升级增强：生成地脉熔隙
+   */
+  onCastEarthshaker(cx, cy, fx = null) {
+    if (this.perks.cataclysmicRupture.unlocked) {
+      // 呈三叉状喷射 3 处地脉熔火裂隙
+      const angles = [0, 2.094, 4.188]; // 0, 120, 240 度
+      for (let i = 0; i < angles.length; i++) {
+        const ang = angles[i] + Math.random() * 0.4 - 0.2;
+        const dist = 48 + Math.random() * 24;
+        this.fissures.push({
+          x: cx + Math.cos(ang) * dist,
+          y: cy + Math.sin(ang) * dist,
+          radius: 46,
+          life: 4.0,
+          maxLife: 4.0,
+          tickTimer: 0
+        });
+      }
+      if (fx) {
+        fx.spawnFloatingText(cx, cy - 28, '天崩地裂·地脉熔火!', '#FF4D4F', 1.25);
+      }
+    }
+  }
+
+  /**
+   * [G] 主动战术号令：守卫集结战吼 (Rallying Battlecry)
+   */
+  castBattlecry(sporelingPatrol, fx = null) {
+    if (this.commandCooldowns.battlecry > 0 || !this.hero || this.hero.state === 'dead') return false;
+    this.commandCooldowns.battlecry = 25.0; // 25s 冷却
+
+    if (sporelingPatrol) {
+      const hx = this.hero.x;
+      const hy = this.hero.y;
+      for (let i = 0; i < sporelingPatrol.guards.length; i++) {
+        const g = sporelingPatrol.guards[i];
+        if (g.state !== 'dead') {
+          g.x = hx + (i === 0 ? -22 : 22);
+          g.y = hy + 8;
+          g.armor += 8;
+          g.attackDmg = Math.round(g.attackDmg * 1.6);
+          setTimeout(() => {
+            g.armor = Math.max(0, g.armor - 8);
+            g.attackDmg = Math.round(g.attackDmg / 1.6);
+          }, 8000);
+        }
+      }
+    }
+
+    if (fx && this.hero) {
+      fx.spawnFloatingText(this.hero.x, this.hero.y - 36, '战吼集结! 全军护卫!', '#FFD700', 1.3);
+      fx.spawnParticles(this.hero.x, this.hero.y, 35, ['#FFD700', '#FFA940', '#52C41A', '#FFFFFF'], 40, 140, 0.35, 0.75, 5);
+      if (fx.triggerScreenShake) fx.triggerScreenShake(3.0, 0.3);
+    }
+    platform.playSfx('sfx_horn');
+    return true;
+  }
+
+  /**
+   * [V] 主动战术号令：灵脉过载灌注 (Leyline Overload)
+   */
+  castLeylineSurge(towerManager, fx = null) {
+    if (this.commandCooldowns.leylineSurge > 0 || !this.hero || this.hero.state === 'dead') return false;
+    if (!towerManager || towerManager.towers.length === 0) return false;
+
+    // 选取距离英雄最近的防御塔进行超载
+    const hx = this.hero.x;
+    const hy = this.hero.y;
+    let closestTower = null;
+    let minDist = 999999;
+    for (let i = 0; i < towerManager.towers.length; i++) {
+      const t = towerManager.towers[i];
+      const d = Math.hypot(t.x - hx, t.y - hy);
+      if (d < minDist) {
+        minDist = d;
+        closestTower = t;
+      }
+    }
+
+    if (!closestTower) return false;
+    this.commandCooldowns.leylineSurge = 30.0; // 30s 冷却
+    closestTower.superchargeTimer = 8.0;
+
+    if (fx) {
+      fx.spawnFloatingText(closestTower.x, closestTower.y - 24, '灵脉超载! 极速狂暴!', '#69C0FF', 1.3);
+      fx.spawnParticles(closestTower.x, closestTower.y, 25, ['#69C0FF', '#BAE7FF', '#FFD700', '#FFFFFF'], 30, 95, 0.3, 0.65, 4);
+    }
+    platform.playSfx('sfx_shock');
+    return true;
+  }
+
+  /**
+   * 渲染地脉裂隙与圣域光环
+   */
+  render(ctx) {
+    // 1. 渲染地面熔火地脉裂隙
+    const fisImg = platform.getImage('assets/vfx/range_earthshaker.png');
+    for (let i = 0; i < this.fissures.length; i++) {
+      const f = this.fissures[i];
+      const alpha = Math.max(0, f.life / f.maxLife);
+      const pulse = 0.8 + Math.sin(this.animTime * 8 + i) * 0.2;
+
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.scale(1.0, 0.72); // 倾角透视
+
+      if (fisImg && fisImg.width) {
+        ctx.globalAlpha = alpha * pulse * 0.75;
+        const dSize = f.radius * 2.2;
+        ctx.drawImage(fisImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+      } else {
+        ctx.globalAlpha = alpha * pulse * 0.40;
+        ctx.fillStyle = '#FF4D4F';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, f.radius, f.radius * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 2. 荒野圣域爆发期间的流金神圣符文光环
+    if (this.sanctuaryActiveTimer > 0 && this.hero && this.hero.state !== 'dead') {
+      const sAlpha = Math.min(1.0, this.sanctuaryActiveTimer / 1.0);
+      const rot = this.animTime * 1.5;
+      const hx = this.hero.x;
+      const hy = this.hero.y;
+
+      const auraImg = platform.getImage('assets/vfx/range_fairy_green.png');
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.scale(1.0, 0.72);
+      ctx.rotate(rot);
+
+      if (auraImg && auraImg.width) {
+        ctx.globalAlpha = sAlpha * 0.55;
+        const aSize = 140;
+        ctx.drawImage(auraImg, -aSize * 0.5, -aSize * 0.5, aSize, aSize);
+      } else {
+        ctx.globalAlpha = sAlpha * 0.25;
+        ctx.fillStyle = 'rgba(115, 209, 61, 0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 70, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+module.exports = HeroTranscendence;
+
+  };
+
+  /* --- js/game/elementalCombos.js --- */
+  __modules['js/game/elementalCombos'] = function(require, module, exports) {
+/**
+ * 自然奇幻·元素裂变与深层连携反应系统 (js/game/elementalCombos.js)
+ * 深度汲取《原神》元素交融反应与《哈迪斯》双重祝福 (Duo Boons) 机制：
+ * 
+ * 6 大高阶自然元素连携反应 (Elemental Combos Matrix):
+ * 1. 【腐殖剧毒 (Miasmic Corrosion)】 = 木属性破甲 (Watch) + 毒瘴水雾 (Mist)
+ *    - 效果：融毁敌怪 80% 护甲，瞬间引爆腐蚀毒雾，以目标为中心造成 160 点腐殖真实伤害，并向周围 80px 溅射毒瘴。
+ * 2. 【蒸气爆鸣 (Steam Overpressure)】 = 熔金炽炎 (Burst) + 潮湿水雾 (Mist)
+ *    - 效果：水火交融引发高压气化冲击波，造成 220 点范围汽化冲击，并将轻型与中型敌怪猛烈震退 40px！
+ * 3. 【炽热荆棘 (Blazing Bramble)】 = 坚韧地刺 (Thorn) + 熔金炽炎 (Burst)
+ *    - 效果：荆棘被烈火引燃，化作焦土尖刺地带，处于其中的敌怪移动受阻 60%，每 0.5s 承受 35 点炽炎灼烧持续 4 秒。
+ * 4. 【圣光涤罪 (Solar Superconduct)】 = 天穹神光 (Lumina) + 任意已触发反应
+ *    - 效果：太阳神光引发光能超导，致盲全场受波及敌怪 2.5 秒，使其攻击落空且移动停滞，并额外喷发 12 颗黄金孢子！
+ * 5. 【霜冻凋零 (Glacial Frostbite)】 = 寒霜凝结 (Mist A3) + 贯穿钢刺 (Thorn)
+ *    - 效果：凝结寒冰碎屑扎入伤口，直接冰封目标 3.0 秒（完全冻结，无法移动与释放技能）。
+ * 6. 【天人合一·自然大共鸣 (Grand Nature Resonance)】 = 3种及以上元素同时交汇
+ *    - 效果：引动森林地脉终极能量，全屏爆发青翠翡翠光环，全屏所有敌怪承受 380 点自然神罚，并定身 3 秒！
+ * 
+ * 100% 拒绝任何矢量直线，全部采用 AI 原生粒子与光晕精灵渲染！
+ */
+
+const CONFIG = require('../data/config');
+const platform = require('../core/platform');
+
+class ElementalComboEngine {
+  constructor() {
+    this.activeCombos = [];
+    this.comboHistory = [];
+    this.totalCombosTriggered = 0;
+    this.animTime = 0;
+
+    // 活跃连携冲击波与焦土区域
+    this.blazingBrambles = [];
+    this.steamShockwaves = [];
+  }
+
+  clear() {
+    this.activeCombos.length = 0;
+    this.blazingBrambles.length = 0;
+    this.steamShockwaves.length = 0;
+  }
+
+  /**
+   * 当防御塔子弹或技能命中敌人时检测元素交融反应
+   * @param {Object} enemy 命中的目标
+   * @param {String} element 新附加的元素类别 ('wood' | 'poison' | 'fire' | 'light' | 'earth' | 'frost')
+   * @param {Object} enemyManager 敌人管理器
+   * @param {Object} economy 经济管理器
+   * @param {Object} fx 视觉特效管理器
+   * @param {Object} combatJuice 屏幕打击感震颤
+   */
+  checkCombo(enemy, element, enemyManager, economy, fx = null, combatJuice = null) {
+    if (!enemy || enemy.hp <= 0 || enemy.state === 'death') return null;
+
+    if (!enemy.elementAfflictions) {
+      enemy.elementAfflictions = {
+        wood: 0,
+        poison: 0,
+        fire: 0,
+        light: 0,
+        earth: 0,
+        frost: 0
+      };
+    }
+
+    // 记录已有元素状态
+    const aff = enemy.elementAfflictions;
+    const hadWood = aff.wood > 0;
+    const hadPoison = aff.poison > 0;
+    const hadFire = aff.fire > 0;
+    const hadLight = aff.light > 0;
+    const hadEarth = aff.earth > 0;
+    const hadFrost = aff.frost > 0;
+
+    // 刷新当前元素存留时间 (4.5s 附着窗口)
+    aff[element] = 4.5;
+
+    let comboTriggered = null;
+
+    // 1. 【腐殖剧毒 (Miasmic Corrosion)】: wood + poison
+    if ((element === 'wood' && hadPoison) || (element === 'poison' && hadWood)) {
+      comboTriggered = this.triggerCorrosion(enemy, enemyManager, fx, combatJuice);
+    }
+    // 2. 【蒸气爆鸣 (Steam Overpressure)】: fire + poison/mist
+    else if ((element === 'fire' && hadPoison) || (element === 'poison' && hadFire)) {
+      comboTriggered = this.triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice);
+    }
+    // 3. 【炽热荆棘 (Blazing Bramble)】: earth + fire
+    else if ((element === 'fire' && hadEarth) || (element === 'earth' && hadFire)) {
+      comboTriggered = this.triggerBlazingBramble(enemy, enemyManager, fx, combatJuice);
+    }
+    // 4. 【霜冻凋零 (Glacial Frostbite)】: frost + wood/earth
+    else if ((element === 'frost' && (hadWood || hadEarth)) || ((element === 'wood' || element === 'earth') && hadFrost)) {
+      comboTriggered = this.triggerFrostbite(enemy, enemyManager, fx, combatJuice);
+    }
+    // 5. 【圣光涤罪 (Solar Superconduct)】: light + (wood/poison/fire/earth)
+    else if (element === 'light' && (hadWood || hadPoison || hadFire || hadEarth)) {
+      comboTriggered = this.triggerSolarSuperconduct(enemy, enemyManager, economy, fx, combatJuice);
+    }
+
+    // 6. 检测【自然大共鸣 (Grand Resonance)】: 3种以上元素同时附着
+    let activeElemCount = 0;
+    for (const k in aff) {
+      if (aff[k] > 0) activeElemCount++;
+    }
+    if (activeElemCount >= 3) {
+      this.triggerGrandResonance(enemy, enemyManager, fx, combatJuice);
+      // 清空附着元素，防止无限连锁
+      for (const k in aff) aff[k] = 0;
+    }
+
+    if (comboTriggered) {
+      this.totalCombosTriggered++;
+      this.comboHistory.push({
+        id: comboTriggered.id,
+        name: comboTriggered.name,
+        time: this.animTime,
+        x: enemy.x,
+        y: enemy.y
+      });
+      if (this.comboHistory.length > 20) this.comboHistory.shift();
+    }
+
+    return comboTriggered;
+  }
+
+  /**
+   * 1. 触发【腐殖剧毒】
+   */
+  triggerCorrosion(enemy, enemyManager, fx, combatJuice) {
+    enemy.baseArmor = Math.max(0, enemy.baseArmor * 0.2); // 削减 80% 护甲
+    enemy.armorReduction = Math.max(enemy.armorReduction || 0, 8.0);
+    const splashDmg = 160;
+
+    // 范围溅射
+    const alive = enemyManager.getAliveEnemies();
+    for (let i = 0; i < alive.length; i++) {
+      const e = alive[i];
+      if (Math.hypot(e.x - enemy.x, e.y - enemy.y) <= 85) {
+        e.hp -= splashDmg;
+        e.residualSlowTimer = Math.max(e.residualSlowTimer || 0, 3.0);
+        e.residualSlowValue = Math.max(e.residualSlowValue || 0, 0.40);
+        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      }
+    }
+
+    if (fx) {
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '腐殖剧毒·护甲融毁!', '#52C41A', 1.3);
+      fx.spawnParticles(enemy.x, enemy.y, 28, ['#52C41A', '#73D13D', '#13C2C2', '#389E0D'], 35, 120, 0.3, 0.7, 4.5);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.28);
+    platform.playSfx('sfx_bomb');
+    return { id: 'corrosion', name: '腐殖剧毒' };
+  }
+
+  /**
+   * 2. 触发【蒸气爆鸣】
+   */
+  triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice) {
+    const shockDmg = 220;
+    const cx = enemy.x;
+    const cy = enemy.y;
+
+    // 记录视觉震荡波
+    this.steamShockwaves.push({
+      x: cx,
+      y: cy,
+      radius: 20,
+      maxRadius: 110,
+      life: 0.45,
+      maxLife: 0.45
+    });
+
+    // 强力击退
+    const alive = enemyManager.getAliveEnemies();
+    for (let i = 0; i < alive.length; i++) {
+      const e = alive[i];
+      const d = Math.hypot(e.x - cx, e.y - cy);
+      if (d <= 110) {
+        e.hp -= shockDmg;
+        // 若非大型 Boss，施加 35px 沿路径后退
+        if (!e.isBoss) {
+          e.distPx = Math.max(0, e.distPx - 35);
+        }
+        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      }
+    }
+
+    if (fx) {
+      fx.spawnFloatingText(cx, cy - 28, '蒸气爆鸣·气压冲击!', '#FF7A45', 1.3);
+      fx.spawnParticles(cx, cy, 32, ['#FFF1B8', '#FF7A45', '#1890FF', '#FFFFFF'], 40, 140, 0.3, 0.75, 5);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.40);
+    platform.playSfx('sfx_shock');
+    return { id: 'steam', name: '蒸气爆鸣' };
+  }
+
+  /**
+   * 3. 触发【炽热荆棘】
+   */
+  triggerBlazingBramble(enemy, enemyManager, fx, combatJuice) {
+    const cx = enemy.x;
+    const cy = enemy.y;
+
+    this.blazingBrambles.push({
+      x: cx,
+      y: cy,
+      radius: 65,
+      life: 4.0,
+      maxLife: 4.0,
+      tickTimer: 0
+    });
+
+    if (fx) {
+      fx.spawnFloatingText(cx, cy - 24, '炽热荆棘·焦土焚烧!', '#FA541C', 1.25);
+      fx.spawnParticles(cx, cy, 26, ['#FA541C', '#FFD666', '#52C41A', '#8C6842'], 30, 95, 0.25, 0.6, 4);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.25);
+    platform.playSfx('sfx_bomb');
+    return { id: 'bramble', name: '炽热荆棘' };
+  }
+
+  /**
+   * 4. 触发【霜冻凋零】
+   */
+  triggerFrostbite(enemy, enemyManager, fx, combatJuice) {
+    enemy.isFrozen = true;
+    enemy.freezeTimer = 3.0;
+    enemy.residualSlowTimer = 3.5;
+    enemy.residualSlowValue = 0.95;
+
+    if (fx) {
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '霜冻凋零·冰封坚固!', '#13C2C2', 1.25);
+      fx.spawnParticles(enemy.x, enemy.y, 24, ['#E6F7FF', '#BAE7FF', '#69C0FF', '#FFFFFF'], 25, 80, 0.25, 0.55, 3.5);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.20);
+    platform.playSfx('sfx_laser');
+    return { id: 'frostbite', name: '霜冻凋零' };
+  }
+
+  /**
+   * 5. 触发【圣光涤罪】
+   */
+  triggerSolarSuperconduct(enemy, enemyManager, economy, fx, combatJuice) {
+    const cx = enemy.x;
+    const cy = enemy.y;
+
+    // 奖励 15 黄金孢子
+    if (economy) {
+      economy.addSpores(15);
+    }
+
+    // 致盲 2.5 秒
+    const alive = enemyManager.getAliveEnemies();
+    for (let i = 0; i < alive.length; i++) {
+      const e = alive[i];
+      if (Math.hypot(e.x - cx, e.y - cy) <= 130) {
+        e.isBlind = true;
+        e.blindTimer = 2.5;
+        e.activeSlow = Math.max(e.activeSlow || 0, 0.70);
+      }
+    }
+
+    if (fx) {
+      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +15 孢子!', '#FFD700', 1.4);
+      fx.spawnParticles(cx, cy, 38, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 45, 160, 0.35, 0.8, 5.5);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.35);
+    platform.playSfx('sfx_coin');
+    return { id: 'solar', name: '圣光涤罪' };
+  }
+
+  /**
+   * 6. 触发【天人合一·自然大共鸣】
+   */
+  triggerGrandResonance(primaryEnemy, enemyManager, fx, combatJuice) {
+    const allAlive = enemyManager.getAliveEnemies();
+    const grandDmg = 380;
+
+    for (let i = 0; i < allAlive.length; i++) {
+      const e = allAlive[i];
+      e.hp -= grandDmg;
+      e.isRooted = true;
+      e.rootTimer = 3.0;
+      e.residualSlowTimer = 3.5;
+      e.residualSlowValue = 0.90;
+      if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+    }
+
+    if (fx) {
+      fx.showBanner('🌲 自然大共鸣·天地同力！', '#52C41A', '全屏神圣天罚，破敌万千！', 2.0);
+      fx.spawnParticles(480, 270, 70, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 80, 320, 0.5, 1.2, 7.0);
+    }
+    if (combatJuice) combatJuice.addTrauma(0.65);
+    platform.playSfx('sfx_win');
+  }
+
+  update(dt, enemyManager, fx) {
+    this.animTime += dt;
+
+    // 更新焦土灼烧区
+    for (let i = this.blazingBrambles.length - 1; i >= 0; i--) {
+      const b = this.blazingBrambles[i];
+      b.life -= dt;
+      b.tickTimer = (b.tickTimer || 0) + dt;
+
+      if (b.tickTimer >= 0.5) {
+        b.tickTimer = 0;
+        if (enemyManager) {
+          const alive = enemyManager.getAliveEnemies();
+          for (let e = 0; e < alive.length; e++) {
+            const tgt = alive[e];
+            if (!tgt.isFlying && Math.hypot(tgt.x - b.x, tgt.y - b.y) <= b.radius) {
+              tgt.hp -= 35;
+              tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.0);
+              tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.60);
+              if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
+            }
+          }
+        }
+      }
+
+      if (b.life <= 0) this.blazingBrambles.splice(i, 1);
+    }
+
+    // 更新蒸气冲击波动画
+    for (let i = this.steamShockwaves.length - 1; i >= 0; i--) {
+      const s = this.steamShockwaves[i];
+      s.life -= dt;
+      const prog = 1 - (s.life / s.maxLife);
+      s.radius = 20 + prog * (s.maxRadius - 20);
+      if (s.life <= 0) this.steamShockwaves.splice(i, 1);
+    }
+
+    // 衰减敌怪体内的元素附着时间
+    if (enemyManager) {
+      const alive = enemyManager.getAliveEnemies();
+      for (let i = 0; i < alive.length; i++) {
+        const aff = alive[i].elementAfflictions;
+        if (aff) {
+          for (const k in aff) {
+            if (aff[k] > 0) aff[k] -= dt;
+          }
+        }
+      }
+    }
+  }
+
+  render(ctx) {
+    // 1. 渲染焦土烈焰荆棘
+    const brambleImg = platform.getImage('assets/vfx/range_bramble_red.png');
+    for (let i = 0; i < this.blazingBrambles.length; i++) {
+      const b = this.blazingBrambles[i];
+      const alpha = Math.max(0, b.life / b.maxLife);
+      const pulse = 0.85 + Math.sin(this.animTime * 10 + i) * 0.15;
+
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.scale(1.0, 0.72);
+
+      if (brambleImg && brambleImg.width) {
+        ctx.globalAlpha = alpha * pulse * 0.70;
+        const dSize = b.radius * 2.2;
+        ctx.drawImage(brambleImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+      } else {
+        ctx.globalAlpha = alpha * pulse * 0.35;
+        ctx.fillStyle = '#FA541C';
+        ctx.beginPath();
+        ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 2. 渲染蒸气高压扩散波 (Steam Overpressure Shockwave)
+    const waveImg = platform.getImage('assets/vfx/range_toxic_acid.png');
+    for (let i = 0; i < this.steamShockwaves.length; i++) {
+      const s = this.steamShockwaves[i];
+      const alpha = Math.max(0, s.life / s.maxLife);
+
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.scale(1.0, 0.72);
+
+      if (waveImg && waveImg.width) {
+        ctx.globalAlpha = alpha * 0.55;
+        const dSize = s.radius * 2.0;
+        ctx.drawImage(waveImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+      } else {
+        ctx.globalAlpha = alpha * 0.30;
+        ctx.fillStyle = '#BAE7FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+module.exports = ElementalComboEngine;
+
+  };
+
   /* --- js/game/contraption.js --- */
   __modules['js/game/contraption'] = function(require, module, exports) {
 /**
@@ -11284,6 +12064,9 @@ class BulletManager {
             fx,
             'lumina'
           );
+          if (this.elementalCombos) {
+            this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
+          }
           tgt.activeSlow = Math.max(tgt.activeSlow || 0, 0.35);
           tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 2.0);
           tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.35);
@@ -11336,6 +12119,9 @@ class BulletManager {
             fx,
             'watch'
           );
+          if (this.elementalCombos) {
+            this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
+          }
           if (fx) {
             fx.onSingleHit(tgt.x, tgt.y, b.branchColor);
           }
@@ -11409,6 +12195,9 @@ class BulletManager {
               fx.onSingleHit(e.x, e.y, b.branchColor);
             }
 
+            if (this.elementalCombos) {
+              this.elementalCombos.checkCombo(e, 'earth', enemyManager, economy, fx, this.combatJuice);
+            }
             b.pierceCountSoFar += 1;
             b.pierceRemaining -= 1;
             if (b.pierceRemaining <= 0) {
@@ -11486,6 +12275,9 @@ class BulletManager {
                 economy,
                 fx
               );
+              if (this.elementalCombos) {
+                this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
+              }
             }
           }
 
@@ -11569,7 +12361,7 @@ class BulletManager {
       let drawW = 32, drawH = 32;
       if (b.kind === 'watch') {
         vfxPath = 'assets/vfx/proj_watch_arrow.png';
-        drawW = 34; drawH = 10;
+        drawW = 42; drawH = 14;
       } else if (b.kind === 'thorn') {
         vfxPath = 'assets/vfx/vfx_spikes.png';
         drawW = 28; drawH = 28;
@@ -11591,13 +12383,13 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 巡林金矢尾部轻灵仙尘微粒拖尾 (Fairy Dust Motes)
+          // 巡林神圣木羽箭尾部仙尘星芒微粒 (Fairy Dust Motes)
           ctx.save();
-          const backX = b.x - Math.cos(b.angle) * 14;
-          const backY = b.y - Math.sin(b.angle) * 14;
-          ctx.fillStyle = 'rgba(255, 235, 140, 0.55)';
+          const backX = b.x - Math.cos(b.angle) * 16;
+          const backY = b.y - Math.sin(b.angle) * 16;
+          ctx.fillStyle = 'rgba(255, 235, 140, 0.75)';
           ctx.beginPath();
-          ctx.arc(backX, backY, 2.0, 0, Math.PI * 2);
+          ctx.arc(backX, backY, 2.2, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           continue;
@@ -14766,13 +15558,22 @@ class UiManager {
         strokeWidth: 0.8
       });
 
-      // 【核心修复：守卫UI显示】优先读取真实 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png！
-      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
+      // 【核心守卫UI显示】读取 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png 并自适应居中渲染
+      const cardArtImg = platform.getImage("assets/ui/cards/card_" + tId + ".png");
       if (cardArtImg && cardArtImg.width) {
-        ctx.drawImage(cardArtImg, cx + 16, cy + 16, 44, 48);
+        const maxArtW = 46;
+        const maxArtH = 44;
+        const artAspect = cardArtImg.width / cardArtImg.height;
+        let dw = maxArtW, dh = maxArtH;
+        if (artAspect > (maxArtW / maxArtH)) {
+          dh = maxArtW / artAspect;
+        } else {
+          dw = maxArtH * artAspect;
+        }
+        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 17 + (maxArtH - dh) * 0.5, dw, dh);
       } else {
         // 兜底绘制真实动画精灵
-        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + (cardW - 32) * 0.5, cy + 32);
+        drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
       // 底部孢子消耗胶囊
@@ -16442,6 +17243,8 @@ const RelicArsenalSystem = require('../game/relicArsenal');
 const { TacticalTargetingSystem } = require('../game/tacticalTargeting');
 const CombatJuiceEngine = require('../game/combatJuice');
 const { MushroomMasterySystem } = require('../game/mushroomMastery');
+const HeroTranscendence = require('../game/heroTranscendence');
+const ElementalComboEngine = require('../game/elementalCombos');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -16490,26 +17293,15 @@ class SceneController {
     this.tacticalTargeting = new TacticalTargetingSystem();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
+    this.heroTranscendence = new HeroTranscendence(this.hero);
+    this.elementalCombos = new ElementalComboEngine();
+    if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
     this.towerManager.mushroomMastery = this.mushroomMastery;
     this.bulletManager.combatJuice = this.combatJuice;
     this.bulletManager.mushroomMastery = this.mushroomMastery;
-    this.enemyManager.combatJuice = this.combatJuice;
-    this.enemyManager.scene = this;
-    this.bulletManager.scene = this;
-    this.elementalReactions = new ElementalReactionSystem();
-    this.heroSkills = new HeroSkillSystem(this.hero);
-    this.combatAnalytics = new CombatAnalyticsSystem();
-    this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
-    this.combatJuice = new CombatJuiceEngine();
-    this.mushroomMastery = new MushroomMasterySystem();
-    this.towerManager.scene = this;
-    this.towerManager.tacticalTargeting = this.tacticalTargeting;
-    this.towerManager.mushroomMastery = this.mushroomMastery;
-    this.bulletManager.combatJuice = this.combatJuice;
-    this.bulletManager.mushroomMastery = this.mushroomMastery;
+    this.bulletManager.elementalCombos = this.elementalCombos;
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
@@ -17139,6 +17931,14 @@ class SceneController {
             platform.playSfx('sfx_shock');
           }
         }
+      } else if (act.type === 'hero_battlecry') {
+        if (this.state === 'BATTLE' && this.heroTranscendence) {
+          this.heroTranscendence.castBattlecry(this.sporelingPatrol, this.fx);
+        }
+      } else if (act.type === 'hero_leyline') {
+        if (this.state === 'BATTLE' && this.heroTranscendence) {
+          this.heroTranscendence.castLeylineSurge(this.towerManager, this.fx);
+        }
       } else if (act.type === 'toggle_awakening') {
         if (this.state === 'BATTLE') {
           if (this.awakeningSeeds > 0) {
@@ -17224,6 +18024,12 @@ class SceneController {
     }
     if (this.heroSkills) {
       this.heroSkills.update(dt, this);
+    }
+    if (this.heroTranscendence) {
+      this.heroTranscendence.update(dt, this.enemyManager, this.sporelingPatrol, this.towerManager, this.fx);
+    }
+    if (this.elementalCombos) {
+      this.elementalCombos.update(dt, this.enemyManager, this.fx);
     }
     if (this.combatAnalytics) {
       this.combatAnalytics.update(dt);
@@ -17435,6 +18241,12 @@ class SceneController {
     this.bulletManager.renderBullets(ctx);
     if (this.heroSkills) {
       this.heroSkills.renderMapVfx(ctx);
+    }
+    if (this.elementalCombos) {
+      this.elementalCombos.render(ctx);
+    }
+    if (this.heroTranscendence) {
+      this.heroTranscendence.render(ctx);
     }
     if (this.elementalReactions) {
       this.elementalReactions.render(ctx, this.animTimeSec);

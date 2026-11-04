@@ -1755,13 +1755,22 @@ class UiManager {
         strokeWidth: 0.8
       });
 
-      // 【核心修复：守卫UI显示】优先读取真实 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png！
-      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
+      // 【核心守卫UI显示】读取 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png 并自适应居中渲染
+      const cardArtImg = platform.getImage("assets/ui/cards/card_" + tId + ".png");
       if (cardArtImg && cardArtImg.width) {
-        ctx.drawImage(cardArtImg, cx + 16, cy + 16, 44, 48);
+        const maxArtW = 46;
+        const maxArtH = 44;
+        const artAspect = cardArtImg.width / cardArtImg.height;
+        let dw = maxArtW, dh = maxArtH;
+        if (artAspect > (maxArtW / maxArtH)) {
+          dh = maxArtW / artAspect;
+        } else {
+          dw = maxArtH * artAspect;
+        }
+        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 17 + (maxArtH - dh) * 0.5, dw, dh);
       } else {
         // 兜底绘制真实动画精灵
-        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + (cardW - 32) * 0.5, cy + 32);
+        drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
       // 底部孢子消耗胶囊

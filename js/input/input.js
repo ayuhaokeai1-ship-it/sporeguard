@@ -123,12 +123,16 @@ function handleKeyDown(rawKey) {
     emitAction('select_tower_slot', { slot: 4 });
   } else if (key === 'enter') {
     emitAction('confirm_tile', { col: gridCursor.col, row: gridCursor.row });
-  } else if (key === 'space' || key === ' ' || key === 'keyg' || key === 'g') {
+  } else if (key === 'space' || key === ' ') {
     if (gridCursor.active) {
       emitAction('confirm_tile', { col: gridCursor.col, row: gridCursor.row });
     } else {
       emitAction('toggle_awakening');
     }
+  } else if (key === 'keyg' || key === 'g') {
+    emitAction('hero_battlecry');
+  } else if (key === 'keyv' || key === 'v') {
+    emitAction('hero_leyline');
   } else if (key === 'keyq' || key === 'q') {
     emitAction('trigger_spell', { spellId: 'rain' });
   } else if (key === 'keyw' || key === 'w') {

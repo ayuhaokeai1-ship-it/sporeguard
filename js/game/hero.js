@@ -239,6 +239,9 @@ class ForestHero {
 
     // 守卫姿态天然 35% 坚韧硬甲减伤，狂暴姿态承伤 +15%
     let finalDamage = amount;
+    if (this.transcendence) {
+      finalDamage = this.transcendence.onHeroTakeDamage(finalDamage, enemyManager, fx);
+    }
     if (this.stance === 'guardian') {
       finalDamage = Math.max(1, Math.round(amount * 0.65));
     } else if (this.stance === 'aggressive') {
@@ -658,6 +661,9 @@ class ForestHero {
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
               enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
+            if (this.transcendence) {
+              this.transcendence.onHeroHitTarget(target, enemyManager, fx);
+            }
               this.gainXp(8, fx);
             }
 

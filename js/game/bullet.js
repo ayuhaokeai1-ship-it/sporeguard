@@ -326,6 +326,9 @@ class BulletManager {
             fx,
             'lumina'
           );
+          if (this.elementalCombos) {
+            this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
+          }
           tgt.activeSlow = Math.max(tgt.activeSlow || 0, 0.35);
           tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 2.0);
           tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.35);
@@ -378,6 +381,9 @@ class BulletManager {
             fx,
             'watch'
           );
+          if (this.elementalCombos) {
+            this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
+          }
           if (fx) {
             fx.onSingleHit(tgt.x, tgt.y, b.branchColor);
           }
@@ -451,6 +457,9 @@ class BulletManager {
               fx.onSingleHit(e.x, e.y, b.branchColor);
             }
 
+            if (this.elementalCombos) {
+              this.elementalCombos.checkCombo(e, 'earth', enemyManager, economy, fx, this.combatJuice);
+            }
             b.pierceCountSoFar += 1;
             b.pierceRemaining -= 1;
             if (b.pierceRemaining <= 0) {
@@ -528,6 +537,9 @@ class BulletManager {
                 economy,
                 fx
               );
+              if (this.elementalCombos) {
+                this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
+              }
             }
           }
 
@@ -611,7 +623,7 @@ class BulletManager {
       let drawW = 32, drawH = 32;
       if (b.kind === 'watch') {
         vfxPath = 'assets/vfx/proj_watch_arrow.png';
-        drawW = 34; drawH = 10;
+        drawW = 42; drawH = 14;
       } else if (b.kind === 'thorn') {
         vfxPath = 'assets/vfx/vfx_spikes.png';
         drawW = 28; drawH = 28;
@@ -633,13 +645,13 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 巡林金矢尾部轻灵仙尘微粒拖尾 (Fairy Dust Motes)
+          // 巡林神圣木羽箭尾部仙尘星芒微粒 (Fairy Dust Motes)
           ctx.save();
-          const backX = b.x - Math.cos(b.angle) * 14;
-          const backY = b.y - Math.sin(b.angle) * 14;
-          ctx.fillStyle = 'rgba(255, 235, 140, 0.55)';
+          const backX = b.x - Math.cos(b.angle) * 16;
+          const backY = b.y - Math.sin(b.angle) * 16;
+          ctx.fillStyle = 'rgba(255, 235, 140, 0.75)';
           ctx.beginPath();
-          ctx.arc(backX, backY, 2.0, 0, Math.PI * 2);
+          ctx.arc(backX, backY, 2.2, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           continue;
