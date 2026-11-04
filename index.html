@@ -1185,6 +1185,22 @@
         return;
       }
 
+      if (location.hash === '#test_title_click') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            const t0 = performance.now();
+            S.ui.handlePointerDown(220, 485, S);
+            S.ui.handlePointerUp(220, 485, S);
+            const t1 = performance.now();
+            document.title = 'TITLE_CLICK_OK state=' + S.state + ' cost_ms=' + (t1 - t0).toFixed(1);
+          } catch (e) {
+            document.title = 'TITLE_CLICK_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
       if (location.hash === '#test_flank_spawner') {
         onGameReady(function() {
           try {

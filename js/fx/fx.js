@@ -150,6 +150,10 @@ class FxSystem {
   /**
    * 弹出伤害或奖励数字
    */
+  spawnDamageText(x, y, text, color = '#FF4D4F') {
+    return this.spawnFloatingText(x, y, text, color, 1.0);
+  }
+
   spawnFloatingText(x, y, text, color = PALETTE.UI_TEXT, scale = 1.0) {
     const item = this.textPool.acquire(true);
     if (!item) return;

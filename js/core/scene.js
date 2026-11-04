@@ -26,6 +26,9 @@ const CombatJuiceEngine = require('../game/combatJuice');
 const { MushroomMasterySystem } = require('../game/mushroomMastery');
 const HeroTranscendence = require('../game/heroTranscendence');
 const ElementalComboEngine = require('../game/elementalCombos');
+const GuardianSynergies = require('../game/guardianSynergies');
+const CombatVfxEngine = require('../game/combatVfxEngine');
+const TacticalFeats = require('../game/tacticalFeats');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -76,6 +79,20 @@ class SceneController {
     this.mushroomMastery = new MushroomMasterySystem();
     this.heroTranscendence = new HeroTranscendence(this.hero);
     this.elementalCombos = new ElementalComboEngine();
+    this.guardianSynergies = new GuardianSynergies();
+    this.combatVfx = new CombatVfxEngine();
+    this.tacticalFeats = new TacticalFeats();
+    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    this.bulletManager.elementalCombos = this.elementalCombos;
+    this.bulletManager.combatVfx = this.combatVfx;
+    this.enemyManager.combatVfx = this.combatVfx;
+    this.enemyManager.tacticalFeats = this.tacticalFeats;
+    this.towerManager.guardianSynergies = this.guardianSynergies;
+    this.heroTranscendence = new HeroTranscendence(this.hero);
+    this.elementalCombos = new ElementalComboEngine();
+    this.guardianSynergies = new GuardianSynergies();
+    this.combatVfx = new CombatVfxEngine();
+    this.tacticalFeats = new TacticalFeats();
     if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
@@ -136,56 +153,12 @@ class SceneController {
   enterTitle() {
     this.state = 'TITLE';
     this.speedMultiplier = 1;
-    this.hero = new ForestHero(this.map);
-    this.awakeningSeeds = 2;
-    this.weather = new WeatherManager();
-    this.achievements = achievements;
-    this.elementalReactions = new ElementalReactionSystem();
-    this.heroSkills = new HeroSkillSystem(this.hero);
-    this.combatAnalytics = new CombatAnalyticsSystem();
-    this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
-    this.combatJuice = new CombatJuiceEngine();
-    this.mushroomMastery = new MushroomMasterySystem();
-    this.towerManager.scene = this;
-    this.towerManager.tacticalTargeting = this.tacticalTargeting;
-    this.towerManager.mushroomMastery = this.mushroomMastery;
-    this.bulletManager.combatJuice = this.combatJuice;
-    this.bulletManager.mushroomMastery = this.mushroomMastery;
-    this.enemyManager.combatJuice = this.combatJuice;
-    this.enemyManager.scene = this;
-    this.bulletManager.scene = this;
-    this.earlyCallsCount = 0;
-    this.activeHeroRally = false;
-    this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
   }
 
   enterLevelSelect() {
     this.state = 'LEVEL_SELECT';
     this.speedMultiplier = 1;
-    this.hero = new ForestHero(this.map);
-    this.awakeningSeeds = 2;
-    this.weather = new WeatherManager();
-    this.achievements = achievements;
-    this.elementalReactions = new ElementalReactionSystem();
-    this.heroSkills = new HeroSkillSystem(this.hero);
-    this.combatAnalytics = new CombatAnalyticsSystem();
-    this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
-    this.combatJuice = new CombatJuiceEngine();
-    this.mushroomMastery = new MushroomMasterySystem();
-    this.towerManager.scene = this;
-    this.towerManager.tacticalTargeting = this.tacticalTargeting;
-    this.towerManager.mushroomMastery = this.mushroomMastery;
-    this.bulletManager.combatJuice = this.combatJuice;
-    this.bulletManager.mushroomMastery = this.mushroomMastery;
-    this.enemyManager.combatJuice = this.combatJuice;
-    this.enemyManager.scene = this;
-    this.bulletManager.scene = this;
-    this.earlyCallsCount = 0;
-    this.activeHeroRally = false;
-    this.activeAwakeningTargeting = false;
     platform.playBgm('bgm_title');
   }
 
@@ -227,6 +200,17 @@ class SceneController {
     this.tacticalTargeting = new TacticalTargetingSystem();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
+    this.heroTranscendence = new HeroTranscendence(this.hero);
+    this.elementalCombos = new ElementalComboEngine();
+    this.guardianSynergies = new GuardianSynergies();
+    this.combatVfx = new CombatVfxEngine();
+    this.tacticalFeats = new TacticalFeats();
+    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    this.bulletManager.elementalCombos = this.elementalCombos;
+    this.bulletManager.combatVfx = this.combatVfx;
+    this.enemyManager.combatVfx = this.combatVfx;
+    this.enemyManager.tacticalFeats = this.tacticalFeats;
+    this.towerManager.guardianSynergies = this.guardianSynergies;
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
     this.towerManager.mushroomMastery = this.mushroomMastery;
@@ -812,6 +796,15 @@ class SceneController {
     if (this.elementalCombos) {
       this.elementalCombos.update(dt, this.enemyManager, this.fx);
     }
+    if (this.guardianSynergies) {
+      this.guardianSynergies.update(dt, this);
+    }
+    if (this.combatVfx) {
+      this.combatVfx.update(dt);
+    }
+    if (this.tacticalFeats) {
+      this.tacticalFeats.update(dt, this);
+    }
     if (this.combatAnalytics) {
       this.combatAnalytics.update(dt);
     }
@@ -1025,6 +1018,15 @@ class SceneController {
     }
     if (this.elementalCombos) {
       this.elementalCombos.render(ctx);
+    }
+    if (this.guardianSynergies) {
+      this.guardianSynergies.render(ctx);
+    }
+    if (this.combatVfx) {
+      this.combatVfx.renderCombatVfx(ctx);
+    }
+    if (this.tacticalFeats) {
+      this.tacticalFeats.render(ctx);
     }
     if (this.heroTranscendence) {
       this.heroTranscendence.render(ctx);

@@ -40,7 +40,9 @@ class EnemyManager {
           this.hp -= dmg;
           this.whiteFlashFrames = 2;
           if (fx) {
-            fx.spawnDamageText(Math.round(this.x), Math.round(this.y - 14), '-' + dmg, '#FF4D4F');
+            if (typeof fx.spawnFloatingText === 'function') {
+              fx.spawnFloatingText(Math.round(this.x), Math.round(this.y - 14), '-' + dmg, '#FF4D4F', 0.9);
+            }
           }
           if (this.hp <= 0) {
             self.killEnemy(this, fx);

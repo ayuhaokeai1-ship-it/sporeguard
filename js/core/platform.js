@@ -350,29 +350,37 @@ function setStorage(key, value) {
 }
 
 /**
- * 首次用户点击后解锁并初始化音频系统
+ * 首次用户点击后解锁并初始化音频系统（极低开销、平滑渐进式防卡顿）
  */
 function preloadSfxBuffers() {
   if (!webAudioCtx) return;
-  Object.keys(AUDIO_PATHS).forEach((key) => {
-    if (key.indexOf('sfx_') !== 0) return;
+  // 关键防卡死：在 file:/// 协议下，浏览器禁止 fetch() 本地文件，强制使用 HTML5 Audio，绝不发并发 fetch 阻塞主线程
+  if (typeof location !== 'undefined' && location.protocol === 'file:') {
+    return;
+  }
+  // 即使在 HTTP 协议下，也仅在后台空闲时逐个预加载，绝不第一击并发暴击卡死界面
+  const sfxKeys = Object.keys(AUDIO_PATHS).filter(k => k.indexOf('sfx_') === 0 && !audioBuffers[k]);
+  let idx = 0;
+  function loadNext() {
+    if (idx >= sfxKeys.length) return;
+    const key = sfxKeys[idx++];
     const src = AUDIO_PATHS[key];
-    if (audioBuffers[key] || !src) return;
-    try {
-      if (typeof fetch !== 'undefined') {
-        fetch(src)
-          .then((res) => {
-            if (!res.ok) throw new Error('Fetch failed');
-            return res.arrayBuffer();
-          })
-          .then((buf) => webAudioCtx.decodeAudioData(buf))
-          .then((decoded) => {
-            audioBuffers[key] = decoded;
-          })
-          .catch(() => {});
-      }
-    } catch (e) {}
-  });
+    if (src && typeof fetch !== 'undefined') {
+      fetch(src)
+        .then(r => r.ok ? r.arrayBuffer() : null)
+        .then(buf => (buf && webAudioCtx) ? webAudioCtx.decodeAudioData(buf) : null)
+        .then(decoded => {
+          if (decoded) audioBuffers[key] = decoded;
+          setTimeout(loadNext, 120);
+        })
+        .catch(() => {
+          setTimeout(loadNext, 120);
+        });
+    } else {
+      setTimeout(loadNext, 120);
+    }
+  }
+  setTimeout(loadNext, 100);
 }
 
 function unlockAudio() {
@@ -384,14 +392,16 @@ function unlockAudio() {
     if (AudioCtx && !webAudioCtx) {
       webAudioCtx = new AudioCtx();
       if (webAudioCtx.state === 'suspended') {
-        webAudioCtx.resume();
+        webAudioCtx.resume().catch(() => {});
       }
     }
   } catch (e) {
     // 忽略 WebAudio 初始化错误
   }
 
-  preloadSfxBuffers();
+  try {
+    preloadSfxBuffers();
+  } catch (e) {}
 
   if (pendingBgmKey && bgmEnabled) {
     playBgm(pendingBgmKey);
@@ -428,6 +438,13 @@ function createAudioInstance(src, loop, volume) {
       ctx.loop = Boolean(loop);
       ctx.volume = volume !== undefined ? volume : 0.6;
       return ctx;
+    } else if (typeof Audio !== 'undefined') {
+      const audio = new Audio();
+      audio.src = src;
+      audio.loop = Boolean(loop);
+      audio.volume = volume !== undefined ? volume : 0.6;
+      audio.preload = 'auto';
+      return audio;
     }
   } catch (e) {
     // 忽略
@@ -500,13 +517,14 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     } else {
       // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
-      if (src && typeof fetch !== 'undefined' && !loadingAudioBuffers[sfxKey]) {
+      const isFileScheme = typeof location !== 'undefined' && location.protocol === 'file:';
+      if (!isFileScheme && src && typeof fetch !== 'undefined' && !loadingAudioBuffers[sfxKey]) {
         loadingAudioBuffers[sfxKey] = true;
         fetch(src)
-          .then((r) => r.arrayBuffer())
-          .then((buf) => webAudioCtx.decodeAudioData(buf))
+          .then((r) => r.ok ? r.arrayBuffer() : null)
+          .then((buf) => (buf && webAudioCtx) ? webAudioCtx.decodeAudioData(buf) : null)
           .then((decoded) => {
-            audioBuffers[sfxKey] = decoded;
+            if (decoded) audioBuffers[sfxKey] = decoded;
             loadingAudioBuffers[sfxKey] = false;
           })
           .catch(() => {
@@ -527,16 +545,19 @@ function playSfx(sfxKey, volumeMod = 1.0) {
       }
     }
     const voices = sfxVoicePool[sfxKey];
-    const idx = sfxVoiceIndices[sfxKey] % voices.length;
-    sfxVoiceIndices[sfxKey] = (idx + 1) % voices.length;
-    const inst = voices[idx];
-    if (inst) {
-      try {
-        if (typeof inst.stop === 'function') inst.stop();
-        if (typeof inst.seek === 'function') inst.seek(0);
-        if ('currentTime' in inst) inst.currentTime = 0;
-        inst.play();
-      } catch (e) {}
+    if (voices && voices.length > 0) {
+      const idx = sfxVoiceIndices[sfxKey] % voices.length;
+      sfxVoiceIndices[sfxKey] = (idx + 1) % voices.length;
+      const inst = voices[idx];
+      if (inst) {
+        try {
+          if (typeof inst.stop === 'function') inst.stop();
+          if (typeof inst.seek === 'function') inst.seek(0);
+          if ('currentTime' in inst) inst.currentTime = 0;
+          const p = inst.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch (e) {}
+      }
     }
   }
 }
