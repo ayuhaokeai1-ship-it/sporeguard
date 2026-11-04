@@ -19,7 +19,7 @@ function bootstrapGame() {
 
   const loop = new GameLoop(scene);
 
-  const g = typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof globalThis !== 'undefined' ? globalThis : window);
+  let g = typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof globalThis !== 'undefined' ? globalThis : window);
   g.__SPOREGUARD__ = {
     scene,
     loop,

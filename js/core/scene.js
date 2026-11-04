@@ -686,6 +686,10 @@ class SceneController {
           }
         }
       } else if (act.type === 'cycle_speed') {
+      } else if (act.type === 'toggle_zen_mode') {
+        if (this.state === 'BATTLE') {
+          this.ui.toggleZenMode(this.fx);
+        }
         if (this.state === 'BATTLE') {
           this.cycleSpeed();
         }

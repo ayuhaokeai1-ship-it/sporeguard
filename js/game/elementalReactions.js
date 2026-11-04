@@ -375,23 +375,21 @@ class ElementalReactionSystem {
         const midY = (arc.y1 + arc.y2) * 0.5 + Math.cos(animTimeSec * 18 + i) * 10 - 6;
 
         // (A) 超导能量流柔和外晕曲线（自然贝塞尔弧形，绝无直条生硬感）
-        ctx.strokeStyle = 
-gba(105, 192, 255, );
-        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = 'rgba(105, 192, 255, ' + (alpha * 0.85) + ')';
+        ctx.lineWidth = 3.0;
         ctx.beginPath();
         ctx.moveTo(arc.x1, arc.y1);
         ctx.quadraticCurveTo(midX, midY, arc.x2, arc.y2);
         ctx.stroke();
 
-        ctx.strokeStyle = 
-gba(186, 231, 255, );
-        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = 'rgba(186, 231, 255, ' + alpha + ')';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
         ctx.moveTo(arc.x1, arc.y1);
         ctx.quadraticCurveTo(midX, midY, arc.x2, arc.y2);
         ctx.stroke();
 
-        // (B) 沿弧线流动 AI 手绘闪电灵核
+        // (B) 闪电焦点 AI 灵光手绘
         if (lightImg && lightImg.width) {
           ctx.save();
           ctx.globalAlpha = alpha * 0.90;

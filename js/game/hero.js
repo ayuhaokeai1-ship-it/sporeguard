@@ -722,30 +722,62 @@ class ForestHero {
       ctx.restore();
     }
     if (this.state === 'dead') {
-      // 阵亡墓碑与复活倒计时光圈
+      // 阵亡休眠：远古树灵休眠古桩（100% AI 手绘青苔灵木古桩）与森林复苏生命光环
       ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      // 地面阴影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y + 8, 14, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 6, 20, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 墓碑/折断木剑立绘
-      ctx.fillStyle = '#8C8C8C';
-      ctx.fillRect(this.x - 6, this.y - 14, 12, 18);
-      ctx.fillRect(this.x - 10, this.y - 8, 20, 5);
+      // 100% AI 手绘远古古桩立绘
+      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
+      if (stumpImg && stumpImg.width) {
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        const sW = 38;
+        const sH = 30;
+        ctx.drawImage(stumpImg, this.x - sW * 0.5, this.y - sH * 0.75, sW, sH);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#4A3319';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y - 4, 14, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      // 复活倒计时文字与圆环
-      const ratio = 1 - (this.reviveTimer / this.reviveTimeTotal);
-      ctx.strokeStyle = '#52C41A';
-      ctx.lineWidth = 2.5;
+      // 灵光微粒环绕（休眠树灵呼吸光效）
+      const breathPulse = 0.5 + Math.sin(animTimeSec * 4) * 0.35;
+      ctx.fillStyle = 'rgba(115, 209, 61, ' + (0.35 * breathPulse) + ')';
       ctx.beginPath();
-      ctx.arc(this.x, this.y - 26, 10, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
+      ctx.arc(this.x + Math.sin(animTimeSec * 3) * 12, this.y - 12 + Math.cos(animTimeSec * 3) * 6, 3, 0, Math.PI * 2);
+      ctx.arc(this.x - Math.sin(animTimeSec * 2.5) * 10, this.y - 8 + Math.sin(animTimeSec * 2.5) * 5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 复活倒计时进度圆环
+      const ratio = 1 - (this.reviveTimer / this.reviveTimeTotal);
+      ctx.strokeStyle = 'rgba(20, 30, 20, 0.65)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y - 28, 12, 0, Math.PI * 2);
       ctx.stroke();
 
+      ctx.strokeStyle = '#52C41A';
+      ctx.lineWidth = 3.0;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y - 28, 12, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
+      ctx.stroke();
+
+      // 倒计时文字与复苏光标
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${Math.ceil(this.reviveTimer)}s`, this.x, this.y - 23);
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(Math.ceil(this.reviveTimer) + 's', this.x, this.y - 28);
+      ctx.shadowBlur = 0;
+
       ctx.restore();
       return;
     }
