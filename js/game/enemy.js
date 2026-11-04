@@ -985,8 +985,9 @@ class EnemyManager {
       if (cImg && cImg.width) {
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
+        // 高性能纯 GPU 闪白 (去除导致 GPU 重新光栅化的 ctx.filter)
         if (flashWhite) {
-          ctx.filter = 'brightness(1.4)';
+          ctx.globalAlpha = 0.85;
         }
         ctx.drawImage(cImg, e.x - customW * 0.5, e.y - customH * 0.5 - walkBob - jumpOffsetY, customW, customH);
         ctx.restore();

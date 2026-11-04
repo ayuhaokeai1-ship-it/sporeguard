@@ -216,12 +216,10 @@ class WeatherManager {
       ctx.fillStyle = 'rgba(210, 230, 240, 0.08)';
       ctx.fillRect(0, 0, 960, 540);
 
+      // 高性能柔和环境浓雾（杜绝每帧生成 RadialGradient 对象造成 GC 巨幅卡顿）
       for (let i = 0; i < this.fogWisps.length; i++) {
         const f = this.fogWisps[i];
-        const g = ctx.createRadialGradient(f.x, f.y, 10, f.x, f.y, f.radius);
-        g.addColorStop(0, `rgba(220, 238, 245, ${f.alpha})`);
-        g.addColorStop(1, 'rgba(220, 238, 245, 0)');
-        ctx.fillStyle = g;
+        ctx.fillStyle = `rgba(220, 238, 245, ${f.alpha * 0.45})`;
         ctx.beginPath();
         ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -258,11 +256,13 @@ class WeatherManager {
       ctx.fillStyle = `rgba(180, 20, 20, ${pulse})`;
       ctx.fillRect(0, 0, 960, 540);
 
-      // 四周暗夜血光暗角
-      const vig = ctx.createRadialGradient(480, 270, 240, 480, 270, 520);
-      vig.addColorStop(0, 'rgba(120, 10, 10, 0)');
-      vig.addColorStop(1, 'rgba(120, 10, 10, 0.45)');
-      ctx.fillStyle = vig;
+      // 四周暗夜血光暗角 (单例静态缓存渐变)
+      if (!this._cachedVig) {
+        this._cachedVig = ctx.createRadialGradient(480, 270, 240, 480, 270, 520);
+        this._cachedVig.addColorStop(0, 'rgba(120, 10, 10, 0)');
+        this._cachedVig.addColorStop(1, 'rgba(120, 10, 10, 0.45)');
+      }
+      ctx.fillStyle = this._cachedVig;
       ctx.fillRect(0, 0, 960, 540);
     }
 

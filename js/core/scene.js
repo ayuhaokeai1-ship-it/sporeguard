@@ -710,7 +710,6 @@ class SceneController {
   fixedStep(dt) {
     if (this.state !== 'BATTLE') return;
     if (this.ui.showGuideModal || this.ui.showSettingsModal) return;
-    if (this.fx.isHitstopped()) return;
 
     this.logicalCombatTimeSec += dt;
 

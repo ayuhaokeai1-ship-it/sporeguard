@@ -202,7 +202,7 @@ const CONFIG = {
     BURST_EXPLOSION: {
       shakePx: 2,
       shakeMs: 120,
-      hitstopMs: 30,
+      hitstopMs: 0,
       particles: 16,
       shockwaveRing: true
     },
@@ -211,7 +211,7 @@ const CONFIG = {
       maxKills: 4,
       shakePx: 2,
       shakeMs: 120,
-      hitstopMs: 30,
+      hitstopMs: 0,
       particles: 24,
       bannerKey: null,
       sfx: 'sfx_multikill'
@@ -221,8 +221,8 @@ const CONFIG = {
       maxKills: 9,
       shakePx: 4,
       shakeMs: 200,
-      hitstopMs: 60,
-      particles: 48,
+      hitstopMs: 0,
+      particles: 24,
       bannerKey: 'banner_chain',
       sfx: 'sfx_multikill'
     },
@@ -231,8 +231,8 @@ const CONFIG = {
       maxKills: 999,
       shakePx: 6,
       shakeMs: 300,
-      hitstopMs: 90,
-      particles: 96,
+      hitstopMs: 0,
+      particles: 32,
       bannerKey: 'banner_overload',
       fxSlowMoScale: 0.5,
       fxSlowMoMs: 150,
@@ -2818,7 +2818,9 @@ function updateViewport() {
     const info = wx.getSystemInfoSync();
     sw = info.windowWidth || sw;
     sh = info.windowHeight || sh;
-    dpr = Math.min(info.pixelRatio || (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1, 3);
+    const rawDpr = info.pixelRatio || (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    dpr = Math.min(rawDpr, isMobile ? 1.5 : 2.0);
   }
 
   viewport.screenWidth = sw;
@@ -2839,7 +2841,7 @@ function updateViewport() {
   }
   if (mainCtx) {
     mainCtx.imageSmoothingEnabled = true;
-    mainCtx.imageSmoothingQuality = 'high';
+    mainCtx.imageSmoothingQuality = 'low';
   }
 }
 
@@ -2867,7 +2869,7 @@ function beginFrame() {
   mainCtx.setTransform(1, 0, 0, 1, 0, 0);
   mainCtx.imageSmoothingEnabled = true;
   mainCtx.fillStyle = '#09120F';
-  mainCtx.imageSmoothingQuality = 'high';
+  mainCtx.imageSmoothingQuality = 'low';
   mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
   mainCtx.save();
@@ -3140,16 +3142,20 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
-      // 触发延迟预热加载
+      // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
-      if (src && typeof fetch !== 'undefined') {
+      if (src && typeof fetch !== 'undefined' && !loadingAudioBuffers[sfxKey]) {
+        loadingAudioBuffers[sfxKey] = true;
         fetch(src)
           .then((r) => r.arrayBuffer())
           .then((buf) => webAudioCtx.decodeAudioData(buf))
           .then((decoded) => {
             audioBuffers[sfxKey] = decoded;
+            loadingAudioBuffers[sfxKey] = false;
           })
-          .catch(() => {});
+          .catch(() => {
+            loadingAudioBuffers[sfxKey] = false;
+          });
       }
     }
   }
@@ -3665,31 +3671,51 @@ class ObjectPool {
     if (this.resetFn) {
       this.resetFn(item);
     }
+    item.__poolIndex = this.activeList.length;
     this.activeList.push(item);
     return item;
   }
 
   /**
-   * 释放指定对象回池
+   * 释放指定对象回池 (O(1) 尾部互换快速出池，彻底消除 O(N) Array.splice 性能瓶颈)
    */
   release(item) {
     if (!item || !item.__active) return;
     item.__active = false;
-    const idx = this.activeList.indexOf(item);
-    if (idx !== -1) {
-      this.activeList.splice(idx, 1);
+    const idx = item.__poolIndex;
+    if (idx !== undefined && idx >= 0 && idx < this.activeList.length && this.activeList[idx] === item) {
+      const last = this.activeList.pop();
+      if (last !== item) {
+        this.activeList[idx] = last;
+        last.__poolIndex = idx;
+      }
+    } else {
+      const fallbackIdx = this.activeList.indexOf(item);
+      if (fallbackIdx !== -1) {
+        const last = this.activeList.pop();
+        if (last !== item) {
+          this.activeList[fallbackIdx] = last;
+          last.__poolIndex = fallbackIdx;
+        }
+      }
     }
+    item.__poolIndex = -1;
     this.freeList.push(item);
   }
 
   /**
-   * 根据索引快速释放（遍历更新时避免 O(N) 查找）
+   * 根据索引快速释放 (O(1) 尾部互换)
    */
   releaseAt(index) {
     if (index < 0 || index >= this.activeList.length) return;
     const item = this.activeList[index];
     item.__active = false;
-    this.activeList.splice(index, 1);
+    const last = this.activeList.pop();
+    if (last !== item) {
+      this.activeList[index] = last;
+      last.__poolIndex = index;
+    }
+    item.__poolIndex = -1;
     this.freeList.push(item);
   }
 
@@ -4938,12 +4964,10 @@ class WeatherManager {
       ctx.fillStyle = 'rgba(210, 230, 240, 0.08)';
       ctx.fillRect(0, 0, 960, 540);
 
+      // 高性能柔和环境浓雾（杜绝每帧生成 RadialGradient 对象造成 GC 巨幅卡顿）
       for (let i = 0; i < this.fogWisps.length; i++) {
         const f = this.fogWisps[i];
-        const g = ctx.createRadialGradient(f.x, f.y, 10, f.x, f.y, f.radius);
-        g.addColorStop(0, `rgba(220, 238, 245, ${f.alpha})`);
-        g.addColorStop(1, 'rgba(220, 238, 245, 0)');
-        ctx.fillStyle = g;
+        ctx.fillStyle = `rgba(220, 238, 245, ${f.alpha * 0.45})`;
         ctx.beginPath();
         ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -4980,11 +5004,13 @@ class WeatherManager {
       ctx.fillStyle = `rgba(180, 20, 20, ${pulse})`;
       ctx.fillRect(0, 0, 960, 540);
 
-      // 四周暗夜血光暗角
-      const vig = ctx.createRadialGradient(480, 270, 240, 480, 270, 520);
-      vig.addColorStop(0, 'rgba(120, 10, 10, 0)');
-      vig.addColorStop(1, 'rgba(120, 10, 10, 0.45)');
-      ctx.fillStyle = vig;
+      // 四周暗夜血光暗角 (单例静态缓存渐变)
+      if (!this._cachedVig) {
+        this._cachedVig = ctx.createRadialGradient(480, 270, 240, 480, 270, 520);
+        this._cachedVig.addColorStop(0, 'rgba(120, 10, 10, 0)');
+        this._cachedVig.addColorStop(1, 'rgba(120, 10, 10, 0.45)');
+      }
+      ctx.fillStyle = this._cachedVig;
       ctx.fillRect(0, 0, 960, 540);
     }
 
@@ -6706,8 +6732,9 @@ class EnemyManager {
       if (cImg && cImg.width) {
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
+        // 高性能纯 GPU 闪白 (去除导致 GPU 重新光栅化的 ctx.filter)
         if (flashWhite) {
-          ctx.filter = 'brightness(1.4)';
+          ctx.globalAlpha = 0.85;
         }
         ctx.drawImage(cImg, e.x - customW * 0.5, e.y - customH * 0.5 - walkBob - jumpOffsetY, customW, customH);
         ctx.restore();
@@ -16121,7 +16148,6 @@ class SceneController {
   fixedStep(dt) {
     if (this.state !== 'BATTLE') return;
     if (this.ui.showGuideModal || this.ui.showSettingsModal) return;
-    if (this.fx.isHitstopped()) return;
 
     this.logicalCombatTimeSec += dt;
 
@@ -16410,6 +16436,7 @@ class GameLoop {
     this.scene = scene;
     this.running = false;
     this.lastTimestamp = 0;
+    this.accumulator = 0;
 
     // 性能统计指标（供 QA 报告与性能监控读取）
     this.perf = {
@@ -16454,16 +16481,27 @@ class GameLoop {
   }
 
   /**
-   * 单帧推进：先更新真实时间输入与 UI，再按倍速执行 1/2/3 个固定逻辑步 (1/60s)，最后绘制
+   * 单帧推进：时间累加器半固定步长更新，彻底杜绝丢帧减速与顿挫
    */
   stepFrame(realDt) {
     this.scene.updateRealTime(realDt);
 
     if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal) {
-      const steps = this.scene.speedMultiplier || 1;
-      for (let s = 0; s < steps; s++) {
+      const speed = this.scene.speedMultiplier || 1;
+      this.accumulator += Math.min(0.08, realDt) * speed;
+
+      let steps = 0;
+      const maxSteps = 4;
+      while (this.accumulator >= FIXED_DT && steps < maxSteps) {
         this.scene.fixedStep(FIXED_DT);
+        this.accumulator -= FIXED_DT;
+        steps++;
       }
+      if (this.accumulator > FIXED_DT * 2) {
+        this.accumulator = 0;
+      }
+    } else {
+      this.accumulator = 0;
     }
 
     const ctx = platform.getContext();

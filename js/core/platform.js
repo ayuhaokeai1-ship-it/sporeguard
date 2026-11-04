@@ -148,7 +148,9 @@ function updateViewport() {
     const info = wx.getSystemInfoSync();
     sw = info.windowWidth || sw;
     sh = info.windowHeight || sh;
-    dpr = Math.min(info.pixelRatio || (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1, 3);
+    const rawDpr = info.pixelRatio || (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    dpr = Math.min(rawDpr, isMobile ? 1.5 : 2.0);
   }
 
   viewport.screenWidth = sw;
@@ -169,7 +171,7 @@ function updateViewport() {
   }
   if (mainCtx) {
     mainCtx.imageSmoothingEnabled = true;
-    mainCtx.imageSmoothingQuality = 'high';
+    mainCtx.imageSmoothingQuality = 'low';
   }
 }
 
@@ -197,7 +199,7 @@ function beginFrame() {
   mainCtx.setTransform(1, 0, 0, 1, 0, 0);
   mainCtx.imageSmoothingEnabled = true;
   mainCtx.fillStyle = '#09120F';
-  mainCtx.imageSmoothingQuality = 'high';
+  mainCtx.imageSmoothingQuality = 'low';
   mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
   mainCtx.save();
@@ -470,16 +472,20 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
-      // 触发延迟预热加载
+      // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
-      if (src && typeof fetch !== 'undefined') {
+      if (src && typeof fetch !== 'undefined' && !loadingAudioBuffers[sfxKey]) {
+        loadingAudioBuffers[sfxKey] = true;
         fetch(src)
           .then((r) => r.arrayBuffer())
           .then((buf) => webAudioCtx.decodeAudioData(buf))
           .then((decoded) => {
             audioBuffers[sfxKey] = decoded;
+            loadingAudioBuffers[sfxKey] = false;
           })
-          .catch(() => {});
+          .catch(() => {
+            loadingAudioBuffers[sfxKey] = false;
+          });
       }
     }
   }

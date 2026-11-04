@@ -40,31 +40,51 @@ class ObjectPool {
     if (this.resetFn) {
       this.resetFn(item);
     }
+    item.__poolIndex = this.activeList.length;
     this.activeList.push(item);
     return item;
   }
 
   /**
-   * 释放指定对象回池
+   * 释放指定对象回池 (O(1) 尾部互换快速出池，彻底消除 O(N) Array.splice 性能瓶颈)
    */
   release(item) {
     if (!item || !item.__active) return;
     item.__active = false;
-    const idx = this.activeList.indexOf(item);
-    if (idx !== -1) {
-      this.activeList.splice(idx, 1);
+    const idx = item.__poolIndex;
+    if (idx !== undefined && idx >= 0 && idx < this.activeList.length && this.activeList[idx] === item) {
+      const last = this.activeList.pop();
+      if (last !== item) {
+        this.activeList[idx] = last;
+        last.__poolIndex = idx;
+      }
+    } else {
+      const fallbackIdx = this.activeList.indexOf(item);
+      if (fallbackIdx !== -1) {
+        const last = this.activeList.pop();
+        if (last !== item) {
+          this.activeList[fallbackIdx] = last;
+          last.__poolIndex = fallbackIdx;
+        }
+      }
     }
+    item.__poolIndex = -1;
     this.freeList.push(item);
   }
 
   /**
-   * 根据索引快速释放（遍历更新时避免 O(N) 查找）
+   * 根据索引快速释放 (O(1) 尾部互换)
    */
   releaseAt(index) {
     if (index < 0 || index >= this.activeList.length) return;
     const item = this.activeList[index];
     item.__active = false;
-    this.activeList.splice(index, 1);
+    const last = this.activeList.pop();
+    if (last !== item) {
+      this.activeList[index] = last;
+      last.__poolIndex = index;
+    }
+    item.__poolIndex = -1;
     this.freeList.push(item);
   }
 

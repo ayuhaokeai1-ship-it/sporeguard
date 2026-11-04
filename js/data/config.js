@@ -107,7 +107,7 @@ const CONFIG = {
     BURST_EXPLOSION: {
       shakePx: 2,
       shakeMs: 120,
-      hitstopMs: 30,
+      hitstopMs: 0,
       particles: 16,
       shockwaveRing: true
     },
@@ -116,7 +116,7 @@ const CONFIG = {
       maxKills: 4,
       shakePx: 2,
       shakeMs: 120,
-      hitstopMs: 30,
+      hitstopMs: 0,
       particles: 24,
       bannerKey: null,
       sfx: 'sfx_multikill'
@@ -126,8 +126,8 @@ const CONFIG = {
       maxKills: 9,
       shakePx: 4,
       shakeMs: 200,
-      hitstopMs: 60,
-      particles: 48,
+      hitstopMs: 0,
+      particles: 24,
       bannerKey: 'banner_chain',
       sfx: 'sfx_multikill'
     },
@@ -136,8 +136,8 @@ const CONFIG = {
       maxKills: 999,
       shakePx: 6,
       shakeMs: 300,
-      hitstopMs: 90,
-      particles: 96,
+      hitstopMs: 0,
+      particles: 32,
       bannerKey: 'banner_overload',
       fxSlowMoScale: 0.5,
       fxSlowMoMs: 150,

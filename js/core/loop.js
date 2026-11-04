@@ -14,6 +14,7 @@ class GameLoop {
     this.scene = scene;
     this.running = false;
     this.lastTimestamp = 0;
+    this.accumulator = 0;
 
     // 性能统计指标（供 QA 报告与性能监控读取）
     this.perf = {
@@ -58,16 +59,27 @@ class GameLoop {
   }
 
   /**
-   * 单帧推进：先更新真实时间输入与 UI，再按倍速执行 1/2/3 个固定逻辑步 (1/60s)，最后绘制
+   * 单帧推进：时间累加器半固定步长更新，彻底杜绝丢帧减速与顿挫
    */
   stepFrame(realDt) {
     this.scene.updateRealTime(realDt);
 
     if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal) {
-      const steps = this.scene.speedMultiplier || 1;
-      for (let s = 0; s < steps; s++) {
+      const speed = this.scene.speedMultiplier || 1;
+      this.accumulator += Math.min(0.08, realDt) * speed;
+
+      let steps = 0;
+      const maxSteps = 4;
+      while (this.accumulator >= FIXED_DT && steps < maxSteps) {
         this.scene.fixedStep(FIXED_DT);
+        this.accumulator -= FIXED_DT;
+        steps++;
       }
+      if (this.accumulator > FIXED_DT * 2) {
+        this.accumulator = 0;
+      }
+    } else {
+      this.accumulator = 0;
     }
 
     const ctx = platform.getContext();
