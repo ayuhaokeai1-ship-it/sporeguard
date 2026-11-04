@@ -174,7 +174,7 @@ const CONFIG = {
     ARMORED_SLOW_FACTOR: 0.50,    // 甲壳虫减速效果减半
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
-    MAX_ACTIVE_WAVE_ENEMIES: 12,  // 同一时刻场上波次出生敌人不超过 12 个
+    MAX_ACTIVE_WAVE_ENEMIES: 36,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
     WAVE_HP_GROWTH_PER_WAVE: 0.10,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
@@ -773,26 +773,26 @@ const TOWERS = {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'lumina_base_desc',
-        cost: 90,
-        range: 4.2,
-        damage: 16,
+        cost: 95,
+        range: 4.0,
+        damage: 6,
         interval: 2.0,
-        sporeGen: 14,
+        sporeGen: 12,
         sporeInterval: 10.0,
-        auraDmgBonus: 0.12,
+        auraDmgBonus: 0.10,
         next: ['lv1']
       },
       lv1: {
         nodeId: 'lv1',
         nameKey: 'lumina_lv1_name',
         descKey: 'lumina_lv1_desc',
-        cost: 70,
-        range: 4.8,
-        damage: 22,
+        cost: 75,
+        range: 4.5,
+        damage: 10,
         interval: 1.8,
-        sporeGen: 20,
+        sporeGen: 16,
         sporeInterval: 9.0,
-        auraDmgBonus: 0.16,
+        auraDmgBonus: 0.12,
         next: ['a2', 'b2']
       },
       a2: {
@@ -801,10 +801,10 @@ const TOWERS = {
         nameKey: 'lumina_a2_name',
         descKey: 'lumina_a2_desc',
         cost: 100,
-        range: 5.2,
-        damage: 35,
+        range: 5.0,
+        damage: 20,
         interval: 1.5,
-        auraAspdBonus: 0.25,
+        auraAspdBonus: 0.20,
         auraHeal: 25,
         healInterval: 5.0,
         next: ['a3']
@@ -815,11 +815,11 @@ const TOWERS = {
         nameKey: 'lumina_a3_name',
         descKey: 'lumina_a3_desc',
         cost: 160,
-        range: 5.8,
-        damage: 50,
+        range: 5.5,
+        damage: 32,
         interval: 1.2,
-        auraAspdBonus: 0.35,
-        auraHeal: 45,
+        auraAspdBonus: 0.30,
+        auraHeal: 40,
         healInterval: 4.0,
         holyWard: true,
         next: []
@@ -830,11 +830,11 @@ const TOWERS = {
         nameKey: 'lumina_b2_name',
         descKey: 'lumina_b2_desc',
         cost: 90,
-        range: 4.5,
-        damage: 22,
+        range: 4.2,
+        damage: 10,
         interval: 2.0,
-        sporeGen: 55,
-        sporeInterval: 5.5,
+        sporeGen: 36,
+        sporeInterval: 6.0,
         next: ['b3']
       },
       b3: {
@@ -843,10 +843,10 @@ const TOWERS = {
         nameKey: 'lumina_b3_name',
         descKey: 'lumina_b3_desc',
         cost: 150,
-        range: 5.0,
-        damage: 28,
+        range: 4.5,
+        damage: 14,
         interval: 2.0,
-        sporeGen: 90,
+        sporeGen: 60,
         sporeInterval: 5.0,
         relicDropBonus: true,
         next: []
@@ -1497,15 +1497,16 @@ const WAVES = {
         { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
       ]
     },
-    // Wave 4: 坚甲逼近，铁甲锹甲掩护推进
+    // Wave 4: 坚甲逼近，暗影潜行者侧翼回旋绕袭
     {
       wave: 4,
       groups: [
         { type: 'armored', count: 1, interval: 2.0, start: 0 },
-        { type: 'beetle', count: 6, interval: 0.9, start: 3 },
-        { type: 'armored', count: 1, interval: 2.0, start: 10 },
-        { type: 'weaver', count: 2, interval: 2.5, start: 11 },
-        { type: 'leaper', count: 3, interval: 1.4, start: 13, routeIndex: 1 },
+        { type: 'beetle', count: 5, interval: 0.9, start: 3 },
+        { type: 'armored', count: 1, interval: 2.0, start: 9 },
+        { type: 'weaver', count: 2, interval: 2.5, start: 10 },
+        { type: 'leaper', count: 3, interval: 1.2, start: 12, routeIndex: 1 },
+        { type: 'beetle', count: 3, interval: 1.0, start: 15, routeIndex: 1 },
         { type: 'swift', count: 4, interval: 0.7, start: 18 },
         { type: 'moth', count: 4, interval: 1.3, start: 20 }
       ]
@@ -1521,7 +1522,7 @@ const WAVES = {
         { type: 'shaman', count: 1, interval: 1.0, start: 24, routeIndex: 1 }
       ]
     },
-    // Wave 6: 异化裂殖，分裂幼体狂奔
+    // Wave 6: 异化裂殖，潜伏掘地虫破土偷袭
     {
       wave: 6,
       groups: [
@@ -1530,6 +1531,7 @@ const WAVES = {
         { type: 'splitter', count: 2, interval: 2.5, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
+        { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
         { type: 'splitter', count: 2, interval: 2.2, start: 14 },
         { type: 'swift', count: 8, interval: 0.7, start: 20 }
       ]
@@ -1545,12 +1547,13 @@ const WAVES = {
         { type: 'burrower', count: 3, interval: 2.0, start: 25 }
       ]
     },
-    // Wave 8: 狂暴大迁徙
+    // Wave 8: 狂暴大迁徙与后排钳形围猎
     {
       wave: 8,
       groups: [
         { type: 'swift', count: 10, interval: 0.65, start: 0 },
         { type: 'moth', count: 8, interval: 1.1, start: 8 },
+        { type: 'leaper', count: 4, interval: 1.1, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -1570,11 +1573,18 @@ const WAVES = {
     {
       wave: 10,
       groups: [
+        {
+      wave: 10,
+      groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
         { type: 'armored', count: 2, interval: 2.5, start: 5 },
         { type: 'moth', count: 6, interval: 1.2, start: 14 },
+        { type: 'leaper', count: 4, interval: 1.2, start: 18, routeIndex: 1 },
         { type: 'splitter', count: 3, interval: 2.0, start: 24 },
+        { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
         { type: 'swift', count: 8, interval: 0.7, start: 32 }
+      ]
+    }
       ]
     }
   ],
@@ -2698,6 +2708,10 @@ const loadedSubpackages = { main: true };
 // 内存后备存储（当宿主环境存储不可用时）
 const memoryStore = {};
 
+let sfxVoicePool = {};
+let sfxVoiceIndices = {};
+let audioBuffers = {};
+
 const AUDIO_PATHS = {
   bgm_title: 'audio/bgm_title.wav',
   bgm_battle: 'audio/bgm_battle.wav',
@@ -2715,7 +2729,38 @@ const AUDIO_PATHS = {
   sfx_multikill: 'audio/sfx_multikill.wav',
   sfx_hurt: 'audio/sfx_hurt.wav',
   sfx_win: 'audio/sfx_win.wav',
-  sfx_lose: 'audio/sfx_lose.wav'
+  sfx_lose: 'audio/sfx_lose.wav',
+  sfx_coin: 'audio/sfx_coin.wav',
+  sfx_horn: 'audio/sfx_horn.wav',
+  sfx_thunder: 'audio/sfx_thunder.wav',
+  sfx_hit: 'audio/sfx_hit.wav',
+  sfx_bomb: 'audio/sfx_bomb.wav',
+  sfx_shock: 'audio/sfx_shock.wav',
+  sfx_laser: 'audio/sfx_laser.wav',
+  sfx_place: 'audio/sfx_place.wav'
+};
+
+const SFX_VOLUMES = {
+  sfx_click: 0.40,
+  sfx_build: 0.65,
+  sfx_upgrade: 0.70,
+  sfx_sell: 0.55,
+  sfx_shoot: 0.45,
+  sfx_mist: 0.50,
+  sfx_thorn: 0.55,
+  sfx_boom: 0.75,
+  sfx_multikill: 0.80,
+  sfx_hurt: 0.60,
+  sfx_win: 0.85,
+  sfx_lose: 0.80,
+  sfx_coin: 0.65,
+  sfx_horn: 0.80,
+  sfx_thunder: 0.85,
+  sfx_hit: 0.60,
+  sfx_bomb: 0.75,
+  sfx_shock: 0.70,
+  sfx_laser: 0.60,
+  sfx_place: 0.65
 };
 
 /**
@@ -2955,6 +3000,29 @@ function setStorage(key, value) {
 /**
  * 首次用户点击后解锁并初始化音频系统
  */
+function preloadSfxBuffers() {
+  if (!webAudioCtx) return;
+  Object.keys(AUDIO_PATHS).forEach((key) => {
+    if (key.indexOf('sfx_') !== 0) return;
+    const src = AUDIO_PATHS[key];
+    if (audioBuffers[key] || !src) return;
+    try {
+      if (typeof fetch !== 'undefined') {
+        fetch(src)
+          .then((res) => {
+            if (!res.ok) throw new Error('Fetch failed');
+            return res.arrayBuffer();
+          })
+          .then((buf) => webAudioCtx.decodeAudioData(buf))
+          .then((decoded) => {
+            audioBuffers[key] = decoded;
+          })
+          .catch(() => {});
+      }
+    } catch (e) {}
+  });
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -2970,6 +3038,8 @@ function unlockAudio() {
   } catch (e) {
     // 忽略 WebAudio 初始化错误
   }
+
+  preloadSfxBuffers();
 
   if (pendingBgmKey && bgmEnabled) {
     playBgm(pendingBgmKey);
@@ -3051,119 +3121,75 @@ function stopBgm() {
 /**
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
-function playSfx(sfxKey) {
+function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
 
+  // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
+  if (webAudioCtx && webAudioCtx.state === 'running') {
+    if (audioBuffers[sfxKey]) {
+      try {
+        const srcNode = webAudioCtx.createBufferSource();
+        srcNode.buffer = audioBuffers[sfxKey];
+        srcNode.playbackRate.value = 0.97 + Math.random() * 0.06;
+        const gainNode = webAudioCtx.createGain();
+        const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
+        gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
+        srcNode.connect(gainNode);
+        gainNode.connect(webAudioCtx.destination);
+        srcNode.start(0);
+        return;
+      } catch (e) {}
+    } else {
+      // 触发延迟预热加载
+      const src = AUDIO_PATHS[sfxKey];
+      if (src && typeof fetch !== 'undefined') {
+        fetch(src)
+          .then((r) => r.arrayBuffer())
+          .then((buf) => webAudioCtx.decodeAudioData(buf))
+          .then((decoded) => {
+            audioBuffers[sfxKey] = decoded;
+          })
+          .catch(() => {});
+      }
+    }
+  }
+
+  // 2. HTML5 / 微信 InnerAudioContext 多音轨轮播兜底 (4-voice round-robin pool)
   const src = AUDIO_PATHS[sfxKey];
   if (src) {
-    if (!sfxPool[sfxKey]) {
-      sfxPool[sfxKey] = createAudioInstance(src, false, 0.65);
+    if (!sfxVoicePool[sfxKey]) {
+      sfxVoicePool[sfxKey] = [];
+      sfxVoiceIndices[sfxKey] = 0;
+      for (let i = 0; i < 4; i++) {
+        sfxVoicePool[sfxKey].push(createAudioInstance(src, false, (SFX_VOLUMES[sfxKey] || 0.6) * volumeMod));
+      }
     }
-    const inst = sfxPool[sfxKey];
+    const voices = sfxVoicePool[sfxKey];
+    const idx = sfxVoiceIndices[sfxKey] % voices.length;
+    sfxVoiceIndices[sfxKey] = (idx + 1) % voices.length;
+    const inst = voices[idx];
     if (inst) {
       try {
         if (typeof inst.stop === 'function') inst.stop();
         if (typeof inst.seek === 'function') inst.seek(0);
+        if ('currentTime' in inst) inst.currentTime = 0;
         inst.play();
       } catch (e) {}
     }
   }
-
-  // WebAudio 瞬态合成层（保证高并发群杀不丢音）
-  if (webAudioCtx && webAudioCtx.state === 'running') {
-    playSynthTone(sfxKey);
-  }
 }
-
 
 const SCALE_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 659.25, 783.99];
 
 function playMusicalScale(noteIdx = 0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  if (!webAudioCtx || webAudioCtx.state !== 'running') {
-    playSfx('sfx_hit');
-    return;
-  }
-  try {
-    const idx = Math.max(0, Math.min(SCALE_FREQS.length - 1, noteIdx));
-    const freq = SCALE_FREQS[idx];
-    const now = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, now);
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
-    gain.gain.setValueAtTime(0.32, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-    osc.start(now);
-    osc.stop(now + 0.22);
-  } catch (e) {}
+  playSfx('sfx_coin');
 }
 
-function playSynthTone(sfxKey) {
-  try {
-    const now = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
-
-    if (sfxKey === 'sfx_click') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(520, now);
-      osc.frequency.exponentialRampToValueAtTime(780, now + 0.04);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.045);
-      osc.start(now);
-      osc.stop(now + 0.05);
-    } else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_upgrade') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(330, now);
-      osc.frequency.setValueAtTime(495, now + 0.05);
-      osc.frequency.setValueAtTime(660, now + 0.10);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
-      osc.start(now);
-      osc.stop(now + 0.19);
-    } else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_multikill') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(sfxKey === 'sfx_multikill' ? 260 : 150, now);
-      osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
-      gain.gain.setValueAtTime(0.14, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.17);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } else if (sfxKey === 'sfx_shoot' || sfxKey === 'sfx_thorn') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(680, now);
-      osc.frequency.exponentialRampToValueAtTime(240, now + 0.05);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.055);
-      osc.start(now);
-      osc.stop(now + 0.06);
-    } else if (sfxKey === 'sfx_hurt') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.linearRampToValueAtTime(90, now + 0.12);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.13);
-      osc.start(now);
-      osc.stop(now + 0.14);
-    } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.06);
-      osc.start(now);
-      osc.stop(now + 0.065);
-    }
-  } catch (e) {}
+function playSynthTone() {
+  // 已全面升级为 44.1kHz 专业实录战术音效，废弃 8-bit 方波电子音
 }
 
-/**
- * 生命周期监听：切到后台自动暂停；回到前台保持暂停，不自动继续
- */
 function registerLifecycle(onHideCallback, onShowCallback) {
   if (typeof wx !== 'undefined' && typeof wx.onHide === 'function') {
     wx.onHide(() => {
@@ -4890,8 +4916,39 @@ class GameMap {
       ctx.fillRect(sdx + 4, sdy + 4, TILE_SIZE - 8, TILE_SIZE - 8);
     }
 
-    // 2.1 绘制侧翼虫巢地洞 (Secondary Spawn Burrow)
+        // 2.1 次级出怪巢穴地穴 (Secondary Corrupted Spawner Burrow - AI 手绘奇幻地穴)
     if (this.mapData.spawnTile2) {
+      const [s2c, s2r] = this.mapData.spawnTile2;
+      const s2x = s2c * TILE_SIZE;
+      const s2y = s2r * TILE_SIZE;
+      const moundImg = platform.getImage('assets/vfx/secondary_spawner_burrow.png') || platform.getImage('assets/vfx/enemy_burrow_mound.png');
+      if (moundImg && moundImg.width) {
+        ctx.save();
+        // 地底暗影与紫雾发光
+        ctx.fillStyle = 'rgba(10, 5, 18, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(s2x + 16, s2y + 24, 28, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 绘制高精度手绘地穴
+        ctx.drawImage(moundImg, s2x - 14, s2y - 18, 60, 48);
+
+        // 洞穴深处猩红复眼呼吸微光
+        const pulse = 0.5 + Math.sin(animTimeSec * 4) * 0.4;
+        ctx.fillStyle = 'rgba(255, 77, 79, ' + (pulse * 0.9) + ')';
+        ctx.shadowColor = '#FF4D4F';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(s2x + 13, s2y + 10, 2.8, 0, Math.PI * 2);
+        ctx.arc(s2x + 20, s2y + 10, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#722ED1';
+        ctx.fillRect(s2x + 4, s2y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+      }
+    }
+if (this.mapData.spawnTile2) {
       const [s2c, s2r] = this.mapData.spawnTile2;
       const s2x = s2c * TILE_SIZE;
       const s2y = s2r * TILE_SIZE;
@@ -4956,18 +5013,35 @@ class GameMap {
     if (this.groundRoute2 && this.groundRoute2.points.length > 1) {
       const g2Pts = this.groundRoute2.points;
       ctx.save();
-      ctx.strokeStyle = 'rgba(179, 127, 235, 0.14)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 8]);
-      ctx.lineDashOffset = -Math.round((animTimeSec * 22) % 14);
+      // 1. 底层微光暗紫腐化地裂发光带
+      ctx.strokeStyle = 'rgba(147, 50, 230, 0.35)';
+      ctx.lineWidth = 4.0;
       ctx.beginPath();
       ctx.moveTo(g2Pts[0].x, g2Pts[0].y);
       for (let i = 1; i < g2Pts.length; i++) {
         ctx.lineTo(g2Pts[i].x, g2Pts[i].y);
       }
       ctx.stroke();
+
+      // 2. 动态爬行虚线紫晶箭痕
+      ctx.strokeStyle = '#D3ADF7';
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([6, 8]);
+      ctx.lineDashOffset = -Math.round((animTimeSec * 28) % 14);
+      ctx.stroke();
+
+      // 3. 沿途飘散幽紫微光粒子
+      for (let p = 0; p < g2Pts.length - 1; p++) {
+        const segT = (animTimeSec * 0.4 + p * 0.25) % 1.0;
+        const px = g2Pts[p].x + (g2Pts[p + 1].x - g2Pts[p].x) * segT;
+        const py = g2Pts[p].y + (g2Pts[p + 1].y - g2Pts[p].y) * segT;
+        ctx.fillStyle = 'rgba(211, 173, 247, 0.75)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
-      platform.recordDrawCall(1);
+      platform.recordDrawCall(2);
     }
   }
 }
@@ -9732,6 +9806,8 @@ class WaveManager {
               console.warn('Unknown enemy type in wave:', g.type);
               g.spawned += 1;
               g.timer = 0;
+            } else {
+              g.timer = Math.max(0, g.interval - 0.25);
             }
           }
         }
@@ -11591,7 +11667,12 @@ class UiManager {
       });
 
       // 3) 羊皮纸视窗中央：高清 AI 蘑菇防御塔立绘 (42x42 悬浮居中)
-      drawUiIcon(ctx, 24, tId, cx + Math.floor((cardW - 42) * 0.5), cy + 20, 42);
+      const luminaCardImg = platform.getImage('assets/ui/cards/card_lumina.png');
+      if (tId === 'lumina' && luminaCardImg && luminaCardImg.width) {
+        ctx.drawImage(luminaCardImg, cx + Math.floor((cardW - 44) * 0.5), cy + 18, 44, 44);
+      } else {
+        drawUiIcon(ctx, 24, tId, cx + Math.floor((cardW - 42) * 0.5), cy + 20, 42);
+      }
 
       // 4) 羊皮纸底部防御塔中文名（金色/羊皮纸清晰立体字）
       drawArtText(ctx, i18n.t(def.nameKey), cx + cardW * 0.5, cy + 64, {

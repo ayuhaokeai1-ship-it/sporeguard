@@ -1134,6 +1134,23 @@
         }, 300);
         return;
       }
+
+      if (location.hash === '#test_flank_spawner') {
+        setTimeout(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            window.require('js/save/storage').markGuideSeen();
+            S.startLevel('map1');
+            S.towerManager.buildTower('lumina', 16, 8, S.map, S.economy, S.fx);
+            S.waveManager.currentWaveIndex = 4;
+            S.waveManager.startCurrentWave(S.economy, S.fx);
+            document.title = 'FLANK_OK wave=' + S.waveManager.currentWaveIndex + ' phase=' + S.waveManager.phase;
+          } catch (e) {
+            document.title = 'FLANK_ERR: ' + e.message;
+          }
+        }, 300);
+        return;
+      }
     })();
   </script>
   <script>

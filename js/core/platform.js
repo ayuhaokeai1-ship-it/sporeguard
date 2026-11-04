@@ -38,6 +38,10 @@ const loadedSubpackages = { main: true };
 // 内存后备存储（当宿主环境存储不可用时）
 const memoryStore = {};
 
+let sfxVoicePool = {};
+let sfxVoiceIndices = {};
+let audioBuffers = {};
+
 const AUDIO_PATHS = {
   bgm_title: 'audio/bgm_title.wav',
   bgm_battle: 'audio/bgm_battle.wav',
@@ -55,7 +59,38 @@ const AUDIO_PATHS = {
   sfx_multikill: 'audio/sfx_multikill.wav',
   sfx_hurt: 'audio/sfx_hurt.wav',
   sfx_win: 'audio/sfx_win.wav',
-  sfx_lose: 'audio/sfx_lose.wav'
+  sfx_lose: 'audio/sfx_lose.wav',
+  sfx_coin: 'audio/sfx_coin.wav',
+  sfx_horn: 'audio/sfx_horn.wav',
+  sfx_thunder: 'audio/sfx_thunder.wav',
+  sfx_hit: 'audio/sfx_hit.wav',
+  sfx_bomb: 'audio/sfx_bomb.wav',
+  sfx_shock: 'audio/sfx_shock.wav',
+  sfx_laser: 'audio/sfx_laser.wav',
+  sfx_place: 'audio/sfx_place.wav'
+};
+
+const SFX_VOLUMES = {
+  sfx_click: 0.40,
+  sfx_build: 0.65,
+  sfx_upgrade: 0.70,
+  sfx_sell: 0.55,
+  sfx_shoot: 0.45,
+  sfx_mist: 0.50,
+  sfx_thorn: 0.55,
+  sfx_boom: 0.75,
+  sfx_multikill: 0.80,
+  sfx_hurt: 0.60,
+  sfx_win: 0.85,
+  sfx_lose: 0.80,
+  sfx_coin: 0.65,
+  sfx_horn: 0.80,
+  sfx_thunder: 0.85,
+  sfx_hit: 0.60,
+  sfx_bomb: 0.75,
+  sfx_shock: 0.70,
+  sfx_laser: 0.60,
+  sfx_place: 0.65
 };
 
 /**
@@ -295,6 +330,29 @@ function setStorage(key, value) {
 /**
  * 首次用户点击后解锁并初始化音频系统
  */
+function preloadSfxBuffers() {
+  if (!webAudioCtx) return;
+  Object.keys(AUDIO_PATHS).forEach((key) => {
+    if (key.indexOf('sfx_') !== 0) return;
+    const src = AUDIO_PATHS[key];
+    if (audioBuffers[key] || !src) return;
+    try {
+      if (typeof fetch !== 'undefined') {
+        fetch(src)
+          .then((res) => {
+            if (!res.ok) throw new Error('Fetch failed');
+            return res.arrayBuffer();
+          })
+          .then((buf) => webAudioCtx.decodeAudioData(buf))
+          .then((decoded) => {
+            audioBuffers[key] = decoded;
+          })
+          .catch(() => {});
+      }
+    } catch (e) {}
+  });
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -310,6 +368,8 @@ function unlockAudio() {
   } catch (e) {
     // 忽略 WebAudio 初始化错误
   }
+
+  preloadSfxBuffers();
 
   if (pendingBgmKey && bgmEnabled) {
     playBgm(pendingBgmKey);
@@ -391,119 +451,75 @@ function stopBgm() {
 /**
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
-function playSfx(sfxKey) {
+function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
 
+  // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
+  if (webAudioCtx && webAudioCtx.state === 'running') {
+    if (audioBuffers[sfxKey]) {
+      try {
+        const srcNode = webAudioCtx.createBufferSource();
+        srcNode.buffer = audioBuffers[sfxKey];
+        srcNode.playbackRate.value = 0.97 + Math.random() * 0.06;
+        const gainNode = webAudioCtx.createGain();
+        const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
+        gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
+        srcNode.connect(gainNode);
+        gainNode.connect(webAudioCtx.destination);
+        srcNode.start(0);
+        return;
+      } catch (e) {}
+    } else {
+      // 触发延迟预热加载
+      const src = AUDIO_PATHS[sfxKey];
+      if (src && typeof fetch !== 'undefined') {
+        fetch(src)
+          .then((r) => r.arrayBuffer())
+          .then((buf) => webAudioCtx.decodeAudioData(buf))
+          .then((decoded) => {
+            audioBuffers[sfxKey] = decoded;
+          })
+          .catch(() => {});
+      }
+    }
+  }
+
+  // 2. HTML5 / 微信 InnerAudioContext 多音轨轮播兜底 (4-voice round-robin pool)
   const src = AUDIO_PATHS[sfxKey];
   if (src) {
-    if (!sfxPool[sfxKey]) {
-      sfxPool[sfxKey] = createAudioInstance(src, false, 0.65);
+    if (!sfxVoicePool[sfxKey]) {
+      sfxVoicePool[sfxKey] = [];
+      sfxVoiceIndices[sfxKey] = 0;
+      for (let i = 0; i < 4; i++) {
+        sfxVoicePool[sfxKey].push(createAudioInstance(src, false, (SFX_VOLUMES[sfxKey] || 0.6) * volumeMod));
+      }
     }
-    const inst = sfxPool[sfxKey];
+    const voices = sfxVoicePool[sfxKey];
+    const idx = sfxVoiceIndices[sfxKey] % voices.length;
+    sfxVoiceIndices[sfxKey] = (idx + 1) % voices.length;
+    const inst = voices[idx];
     if (inst) {
       try {
         if (typeof inst.stop === 'function') inst.stop();
         if (typeof inst.seek === 'function') inst.seek(0);
+        if ('currentTime' in inst) inst.currentTime = 0;
         inst.play();
       } catch (e) {}
     }
   }
-
-  // WebAudio 瞬态合成层（保证高并发群杀不丢音）
-  if (webAudioCtx && webAudioCtx.state === 'running') {
-    playSynthTone(sfxKey);
-  }
 }
-
 
 const SCALE_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 659.25, 783.99];
 
 function playMusicalScale(noteIdx = 0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  if (!webAudioCtx || webAudioCtx.state !== 'running') {
-    playSfx('sfx_hit');
-    return;
-  }
-  try {
-    const idx = Math.max(0, Math.min(SCALE_FREQS.length - 1, noteIdx));
-    const freq = SCALE_FREQS[idx];
-    const now = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, now);
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
-    gain.gain.setValueAtTime(0.32, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-    osc.start(now);
-    osc.stop(now + 0.22);
-  } catch (e) {}
+  playSfx('sfx_coin');
 }
 
-function playSynthTone(sfxKey) {
-  try {
-    const now = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
-
-    if (sfxKey === 'sfx_click') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(520, now);
-      osc.frequency.exponentialRampToValueAtTime(780, now + 0.04);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.045);
-      osc.start(now);
-      osc.stop(now + 0.05);
-    } else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_upgrade') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(330, now);
-      osc.frequency.setValueAtTime(495, now + 0.05);
-      osc.frequency.setValueAtTime(660, now + 0.10);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
-      osc.start(now);
-      osc.stop(now + 0.19);
-    } else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_multikill') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(sfxKey === 'sfx_multikill' ? 260 : 150, now);
-      osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
-      gain.gain.setValueAtTime(0.14, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.17);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } else if (sfxKey === 'sfx_shoot' || sfxKey === 'sfx_thorn') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(680, now);
-      osc.frequency.exponentialRampToValueAtTime(240, now + 0.05);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.055);
-      osc.start(now);
-      osc.stop(now + 0.06);
-    } else if (sfxKey === 'sfx_hurt') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.linearRampToValueAtTime(90, now + 0.12);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.13);
-      osc.start(now);
-      osc.stop(now + 0.14);
-    } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.06);
-      osc.start(now);
-      osc.stop(now + 0.065);
-    }
-  } catch (e) {}
+function playSynthTone() {
+  // 已全面升级为 44.1kHz 专业实录战术音效，废弃 8-bit 方波电子音
 }
 
-/**
- * 生命周期监听：切到后台自动暂停；回到前台保持暂停，不自动继续
- */
 function registerLifecycle(onHideCallback, onShowCallback) {
   if (typeof wx !== 'undefined' && typeof wx.onHide === 'function') {
     wx.onHide(() => {

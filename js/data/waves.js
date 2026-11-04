@@ -39,15 +39,16 @@ const WAVES = {
         { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
       ]
     },
-    // Wave 4: 坚甲逼近，铁甲锹甲掩护推进
+    // Wave 4: 坚甲逼近，暗影潜行者侧翼回旋绕袭
     {
       wave: 4,
       groups: [
         { type: 'armored', count: 1, interval: 2.0, start: 0 },
-        { type: 'beetle', count: 6, interval: 0.9, start: 3 },
-        { type: 'armored', count: 1, interval: 2.0, start: 10 },
-        { type: 'weaver', count: 2, interval: 2.5, start: 11 },
-        { type: 'leaper', count: 3, interval: 1.4, start: 13, routeIndex: 1 },
+        { type: 'beetle', count: 5, interval: 0.9, start: 3 },
+        { type: 'armored', count: 1, interval: 2.0, start: 9 },
+        { type: 'weaver', count: 2, interval: 2.5, start: 10 },
+        { type: 'leaper', count: 3, interval: 1.2, start: 12, routeIndex: 1 },
+        { type: 'beetle', count: 3, interval: 1.0, start: 15, routeIndex: 1 },
         { type: 'swift', count: 4, interval: 0.7, start: 18 },
         { type: 'moth', count: 4, interval: 1.3, start: 20 }
       ]
@@ -63,7 +64,7 @@ const WAVES = {
         { type: 'shaman', count: 1, interval: 1.0, start: 24, routeIndex: 1 }
       ]
     },
-    // Wave 6: 异化裂殖，分裂幼体狂奔
+    // Wave 6: 异化裂殖，潜伏掘地虫破土偷袭
     {
       wave: 6,
       groups: [
@@ -72,6 +73,7 @@ const WAVES = {
         { type: 'splitter', count: 2, interval: 2.5, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
+        { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
         { type: 'splitter', count: 2, interval: 2.2, start: 14 },
         { type: 'swift', count: 8, interval: 0.7, start: 20 }
       ]
@@ -87,12 +89,13 @@ const WAVES = {
         { type: 'burrower', count: 3, interval: 2.0, start: 25 }
       ]
     },
-    // Wave 8: 狂暴大迁徙
+    // Wave 8: 狂暴大迁徙与后排钳形围猎
     {
       wave: 8,
       groups: [
         { type: 'swift', count: 10, interval: 0.65, start: 0 },
         { type: 'moth', count: 8, interval: 1.1, start: 8 },
+        { type: 'leaper', count: 4, interval: 1.1, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -112,11 +115,18 @@ const WAVES = {
     {
       wave: 10,
       groups: [
+        {
+      wave: 10,
+      groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
         { type: 'armored', count: 2, interval: 2.5, start: 5 },
         { type: 'moth', count: 6, interval: 1.2, start: 14 },
+        { type: 'leaper', count: 4, interval: 1.2, start: 18, routeIndex: 1 },
         { type: 'splitter', count: 3, interval: 2.0, start: 24 },
+        { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
         { type: 'swift', count: 8, interval: 0.7, start: 32 }
+      ]
+    }
       ]
     }
   ],

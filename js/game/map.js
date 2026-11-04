@@ -384,8 +384,39 @@ class GameMap {
       ctx.fillRect(sdx + 4, sdy + 4, TILE_SIZE - 8, TILE_SIZE - 8);
     }
 
-    // 2.1 绘制侧翼虫巢地洞 (Secondary Spawn Burrow)
+        // 2.1 次级出怪巢穴地穴 (Secondary Corrupted Spawner Burrow - AI 手绘奇幻地穴)
     if (this.mapData.spawnTile2) {
+      const [s2c, s2r] = this.mapData.spawnTile2;
+      const s2x = s2c * TILE_SIZE;
+      const s2y = s2r * TILE_SIZE;
+      const moundImg = platform.getImage('assets/vfx/secondary_spawner_burrow.png') || platform.getImage('assets/vfx/enemy_burrow_mound.png');
+      if (moundImg && moundImg.width) {
+        ctx.save();
+        // 地底暗影与紫雾发光
+        ctx.fillStyle = 'rgba(10, 5, 18, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(s2x + 16, s2y + 24, 28, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 绘制高精度手绘地穴
+        ctx.drawImage(moundImg, s2x - 14, s2y - 18, 60, 48);
+
+        // 洞穴深处猩红复眼呼吸微光
+        const pulse = 0.5 + Math.sin(animTimeSec * 4) * 0.4;
+        ctx.fillStyle = 'rgba(255, 77, 79, ' + (pulse * 0.9) + ')';
+        ctx.shadowColor = '#FF4D4F';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(s2x + 13, s2y + 10, 2.8, 0, Math.PI * 2);
+        ctx.arc(s2x + 20, s2y + 10, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#722ED1';
+        ctx.fillRect(s2x + 4, s2y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+      }
+    }
+if (this.mapData.spawnTile2) {
       const [s2c, s2r] = this.mapData.spawnTile2;
       const s2x = s2c * TILE_SIZE;
       const s2y = s2r * TILE_SIZE;
@@ -450,18 +481,35 @@ class GameMap {
     if (this.groundRoute2 && this.groundRoute2.points.length > 1) {
       const g2Pts = this.groundRoute2.points;
       ctx.save();
-      ctx.strokeStyle = 'rgba(179, 127, 235, 0.14)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 8]);
-      ctx.lineDashOffset = -Math.round((animTimeSec * 22) % 14);
+      // 1. 底层微光暗紫腐化地裂发光带
+      ctx.strokeStyle = 'rgba(147, 50, 230, 0.35)';
+      ctx.lineWidth = 4.0;
       ctx.beginPath();
       ctx.moveTo(g2Pts[0].x, g2Pts[0].y);
       for (let i = 1; i < g2Pts.length; i++) {
         ctx.lineTo(g2Pts[i].x, g2Pts[i].y);
       }
       ctx.stroke();
+
+      // 2. 动态爬行虚线紫晶箭痕
+      ctx.strokeStyle = '#D3ADF7';
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([6, 8]);
+      ctx.lineDashOffset = -Math.round((animTimeSec * 28) % 14);
+      ctx.stroke();
+
+      // 3. 沿途飘散幽紫微光粒子
+      for (let p = 0; p < g2Pts.length - 1; p++) {
+        const segT = (animTimeSec * 0.4 + p * 0.25) % 1.0;
+        const px = g2Pts[p].x + (g2Pts[p + 1].x - g2Pts[p].x) * segT;
+        const py = g2Pts[p].y + (g2Pts[p + 1].y - g2Pts[p].y) * segT;
+        ctx.fillStyle = 'rgba(211, 173, 247, 0.75)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
-      platform.recordDrawCall(1);
+      platform.recordDrawCall(2);
     }
   }
 }

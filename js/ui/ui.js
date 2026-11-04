@@ -1808,7 +1808,12 @@ class UiManager {
       });
 
       // 3) 羊皮纸视窗中央：高清 AI 蘑菇防御塔立绘 (42x42 悬浮居中)
-      drawUiIcon(ctx, 24, tId, cx + Math.floor((cardW - 42) * 0.5), cy + 20, 42);
+      const luminaCardImg = platform.getImage('assets/ui/cards/card_lumina.png');
+      if (tId === 'lumina' && luminaCardImg && luminaCardImg.width) {
+        ctx.drawImage(luminaCardImg, cx + Math.floor((cardW - 44) * 0.5), cy + 18, 44, 44);
+      } else {
+        drawUiIcon(ctx, 24, tId, cx + Math.floor((cardW - 42) * 0.5), cy + 20, 42);
+      }
 
       // 4) 羊皮纸底部防御塔中文名（金色/羊皮纸清晰立体字）
       drawArtText(ctx, i18n.t(def.nameKey), cx + cardW * 0.5, cy + 64, {

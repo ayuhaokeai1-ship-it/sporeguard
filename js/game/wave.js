@@ -211,6 +211,8 @@ class WaveManager {
               console.warn('Unknown enemy type in wave:', g.type);
               g.spawned += 1;
               g.timer = 0;
+            } else {
+              g.timer = Math.max(0, g.interval - 0.25);
             }
           }
         }
