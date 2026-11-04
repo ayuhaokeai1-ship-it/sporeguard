@@ -3145,8 +3145,14 @@ function stopBgm() {
 /**
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
+const sfxThrottle = {};
 function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
+  const now = platform.nowMs ? platform.nowMs() : Date.now();
+  if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
+    return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
+  }
+  sfxThrottle[sfxKey] = now;
 
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
   if (webAudioCtx && webAudioCtx.state === 'running') {
@@ -8870,6 +8876,9 @@ class ElementalReactionSystem {
    */
   applyElement(enemy, element, baseDmg, scene) {
     if (!enemy || enemy.hp <= 0 || enemy.state === 'death') return null;
+    if (this._isReacting) return null; // 杜绝连锁反应相互调用导致的死循环与指数级性能雪崩
+    this._isReacting = true;
+    try {
 
     if (!enemy.elementalAuras) {
       enemy.elementalAuras = {
@@ -8927,6 +8936,9 @@ class ElementalReactionSystem {
     }
 
     return reactionResult;
+    } finally {
+      this._isReacting = false;
+    }
   }
 
   /**
@@ -8976,31 +8988,39 @@ class ElementalReactionSystem {
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
-    // 寻找最多 4 个最近敌人连锁跳跃
+    // 寻找最多 3 个最近敌人连锁跳跃（O(N) 范围单次遍历，杜绝昂贵排序与内存开销）
     if (scene && scene.enemyManager) {
-      const list = scene.enemyManager.getAliveEnemies().filter(e => e !== enemy);
-      list.sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y));
-      const jumps = Math.min(4, list.length);
+      const list = scene.enemyManager.getAliveEnemies();
+      let jumps = 0;
       let lastX = enemy.x, lastY = enemy.y;
 
-      for (let j = 0; j < jumps; j++) {
+      for (let j = 0; j < list.length && jumps < 3; j++) {
         const next = list[j];
-        const chainDmg = Math.round(dmg * (0.85 - j * 0.15));
-        next.takeDamage(chainDmg, null, 'shock');
-        next.armorReduction = 0.35;
+        if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
+        const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
+        if (d2 <= 130 * 130) {
+          const chainDmg = Math.round(dmg * 0.65);
+          next.hp -= chainDmg;
+          next.whiteFlashFrames = 2;
+          next.armorReduction = Math.max(next.armorReduction || 0, 0.35);
+          if (next.hp <= 0) {
+            scene.enemyManager.killEnemy(next, scene.fx);
+          }
 
-        // 记录电弧视觉渲染链
-        this.chainArcs.push({
-          x1: lastX,
-          y1: lastY,
-          x2: next.x,
-          y2: next.y,
-          life: 0.30,
-          maxLife: 0.30
-        });
-
-        lastX = next.x;
-        lastY = next.y;
+          if (this.chainArcs.length < 8) {
+            this.chainArcs.push({
+              x1: lastX,
+              y1: lastY,
+              x2: next.x,
+              y2: next.y,
+              life: 0.25,
+              maxLife: 0.25
+            });
+          }
+          lastX = next.x;
+          lastY = next.y;
+          jumps++;
+        }
       }
     }
 
@@ -9127,6 +9147,7 @@ class ElementalReactionSystem {
   }
 
   addFloatingBanner(x, y, text, color) {
+    if (this.floatingBanners.length >= 3) return; // 限制屏幕并发横幅数量
     this.floatingBanners.push({
       x,
       y,
@@ -10109,11 +10130,15 @@ class CombatJuiceEngine {
     this.battleScore = 0;
     this.currentRank = 'D';
 
-    // 暴击高光特效粒子
+    // 预分配固定对象池（0 GC 垃圾回收，消除内存抖动卡顿）
     this.critSparks = [];
-
-    // 冲击波环 (Shockwave Rings)
+    for (let i = 0; i < 32; i++) {
+      this.critSparks.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0.35, size: 3, color: '#FFD700', active: false });
+    }
     this.shockwaves = [];
+    for (let i = 0; i < 8; i++) {
+      this.shockwaves.push({ x: 0, y: 0, currentRadius: 0, maxRadius: 45, color: '', life: 0, maxLife: 0.4, active: false });
+    }
   }
 
   reset() {
@@ -10147,20 +10172,24 @@ class CombatJuiceEngine {
    */
   triggerCrit(x, y, damage, fx = null) {
     this.addTrauma(0.18);
-    // 产生 6~8 枚金光四射的暴击星辉碎片
-    for (let i = 0; i < 7; i++) {
-      const ang = (i / 7) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const spd = 40 + Math.random() * 80;
-      this.critSparks.push({
-        x,
-        y,
-        vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd,
-        life: 0.35,
-        maxLife: 0.35,
-        size: 3 + Math.random() * 2,
-        color: i % 2 === 0 ? '#FFD700' : '#FFF1B8'
-      });
+    // 零分配复用粒子池
+    let spawned = 0;
+    for (let i = 0; i < this.critSparks.length && spawned < 6; i++) {
+      const sp = this.critSparks[i];
+      if (!sp.active) {
+        const ang = (spawned / 6) * Math.PI * 2;
+        const spd = 45 + Math.random() * 60;
+        sp.x = x;
+        sp.y = y;
+        sp.vx = Math.cos(ang) * spd;
+        sp.vy = Math.sin(ang) * spd;
+        sp.life = 0.28;
+        sp.maxLife = 0.28;
+        sp.size = 2.8;
+        sp.color = spawned % 2 === 0 ? '#FFD700' : '#FFF1B8';
+        sp.active = true;
+        spawned++;
+      }
     }
 
     if (fx) {
@@ -10172,15 +10201,20 @@ class CombatJuiceEngine {
    * 触发着陆或大爆炸环状冲击波
    */
   triggerShockwave(x, y, maxRadius = 45, color = 'rgba(255, 235, 140, 0.75)') {
-    this.shockwaves.push({
-      x,
-      y,
-      currentRadius: 6,
-      maxRadius,
-      color,
-      life: 0.4,
-      maxLife: 0.4
-    });
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      const sw = this.shockwaves[i];
+      if (!sw.active) {
+        sw.x = x;
+        sw.y = y;
+        sw.currentRadius = 6;
+        sw.maxRadius = maxRadius;
+        sw.color = color;
+        sw.life = 0.32;
+        sw.maxLife = 0.32;
+        sw.active = true;
+        break;
+      }
+    }
     this.addTrauma(0.25);
   }
 
@@ -10226,26 +10260,28 @@ class CombatJuiceEngine {
       }
     }
 
-    // 3. 暴击火花粒子更新
-    for (let i = this.critSparks.length - 1; i >= 0; i--) {
+    // 3. 暴击火花粒子更新（无 splice 零开销）
+    for (let i = 0; i < this.critSparks.length; i++) {
       const sp = this.critSparks[i];
+      if (!sp.active) continue;
       sp.life -= dt;
       if (sp.life <= 0) {
-        this.critSparks.splice(i, 1);
+        sp.active = false;
         continue;
       }
       sp.x += sp.vx * dt;
       sp.y += sp.vy * dt;
-      sp.vy += 60 * dt; // 重力微落
+      sp.vy += 50 * dt;
       sp.vx *= 0.92;
     }
 
-    // 4. 冲击波更新
-    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+    // 4. 冲击波更新（无 splice 零开销）
+    for (let i = 0; i < this.shockwaves.length; i++) {
       const sw = this.shockwaves[i];
+      if (!sw.active) continue;
       sw.life -= dt;
       if (sw.life <= 0) {
-        this.shockwaves.splice(i, 1);
+        sw.active = false;
         continue;
       }
       const prog = 1 - (sw.life / sw.maxLife);
@@ -10274,6 +10310,7 @@ class CombatJuiceEngine {
       ctx.save();
       for (let i = 0; i < this.shockwaves.length; i++) {
         const sw = this.shockwaves[i];
+        if (!sw.active) continue;
         const alpha = Math.max(0, sw.life / sw.maxLife);
         ctx.strokeStyle = sw.color;
         ctx.lineWidth = 2.5 * alpha;
@@ -10289,6 +10326,7 @@ class CombatJuiceEngine {
       ctx.save();
       for (let i = 0; i < this.critSparks.length; i++) {
         const sp = this.critSparks[i];
+        if (!sp.active) continue;
         const alpha = Math.max(0, sp.life / sp.maxLife);
         ctx.fillStyle = sp.color;
         ctx.globalAlpha = alpha;
@@ -11632,6 +11670,7 @@ const TILE_SIZE = CONFIG.RESOLUTION.TILE_SIZE; // 32
 class TowerManager {
   constructor() {
     this.towers = [];
+    this.towersDirty = true;
     this.networkEdges = [];
     this.networkTimer = 0;
     this.animTimer = 0;
@@ -11714,6 +11753,7 @@ class TowerManager {
     const tile = map.getTile(col, row);
     tile.tower = tower;
     this.towers.push(tower);
+    this.towersDirty = true;
 
     if (fx) {
       fx.spawnParticles(tower.x, tower.y, 14, [PALETTE.GROUND_LIGHT, PALETTE.UI_SPORE], 25, 85, 0.2, 0.4, 4);
@@ -11797,6 +11837,7 @@ class TowerManager {
     const idx = this.towers.indexOf(tower);
     if (idx !== -1) {
       this.towers.splice(idx, 1);
+    this.towersDirty = true;
     }
   }
 
@@ -11813,6 +11854,7 @@ class TowerManager {
     const idx = this.towers.indexOf(tower);
     if (idx !== -1) {
       this.towers.splice(idx, 1);
+    this.towersDirty = true;
     }
 
     if (fx) {
@@ -12284,8 +12326,11 @@ class TowerManager {
    * 绘制所有已建造的蘑菇炮塔及其形态徽章
    */
   render(ctx) {
-    // 按行从上到下排序绘制，保证 16x24 高塔的前后遮挡关系自然
-    this.towers.sort((a, b) => a.row - b.row || a.col - b.col);
+    // 仅在防御塔增删改变时执行排序，杜绝每帧 60 次创建闭包排序导致卡顿
+    if (this.towersDirty) {
+      this.towers.sort((a, b) => a.row - b.row || a.col - b.col);
+      this.towersDirty = false;
+    }
 
     for (let i = 0; i < this.towers.length; i++) {
       const t = this.towers[i];
@@ -13088,28 +13133,23 @@ function drawArtText(ctx, text, x, y, options = {}) {
     effectiveStroke = size <= 15 ? 0.8 : (size <= 18 ? 1.1 : Math.min(2.0, size * 0.10));
   }
 
-  // 1. 底层精细投影
-  ctx.shadowColor = shadowColor;
-  ctx.shadowBlur = shadowBlur;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = shadowY;
+  // 性能飞跃优化：用 1px 偏移轻投影彻底替换极其昂贵的 ctx.shadowBlur（消除每秒上千次高斯模糊软光栅化）
+  if (shadowColor && shadowColor !== 'transparent') {
+    ctx.fillStyle = shadowColor;
+    ctx.fillText(str, x, y + 1);
+  }
 
   // 2. 发丝级描边（若开启）
   if (effectiveStroke > 0) {
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = effectiveStroke * 1.4;
+    ctx.lineWidth = effectiveStroke * 1.3;
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
     ctx.strokeText(str, x, y);
   }
 
-  // 关闭投影以渲染清晰字面
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
-  // 3. 字体字面（小字优先高对比度第一阶颜色，大字采用微渐变）
-  if (size <= 13 && style !== 'gold') {
+  // 3. 字体字面（小字直接采用亮色常数，大字避免每帧频繁分配线性渐变对象）
+  if (size <= 15 || style !== 'gold') {
     ctx.fillStyle = gradColors[0];
     ctx.fillText(str, x, y);
   } else {
@@ -13117,9 +13157,8 @@ function drawArtText(ctx, text, x, y, options = {}) {
     const topY = baseline === 'middle' ? y - h * 0.5 : (baseline === 'top' ? y : y - h);
     const grad = ctx.createLinearGradient(x, topY, x, topY + h);
     grad.addColorStop(0.0, gradColors[0]);
-    grad.addColorStop(0.40, gradColors[1]);
-    grad.addColorStop(0.80, gradColors[2]);
-    grad.addColorStop(1.0, gradColors[3]);
+    grad.addColorStop(0.45, gradColors[1]);
+    grad.addColorStop(1.0, gradColors[2]);
     ctx.fillStyle = grad;
     ctx.fillText(str, x, y);
   }
@@ -17496,18 +17535,13 @@ class GameLoop {
 
     if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal) {
       const speed = this.scene.speedMultiplier || 1;
-      this.accumulator += Math.min(0.08, realDt) * speed;
-
-      let steps = 0;
-      const maxSteps = 4;
-      while (this.accumulator >= FIXED_DT && steps < maxSteps) {
+      // 顶级性能调优：1x速每帧精准执行 1 次逻辑步，2x速执行 2 次，3x速执行 3 次
+      // 彻底消除时间累加器浮动导致的周期性微卡顿 (Micro-stutter) 与螺旋延迟
+      const targetSteps = Math.min(3, Math.max(1, Math.round(speed)));
+      for (let s = 0; s < targetSteps; s++) {
         this.scene.fixedStep(FIXED_DT);
-        this.accumulator -= FIXED_DT;
-        steps++;
       }
-      if (this.accumulator > FIXED_DT * 2) {
-        this.accumulator = 0;
-      }
+      this.accumulator = 0;
     } else {
       this.accumulator = 0;
     }

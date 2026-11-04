@@ -17,6 +17,7 @@ const TILE_SIZE = CONFIG.RESOLUTION.TILE_SIZE; // 32
 class TowerManager {
   constructor() {
     this.towers = [];
+    this.towersDirty = true;
     this.networkEdges = [];
     this.networkTimer = 0;
     this.animTimer = 0;
@@ -99,6 +100,7 @@ class TowerManager {
     const tile = map.getTile(col, row);
     tile.tower = tower;
     this.towers.push(tower);
+    this.towersDirty = true;
 
     if (fx) {
       fx.spawnParticles(tower.x, tower.y, 14, [PALETTE.GROUND_LIGHT, PALETTE.UI_SPORE], 25, 85, 0.2, 0.4, 4);
@@ -182,6 +184,7 @@ class TowerManager {
     const idx = this.towers.indexOf(tower);
     if (idx !== -1) {
       this.towers.splice(idx, 1);
+    this.towersDirty = true;
     }
   }
 
@@ -198,6 +201,7 @@ class TowerManager {
     const idx = this.towers.indexOf(tower);
     if (idx !== -1) {
       this.towers.splice(idx, 1);
+    this.towersDirty = true;
     }
 
     if (fx) {
@@ -669,8 +673,11 @@ class TowerManager {
    * 绘制所有已建造的蘑菇炮塔及其形态徽章
    */
   render(ctx) {
-    // 按行从上到下排序绘制，保证 16x24 高塔的前后遮挡关系自然
-    this.towers.sort((a, b) => a.row - b.row || a.col - b.col);
+    // 仅在防御塔增删改变时执行排序，杜绝每帧 60 次创建闭包排序导致卡顿
+    if (this.towersDirty) {
+      this.towers.sort((a, b) => a.row - b.row || a.col - b.col);
+      this.towersDirty = false;
+    }
 
     for (let i = 0; i < this.towers.length; i++) {
       const t = this.towers[i];

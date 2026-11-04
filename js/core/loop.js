@@ -66,18 +66,13 @@ class GameLoop {
 
     if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal) {
       const speed = this.scene.speedMultiplier || 1;
-      this.accumulator += Math.min(0.08, realDt) * speed;
-
-      let steps = 0;
-      const maxSteps = 4;
-      while (this.accumulator >= FIXED_DT && steps < maxSteps) {
+      // 顶级性能调优：1x速每帧精准执行 1 次逻辑步，2x速执行 2 次，3x速执行 3 次
+      // 彻底消除时间累加器浮动导致的周期性微卡顿 (Micro-stutter) 与螺旋延迟
+      const targetSteps = Math.min(3, Math.max(1, Math.round(speed)));
+      for (let s = 0; s < targetSteps; s++) {
         this.scene.fixedStep(FIXED_DT);
-        this.accumulator -= FIXED_DT;
-        steps++;
       }
-      if (this.accumulator > FIXED_DT * 2) {
-        this.accumulator = 0;
-      }
+      this.accumulator = 0;
     } else {
       this.accumulator = 0;
     }

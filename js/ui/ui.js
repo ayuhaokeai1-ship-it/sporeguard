@@ -122,28 +122,23 @@ function drawArtText(ctx, text, x, y, options = {}) {
     effectiveStroke = size <= 15 ? 0.8 : (size <= 18 ? 1.1 : Math.min(2.0, size * 0.10));
   }
 
-  // 1. 底层精细投影
-  ctx.shadowColor = shadowColor;
-  ctx.shadowBlur = shadowBlur;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = shadowY;
+  // 性能飞跃优化：用 1px 偏移轻投影彻底替换极其昂贵的 ctx.shadowBlur（消除每秒上千次高斯模糊软光栅化）
+  if (shadowColor && shadowColor !== 'transparent') {
+    ctx.fillStyle = shadowColor;
+    ctx.fillText(str, x, y + 1);
+  }
 
   // 2. 发丝级描边（若开启）
   if (effectiveStroke > 0) {
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = effectiveStroke * 1.4;
+    ctx.lineWidth = effectiveStroke * 1.3;
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
     ctx.strokeText(str, x, y);
   }
 
-  // 关闭投影以渲染清晰字面
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
-  // 3. 字体字面（小字优先高对比度第一阶颜色，大字采用微渐变）
-  if (size <= 13 && style !== 'gold') {
+  // 3. 字体字面（小字直接采用亮色常数，大字避免每帧频繁分配线性渐变对象）
+  if (size <= 15 || style !== 'gold') {
     ctx.fillStyle = gradColors[0];
     ctx.fillText(str, x, y);
   } else {
@@ -151,9 +146,8 @@ function drawArtText(ctx, text, x, y, options = {}) {
     const topY = baseline === 'middle' ? y - h * 0.5 : (baseline === 'top' ? y : y - h);
     const grad = ctx.createLinearGradient(x, topY, x, topY + h);
     grad.addColorStop(0.0, gradColors[0]);
-    grad.addColorStop(0.40, gradColors[1]);
-    grad.addColorStop(0.80, gradColors[2]);
-    grad.addColorStop(1.0, gradColors[3]);
+    grad.addColorStop(0.45, gradColors[1]);
+    grad.addColorStop(1.0, gradColors[2]);
     ctx.fillStyle = grad;
     ctx.fillText(str, x, y);
   }

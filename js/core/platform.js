@@ -473,8 +473,14 @@ function stopBgm() {
 /**
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
+const sfxThrottle = {};
 function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
+  const now = platform.nowMs ? platform.nowMs() : Date.now();
+  if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
+    return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
+  }
+  sfxThrottle[sfxKey] = now;
 
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
   if (webAudioCtx && webAudioCtx.state === 'running') {

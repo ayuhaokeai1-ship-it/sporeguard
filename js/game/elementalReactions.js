@@ -45,6 +45,9 @@ class ElementalReactionSystem {
    */
   applyElement(enemy, element, baseDmg, scene) {
     if (!enemy || enemy.hp <= 0 || enemy.state === 'death') return null;
+    if (this._isReacting) return null; // 杜绝连锁反应相互调用导致的死循环与指数级性能雪崩
+    this._isReacting = true;
+    try {
 
     if (!enemy.elementalAuras) {
       enemy.elementalAuras = {
@@ -102,6 +105,9 @@ class ElementalReactionSystem {
     }
 
     return reactionResult;
+    } finally {
+      this._isReacting = false;
+    }
   }
 
   /**
@@ -151,31 +157,39 @@ class ElementalReactionSystem {
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
-    // 寻找最多 4 个最近敌人连锁跳跃
+    // 寻找最多 3 个最近敌人连锁跳跃（O(N) 范围单次遍历，杜绝昂贵排序与内存开销）
     if (scene && scene.enemyManager) {
-      const list = scene.enemyManager.getAliveEnemies().filter(e => e !== enemy);
-      list.sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y));
-      const jumps = Math.min(4, list.length);
+      const list = scene.enemyManager.getAliveEnemies();
+      let jumps = 0;
       let lastX = enemy.x, lastY = enemy.y;
 
-      for (let j = 0; j < jumps; j++) {
+      for (let j = 0; j < list.length && jumps < 3; j++) {
         const next = list[j];
-        const chainDmg = Math.round(dmg * (0.85 - j * 0.15));
-        next.takeDamage(chainDmg, null, 'shock');
-        next.armorReduction = 0.35;
+        if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
+        const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
+        if (d2 <= 130 * 130) {
+          const chainDmg = Math.round(dmg * 0.65);
+          next.hp -= chainDmg;
+          next.whiteFlashFrames = 2;
+          next.armorReduction = Math.max(next.armorReduction || 0, 0.35);
+          if (next.hp <= 0) {
+            scene.enemyManager.killEnemy(next, scene.fx);
+          }
 
-        // 记录电弧视觉渲染链
-        this.chainArcs.push({
-          x1: lastX,
-          y1: lastY,
-          x2: next.x,
-          y2: next.y,
-          life: 0.30,
-          maxLife: 0.30
-        });
-
-        lastX = next.x;
-        lastY = next.y;
+          if (this.chainArcs.length < 8) {
+            this.chainArcs.push({
+              x1: lastX,
+              y1: lastY,
+              x2: next.x,
+              y2: next.y,
+              life: 0.25,
+              maxLife: 0.25
+            });
+          }
+          lastX = next.x;
+          lastY = next.y;
+          jumps++;
+        }
       }
     }
 
@@ -302,6 +316,7 @@ class ElementalReactionSystem {
   }
 
   addFloatingBanner(x, y, text, color) {
+    if (this.floatingBanners.length >= 3) return; // 限制屏幕并发横幅数量
     this.floatingBanners.push({
       x,
       y,

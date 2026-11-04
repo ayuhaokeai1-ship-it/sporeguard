@@ -24,11 +24,15 @@ class CombatJuiceEngine {
     this.battleScore = 0;
     this.currentRank = 'D';
 
-    // 暴击高光特效粒子
+    // 预分配固定对象池（0 GC 垃圾回收，消除内存抖动卡顿）
     this.critSparks = [];
-
-    // 冲击波环 (Shockwave Rings)
+    for (let i = 0; i < 32; i++) {
+      this.critSparks.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0.35, size: 3, color: '#FFD700', active: false });
+    }
     this.shockwaves = [];
+    for (let i = 0; i < 8; i++) {
+      this.shockwaves.push({ x: 0, y: 0, currentRadius: 0, maxRadius: 45, color: '', life: 0, maxLife: 0.4, active: false });
+    }
   }
 
   reset() {
@@ -62,20 +66,24 @@ class CombatJuiceEngine {
    */
   triggerCrit(x, y, damage, fx = null) {
     this.addTrauma(0.18);
-    // 产生 6~8 枚金光四射的暴击星辉碎片
-    for (let i = 0; i < 7; i++) {
-      const ang = (i / 7) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const spd = 40 + Math.random() * 80;
-      this.critSparks.push({
-        x,
-        y,
-        vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd,
-        life: 0.35,
-        maxLife: 0.35,
-        size: 3 + Math.random() * 2,
-        color: i % 2 === 0 ? '#FFD700' : '#FFF1B8'
-      });
+    // 零分配复用粒子池
+    let spawned = 0;
+    for (let i = 0; i < this.critSparks.length && spawned < 6; i++) {
+      const sp = this.critSparks[i];
+      if (!sp.active) {
+        const ang = (spawned / 6) * Math.PI * 2;
+        const spd = 45 + Math.random() * 60;
+        sp.x = x;
+        sp.y = y;
+        sp.vx = Math.cos(ang) * spd;
+        sp.vy = Math.sin(ang) * spd;
+        sp.life = 0.28;
+        sp.maxLife = 0.28;
+        sp.size = 2.8;
+        sp.color = spawned % 2 === 0 ? '#FFD700' : '#FFF1B8';
+        sp.active = true;
+        spawned++;
+      }
     }
 
     if (fx) {
@@ -87,15 +95,20 @@ class CombatJuiceEngine {
    * 触发着陆或大爆炸环状冲击波
    */
   triggerShockwave(x, y, maxRadius = 45, color = 'rgba(255, 235, 140, 0.75)') {
-    this.shockwaves.push({
-      x,
-      y,
-      currentRadius: 6,
-      maxRadius,
-      color,
-      life: 0.4,
-      maxLife: 0.4
-    });
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      const sw = this.shockwaves[i];
+      if (!sw.active) {
+        sw.x = x;
+        sw.y = y;
+        sw.currentRadius = 6;
+        sw.maxRadius = maxRadius;
+        sw.color = color;
+        sw.life = 0.32;
+        sw.maxLife = 0.32;
+        sw.active = true;
+        break;
+      }
+    }
     this.addTrauma(0.25);
   }
 
@@ -141,26 +154,28 @@ class CombatJuiceEngine {
       }
     }
 
-    // 3. 暴击火花粒子更新
-    for (let i = this.critSparks.length - 1; i >= 0; i--) {
+    // 3. 暴击火花粒子更新（无 splice 零开销）
+    for (let i = 0; i < this.critSparks.length; i++) {
       const sp = this.critSparks[i];
+      if (!sp.active) continue;
       sp.life -= dt;
       if (sp.life <= 0) {
-        this.critSparks.splice(i, 1);
+        sp.active = false;
         continue;
       }
       sp.x += sp.vx * dt;
       sp.y += sp.vy * dt;
-      sp.vy += 60 * dt; // 重力微落
+      sp.vy += 50 * dt;
       sp.vx *= 0.92;
     }
 
-    // 4. 冲击波更新
-    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+    // 4. 冲击波更新（无 splice 零开销）
+    for (let i = 0; i < this.shockwaves.length; i++) {
       const sw = this.shockwaves[i];
+      if (!sw.active) continue;
       sw.life -= dt;
       if (sw.life <= 0) {
-        this.shockwaves.splice(i, 1);
+        sw.active = false;
         continue;
       }
       const prog = 1 - (sw.life / sw.maxLife);
@@ -189,6 +204,7 @@ class CombatJuiceEngine {
       ctx.save();
       for (let i = 0; i < this.shockwaves.length; i++) {
         const sw = this.shockwaves[i];
+        if (!sw.active) continue;
         const alpha = Math.max(0, sw.life / sw.maxLife);
         ctx.strokeStyle = sw.color;
         ctx.lineWidth = 2.5 * alpha;
@@ -204,6 +220,7 @@ class CombatJuiceEngine {
       ctx.save();
       for (let i = 0; i < this.critSparks.length; i++) {
         const sp = this.critSparks[i];
+        if (!sp.active) continue;
         const alpha = Math.max(0, sp.life / sp.maxLife);
         ctx.fillStyle = sp.color;
         ctx.globalAlpha = alpha;
