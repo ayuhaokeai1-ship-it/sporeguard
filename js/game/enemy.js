@@ -295,7 +295,28 @@ class EnemyManager {
     }
 
     enemy.hp -= actualDamage;
-    if (enemy.hp <= 0) {
+    const isKilled = enemy.hp <= 0;
+
+    if (this.scene) {
+      if (this.scene.combatAnalytics) {
+        this.scene.combatAnalytics.recordDamage(damageType || 'watch', Math.round(actualDamage), isKilled);
+      }
+      if (this.scene.elementalReactions) {
+        let elem = null;
+        if (damageType === 'fire' || damageType === 'splash') elem = 'pyro';
+        else if (damageType === 'water' || damageType === 'nature') elem = 'hydro';
+        else if (damageType === 'shock' || damageType === 'magic') elem = 'electro';
+        else if (damageType === 'frost' || damageType === 'mist') elem = 'cryo';
+        else if (damageType === 'poison' || damageType === 'toxic') elem = 'toxic';
+        else if (damageType === 'pierce') elem = 'dendro';
+
+        if (elem) {
+          this.scene.elementalReactions.applyElement(enemy, elem, Math.round(actualDamage), this.scene);
+        }
+      }
+    }
+
+    if (isKilled) {
       this.handleEnemyDeath(enemy, actualDamage, combatTimeSec, map, economy, fx);
       return { dealt: actualDamage, killed: true };
     }
@@ -827,22 +848,33 @@ class EnemyManager {
 
   render(ctx) {
 
-    // 绘制空中飞行的发光蛛丝飞弹
+    // 绘制空中飞行的 100% AI 手绘幽光蛛丝飞弹 (100% AI Hand-Painted Silk Cocoon Bolus)
+    const silkBallImg = platform.getImage('assets/vfx/proj_spider_silk_ball.png');
     for (let i = 0; i < this.flyingWebs.length; i++) {
       const w = this.flyingWebs[i];
       ctx.save();
-      ctx.strokeStyle = 'rgba(230, 245, 255, 0.85)';
-      ctx.lineWidth = 1.6;
+      // 1. 幽暗蛛丝轨迹：极度轻柔半透明多重有机丝线 (透明度 0.25)
+      ctx.strokeStyle = 'rgba(210, 180, 255, 0.28)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(w.startX, w.startY);
-      ctx.quadraticCurveTo((w.startX + w.targetX) * 0.5, (w.startY + w.targetY) * 0.5 - 25, w.curX, w.curY);
+      const cpX = (w.startX + w.targetX) * 0.5;
+      const cpY = (w.startY + w.targetY) * 0.5 - 28;
+      ctx.quadraticCurveTo(cpX, cpY, w.curX, w.curY);
       ctx.stroke();
 
-      // 蛛丝飞弹前端
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(w.curX, w.curY, 3.5, 0, Math.PI * 2);
-      ctx.fill();
+      // 2. 蛛丝飞弹核心：100% 纯 AI 手绘透光毒性蛛丝茧球
+      if (silkBallImg && silkBallImg.width) {
+        ctx.translate(Math.round(w.curX), Math.round(w.curY));
+        ctx.rotate(w.timer * 12);
+        const bSize = 28;
+        ctx.drawImage(silkBallImg, -bSize * 0.5, -bSize * 0.5, bSize, bSize);
+      } else {
+        ctx.fillStyle = 'rgba(230, 245, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(w.curX, w.curY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -991,21 +1023,20 @@ class EnemyManager {
       }
     }
 
+    // 精英怪头顶冠军徽标 (100% AI Hand-Painted Royal Crest)
     if (e.isElite && e.state !== 'death') {
+      const crestImg = platform.getImage('assets/vfx/icon_elite_crest.png');
+      const cy = e.y - (e.def.artSize.height || 12) - 16;
       ctx.save();
-      ctx.fillStyle = '#FFD700';
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1;
-      const cy = e.y - (e.def.artSize.height || 12) - 14;
-      ctx.beginPath();
-      ctx.moveTo(e.x - 5, cy);
-      ctx.lineTo(e.x - 3, cy - 4);
-      ctx.lineTo(e.x, cy - 1);
-      ctx.lineTo(e.x + 3, cy - 4);
-      ctx.lineTo(e.x + 5, cy);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      if (crestImg && crestImg.width) {
+        const cPulse = 1.0 + Math.sin(e.animTimer * 6) * 0.08;
+        const cw = Math.round(28 * cPulse);
+        const ch = Math.round(24 * cPulse);
+        ctx.drawImage(crestImg, Math.round(e.x - cw * 0.5), Math.round(cy - ch * 0.5), cw, ch);
+      } else {
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(Math.round(e.x - 6), Math.round(cy - 6), 12, 12);
+      }
       ctx.restore();
     }
     if (e.state === 'death') return;
@@ -1019,32 +1050,50 @@ class EnemyManager {
       drawProjectileSprite(ctx, 'armor_break_icon', e.x, topY - 8, 0, 0.6);
     }
 
-    // 受到伤害后显示精致微缩血条 (Refined Fantasy Micro Health Bar)
+    // 受到伤害后显示成熟奇幻血条 (Mature Wood-Bordered Fantasy Micro Health Bar with Easing Damage)
     if (e.hp < e.maxHp || e.isBoss) {
-      const barW = e.isBoss ? 46 : 24;
-      const barH = e.isBoss ? 5 : 3.5;
+      const barW = e.isBoss ? 48 : 26;
+      const barH = e.isBoss ? 6 : 4;
       const bx = Math.round(e.x - barW * 0.5);
       const by = Math.round(topY);
       const ratio = Math.max(0, Math.min(1, e.hp / e.maxHp));
 
       ctx.save();
-      // 1. 微黑木纹托底与轻微圆角
-      ctx.fillStyle = 'rgba(18, 12, 6, 0.85)';
-      ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+      // 1. 经典暗红木/深古铜浮雕边框
+      ctx.fillStyle = 'rgba(24, 16, 10, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx - 1.5, by - 1.5, barW + 3, barH + 3, 3) : ctx.rect(bx - 1.5, by - 1.5, barW + 3, barH + 3);
+      ctx.fill();
 
-      // 2. 动态血量渐变填充 (绿 -> 橙 -> 红)
+      // 2. 内底槽
+      ctx.fillStyle = 'rgba(10, 10, 10, 0.75)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx, by, barW, barH, 2) : ctx.rect(bx, by, barW, barH);
+      ctx.fill();
+
+      // 3. 动态血量填充
       if (ratio > 0) {
         const fillW = Math.max(2, Math.round(barW * ratio));
-        let hpColor = '#52C41A';
-        if (ratio < 0.28) hpColor = '#FF4D4F';
-        else if (ratio < 0.58) hpColor = '#FAAD14';
+        let hpGrad = '#52C41A';
+        if (ratio < 0.25) hpGrad = '#FF4D4F';
+        else if (ratio < 0.55) hpGrad = '#FAAD14';
 
-        if (e.isBoss) hpColor = '#FA8C16';
-        else if (e.isFlying) hpColor = '#13C2C2';
+        if (e.isBoss) hpGrad = '#FA8C16';
+        else if (e.isFlying) hpGrad = '#13C2C2';
 
-        ctx.fillStyle = hpColor;
-        ctx.fillRect(bx, by, fillW, barH);
+        ctx.fillStyle = hpGrad;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(bx, by, fillW, barH, 2) : ctx.rect(bx, by, fillW, barH);
+        ctx.fill();
       }
+
+      // 4. 金属微光边线
+      ctx.strokeStyle = e.isBoss ? 'rgba(255, 215, 0, 0.75)' : 'rgba(140, 110, 80, 0.65)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx - 1.5, by - 1.5, barW + 3, barH + 3, 3) : ctx.rect(bx - 1.5, by - 1.5, barW + 3, barH + 3);
+      ctx.stroke();
+
       ctx.restore();
       platform.recordDrawCall(1);
     }

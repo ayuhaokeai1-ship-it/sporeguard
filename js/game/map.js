@@ -416,28 +416,7 @@ class GameMap {
         ctx.fillRect(s2x + 4, s2y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
       }
     }
-if (this.mapData.spawnTile2) {
-      const [s2c, s2r] = this.mapData.spawnTile2;
-      const s2x = s2c * TILE_SIZE;
-      const s2y = s2r * TILE_SIZE;
-      const moundImg = platform.getImage('assets/vfx/enemy_burrow_mound.png');
-      if (moundImg && moundImg.width) {
-        ctx.save();
-        ctx.drawImage(moundImg, s2x - 6, s2y - 6, 44, 36);
-        const pulse = 0.5 + Math.sin(animTimeSec * 4) * 0.4;
-        ctx.fillStyle = 'rgba(255, 77, 79, ' + (pulse * 0.7) + ')';
-        ctx.shadowColor = '#FF4D4F';
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(s2x + 13, s2y + 11, 2.5, 0, Math.PI * 2);
-        ctx.arc(s2x + 19, s2y + 11, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else {
-        ctx.fillStyle = '#722ED1';
-        ctx.fillRect(s2x + 4, s2y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-      }
-    }
+
 
     if (this.mapData.spawnTile2) {
       const [s2c, s2r] = this.mapData.spawnTile2;
@@ -477,39 +456,20 @@ if (this.mapData.spawnTile2) {
       platform.recordDrawCall(1);
     }
 
-    // 侧翼回旋暗道：幽暗紫光流动引导线
+    // 侧翼地穴暗影微粒（极柔和的自然暗紫荧光孢子飘散，彻底移除生硬的人工几何虚线框）
     if (this.groundRoute2 && this.groundRoute2.points.length > 1) {
       const g2Pts = this.groundRoute2.points;
       ctx.save();
-      // 1. 底层微光暗紫腐化地裂发光带
-      ctx.strokeStyle = 'rgba(147, 50, 230, 0.35)';
-      ctx.lineWidth = 4.0;
-      ctx.beginPath();
-      ctx.moveTo(g2Pts[0].x, g2Pts[0].y);
-      for (let i = 1; i < g2Pts.length; i++) {
-        ctx.lineTo(g2Pts[i].x, g2Pts[i].y);
-      }
-      ctx.stroke();
-
-      // 2. 动态爬行虚线紫晶箭痕
-      ctx.strokeStyle = '#D3ADF7';
-      ctx.lineWidth = 2.0;
-      ctx.setLineDash([6, 8]);
-      ctx.lineDashOffset = -Math.round((animTimeSec * 28) % 14);
-      ctx.stroke();
-
-      // 3. 沿途飘散幽紫微光粒子
       for (let p = 0; p < g2Pts.length - 1; p++) {
-        const segT = (animTimeSec * 0.4 + p * 0.25) % 1.0;
+        const segT = (animTimeSec * 0.3 + p * 0.25) % 1.0;
         const px = g2Pts[p].x + (g2Pts[p + 1].x - g2Pts[p].x) * segT;
         const py = g2Pts[p].y + (g2Pts[p + 1].y - g2Pts[p].y) * segT;
-        ctx.fillStyle = 'rgba(211, 173, 247, 0.75)';
+        ctx.fillStyle = 'rgba(180, 120, 255, 0.25)';
         ctx.beginPath();
-        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
-      platform.recordDrawCall(2);
     }
   }
 }

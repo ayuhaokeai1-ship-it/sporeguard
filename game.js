@@ -65,7 +65,21 @@ function bootstrapGame() {
     'assets/vfx/enemy_leaper.png',
     'assets/vfx/enemy_leaper_jump.png',
     'assets/vfx/enemy_siege_beetle.png',
-    'assets/vfx/vfx_leap_wind.png'
+    'assets/vfx/vfx_leap_wind.png',
+    'assets/vfx/hero_oak.png',
+    'assets/vfx/vfx_hero_slash.png',
+    'assets/vfx/vfx_hit_spark.png',
+    'assets/vfx/proj_watch_arrow.png',
+    'assets/vfx/proj_burst_shell.png',
+    'assets/vfx/item_golden_spore.png',
+    'assets/vfx/item_awakening_seed.png',
+    'assets/vfx/secondary_spawner_burrow.png',
+    'assets/vfx/enemy_shadow_stalker.png',
+    'assets/vfx/card_lumina.png',
+    'assets/vfx/prop_rally_flag.png',
+    'assets/vfx/sporeling_guard.png',
+    'assets/vfx/proj_spider_silk_ball.png',
+    'assets/vfx/icon_elite_crest.png'
   ];
 
   Promise.all([

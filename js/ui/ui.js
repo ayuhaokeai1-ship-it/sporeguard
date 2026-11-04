@@ -299,6 +299,14 @@ class UiManager {
     }
 
     if (scene && scene.state === 'BATTLE') {
+      // (0) 实时战斗统计面板开关与点击
+      if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
+        return true;
+      }
+      if (scene.heroSkills && scene.heroSkills.handleClick(x, y, scene)) {
+        return true;
+      }
+
       // (A) PvZ 式阳光/晨露金孢点击即时收集
       if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(x, y, scene.economy, scene.fx)) {
         return true;
@@ -803,6 +811,16 @@ class UiManager {
       scene.weather.renderTopWeatherBadge(ctx, 426, 16);
     }
 
+    // 1.35 顶部居中偏右：远古神器状态栏 (4大装备神器)
+    if (scene.relicArsenal) {
+      scene.relicArsenal.renderHudRelicBadges(ctx, 580, 18);
+    }
+
+    // 1.4 顶部战况实时DPS分析按钮
+    if (scene.combatAnalytics) {
+      scene.combatAnalytics.renderToggleButton(ctx, 740, 16);
+    }
+
     // 1.5 战术成就达成即时滑入横幅 (Kingdom Rush 20大成就)
     if (scene.achievements) {
       scene.achievements.renderToast(ctx);
@@ -859,6 +877,11 @@ class UiManager {
     // 3. 左下角：指挥官战术主动技能勋章栏（自然甘霖 [Q]、雷霆震爆 [W]、大地丰收 [E]）
     this.renderCommanderSpellDock(ctx, scene);
 
+    // 3.5 英雄战技微操快捷条 [Q] 巨木横扫 [W] 荆棘木肤 [E] 庇护根脉 [R] 自然之怒觉醒
+    if (scene.heroSkills) {
+      scene.heroSkills.renderSkillActionBar(ctx, 230, 588);
+    }
+
     // 4. 底部居中：植物塔防式蘑菇建造卡片栏
     this.renderBottomBuildDock(ctx, scene);
 
@@ -903,6 +926,11 @@ class UiManager {
       this.renderPauseOverlay(ctx, scene);
     } else if (scene.state === 'SETTLEMENT') {
       this.renderSettlementOverlay(ctx, scene);
+    }
+
+    // 8.5 实时战斗DPS战报分析仪表盘 (全屏弹窗)
+    if (scene.combatAnalytics) {
+      scene.combatAnalytics.renderAnalyticsDashboard(ctx);
     }
   }
 
@@ -1516,14 +1544,16 @@ class UiManager {
         ctx.restore();
       }
 
-      // 绘制 AI 原生圆形技能勋章
-      if (item.id === 'rally') {
-        const sImg = platform.getImage('assets/vfx/relic_shield.png');
-        if (sImg && sImg.width) {
-          ctx.drawImage(sImg, bx + 8, by + 8, btnSize - 16, btnSize - 16);
-        } else {
-          drawSpellIcon(ctx, 'rain', bx + 2, by + 2, btnSize - 4);
-        }
+      // 绘制 100% 纯 AI 手绘高质感奇幻法术勋章 (100% AI Hand-Painted Crystal Relic Badges)
+      let aiSpellPath = null;
+      if (item.id === 'rain') aiSpellPath = 'assets/vfx/relic_clover.png';
+      else if (item.id === 'shock') aiSpellPath = 'assets/vfx/relic_lightning.png';
+      else if (item.id === 'harvest') aiSpellPath = 'assets/vfx/relic_coin.png';
+      else if (item.id === 'rally') aiSpellPath = 'assets/vfx/prop_rally_flag.png';
+
+      const sImg = aiSpellPath ? platform.getImage(aiSpellPath) : null;
+      if (sImg && sImg.width) {
+        ctx.drawImage(sImg, bx + 6, by + 6, btnSize - 12, btnSize - 12);
       } else {
         drawSpellIcon(ctx, item.id, bx + 2, by + 2, btnSize - 4);
       }

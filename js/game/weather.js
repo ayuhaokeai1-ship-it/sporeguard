@@ -90,6 +90,13 @@ class WeatherManager {
   }
 
   update(dt, enemyManager = null, towerManager = null, hero = null, fx = null) {
+    if (enemyManager && enemyManager.enemyManager) {
+      const scene = enemyManager;
+      enemyManager = scene.enemyManager;
+      towerManager = scene.towerManager;
+      hero = scene.hero;
+      fx = scene.fx;
+    }
     this.weatherTimer += dt;
     if (this.weatherNoticeTimer > 0) {
       this.weatherNoticeTimer -= dt;
@@ -291,6 +298,14 @@ class WeatherManager {
     ctx.fillText(`${b.icon} ${b.text}`, x + bw * 0.5, y + bh * 0.5);
 
     ctx.restore();
+  }
+
+  renderWeatherOverlay(ctx) {
+    return this.renderWeatherEffects(ctx);
+  }
+
+  renderTopWeatherBadge(ctx, x, y) {
+    return this.renderWeatherHudBadge(ctx, x, y);
   }
 }
 

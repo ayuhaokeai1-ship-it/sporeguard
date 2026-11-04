@@ -969,7 +969,6 @@
       }
 
       const m = /#battle=(map\d)(?:&steps=(\d+))?(?:&inspect=(\d+))?(?:&upgrade=(\d+))?/.exec(location.hash);
-      if (!m) return;
       function runBattle() {
         if (!window.__SPOREGUARD__ || !window.__SPOREGUARD__.scene) {
           setTimeout(runBattle, 50);
@@ -1013,9 +1012,11 @@
           document.title = 'TEST_ERR: ' + err.message + ' @ ' + (err.stack ? err.stack.replace(/\n/g, ' -> ') : '');
         }
       }
-      runBattle();
+      if (m) {
+        runBattle();
+        return;
+      }
 
-      
       if (location.hash === '#test_codex_dismiss') {
         function checkDismiss() {
           if (!window.__SPOREGUARD__ || !window.__SPOREGUARD__.scene) {

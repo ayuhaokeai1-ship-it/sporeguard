@@ -317,54 +317,35 @@ class SporelingPatrol {
   render(ctx) {
     if (!this.hasRally) return;
 
-    // 1. 绘制集结木旗（Rally Flag）
+    // 1. 绘制集结木旗（100% 纯 AI 手绘高精木质藤蔓绿叶旗帜）
     ctx.save();
     const fx = this.rallyX;
     const fy = this.rallyY;
-    const wave = Math.sin(this.flagAnimTimer * 4) * 3;
+    const wave = Math.sin(this.flagAnimTimer * 4) * 2;
 
     // 旗帜立柱阴影
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.beginPath();
-    ctx.ellipse(fx + 2, fy + 4, 10, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(fx + 2, fy + 4, 12, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 木质立柱
-    ctx.strokeStyle = '#5C381E';
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(fx, fy + 4);
-    ctx.lineTo(fx, fy - 22);
-    ctx.stroke();
-
-    // 旗顶金色果实/宝珠
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.arc(fx, fy - 23, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 飘扬的绿林卫士旗面
-    ctx.fillStyle = '#389E0D';
-    ctx.beginPath();
-    ctx.moveTo(fx, fy - 22);
-    ctx.quadraticCurveTo(fx + 9, fy - 20 + wave * 0.5, fx + 16, fy - 18 + wave);
-    ctx.lineTo(fx + 16, fy - 10 + wave);
-    ctx.quadraticCurveTo(fx + 8, fy - 12 + wave * 0.5, fx, fy - 14);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#D9F7BE';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 旗面徽标（金黄色孢子微点）
-    ctx.fillStyle = '#FFF1B8';
-    ctx.beginPath();
-    ctx.arc(fx + 7, fy - 16 + wave * 0.5, 2, 0, Math.PI * 2);
-    ctx.fill();
+    const flagImg = platform.getImage('assets/vfx/prop_rally_flag.png');
+    if (flagImg && flagImg.width) {
+      const flW = 28;
+      const flH = 34;
+      ctx.drawImage(flagImg, fx - flW * 0.45, fy - flH + 6 + wave * 0.5, flW, flH);
+    } else {
+      ctx.strokeStyle = '#5C381E';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy + 4);
+      ctx.lineTo(fx, fy - 22);
+      ctx.stroke();
+    }
     ctx.restore();
 
-    // 2. 绘制 2 只萌萌菇精小卫士
+    // 2. 绘制 2 只萌萌菇精小卫士 (100% 纯 AI 手绘高精菇精战士立绘)
+    const guardImg = platform.getImage('assets/vfx/sporeling_guard.png');
     for (let i = 0; i < this.guards.length; i++) {
       const g = this.guards[i];
       if (g.state === 'dead') continue;
@@ -372,81 +353,39 @@ class SporelingPatrol {
       ctx.save();
       const gx = Math.round(g.x);
       const gy = Math.round(g.y);
-      const bob = g.state === 'walk' ? Math.abs(Math.sin(g.animTimer * 10)) * 2 : Math.sin(g.animTimer * 3) * 0.8;
+      const bob = g.state === 'walk' ? Math.abs(Math.sin(g.animTimer * 10)) * 2.5 : Math.sin(g.animTimer * 3) * 0.8;
       const thrust = g.thrustTimer > 0 ? 5 : 0;
 
       // 脚底微阴影
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.beginPath();
-      ctx.ellipse(gx, gy + 3, 7, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(gx, gy + 3, 9, 4, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 菇精小身躯（圆滚滚的米黄色菌柄）
-      ctx.fillStyle = '#FFFBE6';
-      ctx.strokeStyle = '#AD8B00';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.ellipse(gx, gy - 2 - bob, 5, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      if (guardImg && guardImg.width) {
+        const gw = 28;
+        const gh = 30;
+        ctx.translate(gx + thrust * 0.5, gy - bob);
+        if (g.facingLeft) ctx.scale(-1, 1);
+        ctx.drawImage(guardImg, -gw * 0.5, -gh + 4, gw, gh);
+      } else {
+        ctx.fillStyle = '#FFFBE6';
+        ctx.beginPath();
+        ctx.ellipse(gx, gy - 2 - bob, 5, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      // 黑色小萌眼
-      ctx.fillStyle = '#262626';
-      ctx.beginPath();
-      ctx.arc(gx - 1.5, gy - 3 - bob, 0.9, 0, Math.PI * 2);
-      ctx.arc(gx + 1.5, gy - 3 - bob, 0.9, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 菇精卫头顶翡翠绿菌盖（带白色小点点）
-      ctx.fillStyle = '#52C41A';
-      ctx.beginPath();
-      ctx.ellipse(gx, gy - 7 - bob, 8, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#237804';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // 菌盖白色点斑
-      ctx.fillStyle = '#F6FFED';
-      ctx.beginPath();
-      ctx.arc(gx - 3, gy - 8 - bob, 1.2, 0, Math.PI * 2);
-      ctx.arc(gx + 3, gy - 7 - bob, 1.2, 0, Math.PI * 2);
-      ctx.arc(gx, gy - 10 - bob, 1.0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 武器：蒲公英长矛（突刺动画）
-      ctx.strokeStyle = '#8C4D18';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(gx + 3, gy - bob);
-      ctx.lineTo(gx + 10 + thrust, gy - 4 - bob);
-      ctx.stroke();
-      // 矛尖（金黄尖端）
-      ctx.fillStyle = '#FFD700';
-      ctx.beginPath();
-      ctx.arc(gx + 11 + thrust, gy - 4 - bob, 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 防具：左手持圆形小木盾
-      ctx.fillStyle = '#A05A2C';
-      ctx.strokeStyle = '#D4B106';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(gx - 5, gy - 2 - bob, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // 战斗中显示小生命条
+      // 战斗中显示微雕木质小血条
       if (g.state === 'combat' || g.hp < g.maxHp) {
         const barW = 20;
         const barH = 3;
         const barX = gx - barW * 0.5;
-        const barY = gy - 16 - bob;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        const barY = gy - 28 - bob;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
         ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
         const hpPct = Math.max(0, Math.min(1, g.hp / g.maxHp));
         ctx.fillStyle = hpPct > 0.4 ? '#52C41A' : '#FF4D4F';
-        ctx.fillRect(barX, barY, barW * hpPct, barH);
+        ctx.fillRect(barX, barY, Math.round(barW * hpPct), barH);
       }
 
       ctx.restore();

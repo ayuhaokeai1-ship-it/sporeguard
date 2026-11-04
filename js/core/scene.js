@@ -17,6 +17,10 @@ const ForestHero = require('../game/hero');
 const WeatherManager = require('../game/weather');
 const achievements = require('../game/achievements');
 const RelicDropManager = require('../game/relic');
+const ElementalReactionSystem = require('../game/elementalReactions');
+const HeroSkillSystem = require('../game/heroSkills');
+const CombatAnalyticsSystem = require('../game/combatAnalytics');
+const RelicArsenalSystem = require('../game/relicArsenal');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -58,6 +62,18 @@ class SceneController {
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
     this.achievements = achievements;
+    this.elementalReactions = new ElementalReactionSystem();
+    this.heroSkills = new HeroSkillSystem(this.hero);
+    this.combatAnalytics = new CombatAnalyticsSystem();
+    this.relicArsenal = new RelicArsenalSystem();
+    this.enemyManager.scene = this;
+    this.bulletManager.scene = this;
+    this.elementalReactions = new ElementalReactionSystem();
+    this.heroSkills = new HeroSkillSystem(this.hero);
+    this.combatAnalytics = new CombatAnalyticsSystem();
+    this.relicArsenal = new RelicArsenalSystem();
+    this.enemyManager.scene = this;
+    this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false; // 1 | 2 | 3
@@ -112,6 +128,12 @@ class SceneController {
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
     this.achievements = achievements;
+    this.elementalReactions = new ElementalReactionSystem();
+    this.heroSkills = new HeroSkillSystem(this.hero);
+    this.combatAnalytics = new CombatAnalyticsSystem();
+    this.relicArsenal = new RelicArsenalSystem();
+    this.enemyManager.scene = this;
+    this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
@@ -125,6 +147,12 @@ class SceneController {
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
     this.achievements = achievements;
+    this.elementalReactions = new ElementalReactionSystem();
+    this.heroSkills = new HeroSkillSystem(this.hero);
+    this.combatAnalytics = new CombatAnalyticsSystem();
+    this.relicArsenal = new RelicArsenalSystem();
+    this.enemyManager.scene = this;
+    this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
@@ -162,6 +190,12 @@ class SceneController {
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
     this.achievements = achievements;
+    this.elementalReactions = new ElementalReactionSystem();
+    this.heroSkills = new HeroSkillSystem(this.hero);
+    this.combatAnalytics = new CombatAnalyticsSystem();
+    this.relicArsenal = new RelicArsenalSystem();
+    this.enemyManager.scene = this;
+    this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
@@ -705,6 +739,18 @@ class SceneController {
     if (this.weather) {
       this.weather.update(dt, this);
     }
+    if (this.elementalReactions) {
+      this.elementalReactions.update(dt, this);
+    }
+    if (this.heroSkills) {
+      this.heroSkills.update(dt, this);
+    }
+    if (this.combatAnalytics) {
+      this.combatAnalytics.update(dt);
+    }
+    if (this.relicArsenal) {
+      this.relicArsenal.update(dt, this);
+    }
     if (this.achievements) {
       this.achievements.update(dt, this.fx);
     }
@@ -907,6 +953,12 @@ class SceneController {
     this.towerManager.render(ctx);
     this.enemyManager.render(ctx);
     this.bulletManager.renderBullets(ctx);
+    if (this.heroSkills) {
+      this.heroSkills.renderMapVfx(ctx);
+    }
+    if (this.elementalReactions) {
+      this.elementalReactions.render(ctx, this.animTimeSec);
+    }
     this.fx.renderMapFx(ctx);
     this.sporeDropManager.render(ctx);
 
