@@ -37,22 +37,31 @@ class GameLoop {
 
     const tick = (timestamp) => {
       if (!this.running) return;
-      const frameStart = platform.nowMs();
-      const rawDeltaSec = Math.max(0, (timestamp - this.lastTimestamp) / 1000);
-      this.lastTimestamp = timestamp;
-      const realDt = Math.min(CONFIG.TIMING.MAX_FRAME_DELTA, rawDeltaSec || FIXED_DT);
+      try {
+        const frameStart = platform.nowMs();
+        const rawDeltaSec = Math.max(0, (timestamp - this.lastTimestamp) / 1000);
+        this.lastTimestamp = timestamp;
+        const realDt = Math.min(CONFIG.TIMING.MAX_FRAME_DELTA, rawDeltaSec || FIXED_DT);
 
-      this.stepFrame(realDt);
+        this.stepFrame(realDt);
 
-      const workMs = platform.nowMs() - frameStart;
-      this.perf.frameCount += 1;
-      this.perf.totalFrameWorkMs += workMs;
-      this.perf.avgFrameWorkMs = this.perf.totalFrameWorkMs / this.perf.frameCount;
-      if (workMs > 22.2) {
-        this.perf.slowFramesUnder45Fps += 1;
+        const workMs = platform.nowMs() - frameStart;
+        this.perf.frameCount += 1;
+        this.perf.totalFrameWorkMs += workMs;
+        this.perf.avgFrameWorkMs = this.perf.totalFrameWorkMs / this.perf.frameCount;
+        if (workMs > 22.2) {
+          this.perf.slowFramesUnder45Fps += 1;
+        }
+      } catch (err) {
+        // 核心防假死：捕获任何单帧未预期异常，并在控制台告警，绝不中断 requestAnimationFrame 循环！
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Sporeguard SafeLoop Recovery]:', err);
+        }
+      } finally {
+        if (this.running) {
+          raf(tick);
+        }
       }
-
-      raf(tick);
     };
 
     raf(tick);

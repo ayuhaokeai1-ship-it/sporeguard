@@ -457,7 +457,8 @@ function playBgm(bgmKey) {
   if (!audioUnlocked || !bgmEnabled) return;
   if (currentBgmKey === bgmKey && bgmContexts[bgmKey]) {
     try {
-      bgmContexts[bgmKey].play();
+      const p = bgmContexts[bgmKey].play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (e) {}
     return;
   }
@@ -473,7 +474,8 @@ function playBgm(bgmKey) {
   const inst = bgmContexts[bgmKey];
   if (inst) {
     try {
-      inst.play();
+      const p = inst.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (e) {}
   }
 }
@@ -481,7 +483,10 @@ function playBgm(bgmKey) {
 function stopBgm() {
   if (currentBgmKey && bgmContexts[currentBgmKey]) {
     try {
-      bgmContexts[currentBgmKey].pause();
+      const inst = bgmContexts[currentBgmKey];
+      if (typeof inst.pause === 'function') {
+        inst.pause();
+      }
     } catch (e) {}
   }
   currentBgmKey = null;

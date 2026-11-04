@@ -169,7 +169,8 @@ class GameMap {
       const dr = Math.sign(r1 - r0);
       let c = c0;
       let r = r0;
-      while (true) {
+      let safety = 0;
+      while (safety++ < 100) {
         if (this.inBounds(c, r)) {
           this.grid[r][c].type = 'path';
           if (cornerSet.has(c + ',' + r)) {
@@ -179,8 +180,8 @@ class GameMap {
           }
         }
         if (c === c1 && r === r1) break;
-        c += dc;
-        r += dr;
+        if (c !== c1) c += dc;
+        if (r !== r1) r += dr;
       }
     }
 

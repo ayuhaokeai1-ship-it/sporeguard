@@ -11,15 +11,20 @@ const SCALE = CONFIG.RESOLUTION.ART_PIXEL_SCALE; // 2
 const HD_ATLAS_SCALE = 4; // 4x AI 高清图集采样倍率
 
 function drawSubImage(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
-  if (!img) return false;
-  ctx.imageSmoothingEnabled = true;
-  if (typeof ctx.imageSmoothingQuality !== 'undefined') {
-    ctx.imageSmoothingQuality = 'high';
+  if (!img || !img.width || !img.height) return false;
+  if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return false;
+  try {
+    ctx.imageSmoothingEnabled = true;
+    if (typeof ctx.imageSmoothingQuality !== 'undefined') {
+      ctx.imageSmoothingQuality = 'high';
+    }
+    const k = (img.width && img.width >= 1024) ? HD_ATLAS_SCALE : 1;
+    ctx.drawImage(img, sx * k, sy * k, sw * k, sh * k, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+    platform.recordDrawCall(1);
+    return true;
+  } catch (e) {
+    return false;
   }
-  const k = (img.width && img.width >= 1024) ? HD_ATLAS_SCALE : 1;
-  ctx.drawImage(img, sx * k, sy * k, sw * k, sh * k, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-  platform.recordDrawCall(1);
-  return true;
 }
 
 /**

@@ -1201,6 +1201,49 @@
         return;
       }
 
+      if (location.hash === '#test_full_flow') {
+        onGameReady(function() {
+          const S = window.__SPOREGUARD__ && window.__SPOREGUARD__.scene;
+          if (!S) { document.title = 'FLOW_ERR: No Scene'; return; }
+          const report = [];
+          try {
+            report.push('S0:' + S.state);
+            const t0 = performance.now();
+            S.ui.handlePointerDown(220, 485, S);
+            S.ui.handlePointerUp(220, 485, S);
+            const t1 = performance.now();
+            report.push('S1:' + S.state + '(' + (t1-t0).toFixed(1) + 'ms)');
+
+            const t2 = performance.now();
+            S.startLevel('map1');
+            const t3 = performance.now();
+            report.push('S2:' + S.state + '(' + (t3-t2).toFixed(1) + 'ms)');
+
+            const t4 = performance.now();
+            S.selectedBuildTowerId = 'watch';
+            S.selectedTile = { col: 5, row: 3 };
+            S.tryBuildOnSelectedTile();
+            const t5 = performance.now();
+            report.push('Build:' + S.towerManager.towers.length + '(' + (t5-t4).toFixed(1) + 'ms)');
+
+            S.callWaveEarly();
+            report.push('Wave:' + S.waveManager.currentWaveIndex);
+
+            const stepT0 = performance.now();
+            for (let f = 0; f < 300; f++) {
+              S.fixedStep(1/60);
+            }
+            const stepT1 = performance.now();
+            report.push('300steps:(' + (stepT1-stepT0).toFixed(1) + 'ms)');
+
+            document.title = 'FLOW_OK: ' + report.join(' | ');
+          } catch (e) {
+            document.title = 'FLOW_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
       if (location.hash === '#test_flank_spawner') {
         onGameReady(function() {
           try {

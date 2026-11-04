@@ -16,7 +16,9 @@ let prevGamepadButtons = [];
 let stickCooldown = 0;
 
 function emitAction(type, payload = {}) {
-  platform.unlockAudio();
+  if (type === 'pointer_down' || type === 'confirm_tile') {
+    platform.unlockAudio();
+  }
   actionQueue.push(Object.assign({ type }, payload));
 }
 
@@ -42,6 +44,7 @@ function initInput() {
       });
     }
 
+    let lastMoveEmitted = 0;
     if (typeof wx.onTouchMove === 'function') {
       wx.onTouchMove((res) => {
         const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
@@ -50,7 +53,11 @@ function initInput() {
         pointerPos.x = pos.x;
         pointerPos.y = pos.y;
         updateCursorFromPointer(pos.x, pos.y);
-        emitAction('pointer_move', { x: pos.x, y: pos.y });
+        const now = platform.nowMs ? platform.nowMs() : Date.now();
+        if (now - lastMoveEmitted >= 16) {
+          lastMoveEmitted = now;
+          emitAction('pointer_move', { x: pos.x, y: pos.y });
+        }
       });
     }
 

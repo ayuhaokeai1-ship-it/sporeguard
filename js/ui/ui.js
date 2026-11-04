@@ -376,7 +376,13 @@ class UiManager {
           return true;
         } else {
           if (b.onClick) {
-            b.onClick(b);
+            try {
+              b.onClick(b);
+            } catch (btnErr) {
+              if (typeof console !== 'undefined' && console.error) {
+                console.error('[Button Click Recovered]:', btnErr);
+              }
+            }
           }
           return true;
         }
@@ -440,7 +446,13 @@ class UiManager {
       }
     } else if (this.pressedSlotButton && !this.isDragging) {
       if (this.pressedSlotButton.onClick) {
-        this.pressedSlotButton.onClick(this.pressedSlotButton);
+        try {
+          this.pressedSlotButton.onClick(this.pressedSlotButton);
+        } catch (btnErr) {
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[Slot Button Click Recovered]:', btnErr);
+          }
+        }
       }
     }
 

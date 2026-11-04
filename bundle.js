@@ -3129,7 +3129,8 @@ function playBgm(bgmKey) {
   if (!audioUnlocked || !bgmEnabled) return;
   if (currentBgmKey === bgmKey && bgmContexts[bgmKey]) {
     try {
-      bgmContexts[bgmKey].play();
+      const p = bgmContexts[bgmKey].play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (e) {}
     return;
   }
@@ -3145,7 +3146,8 @@ function playBgm(bgmKey) {
   const inst = bgmContexts[bgmKey];
   if (inst) {
     try {
-      inst.play();
+      const p = inst.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (e) {}
   }
 }
@@ -3153,7 +3155,10 @@ function playBgm(bgmKey) {
 function stopBgm() {
   if (currentBgmKey && bgmContexts[currentBgmKey]) {
     try {
-      bgmContexts[currentBgmKey].pause();
+      const inst = bgmContexts[currentBgmKey];
+      if (typeof inst.pause === 'function') {
+        inst.pause();
+      }
     } catch (e) {}
   }
   currentBgmKey = null;
@@ -3807,15 +3812,20 @@ const SCALE = CONFIG.RESOLUTION.ART_PIXEL_SCALE; // 2
 const HD_ATLAS_SCALE = 4; // 4x AI 高清图集采样倍率
 
 function drawSubImage(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
-  if (!img) return false;
-  ctx.imageSmoothingEnabled = true;
-  if (typeof ctx.imageSmoothingQuality !== 'undefined') {
-    ctx.imageSmoothingQuality = 'high';
+  if (!img || !img.width || !img.height) return false;
+  if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return false;
+  try {
+    ctx.imageSmoothingEnabled = true;
+    if (typeof ctx.imageSmoothingQuality !== 'undefined') {
+      ctx.imageSmoothingQuality = 'high';
+    }
+    const k = (img.width && img.width >= 1024) ? HD_ATLAS_SCALE : 1;
+    ctx.drawImage(img, sx * k, sy * k, sw * k, sh * k, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+    platform.recordDrawCall(1);
+    return true;
+  } catch (e) {
+    return false;
   }
-  const k = (img.width && img.width >= 1024) ? HD_ATLAS_SCALE : 1;
-  ctx.drawImage(img, sx * k, sy * k, sw * k, sh * k, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-  platform.recordDrawCall(1);
-  return true;
 }
 
 /**
@@ -4012,7 +4022,9 @@ let prevGamepadButtons = [];
 let stickCooldown = 0;
 
 function emitAction(type, payload = {}) {
-  platform.unlockAudio();
+  if (type === 'pointer_down' || type === 'confirm_tile') {
+    platform.unlockAudio();
+  }
   actionQueue.push(Object.assign({ type }, payload));
 }
 
@@ -4038,6 +4050,7 @@ function initInput() {
       });
     }
 
+    let lastMoveEmitted = 0;
     if (typeof wx.onTouchMove === 'function') {
       wx.onTouchMove((res) => {
         const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
@@ -4046,7 +4059,11 @@ function initInput() {
         pointerPos.x = pos.x;
         pointerPos.y = pos.y;
         updateCursorFromPointer(pos.x, pos.y);
-        emitAction('pointer_move', { x: pos.x, y: pos.y });
+        const now = platform.nowMs ? platform.nowMs() : Date.now();
+        if (now - lastMoveEmitted >= 16) {
+          lastMoveEmitted = now;
+          emitAction('pointer_move', { x: pos.x, y: pos.y });
+        }
       });
     }
 
@@ -5295,7 +5312,8 @@ class GameMap {
       const dr = Math.sign(r1 - r0);
       let c = c0;
       let r = r0;
-      while (true) {
+      let safety = 0;
+      while (safety++ < 100) {
         if (this.inBounds(c, r)) {
           this.grid[r][c].type = 'path';
           if (cornerSet.has(c + ',' + r)) {
@@ -5305,8 +5323,8 @@ class GameMap {
           }
         }
         if (c === c1 && r === r1) break;
-        c += dc;
-        r += dr;
+        if (c !== c1) c += dc;
+        if (r !== r1) r += dr;
       }
     }
 
@@ -15098,7 +15116,13 @@ class UiManager {
           return true;
         } else {
           if (b.onClick) {
-            b.onClick(b);
+            try {
+              b.onClick(b);
+            } catch (btnErr) {
+              if (typeof console !== 'undefined' && console.error) {
+                console.error('[Button Click Recovered]:', btnErr);
+              }
+            }
           }
           return true;
         }
@@ -15162,7 +15186,13 @@ class UiManager {
       }
     } else if (this.pressedSlotButton && !this.isDragging) {
       if (this.pressedSlotButton.onClick) {
-        this.pressedSlotButton.onClick(this.pressedSlotButton);
+        try {
+          this.pressedSlotButton.onClick(this.pressedSlotButton);
+        } catch (btnErr) {
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[Slot Button Click Recovered]:', btnErr);
+          }
+        }
       }
     }
 
@@ -18661,7 +18691,8 @@ class SceneController {
   processInputActions() {
     const actions = input.consumeActions();
     for (let i = 0; i < actions.length; i++) {
-      const act = actions[i];
+      try {
+        const act = actions[i];
 
       if (act.type === 'pointer_move') {
         this.ui.handlePointerMove(act.x, act.y, this);
@@ -18881,6 +18912,11 @@ class SceneController {
           this.pauseGame();
         } else if (this.state === 'PAUSED') {
           this.resumeGame();
+        }
+      }
+      } catch (actionErr) {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Action Processing Safe-Catch]:', actionErr);
         }
       }
     }
@@ -19239,22 +19275,31 @@ class GameLoop {
 
     const tick = (timestamp) => {
       if (!this.running) return;
-      const frameStart = platform.nowMs();
-      const rawDeltaSec = Math.max(0, (timestamp - this.lastTimestamp) / 1000);
-      this.lastTimestamp = timestamp;
-      const realDt = Math.min(CONFIG.TIMING.MAX_FRAME_DELTA, rawDeltaSec || FIXED_DT);
+      try {
+        const frameStart = platform.nowMs();
+        const rawDeltaSec = Math.max(0, (timestamp - this.lastTimestamp) / 1000);
+        this.lastTimestamp = timestamp;
+        const realDt = Math.min(CONFIG.TIMING.MAX_FRAME_DELTA, rawDeltaSec || FIXED_DT);
 
-      this.stepFrame(realDt);
+        this.stepFrame(realDt);
 
-      const workMs = platform.nowMs() - frameStart;
-      this.perf.frameCount += 1;
-      this.perf.totalFrameWorkMs += workMs;
-      this.perf.avgFrameWorkMs = this.perf.totalFrameWorkMs / this.perf.frameCount;
-      if (workMs > 22.2) {
-        this.perf.slowFramesUnder45Fps += 1;
+        const workMs = platform.nowMs() - frameStart;
+        this.perf.frameCount += 1;
+        this.perf.totalFrameWorkMs += workMs;
+        this.perf.avgFrameWorkMs = this.perf.totalFrameWorkMs / this.perf.frameCount;
+        if (workMs > 22.2) {
+          this.perf.slowFramesUnder45Fps += 1;
+        }
+      } catch (err) {
+        // 核心防假死：捕获任何单帧未预期异常，并在控制台告警，绝不中断 requestAnimationFrame 循环！
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Sporeguard SafeLoop Recovery]:', err);
+        }
+      } finally {
+        if (this.running) {
+          raf(tick);
+        }
       }
-
-      raf(tick);
     };
 
     raf(tick);

@@ -523,7 +523,8 @@ class SceneController {
   processInputActions() {
     const actions = input.consumeActions();
     for (let i = 0; i < actions.length; i++) {
-      const act = actions[i];
+      try {
+        const act = actions[i];
 
       if (act.type === 'pointer_move') {
         this.ui.handlePointerMove(act.x, act.y, this);
@@ -743,6 +744,11 @@ class SceneController {
           this.pauseGame();
         } else if (this.state === 'PAUSED') {
           this.resumeGame();
+        }
+      }
+      } catch (actionErr) {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Action Processing Safe-Catch]:', actionErr);
         }
       }
     }
