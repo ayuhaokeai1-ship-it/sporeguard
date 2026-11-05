@@ -179,8 +179,13 @@ function updateViewport() {
  * 将屏幕坐标转换为 960x540 逻辑坐标
  */
 function screenToLogical(clientX, clientY) {
-  const lx = (clientX - viewport.offsetX) / viewport.scale;
-  const ly = (clientY - viewport.offsetY) / viewport.scale;
+  const scale = Math.max(0.01, viewport.scale || 1.0);
+  const cx = isFinite(clientX) ? clientX : 0;
+  const cy = isFinite(clientY) ? clientY : 0;
+  const offX = isFinite(viewport.offsetX) ? viewport.offsetX : 0;
+  const offY = isFinite(viewport.offsetY) ? viewport.offsetY : 0;
+  const lx = (cx - offX) / scale;
+  const ly = (cy - offY) / scale;
   return {
     x: lx,
     y: ly,
@@ -395,17 +400,144 @@ function unlockAudio() {
         webAudioCtx.resume().catch(() => {});
       }
     }
-  } catch (e) {
-    // 忽略 WebAudio 初始化错误
-  }
-
-  try {
-    preloadSfxBuffers();
   } catch (e) {}
 
-  if (pendingBgmKey && bgmEnabled) {
-    playBgm(pendingBgmKey);
-  }
+  // 异步延后调度BGM播放与资源探测，坚决不在首次用户点击的同步帧中阻塞主线程！
+  setTimeout(() => {
+    try {
+      preloadSfxBuffers();
+    } catch (e) {}
+
+    if (pendingBgmKey && bgmEnabled) {
+      playBgm(pendingBgmKey);
+    }
+  }, 100);
+}
+
+function playSynthesizedSound(sfxKey, volumeMod = 1.0) {
+  if (!webAudioCtx) return false;
+  try {
+    if (webAudioCtx.state === 'suspended') {
+      webAudioCtx.resume().catch(() => {});
+    }
+    const t0 = webAudioCtx.currentTime;
+    const osc = webAudioCtx.createOscillator();
+    const gain = webAudioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(webAudioCtx.destination);
+
+    if (sfxKey === 'sfx_click') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t0);
+      osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.035);
+      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+      osc.start(t0);
+      osc.stop(t0 + 0.035);
+      return true;
+    } else if (sfxKey === 'sfx_build') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, t0);
+      osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.08);
+      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+      osc.start(t0);
+      osc.stop(t0 + 0.09);
+      return true;
+    } else if (sfxKey === 'sfx_upgrade') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, t0);
+      osc.frequency.setValueAtTime(659.25, t0 + 0.05);
+      osc.frequency.setValueAtTime(783.99, t0 + 0.10);
+      gain.gain.setValueAtTime(0.25 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_coin' || sfxKey === 'sfx_sell') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, t0);
+      osc.frequency.setValueAtTime(1600, t0 + 0.04);
+      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+      osc.start(t0);
+      osc.stop(t0 + 0.12);
+      return true;
+    } else if (sfxKey === 'sfx_hurt') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, t0);
+      osc.frequency.exponentialRampToValueAtTime(50, t0 + 0.08);
+      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+      osc.start(t0);
+      osc.stop(t0 + 0.08);
+      return true;
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, t0);
+      osc.frequency.exponentialRampToValueAtTime(35, t0 + 0.22);
+      gain.gain.setValueAtTime(0.30 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(450, t0);
+      osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.05);
+      gain.gain.setValueAtTime(0.16 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+      osc.start(t0);
+      osc.stop(t0 + 0.05);
+      return true;
+    } else if (sfxKey === 'sfx_thorn') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(580, t0);
+      osc.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+      gain.gain.setValueAtTime(0.14 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+      osc.start(t0);
+      osc.stop(t0 + 0.06);
+      return true;
+    } else if (sfxKey === 'sfx_mist') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, t0);
+      osc.frequency.exponentialRampToValueAtTime(600, t0 + 0.08);
+      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+      osc.start(t0);
+      osc.stop(t0 + 0.12);
+      return true;
+    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(392, t0);
+      osc.frequency.setValueAtTime(523.25, t0 + 0.08);
+      osc.frequency.setValueAtTime(659.25, t0 + 0.16);
+      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+      osc.start(t0);
+      osc.stop(t0 + 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_shovel') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(240, t0);
+      osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.05);
+      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+      osc.start(t0);
+      osc.stop(t0 + 0.05);
+      return true;
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, t0);
+      gain.gain.setValueAtTime(0.10 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.04);
+      osc.start(t0);
+      osc.stop(t0 + 0.04);
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 
 function isAudioUnlocked() {
@@ -505,7 +637,7 @@ function playSfx(sfxKey, volumeMod = 1.0) {
   sfxThrottle[sfxKey] = now;
 
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
-  if (webAudioCtx && webAudioCtx.state === 'running') {
+  if (webAudioCtx) {
     if (audioBuffers[sfxKey]) {
       try {
         const srcNode = webAudioCtx.createBufferSource();
@@ -520,6 +652,9 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
+      if (playSynthesizedSound(sfxKey, volumeMod)) {
+        return;
+      }
       // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
       const isFileScheme = typeof location !== 'undefined' && location.protocol === 'file:';
@@ -539,9 +674,10 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     }
   }
 
-  // 2. HTML5 / 微信 InnerAudioContext 多音轨轮播兜底 (4-voice round-robin pool)
+  // 2. HTML5 / 微信 InnerAudioContext 轮播兜底 (仅在无 WebAudio 且非 file 协议时激活)
+  const isFile = typeof location !== 'undefined' && location.protocol === 'file:';
   const src = AUDIO_PATHS[sfxKey];
-  if (src) {
+  if (src && !isFile) {
     if (!sfxVoicePool[sfxKey]) {
       sfxVoicePool[sfxKey] = [];
       sfxVoiceIndices[sfxKey] = 0;

@@ -368,8 +368,8 @@ class UiManager {
     for (let i = this.buttons.length - 1; i >= 0; i--) {
       const b = this.buttons[i];
       if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-        if (b.id && b.id.indexOf('slot_') === 0) {
-          const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '');
+        if (b.id && (b.id.indexOf('slot_') === 0 || b.id.indexOf('dock_card_') === 0)) {
+          const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
           this.draggingTowerId = tId;
           this.pressedSlotButton = b;
           platform.playSfx('sfx_click');
@@ -682,7 +682,7 @@ class UiManager {
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx);
     } else if (this.showGuideModal) {
-      this.renderGuideModal(ctx);
+      this.renderGuideModal(ctx, scene);
     }
   }
 
@@ -856,12 +856,18 @@ class UiManager {
       if (this.showSettingsModal) {
         this.renderSettingsModal(ctx);
       } else if (this.showGuideModal) {
-        this.renderGuideModal(ctx);
+        this.renderGuideModal(ctx, scene);
       } else if (scene.state === 'PAUSED') {
         this.renderPauseOverlay(ctx, scene);
       } else if (scene.state === 'SETTLEMENT') {
         this.renderSettlementOverlay(ctx, scene);
       }
+      return;
+    }
+
+    // 若处于暂停状态，直接渲染专属高质感暗黑暂停面板并返回，彻底杜绝下层任何UI残留
+    if (scene.state === 'PAUSED') {
+      this.renderPauseOverlay(ctx, scene);
       return;
     }
 
@@ -938,7 +944,9 @@ class UiManager {
 
     // 3 & 4. 底部全功能一体化统御控制舱 (Unified Bottom Command Deck: 英雄+姿态+4大神术+5大守卫卡牌+铲子+觉醒)
     // 黄金比例统御下沉托盘，严格限制于 Y:444..534 区域，杜绝任何左侧巨幅面板遮挡地图！
-    this.renderBottomUnifiedCommandDeck(ctx, scene);
+    if (scene.state !== 'PAUSED' && !this.showSettingsModal && !this.showGuideModal) {
+      this.renderBottomUnifiedCommandDeck(ctx, scene);
+    }
 
     // 5. 动态弹出式：防御塔选中与升级羊皮纸木框面板（仅在点击交互时弹出）
     if (this.inspectorOpen) {
@@ -976,7 +984,7 @@ class UiManager {
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx);
     } else if (this.showGuideModal) {
-      this.renderGuideModal(ctx);
+      this.renderGuideModal(ctx, scene);
     } else if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
     } else if (scene.state === 'SETTLEMENT') {
@@ -1770,8 +1778,8 @@ class UiManager {
       // 【核心守卫UI显示】读取 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png 并自适应居中渲染
       const cardArtImg = platform.getImage("assets/ui/cards/card_" + tId + ".png");
       if (cardArtImg && cardArtImg.width) {
-        const maxArtW = 46;
-        const maxArtH = 44;
+        const maxArtW = 54;
+        const maxArtH = 50;
         const artAspect = cardArtImg.width / cardArtImg.height;
         let dw = maxArtW, dh = maxArtH;
         if (artAspect > (maxArtW / maxArtH)) {
@@ -1779,9 +1787,16 @@ class UiManager {
         } else {
           dw = maxArtH * artAspect;
         }
-        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 17 + (maxArtH - dh) * 0.5, dw, dh);
+        // 柔和微光底座聚光
+        ctx.save();
+        ctx.fillStyle = isSelected ? 'rgba(255, 215, 0, 0.25)' : 'rgba(120, 255, 175, 0.12)';
+        ctx.beginPath();
+        ctx.ellipse(cx + cardW * 0.5, cy + 38, dw * 0.48, dh * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 14 + (maxArtH - dh) * 0.5, dw, dh);
       } else {
-        // 兜底绘制真实动画精灵
         drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
@@ -1799,9 +1814,9 @@ class UiManager {
       });
       ctx.restore();
 
-      this.registerButton('dock_card_' + tId, cx, cy, cardW, cardH, () => {
+      this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
         scene.selectBuildTower(tId);
-      });
+      }, { towerId: tId });
     }
 
     // =========================================================================
@@ -2115,6 +2130,11 @@ class UiManager {
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const btnW = 276;
     const bx = x + 26;
+
+    // 战术索敌偏好切换按钮 (Tactical Targeting AI)
+    if (scene.tacticalTargeting && scene.tacticalTargeting.renderInspectorTargetingBadge) {
+      scene.tacticalTargeting.renderInspectorTargetingBadge(ctx, tower, bx, y + 195, btnW, 32, this);
+    }
 
     if (upgrades.length === 0) {
       // 已升至顶级
@@ -2437,7 +2457,8 @@ class UiManager {
   // 4. 暂停、结算、设置与新手引导木质羊皮纸弹窗
   // =========================================================================
   renderPauseOverlay(ctx, scene) {
-    ctx.fillStyle = 'rgba(10, 16, 12, 0.72)';
+    this.clearButtons(); // 清理主战场按钮，杜绝穿透
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.96)';
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 350;
@@ -2712,7 +2733,8 @@ class UiManager {
    * 2. 🐛 暗黑虫潮首领 (16大怪物种群全部同屏直选展示、生态威胁、针对弱点与克制战法)
    * 3. 📜 领袖战术心得 (英雄肉搏要义、能量豆超频时机、战场即时撕网破茧、踩踏掘地怪、自爆泄气)
    */
-  renderGuideModal(ctx) {
+  renderGuideModal(ctx, scene) {
+    const curScene = scene || this.scene || (typeof window !== 'undefined' && window.__SPOREGUARD__ && window.__SPOREGUARD__.scene);
     ctx.save();
     // 沉浸式暗林边缘微虚化半透明背景
     ctx.fillStyle = 'rgba(6, 12, 8, 0.88)';
@@ -2749,10 +2771,10 @@ class UiManager {
 
     // 2. 顶部三大篇章分页标签 (Tabs)
     const tabs = [
-      { id: 0, label: '🌲 守林神树卫士 (5/5)' },
-      { id: 1, label: '🐛 暗黑虫潮首领 (16/16)' },
-      { id: 2, label: '📜 领袖战术心得' },
-      { id: 3, label: '🏆 战术成就殿堂 (20)' }
+      { id: 0, label: '🍄 蘑菇守卫 (5/5)' },
+      { id: 1, label: '🐛 林区害虫 (16/16)' },
+      { id: 2, label: '🌿 远古真菌知识之树' },
+      { id: 3, label: '🏆 王国成就 (20)' }
     ];
     const tabY = my + 40;
     const tabW = 180;
@@ -2796,7 +2818,11 @@ class UiManager {
     } else if (this.codexTab === 1) {
       this.renderCodexBestiaryTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     } else if (this.codexTab === 2) {
-      this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+      if (curScene && curScene.ancientKnowledgeTree) {
+        curScene.ancientKnowledgeTree.renderKnowledgePanel(ctx, mx + 16, bodyY, mw - 32, bodyH, this);
+      } else {
+        this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+      }
     } else {
       this.renderCodexAchievementsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     }

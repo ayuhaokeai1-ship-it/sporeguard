@@ -29,6 +29,10 @@ const ElementalComboEngine = require('../game/elementalCombos');
 const GuardianSynergies = require('../game/guardianSynergies');
 const CombatVfxEngine = require('../game/combatVfxEngine');
 const TacticalFeats = require('../game/tacticalFeats');
+const { AncientKnowledgeTree } = require('../game/ancientKnowledgeTree');
+const { TacticalTargetingAI } = require('../game/tacticalTargetingAI');
+const CombatScreenJuice = require('../game/combatScreenJuice');
+const BossOverdriveEngine = require('../game/bossOverdriveEngine');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -82,17 +86,17 @@ class SceneController {
     this.guardianSynergies = new GuardianSynergies();
     this.combatVfx = new CombatVfxEngine();
     this.tacticalFeats = new TacticalFeats();
+    this.ancientKnowledgeTree = new AncientKnowledgeTree();
+    this.tacticalTargeting = new TacticalTargetingAI();
+    this.combatScreenJuice = new CombatScreenJuice();
+    this.bossOverdriveEngine = new BossOverdriveEngine();
+    this.ancientKnowledgeTree.applyToCombatScene(this);
     if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
     this.enemyManager.tacticalFeats = this.tacticalFeats;
     this.towerManager.guardianSynergies = this.guardianSynergies;
-    this.heroTranscendence = new HeroTranscendence(this.hero);
-    this.elementalCombos = new ElementalComboEngine();
-    this.guardianSynergies = new GuardianSynergies();
-    this.combatVfx = new CombatVfxEngine();
-    this.tacticalFeats = new TacticalFeats();
     if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
@@ -197,7 +201,7 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.tacticalTargeting = new TacticalTargetingAI();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
     this.heroTranscendence = new HeroTranscendence(this.hero);
@@ -219,6 +223,9 @@ class SceneController {
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
+    if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
+    if (this.combatScreenJuice) this.combatScreenJuice.reset();
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
@@ -235,11 +242,11 @@ class SceneController {
     this.logicalCombatTimeSec = 0;
     this.state = 'BATTLE';
 
-    // 首次进入关卡弹出三步简短操作引导
+    // 首次进入关卡不阻断玩家，弹出轻量化横幅指引，保证零阻塞极致丝滑
     const save = storage.getSave();
     if (!save.guideSeen) {
-      this.ui.guideStep = 0;
-      this.ui.showGuideModal = true;
+      storage.markGuideSeen();
+      this.fx.showBanner('🌲 欢迎来到守林前线！', '#BAE7FF', '点击底部卡牌在绿地扎根守卫，点击右上角【图鉴】随时查阅秘典与天赋！', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -820,6 +827,10 @@ class SceneController {
     if (this.achievements) {
       this.achievements.update(dt, this.fx);
     }
+    if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.update(dt, this);
+    if (this.tacticalTargeting) this.tacticalTargeting.update(dt);
+    if (this.combatScreenJuice) this.combatScreenJuice.update(dt, this.state === 'BATTLE');
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.update(dt, this);
     if (this.elderRootActiveTimer > 0) {
       this.elderRootActiveTimer = Math.max(0, this.elderRootActiveTimer - dt);
     }
@@ -928,6 +939,7 @@ class SceneController {
       this.comboKillCount = 1;
     }
     this.comboKillTimer = 1.4;
+    if (this.combatScreenJuice) this.combatScreenJuice.onKill(enemy, this);
 
     platform.playMusicalScale(this.comboKillCount - 1);
     if (this.achievements) {
@@ -1052,6 +1064,18 @@ class SceneController {
     // 天候生态全屏环境滤镜、雨滴与雾气
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
+    }
+    if (this.bossOverdriveEngine) {
+      this.bossOverdriveEngine.renderBossHud(ctx);
+    }
+    if (this.combatScreenJuice) {
+      this.combatScreenJuice.renderJuiceOverlays(ctx);
+    }
+    if (this.selectedTile && this.selectedTile.col >= 0) {
+      const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
+      if (tw && this.tacticalTargeting && this.tacticalTargeting.renderTargetHighlight) {
+        this.tacticalTargeting.renderTargetHighlight(ctx, tw, this.map, this.enemyManager);
+      }
     }
 
     // 屏幕级特效横幅与红边闪烁

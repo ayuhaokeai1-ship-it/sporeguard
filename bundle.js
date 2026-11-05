@@ -2851,8 +2851,13 @@ function updateViewport() {
  * 将屏幕坐标转换为 960x540 逻辑坐标
  */
 function screenToLogical(clientX, clientY) {
-  const lx = (clientX - viewport.offsetX) / viewport.scale;
-  const ly = (clientY - viewport.offsetY) / viewport.scale;
+  const scale = Math.max(0.01, viewport.scale || 1.0);
+  const cx = isFinite(clientX) ? clientX : 0;
+  const cy = isFinite(clientY) ? clientY : 0;
+  const offX = isFinite(viewport.offsetX) ? viewport.offsetX : 0;
+  const offY = isFinite(viewport.offsetY) ? viewport.offsetY : 0;
+  const lx = (cx - offX) / scale;
+  const ly = (cy - offY) / scale;
   return {
     x: lx,
     y: ly,
@@ -3067,17 +3072,144 @@ function unlockAudio() {
         webAudioCtx.resume().catch(() => {});
       }
     }
-  } catch (e) {
-    // 忽略 WebAudio 初始化错误
-  }
-
-  try {
-    preloadSfxBuffers();
   } catch (e) {}
 
-  if (pendingBgmKey && bgmEnabled) {
-    playBgm(pendingBgmKey);
-  }
+  // 异步延后调度BGM播放与资源探测，坚决不在首次用户点击的同步帧中阻塞主线程！
+  setTimeout(() => {
+    try {
+      preloadSfxBuffers();
+    } catch (e) {}
+
+    if (pendingBgmKey && bgmEnabled) {
+      playBgm(pendingBgmKey);
+    }
+  }, 100);
+}
+
+function playSynthesizedSound(sfxKey, volumeMod = 1.0) {
+  if (!webAudioCtx) return false;
+  try {
+    if (webAudioCtx.state === 'suspended') {
+      webAudioCtx.resume().catch(() => {});
+    }
+    const t0 = webAudioCtx.currentTime;
+    const osc = webAudioCtx.createOscillator();
+    const gain = webAudioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(webAudioCtx.destination);
+
+    if (sfxKey === 'sfx_click') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t0);
+      osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.035);
+      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+      osc.start(t0);
+      osc.stop(t0 + 0.035);
+      return true;
+    } else if (sfxKey === 'sfx_build') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, t0);
+      osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.08);
+      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+      osc.start(t0);
+      osc.stop(t0 + 0.09);
+      return true;
+    } else if (sfxKey === 'sfx_upgrade') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, t0);
+      osc.frequency.setValueAtTime(659.25, t0 + 0.05);
+      osc.frequency.setValueAtTime(783.99, t0 + 0.10);
+      gain.gain.setValueAtTime(0.25 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_coin' || sfxKey === 'sfx_sell') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, t0);
+      osc.frequency.setValueAtTime(1600, t0 + 0.04);
+      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+      osc.start(t0);
+      osc.stop(t0 + 0.12);
+      return true;
+    } else if (sfxKey === 'sfx_hurt') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, t0);
+      osc.frequency.exponentialRampToValueAtTime(50, t0 + 0.08);
+      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+      osc.start(t0);
+      osc.stop(t0 + 0.08);
+      return true;
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, t0);
+      osc.frequency.exponentialRampToValueAtTime(35, t0 + 0.22);
+      gain.gain.setValueAtTime(0.30 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(450, t0);
+      osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.05);
+      gain.gain.setValueAtTime(0.16 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+      osc.start(t0);
+      osc.stop(t0 + 0.05);
+      return true;
+    } else if (sfxKey === 'sfx_thorn') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(580, t0);
+      osc.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+      gain.gain.setValueAtTime(0.14 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+      osc.start(t0);
+      osc.stop(t0 + 0.06);
+      return true;
+    } else if (sfxKey === 'sfx_mist') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, t0);
+      osc.frequency.exponentialRampToValueAtTime(600, t0 + 0.08);
+      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+      osc.start(t0);
+      osc.stop(t0 + 0.12);
+      return true;
+    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(392, t0);
+      osc.frequency.setValueAtTime(523.25, t0 + 0.08);
+      osc.frequency.setValueAtTime(659.25, t0 + 0.16);
+      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+      osc.start(t0);
+      osc.stop(t0 + 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_shovel') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(240, t0);
+      osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.05);
+      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+      osc.start(t0);
+      osc.stop(t0 + 0.05);
+      return true;
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, t0);
+      gain.gain.setValueAtTime(0.10 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.04);
+      osc.start(t0);
+      osc.stop(t0 + 0.04);
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 
 function isAudioUnlocked() {
@@ -3177,7 +3309,7 @@ function playSfx(sfxKey, volumeMod = 1.0) {
   sfxThrottle[sfxKey] = now;
 
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
-  if (webAudioCtx && webAudioCtx.state === 'running') {
+  if (webAudioCtx) {
     if (audioBuffers[sfxKey]) {
       try {
         const srcNode = webAudioCtx.createBufferSource();
@@ -3192,6 +3324,9 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
+      if (playSynthesizedSound(sfxKey, volumeMod)) {
+        return;
+      }
       // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
       const isFileScheme = typeof location !== 'undefined' && location.protocol === 'file:';
@@ -3211,9 +3346,10 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     }
   }
 
-  // 2. HTML5 / 微信 InnerAudioContext 多音轨轮播兜底 (4-voice round-robin pool)
+  // 2. HTML5 / 微信 InnerAudioContext 轮播兜底 (仅在无 WebAudio 且非 file 协议时激活)
+  const isFile = typeof location !== 'undefined' && location.protocol === 'file:';
   const src = AUDIO_PATHS[sfxKey];
-  if (src) {
+  if (src && !isFile) {
     if (!sfxVoicePool[sfxKey]) {
       sfxVoicePool[sfxKey] = [];
       sfxVoiceIndices[sfxKey] = 0;
@@ -5991,6 +6127,9 @@ class EnemyManager {
     e.def = def;
     e.isFlying = Boolean(def.isFlying);
     e.isBoss = Boolean(def.isBoss);
+    if (e.isBoss && this.scene && this.scene.bossOverdriveEngine) {
+      this.scene.bossOverdriveEngine.registerBoss(e);
+    }
     e.fromWave = options.fromWave !== undefined ? options.fromWave : true;
     e.hp = maxHp;
     e.maxHp = maxHp;
@@ -12315,6 +12454,1265 @@ module.exports = TacticalFeatsSystem;
 
   };
 
+  /* --- js/game/ancientKnowledgeTree.js --- */
+  __modules['js/game/ancientKnowledgeTree'] = function(require, module, exports) {
+/**
+ * 远古真菌知识之树 (js/game/ancientKnowledgeTree.js)
+ * 参考 Kingdom Rush 星级科技树与 Bloons TD6 猴子知识体系
+ * 为全系蘑菇、英雄、神术与经济提供永久深度强化与战术流派构筑
+ */
+
+const storage = require('../save/storage');
+const PALETTE = require('../data/palette');
+
+const TALENT_BRANCHES = {
+  BLOOM: 'bloom',       // 丰饶繁育分支 (经济与资源)
+  TIMBER: 'timber',     // 苍翠坚木分支 (肉盾与防线)
+  ELEMENT: 'element',   // 元素共鸣分支 (反应与范围)
+  COMMAND: 'command'    // 自然神术分支 (英雄与微操)
+};
+
+const TALENT_DEFS = {
+  // 1. 丰饶繁育分支
+  mycelium_network: {
+    id: 'mycelium_network',
+    branch: TALENT_BRANCHES.BLOOM,
+    tier: 1,
+    name: '菌丝网络',
+    icon: '🌱',
+    desc: '开局额外获得 +30 基础孢子，且每秒自然凝聚 +1 孢子',
+    maxRank: 3,
+    costPerRank: 1,
+    effect: (rank) => ({ startingSpores: rank * 30, sporeTricklePerSec: rank * 1.0 })
+  },
+  bountiful_harvest: {
+    id: 'bountiful_harvest',
+    branch: TALENT_BRANCHES.BLOOM,
+    tier: 2,
+    name: '丰收祝福',
+    icon: '🌾',
+    desc: '[E] 孢子丰饶神术额外产出 +40 孢子，且击杀精英怪必定掉落双倍金孢子',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ extraHarvestSpores: rank * 40, doubleSporeChance: rank * 0.4 })
+  },
+  root_recycling: {
+    id: 'root_recycling',
+    branch: TALENT_BRANCHES.BLOOM,
+    tier: 3,
+    name: '根系循环',
+    icon: '♻️',
+    desc: '铲除回收蘑菇返还比例由 70% 提升至 85%（满级 95%），实现灵活战场转线',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ refundBonus: rank * 0.125 })
+  },
+  elder_photosynthesis: {
+    id: 'elder_photosynthesis',
+    branch: TALENT_BRANCHES.BLOOM,
+    tier: 4,
+    name: '远古光合',
+    icon: '☀️',
+    desc: '波次结算时，剩余未使用的孢子产生 +12% 丰厚利息（上限 180 孢子）',
+    maxRank: 1,
+    costPerRank: 3,
+    effect: (rank) => ({ waveInterestRate: 0.12, maxInterest: 180 })
+  },
+
+  // 2. 苍翠坚木分支
+  bark_armor: {
+    id: 'bark_armor',
+    branch: TALENT_BRANCHES.TIMBER,
+    tier: 1,
+    name: '远古树皮',
+    icon: '🛡️',
+    desc: '树人英雄生命上限 +100，受到近战攻击时向四周迸发 8 片尖刺反伤',
+    maxRank: 3,
+    costPerRank: 1,
+    effect: (rank) => ({ heroBonusHp: rank * 100, thornThornsDmg: rank * 18 })
+  },
+  iron_sporelings: {
+    id: 'iron_sporelings',
+    branch: TALENT_BRANCHES.TIMBER,
+    tier: 2,
+    name: '钢盔小蘑兵',
+    icon: '🍄',
+    desc: '巡逻小蘑兵生命值翻倍，首次受到致命伤害时免疫死亡并击晕周围敌人 1.2 秒',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ sporelingShield: true, deathStunDuration: rank * 0.8 })
+  },
+  deep_entanglement: {
+    id: 'deep_entanglement',
+    branch: TALENT_BRANCHES.TIMBER,
+    tier: 3,
+    name: '深根盘缚',
+    icon: '🌿',
+    desc: '尖刺菇与藤蔓对迅捷甲虫、跃击者等敏捷型敌人的减速效果额外提升 +30%',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ extraSlowRatio: rank * 0.18 })
+  },
+  living_citadel: {
+    id: 'living_citadel',
+    branch: TALENT_BRANCHES.TIMBER,
+    tier: 4,
+    name: '生命壁垒',
+    icon: '🏰',
+    desc: '基地蘑菇小屋获得 1 层自然神圣结界，单局可彻底免除一次怪物入仓扣血',
+    maxRank: 1,
+    costPerRank: 3,
+    effect: (rank) => ({ warehouseHolyShield: 1 })
+  },
+
+  // 3. 元素共鸣分支
+  superconduct_resonance: {
+    id: 'superconduct_resonance',
+    branch: TALENT_BRANCHES.ELEMENT,
+    tier: 1,
+    name: '超导共振',
+    icon: '⚡',
+    desc: '闪电链传导跳跃目标数 +2，且对重甲甲虫额外造成 +35% 破甲雷爆',
+    maxRank: 3,
+    costPerRank: 1,
+    effect: (rank) => ({ extraChainJumps: rank * 1, armorBreakBonus: rank * 0.20 })
+  },
+  pyro_fissure: {
+    id: 'pyro_fissure',
+    branch: TALENT_BRANCHES.ELEMENT,
+    tier: 2,
+    name: '烈焰地裂',
+    icon: '🔥',
+    desc: '爆裂菇抛射炮弹爆炸后，在地面残留 3.5 秒熔岩烈焰，经过敌人每秒受 45 点灼伤',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ lavaPoolDuration: rank * 2.0, lavaDps: rank * 35 })
+  },
+  toxic_miasma: {
+    id: 'toxic_miasma',
+    branch: TALENT_BRANCHES.ELEMENT,
+    tier: 3,
+    name: '深渊剧毒',
+    icon: '🟣',
+    desc: '雾菇剧毒迷雾附带神经衰弱毒素，中毒敌人的护甲与法抗降低 40%',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ miasmaResistDebuff: rank * 0.25 })
+  },
+  prismatic_singularity: {
+    id: 'prismatic_singularity',
+    branch: TALENT_BRANCHES.ELEMENT,
+    tier: 4,
+    name: '棱镜奇点',
+    icon: '✨',
+    desc: '当敌人同时附带 2 种以上元素异常时，受到的所有伤害提升 +50% 并引发极光核爆',
+    maxRank: 1,
+    costPerRank: 3,
+    effect: (rank) => ({ multiElementAmp: 0.50, elementalSupernova: true })
+  },
+
+  // 4. 自然神术分支
+  quickened_mysticism: {
+    id: 'quickened_mysticism',
+    branch: TALENT_BRANCHES.COMMAND,
+    tier: 1,
+    name: '疾速通灵',
+    icon: '⏳',
+    desc: '所有指挥官神术 [Q/W/E/R] 冷却时间缩短 20%（满级 35%）',
+    maxRank: 3,
+    costPerRank: 1,
+    effect: (rank) => ({ cdrRatio: rank * 0.12 })
+  },
+  tempest_surge: {
+    id: 'tempest_surge',
+    branch: TALENT_BRANCHES.COMMAND,
+    tier: 2,
+    name: '风暴狂涌',
+    icon: '⛈️',
+    desc: '[W] 天雷震击范围扩大 40%，落雷处产生聚怪吸引风暴，持续 2.0 秒',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ thunderRadiusMod: 1.0 + rank * 0.25, vortexPull: true })
+  },
+  fertile_awakening: {
+    id: 'fertile_awakening',
+    branch: TALENT_BRANCHES.COMMAND,
+    tier: 3,
+    name: '始源觉醒',
+    icon: '🌟',
+    desc: '战斗开局额外获赠 +1 颗始源觉醒古种，且觉醒守卫攻击速度永久额外 +20%',
+    maxRank: 2,
+    costPerRank: 2,
+    effect: (rank) => ({ startingAwakeningSeeds: rank * 1, awakenedAtkSpeedMod: 1.0 + rank * 0.15 })
+  },
+  avatar_of_nature: {
+    id: 'avatar_of_nature',
+    branch: TALENT_BRANCHES.COMMAND,
+    tier: 4,
+    name: '森之化身',
+    icon: '👑',
+    desc: '树人英雄大招【撼地重击】冷却缩短 30%，施放后赋予全场守卫 5 秒狂暴攻速',
+    maxRank: 1,
+    costPerRank: 3,
+    effect: (rank) => ({ heroUltCdr: 0.30, teamFrenzyDuration: 5.0 })
+  }
+};
+
+class AncientKnowledgeTree {
+  constructor() {
+    this.ranks = {};
+    this.totalPointsEarned = 12; // 默认赋予玩家初始领悟点数，确保立即可体验丰富配点
+    this.activeTab = TALENT_BRANCHES.BLOOM;
+    this.selectedTalentId = 'mycelium_network';
+    this.loadState();
+  }
+
+  loadState() {
+    const save = storage.getSave ? storage.getSave() : {};
+    const savedTree = (save && save.knowledgeTree) || {};
+    this.ranks = savedTree.ranks || {
+      mycelium_network: 1,
+      bark_armor: 1,
+      superconduct_resonance: 1,
+      quickened_mysticism: 1
+    };
+    if (typeof savedTree.totalPoints === 'number') {
+      this.totalPointsEarned = Math.max(12, savedTree.totalPoints);
+    }
+  }
+
+  saveState() {
+    try {
+      const save = storage.getSave ? storage.getSave() : {};
+      save.knowledgeTree = {
+        ranks: this.ranks,
+        totalPoints: this.totalPointsEarned
+      };
+      if (storage.setStorage) {
+        storage.setStorage('sporeguard_save_v1', save);
+      }
+    } catch (e) {}
+  }
+
+  getRank(talentId) {
+    return this.ranks[talentId] || 0;
+  }
+
+  getSpentPoints() {
+    let spent = 0;
+    for (let k in this.ranks) {
+      const def = TALENT_DEFS[k];
+      if (def) {
+        spent += this.ranks[k] * def.costPerRank;
+      }
+    }
+    return spent;
+  }
+
+  getAvailablePoints() {
+    return Math.max(0, this.totalPointsEarned - this.getSpentPoints());
+  }
+
+  canUpgrade(talentId) {
+    const def = TALENT_DEFS[talentId];
+    if (!def) return false;
+    const curRank = this.getRank(talentId);
+    if (curRank >= def.maxRank) return false;
+    if (this.getAvailablePoints() < def.costPerRank) return false;
+    return true;
+  }
+
+  upgradeTalent(talentId) {
+    if (!this.canUpgrade(talentId)) return false;
+    const def = TALENT_DEFS[talentId];
+    this.ranks[talentId] = (this.ranks[talentId] || 0) + 1;
+    this.saveState();
+    return true;
+  }
+
+  resetBranch(branch) {
+    for (let k in TALENT_DEFS) {
+      if (TALENT_DEFS[k].branch === branch) {
+        delete this.ranks[k];
+      }
+    }
+    this.saveState();
+  }
+
+  resetAll() {
+    this.ranks = {};
+    this.saveState();
+  }
+
+  /**
+   * 应用所有激活天赋至当前战斗场景
+   */
+  applyToCombatScene(scene) {
+    if (!scene) return;
+
+    // 1. 菌丝网络：开局额外孢子与自然产出
+    const myRank = this.getRank('mycelium_network');
+    if (myRank > 0 && scene.economy) {
+      scene.economy.spores += myRank * 30;
+      scene.economy.passiveTrickleBonus = myRank * 1.0;
+    }
+
+    // 2. 远古树皮：英雄生命与刺甲
+    const barkRank = this.getRank('bark_armor');
+    if (barkRank > 0 && scene.hero) {
+      scene.hero.maxHp += barkRank * 100;
+      scene.hero.hp = scene.hero.maxHp;
+      scene.hero.thornReflectDmg = barkRank * 18;
+    }
+
+    // 3. 根系循环：铲除返还提升
+    const recRank = this.getRank('root_recycling');
+    if (recRank > 0) {
+      scene.shovelRefundMultiplier = 0.70 + recRank * 0.125;
+    }
+
+    // 4. 始源觉醒：额外觉醒古种
+    const awakRank = this.getRank('fertile_awakening');
+    if (awakRank > 0) {
+      scene.awakeningSeeds += awakRank;
+    }
+
+    // 5. 疾速通灵：神术冷却缩减
+    const cdrRank = this.getRank('quickened_mysticism');
+    if (cdrRank > 0) {
+      scene.spellCdrMultiplier = 1.0 - cdrRank * 0.12;
+    }
+
+    // 6. 生命壁垒：基地结界
+    const citRank = this.getRank('living_citadel');
+    if (citRank > 0) {
+      scene.holyShieldCharges = 1;
+    }
+
+    // 7. 棱镜奇点：多元素增幅
+    if (this.getRank('prismatic_singularity') > 0) {
+      scene.hasPrismaticSingularity = true;
+    }
+  }
+
+  /**
+   * 每秒持续更新（例如微量孢子自然凝聚、利息结算等）
+   */
+  update(dt, scene) {
+    if (!scene || scene.state !== 'BATTLE') return;
+
+    // 菌丝网络：每秒自然凝聚额外孢子
+    const myRank = this.getRank('mycelium_network');
+    if (myRank > 0 && scene.economy) {
+      this.trickleTimer = (this.trickleTimer || 0) + dt;
+      if (this.trickleTimer >= 1.0) {
+        this.trickleTimer -= 1.0;
+        scene.economy.addSpores(Math.round(myRank * 1.0));
+      }
+    }
+  }
+
+  /**
+   * 渲染图鉴中的远古知识之树 UI 面板
+   */
+  renderKnowledgePanel(ctx, x, y, w, h, ui) {
+    ctx.save();
+
+    // 1. 顶部领悟点数与流派切换标签
+    ctx.fillStyle = 'rgba(255, 229, 143, 0.95)';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const avail = this.getAvailablePoints();
+    ctx.fillText(`✨ 领悟之光: ${avail} 点可用 (已消耗: ${this.getSpentPoints()})`, x + 20, y + 25);
+
+    const branches = [
+      { id: TALENT_BRANCHES.BLOOM, name: '🌱 丰饶繁育' },
+      { id: TALENT_BRANCHES.TIMBER, name: '🛡️ 苍翠坚木' },
+      { id: TALENT_BRANCHES.ELEMENT, name: '⚡ 元素共鸣' },
+      { id: TALENT_BRANCHES.COMMAND, name: '👑 自然神术' }
+    ];
+
+    const tabW = 120;
+    const tabH = 30;
+    for (let i = 0; i < branches.length; i++) {
+      const b = branches[i];
+      const tx = x + 340 + i * (tabW + 8);
+      const ty = y + 10;
+      const isCur = this.activeTab === b.id;
+
+      ctx.fillStyle = isCur ? 'rgba(82, 196, 26, 0.85)' : 'rgba(30, 24, 18, 0.75)';
+      ctx.strokeStyle = isCur ? '#FFE58F' : 'rgba(140, 94, 42, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(tx, ty, tabW, tabH, 6) : ctx.rect(tx, ty, tabW, tabH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = isCur ? '#FFFFFF' : '#D9D9D9';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(b.name, tx + tabW * 0.5, ty + tabH * 0.5);
+
+      if (ui) {
+        ui.registerButton('tal_tab_' + b.id, tx, ty, tabW, tabH, () => {
+          this.activeTab = b.id;
+        });
+      }
+    }
+
+    // 2. 当前分支下的 4 个阶梯天赋卡片
+    const currentTalents = Object.values(TALENT_DEFS).filter(t => t.branch === this.activeTab);
+    const cardW = (w - 60) / 4;
+    const cardH = 260;
+    const startY = y + 55;
+
+    for (let i = 0; i < currentTalents.length; i++) {
+      const t = currentTalents[i];
+      const cx = x + 20 + i * (cardW + 8);
+      const cy = startY;
+      const curRank = this.getRank(t.id);
+      const isMax = curRank >= t.maxRank;
+      const canUp = this.canUpgrade(t.id);
+
+      ctx.fillStyle = curRank > 0 ? 'rgba(32, 45, 30, 0.90)' : 'rgba(20, 16, 12, 0.82)';
+      ctx.strokeStyle = isMax ? '#FFD700' : (curRank > 0 ? '#52C41A' : 'rgba(140, 94, 42, 0.40)');
+      ctx.lineWidth = isMax ? 2.2 : 1.2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(cx, cy, cardW, cardH, 8) : ctx.rect(cx, cy, cardW, cardH);
+      ctx.fill();
+      ctx.stroke();
+
+      // 天赋图标与阶层
+      ctx.font = '28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(t.icon, cx + cardW * 0.5, cy + 38);
+
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillStyle = isMax ? '#FFE58F' : '#FFFFFF';
+      ctx.fillText(t.name, cx + cardW * 0.5, cy + 72);
+
+      // 等级角标
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = isMax ? '#FFD700' : '#85A5FF';
+      ctx.fillText(`等级: ${curRank} / ${t.maxRank}`, cx + cardW * 0.5, cy + 92);
+
+      // 天赋描述
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#CCCCCC';
+      ctx.textAlign = 'left';
+      this.wrapText(ctx, t.desc, cx + 12, cy + 115, cardW - 24, 16);
+
+      // 升级按钮
+      const btnW = cardW - 24;
+      const btnH = 30;
+      const btnX = cx + 12;
+      const btnY = cy + cardH - 42;
+
+      ctx.fillStyle = isMax ? 'rgba(60, 60, 60, 0.6)' : (canUp ? 'rgba(82, 196, 26, 0.9)' : 'rgba(100, 30, 30, 0.5)');
+      ctx.strokeStyle = canUp ? '#D9F7BE' : 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(btnX, btnY, btnW, btnH, 6) : ctx.rect(btnX, btnY, btnW, btnH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : `点数不足`), btnX + btnW * 0.5, btnY + 19);
+
+      if (ui && canUp && !isMax) {
+        ui.registerButton('tal_up_' + t.id, btnX, btnY, btnW, btnH, () => {
+          this.upgradeTalent(t.id);
+        });
+      }
+    }
+
+    ctx.restore();
+  }
+
+  wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const chars = text.split('');
+    let line = '';
+    let curY = y;
+    for (let n = 0; n < chars.length; n++) {
+      const testLine = line + chars[n];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, x, curY);
+        line = chars[n];
+        curY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, x, curY);
+  }
+}
+
+module.exports = {
+  AncientKnowledgeTree,
+  TALENT_DEFS,
+  TALENT_BRANCHES
+};
+
+  };
+
+  /* --- js/game/tacticalTargetingAI.js --- */
+  __modules['js/game/tacticalTargetingAI'] = function(require, module, exports) {
+/**
+ * 战术索敌与集火控制引擎 (js/game/tacticalTargetingAI.js)
+ * 深度汲取 Bloons TD6 与 Kingdom Rush 战术策略精髓
+ * 提供五大核心索敌模式：首位、末位、强敌、极速、就近，并提供集火指示
+ */
+
+const TARGET_MODES = {
+  FIRST: { id: 'FIRST', name: '首位先锋', icon: '🎯', desc: '锁定行进路程最远、最接近基地的敌人', color: '#52C41A' },
+  STRONG: { id: 'STRONG', name: '致命强敌', icon: '👑', desc: '优先集火生命值最高者、精英首领与攻城巨虫', color: '#FF4D4F' },
+  FAST: { id: 'FAST', name: '疾行截击', icon: '⚡', desc: '优先狙杀移动速度极快的迅捷虫与跃击潜行者', color: '#FAAD14' },
+  CLOSE: { id: 'CLOSE', name: '贴身护卫', icon: '📍', desc: '优先打击与守卫距离最近的敌人，确保安全防线', color: '#1890FF' },
+  LAST: { id: 'LAST', name: '殿后拦截', icon: '🛡️', desc: '锁定刚刚踏入林区的后排敌人，遏制后续援军', color: '#722ED1' }
+};
+
+const MODE_ORDER = ['FIRST', 'STRONG', 'FAST', 'CLOSE', 'LAST'];
+
+class TacticalTargetingAI {
+  constructor() {
+    this.towerModes = {}; // tower.id -> mode string
+    this.animTimer = 0;
+  }
+
+  getMode(tower) {
+    if (!tower) return TARGET_MODES.FIRST;
+    const modeKey = this.towerModes[tower.id] || tower.targetingMode || 'FIRST';
+    return TARGET_MODES[modeKey] || TARGET_MODES.FIRST;
+  }
+
+  cycleMode(tower) {
+    if (!tower) return TARGET_MODES.FIRST;
+    const curKey = (this.towerModes[tower.id] || tower.targetingMode || 'FIRST');
+    const idx = MODE_ORDER.indexOf(curKey);
+    const nextKey = MODE_ORDER[(idx + 1) % MODE_ORDER.length];
+    this.towerModes[tower.id] = nextKey;
+    tower.targetingMode = nextKey;
+    return TARGET_MODES[nextKey];
+  }
+
+  setMode(tower, modeKey) {
+    if (!tower || !TARGET_MODES[modeKey]) return;
+    this.towerModes[tower.id] = modeKey;
+    tower.targetingMode = modeKey;
+  }
+
+  /**
+   * 根据当前战术模式，从候选敌人列表中精准挑选最优目标
+   */
+  pickTarget(tower, candidates, map) {
+    return this.selectBestTarget(tower, candidates, map);
+  }
+
+  selectBestTarget(tower, candidates, map) {
+    if (!candidates || candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    const modeKey = (this.towerModes[tower.id] || tower.targetingMode || 'FIRST');
+
+    switch (modeKey) {
+      case 'STRONG': {
+        // 优先集火当前最大血量 / 剩余生命值最高者（Boss/攻城巨虫优先）
+        let best = candidates[0];
+        let maxHp = best.hp || 1;
+        if (best.isBoss) maxHp += 50000;
+        if (best.type === 'siege') maxHp += 10000;
+
+        for (let i = 1; i < candidates.length; i++) {
+          const em = candidates[i];
+          let score = em.hp || 1;
+          if (em.isBoss) score += 50000;
+          if (em.type === 'siege') score += 10000;
+          if (score > maxHp) {
+            maxHp = score;
+            best = em;
+          }
+        }
+        return best;
+      }
+
+      case 'FAST': {
+        // 优先拦截疾速型敌兵（飞蛾、跃击者、迅捷甲虫）
+        let best = candidates[0];
+        let maxSpeed = best.speed || 1;
+        for (let i = 1; i < candidates.length; i++) {
+          const em = candidates[i];
+          const spd = (em.speed || 1) * (em.isFlying ? 1.5 : (em.type === 'leaper' ? 1.4 : 1.0));
+          if (spd > maxSpeed) {
+            maxSpeed = spd;
+            best = em;
+          }
+        }
+        return best;
+      }
+
+      case 'CLOSE': {
+        // 优先打击离守卫几何距离最近的敌人
+        let best = candidates[0];
+        let minDistSq = Math.hypot(best.x - tower.x, best.y - tower.y);
+        for (let i = 1; i < candidates.length; i++) {
+          const em = candidates[i];
+          const dist = Math.hypot(em.x - tower.x, em.y - tower.y);
+          if (dist < minDistSq) {
+            minDistSq = dist;
+            best = em;
+          }
+        }
+        return best;
+      }
+
+      case 'LAST': {
+        // 优先锁定行进距离最短的敌人（殿后截击）
+        let best = candidates[0];
+        let minDist = best.distPx || 0;
+        for (let i = 1; i < candidates.length; i++) {
+          const em = candidates[i];
+          if ((em.distPx || 0) < minDist) {
+            minDist = em.distPx || 0;
+            best = em;
+          }
+        }
+        return best;
+      }
+
+      case 'FIRST':
+      default: {
+        // 默认首位先锋：锁定最接近基地的敌人（行进路程最远）
+        let best = candidates[0];
+        let maxDist = best.distPx || 0;
+        for (let i = 1; i < candidates.length; i++) {
+          const em = candidates[i];
+          if ((em.distPx || 0) > maxDist) {
+            maxDist = em.distPx || 0;
+            best = em;
+          }
+        }
+        return best;
+      }
+    }
+  }
+
+  update(dt) {
+    this.animTimer += dt;
+  }
+
+  /**
+   * 绘制当前选中守卫正在集火的目标光环与索敌射线
+   */
+  renderTargetHighlight(ctx, selectedTower, map, enemyManager) {
+    if (!selectedTower || !enemyManager) return;
+    const candidates = enemyManager.getAliveEnemies().filter(em => {
+      if (em.state === 'death' || em.hp <= 0) return false;
+      const d = Math.hypot(em.x - selectedTower.x, em.y - selectedTower.y);
+      return d <= selectedTower.range;
+    });
+
+    if (candidates.length === 0) return;
+    const target = this.selectBestTarget(selectedTower, candidates, map);
+    if (!target) return;
+
+    ctx.save();
+    const mode = this.getMode(selectedTower);
+    const pulse = 1.0 + Math.sin(this.animTimer * 10) * 0.12;
+
+    // 1. 守卫至目标之间的幽光微导引线
+    ctx.strokeStyle = mode.color;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.35 + Math.sin(this.animTimer * 8) * 0.15;
+    ctx.setLineDash([4, 4]);
+    ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 8);
+    ctx.beginPath();
+    ctx.moveTo(selectedTower.x, selectedTower.y - 12);
+    ctx.lineTo(target.x, target.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 2. 目标脚下的战术聚焦光环
+    ctx.translate(target.x, target.y);
+    ctx.scale(pulse, pulse);
+    ctx.strokeStyle = mode.color;
+    ctx.lineWidth = 1.8;
+    ctx.globalAlpha = 0.85;
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 战术准星四角羽标
+    const mk = 14;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-mk, 0); ctx.lineTo(-mk + 4, 0);
+    ctx.moveTo(mk, 0); ctx.lineTo(mk - 4, 0);
+    ctx.moveTo(0, -mk * 0.65); ctx.lineTo(0, -mk * 0.65 + 3);
+    ctx.moveTo(0, mk * 0.65); ctx.lineTo(0, mk * 0.65 - 3);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /**
+   * 绘制守卫检查面板 (Inspector) 中的索敌切换按钮
+   */
+  renderInspectorTargetingBadge(ctx, tower, bx, by, bw, bh, ui) {
+    if (!tower) return;
+    const mode = this.getMode(tower);
+
+    ctx.save();
+    // 按钮背景
+    ctx.fillStyle = 'rgba(26, 18, 14, 0.92)';
+    ctx.strokeStyle = mode.color;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 6) : ctx.rect(bx, by, bw, bh);
+    ctx.fill();
+    ctx.stroke();
+
+    // 图标与标题
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(mode.icon, bx + 8, by + bh * 0.5);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = mode.color;
+    ctx.fillText(mode.name, bx + 28, by + bh * 0.5 - 5);
+
+    ctx.font = '9.5px sans-serif';
+    ctx.fillStyle = '#CCCCCC';
+    ctx.fillText('点击切换索敌偏好', bx + 28, by + bh * 0.5 + 7);
+
+    // 切换按钮注册
+    if (ui) {
+      ui.registerButton('tower_target_mode_' + tower.id, bx, by, bw, bh, () => {
+        this.cycleMode(tower);
+      });
+    }
+
+    ctx.restore();
+  }
+}
+
+module.exports = {
+  TacticalTargetingAI,
+  TARGET_MODES
+};
+
+  };
+
+  /* --- js/game/combatScreenJuice.js --- */
+  __modules['js/game/combatScreenJuice'] = function(require, module, exports) {
+/**
+ * 战斗打击感与物理视效引擎 (js/game/combatScreenJuice.js)
+ * 深度汲取《Dead Cells》《Hades》与《Kingdom Rush》顶级打击反馈
+ * 提供真实弹簧阻尼旋转晃屏、动态击飞伤害跳字、连杀里程碑与微环境粒子
+ */
+
+class CombatScreenJuice {
+  constructor() {
+    this.trauma = 0; // 0..1 震动创伤值
+    this.maxShakePx = 10;
+    this.maxAngleRad = 0.045; // ~2.5 度微旋转，提供顶级电影级受击感
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
+    this.shakeAngle = 0;
+    this.juiceTime = 0;
+
+    // 漂浮物理跳字池
+    this.floatingTexts = [];
+
+    // 连杀计数与华丽徽章
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.comboScale = 1.0;
+
+    // 氛围粒子 (落叶、萤火虫、水花涟漪)
+    this.ambientMotes = [];
+    this.initAmbientMotes();
+  }
+
+  reset() {
+    this.trauma = 0;
+    this.shakeX = 0;
+    this.shakeY = 0;
+    this.shakeAngle = 0;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.floatingTexts = [];
+    this.initAmbientMotes();
+  }
+
+  initAmbientMotes() {
+    for (let i = 0; i < 28; i++) {
+      this.ambientMotes.push({
+        x: Math.random() * 960,
+        y: Math.random() * 540,
+        vx: 0.15 + Math.random() * 0.45,
+        vy: 0.25 + Math.random() * 0.55,
+        size: 1.5 + Math.random() * 2.5,
+        rot: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 2.0,
+        type: i % 3 === 0 ? 'leaf' : (i % 2 === 0 ? 'spore' : 'mote'),
+        alpha: 0.25 + Math.random() * 0.55
+      });
+    }
+  }
+
+  /**
+   * 注入打击创伤值 (0..1)
+   */
+  addTrauma(amount) {
+    this.trauma = Math.min(1.0, this.trauma + amount);
+  }
+
+  /**
+   * 触发暴击跳字
+   */
+  spawnCritText(x, y, text, color = '#FFE58F', scale = 1.25) {
+    this.floatingTexts.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 45,
+      vy: -65 - Math.random() * 40,
+      text,
+      color,
+      scale,
+      life: 1.0,
+      maxLife: 1.0,
+      isCrit: true
+    });
+    this.addTrauma(0.18);
+  }
+
+  /**
+   * 击杀递增连杀计数
+   */
+  onKill(enemy, scene) {
+    this.comboTimer = 2.4;
+    this.comboCount += 1;
+    this.comboScale = 1.45;
+
+    if (this.comboCount % 5 === 0) {
+      this.addTrauma(0.22);
+      if (scene && scene.fx) {
+        scene.fx.spawnParticles(enemy.x, enemy.y, 25, ['#FFD700', '#52C41A', '#BAE7FF', '#FFA39E'], 40, 110, 0.3, 0.6, 4.5);
+      }
+    }
+  }
+
+  update(dt, isBattle = true) {
+    this.juiceTime += dt;
+
+    // 1. 创伤值按平方衰减（更符合自然物理反馈）
+    if (this.trauma > 0) {
+      this.trauma = Math.max(0, this.trauma - dt * 1.6);
+      const shakePower = this.trauma * this.trauma;
+      this.shakeOffsetX = (Math.sin(this.juiceTime * 45) + (Math.random() - 0.5) * 0.6) * this.maxShakePx * shakePower;
+      this.shakeOffsetY = (Math.cos(this.juiceTime * 52) + (Math.random() - 0.5) * 0.6) * this.maxShakePx * shakePower;
+      this.shakeAngle = Math.sin(this.juiceTime * 38) * this.maxAngleRad * shakePower;
+    } else {
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+      this.shakeAngle = 0;
+    }
+
+    // 2. 连杀计时器衰减
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      this.comboScale = Math.max(1.0, this.comboScale - dt * 2.0);
+      if (this.comboTimer <= 0) {
+        this.comboCount = 0;
+      }
+    }
+
+    // 3. 漂浮物理伤害数字更新
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.life -= dt;
+      if (ft.life <= 0) {
+        this.floatingTexts.splice(i, 1);
+        continue;
+      }
+      ft.x += ft.vx * dt;
+      ft.y += ft.vy * dt;
+      ft.vy += 80 * dt; // 重力下坠感
+    }
+
+    // 4. 环境氛围微粒漂移
+    if (isBattle) {
+      for (let i = 0; i < this.ambientMotes.length; i++) {
+        const m = this.ambientMotes[i];
+        m.x += m.vx;
+        m.y += m.vy;
+        m.rot += m.vRot * dt;
+        if (m.x > 980) m.x = -20;
+        if (m.y > 560) m.y = -20;
+      }
+    }
+  }
+
+  /**
+   * 应用视效位移变换至主画布上下文
+   */
+  applyScreenShakeTransform(ctx) {
+    if (this.trauma <= 0.001) return;
+    ctx.translate(480 + this.shakeOffsetX, 270 + this.shakeOffsetY);
+    ctx.rotate(this.shakeAngle);
+    ctx.translate(-480, -270);
+  }
+
+  /**
+   * 渲染环境粒子与击杀连击 UI 徽章
+   */
+  renderJuiceOverlays(ctx) {
+    ctx.save();
+
+    // 1. 绘制灵动林间微粒
+    for (let i = 0; i < this.ambientMotes.length; i++) {
+      const m = this.ambientMotes[i];
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rot);
+      ctx.globalAlpha = m.alpha * 0.75;
+
+      if (m.type === 'leaf') {
+        ctx.fillStyle = '#73D13D';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, m.size * 2, m.size, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (m.type === 'spore') {
+        ctx.fillStyle = '#FFE58F';
+        ctx.beginPath();
+        ctx.arc(0, 0, m.size, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#BAE7FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, m.size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 2. 绘制漂浮物理伤害数字
+    for (let i = 0; i < this.floatingTexts.length; i++) {
+      const ft = this.floatingTexts[i];
+      const prog = ft.life / ft.maxLife;
+      ctx.save();
+      ctx.translate(ft.x, ft.y);
+      ctx.scale(ft.scale * (0.8 + 0.2 * prog), ft.scale * (0.8 + 0.2 * prog));
+      ctx.globalAlpha = Math.min(1.0, prog * 1.5);
+
+      ctx.font = ft.isCrit ? '900 16px "Cinzel", sans-serif' : 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // 阴影描边
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.lineWidth = 3.2;
+      ctx.strokeText(ft.text, 0, 0);
+
+      // 发光字芯
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, 0, 0);
+      ctx.restore();
+    }
+
+    // 3. 绘制激燃连杀战绩徽章 (Combo Milestone Badge)
+    if (this.comboCount >= 3) {
+      const bx = 480;
+      const by = 86;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.scale(this.comboScale, this.comboScale);
+
+      const isHigh = this.comboCount >= 10;
+      ctx.fillStyle = isHigh ? 'rgba(140, 29, 24, 0.90)' : 'rgba(26, 38, 24, 0.88)';
+      ctx.strokeStyle = isHigh ? '#FFA39E' : '#FFE58F';
+      ctx.lineWidth = 2.0;
+
+      const badgeW = 160;
+      const badgeH = 28;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH, 14) : ctx.rect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = isHigh ? '#FFF1F0' : '#FFE58F';
+      ctx.font = '900 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const title = this.comboCount >= 20 ? '🔥 狂暴超神!' : (this.comboCount >= 10 ? '⚡ 势如破竹!' : '⚔️ 连续斩获!');
+      ctx.fillText(`${title} ${this.comboCount} 连杀`, 0, 0);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+}
+
+module.exports = CombatScreenJuice;
+
+  };
+
+  /* --- js/game/bossOverdriveEngine.js --- */
+  __modules['js/game/bossOverdriveEngine'] = function(require, module, exports) {
+/**
+ * 首领过载与多阶段战役引擎 (js/game/bossOverdriveEngine.js)
+ * 深度汲取《王国保卫战》(Kingdom Rush) 首领战精髓
+ * 提供首领护甲蜕壳、狂暴冲锋、全场践踏晕眩与绝境地穴援军召唤机制
+ * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
+ */
+
+class BossOverdriveEngine {
+  constructor() {
+    this.activeBoss = null;
+    this.phase = 1; // 1: 坚韧重甲态, 2: 狂暴过载态, 3: 绝境召唤态
+    this.maxHp = 0;
+    this.currentHp = 0;
+    this.enragedTimer = 0;
+    this.stompCooldown = 8.0;
+    this.summonCooldown = 12.0;
+    this.overdriveAuraAnim = 0;
+  }
+
+  registerBoss(bossEnemy) {
+    if (!bossEnemy) return;
+    this.activeBoss = bossEnemy;
+    this.phase = 1;
+    this.maxHp = bossEnemy.maxHp || bossEnemy.hp || 1000;
+    this.currentHp = bossEnemy.hp || this.maxHp;
+    this.enragedTimer = 0;
+    this.stompCooldown = 6.0;
+    this.summonCooldown = 10.0;
+  }
+
+  clear() {
+    this.activeBoss = null;
+    this.phase = 1;
+    this.currentHp = 0;
+  }
+
+  reset() {
+    this.clear();
+  }
+
+  update(dt, scene) {
+    if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) {
+      this.activeBoss = null;
+      return;
+    }
+
+    this.overdriveAuraAnim += dt;
+    this.currentHp = this.activeBoss.hp;
+    const hpRatio = this.currentHp / this.maxHp;
+
+    // 1. 阶段检查与蜕变
+    if (this.phase === 1 && hpRatio <= 0.60) {
+      // 触发二阶段：狂暴过载 (Carapace Shed & Enraged Overdrive)
+      this.phase = 2;
+      this.triggerPhase2Transition(scene);
+    } else if (this.phase === 2 && hpRatio <= 0.25) {
+      // 触发三阶段：绝境召唤 (Desperation Swarm)
+      this.phase = 3;
+      this.triggerPhase3Transition(scene);
+    }
+
+    // 2. 二阶段狂暴践踏技能
+    if (this.phase >= 2) {
+      this.stompCooldown -= dt;
+      if (this.stompCooldown <= 0) {
+        this.stompCooldown = 7.5;
+        this.executeEarthStomp(scene);
+      }
+    }
+
+    // 3. 三阶段地穴援军召唤技能
+    if (this.phase >= 3) {
+      this.summonCooldown -= dt;
+      if (this.summonCooldown <= 0) {
+        this.summonCooldown = 11.0;
+        this.executeSubterraneanSummon(scene);
+      }
+    }
+  }
+
+  triggerPhase2Transition(scene) {
+    if (!scene || !this.activeBoss) return;
+    // 移速提升 +40%，全身赤红过载
+    this.activeBoss.speed = (this.activeBoss.speed || 1.0) * 1.35;
+    this.activeBoss.isEnraged = true;
+
+    if (scene.fx) {
+      scene.fx.triggerScreenShake(7.5, 0.65);
+      scene.fx.showBanner('🔥 首领狂暴过载！蜕壳暴走！', '#FF4D4F', '全场守卫小心践踏！', 2.8);
+      scene.fx.spawnParticles(this.activeBoss.x, this.activeBoss.y, 45, ['#FF4D4F', '#FFA39E', '#D4380D', '#FFD666'], 60, 160, 0.4, 0.85, 6);
+    }
+  }
+
+  triggerPhase3Transition(scene) {
+    if (!scene || !this.activeBoss) return;
+    this.activeBoss.speed = (this.activeBoss.speed || 1.0) * 1.25;
+
+    if (scene.fx) {
+      scene.fx.triggerScreenShake(9.0, 0.8);
+      scene.fx.showBanner('⚡ 首领绝境濒死！呼唤地穴援军！', '#722ED1', '侧翼地穴隧道已开启！', 3.0);
+      scene.fx.spawnParticles(this.activeBoss.x, this.activeBoss.y, 55, ['#722ED1', '#B37FEB', '#FF4D4F', '#FFE58F'], 80, 200, 0.5, 1.0, 6.5);
+    }
+    this.executeSubterraneanSummon(scene);
+  }
+
+  /**
+   * 首领践踏技能：震击全场地面，使周围防御塔短暂短路眩晕 1.5 秒
+   */
+  executeEarthStomp(scene) {
+    if (!scene || !this.activeBoss) return;
+    const bx = this.activeBoss.x;
+    const by = this.activeBoss.y;
+
+    if (scene.fx) {
+      scene.fx.triggerScreenShake(5.0, 0.35);
+      scene.fx.spawnParticles(bx, by, 30, ['#8C6842', '#D4B106', '#5C4028'], 40, 120, 0.3, 0.6, 4.5);
+      scene.fx.spawnFloatingText(bx, by - 24, '⚡ 撼地践踏!', '#FF7875', 1.25);
+    }
+
+    // 附近的防御塔进入短暂 1.2 秒休眠状态
+    if (scene.towerManager && scene.towerManager.towers) {
+      for (let i = 0; i < scene.towerManager.towers.length; i++) {
+        const tw = scene.towerManager.towers[i];
+        if (Math.hypot(tw.x - bx, tw.y - by) <= 160) {
+          tw.stunTimer = 1.2;
+          if (scene.fx) {
+            scene.fx.spawnFloatingText(tw.x, tw.y - 16, '💤 眩晕', '#FFD591', 0.9);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * 绝境召唤：从地图次级出生点召唤 4 只迅捷跳跃甲虫
+   */
+  executeSubterraneanSummon(scene) {
+    if (!scene || !scene.enemyManager || !scene.map) return;
+    const map = scene.map;
+    const spawnPt = (map.mapData && map.mapData.spawnTile2) || [18, 2];
+    const sx = (spawnPt[0] + 0.5) * 32;
+    const sy = (spawnPt[1] + 0.5) * 32;
+
+    if (scene.fx) {
+      scene.fx.spawnParticles(sx, sy, 25, ['#722ED1', '#52C41A', '#FFD700'], 35, 90, 0.3, 0.6, 4.0);
+      scene.fx.spawnFloatingText(sx, sy - 18, '🕳️ 地穴裂隙援军涌出!', '#B37FEB', 1.2);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        if (scene && scene.enemyManager) {
+          scene.enemyManager.spawnEnemy('swift', map, i % 2);
+        }
+      }, i * 350);
+    }
+  }
+
+  /**
+   * 渲染首领身下战术过载光环与顶部史诗级 Boss 血条
+   */
+  renderBossHud(ctx) {
+    if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
+
+    ctx.save();
+
+    // 1. 首领脚下多层流光过载阵法
+    const bx = this.activeBoss.x;
+    const by = this.activeBoss.y;
+    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
+    const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 8) * 0.15;
+
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(pulse, pulse * 0.7);
+    ctx.strokeStyle = auraColor;
+    ctx.lineWidth = 2.0;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 32, 20, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.rotate(this.overdriveAuraAnim * 2.0);
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (Epic Segmented Boss Bar)
+    const barW = 380;
+    const barH = 18;
+    const barX = (960 - barW) * 0.5;
+    const barY = 46;
+    const hpRatio = Math.max(0, Math.min(1.0, this.currentHp / this.maxHp));
+
+    // 血条底座背框
+    ctx.fillStyle = 'rgba(18, 12, 8, 0.94)';
+    ctx.strokeStyle = '#D4B106';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(barX - 4, barY - 18, barW + 8, barH + 24, 8) : ctx.rect(barX - 4, barY - 18, barW + 8, barH + 24);
+    ctx.fill();
+    ctx.stroke();
+
+    // 首领名称与阶段标识
+    const bossName = this.activeBoss.name || '远古腐化甲虫皇';
+    const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = auraColor;
+    ctx.textAlign = 'left';
+    ctx.fillText(`👑 ${bossName} ${phaseLabel}`, barX + 6, barY - 4);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#FFE58F';
+    ctx.fillText(`${Math.ceil(this.currentHp)} / ${this.maxHp}`, barX + barW - 6, barY - 4);
+
+    // 内部血条充能槽
+    ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(barX, barY, barW, barH, 4) : ctx.rect(barX, barY, barW, barH);
+    ctx.fill();
+
+    // 动态多段渐变血条
+    ctx.fillStyle = this.phase === 3 ? 'linear-gradient(to right, #722ED1, #F5222D)' : (this.phase === 2 ? '#F5222D' : '#FA8C16');
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(barX, barY, barW * hpRatio, barH, 4) : ctx.rect(barX, barY, barW * hpRatio, barH);
+    ctx.fill();
+
+    // 阶段分段刻度线 (60% 和 25% 处设金刻度线)
+    ctx.strokeStyle = '#FFE58F';
+    ctx.lineWidth = 1.5;
+    [0.60, 0.25].forEach(thresh => {
+      const tx = barX + barW * thresh;
+      ctx.beginPath();
+      ctx.moveTo(tx, barY);
+      ctx.lineTo(tx, barY + barH);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+}
+
+module.exports = BossOverdriveEngine;
+
+  };
+
   /* --- js/game/contraption.js --- */
   __modules['js/game/contraption'] = function(require, module, exports) {
 /**
@@ -15108,8 +16506,8 @@ class UiManager {
     for (let i = this.buttons.length - 1; i >= 0; i--) {
       const b = this.buttons[i];
       if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-        if (b.id && b.id.indexOf('slot_') === 0) {
-          const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '');
+        if (b.id && (b.id.indexOf('slot_') === 0 || b.id.indexOf('dock_card_') === 0)) {
+          const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
           this.draggingTowerId = tId;
           this.pressedSlotButton = b;
           platform.playSfx('sfx_click');
@@ -15422,7 +16820,7 @@ class UiManager {
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx);
     } else if (this.showGuideModal) {
-      this.renderGuideModal(ctx);
+      this.renderGuideModal(ctx, scene);
     }
   }
 
@@ -15596,12 +16994,18 @@ class UiManager {
       if (this.showSettingsModal) {
         this.renderSettingsModal(ctx);
       } else if (this.showGuideModal) {
-        this.renderGuideModal(ctx);
+        this.renderGuideModal(ctx, scene);
       } else if (scene.state === 'PAUSED') {
         this.renderPauseOverlay(ctx, scene);
       } else if (scene.state === 'SETTLEMENT') {
         this.renderSettlementOverlay(ctx, scene);
       }
+      return;
+    }
+
+    // 若处于暂停状态，直接渲染专属高质感暗黑暂停面板并返回，彻底杜绝下层任何UI残留
+    if (scene.state === 'PAUSED') {
+      this.renderPauseOverlay(ctx, scene);
       return;
     }
 
@@ -15678,7 +17082,9 @@ class UiManager {
 
     // 3 & 4. 底部全功能一体化统御控制舱 (Unified Bottom Command Deck: 英雄+姿态+4大神术+5大守卫卡牌+铲子+觉醒)
     // 黄金比例统御下沉托盘，严格限制于 Y:444..534 区域，杜绝任何左侧巨幅面板遮挡地图！
-    this.renderBottomUnifiedCommandDeck(ctx, scene);
+    if (scene.state !== 'PAUSED' && !this.showSettingsModal && !this.showGuideModal) {
+      this.renderBottomUnifiedCommandDeck(ctx, scene);
+    }
 
     // 5. 动态弹出式：防御塔选中与升级羊皮纸木框面板（仅在点击交互时弹出）
     if (this.inspectorOpen) {
@@ -15716,7 +17122,7 @@ class UiManager {
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx);
     } else if (this.showGuideModal) {
-      this.renderGuideModal(ctx);
+      this.renderGuideModal(ctx, scene);
     } else if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
     } else if (scene.state === 'SETTLEMENT') {
@@ -16510,8 +17916,8 @@ class UiManager {
       // 【核心守卫UI显示】读取 100% AI 手绘卡牌原画 assets/ui/cards/card_${tId}.png 并自适应居中渲染
       const cardArtImg = platform.getImage("assets/ui/cards/card_" + tId + ".png");
       if (cardArtImg && cardArtImg.width) {
-        const maxArtW = 46;
-        const maxArtH = 44;
+        const maxArtW = 54;
+        const maxArtH = 50;
         const artAspect = cardArtImg.width / cardArtImg.height;
         let dw = maxArtW, dh = maxArtH;
         if (artAspect > (maxArtW / maxArtH)) {
@@ -16519,9 +17925,16 @@ class UiManager {
         } else {
           dw = maxArtH * artAspect;
         }
-        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 17 + (maxArtH - dh) * 0.5, dw, dh);
+        // 柔和微光底座聚光
+        ctx.save();
+        ctx.fillStyle = isSelected ? 'rgba(255, 215, 0, 0.25)' : 'rgba(120, 255, 175, 0.12)';
+        ctx.beginPath();
+        ctx.ellipse(cx + cardW * 0.5, cy + 38, dw * 0.48, dh * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.drawImage(cardArtImg, cx + (cardW - dw) * 0.5, cy + 14 + (maxArtH - dh) * 0.5, dw, dh);
       } else {
-        // 兜底绘制真实动画精灵
         drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
@@ -16539,9 +17952,9 @@ class UiManager {
       });
       ctx.restore();
 
-      this.registerButton('dock_card_' + tId, cx, cy, cardW, cardH, () => {
+      this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
         scene.selectBuildTower(tId);
-      });
+      }, { towerId: tId });
     }
 
     // =========================================================================
@@ -16855,6 +18268,11 @@ class UiManager {
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const btnW = 276;
     const bx = x + 26;
+
+    // 战术索敌偏好切换按钮 (Tactical Targeting AI)
+    if (scene.tacticalTargeting && scene.tacticalTargeting.renderInspectorTargetingBadge) {
+      scene.tacticalTargeting.renderInspectorTargetingBadge(ctx, tower, bx, y + 195, btnW, 32, this);
+    }
 
     if (upgrades.length === 0) {
       // 已升至顶级
@@ -17177,7 +18595,8 @@ class UiManager {
   // 4. 暂停、结算、设置与新手引导木质羊皮纸弹窗
   // =========================================================================
   renderPauseOverlay(ctx, scene) {
-    ctx.fillStyle = 'rgba(10, 16, 12, 0.72)';
+    this.clearButtons(); // 清理主战场按钮，杜绝穿透
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.96)';
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 350;
@@ -17452,7 +18871,8 @@ class UiManager {
    * 2. 🐛 暗黑虫潮首领 (16大怪物种群全部同屏直选展示、生态威胁、针对弱点与克制战法)
    * 3. 📜 领袖战术心得 (英雄肉搏要义、能量豆超频时机、战场即时撕网破茧、踩踏掘地怪、自爆泄气)
    */
-  renderGuideModal(ctx) {
+  renderGuideModal(ctx, scene) {
+    const curScene = scene || this.scene || (typeof window !== 'undefined' && window.__SPOREGUARD__ && window.__SPOREGUARD__.scene);
     ctx.save();
     // 沉浸式暗林边缘微虚化半透明背景
     ctx.fillStyle = 'rgba(6, 12, 8, 0.88)';
@@ -17489,10 +18909,10 @@ class UiManager {
 
     // 2. 顶部三大篇章分页标签 (Tabs)
     const tabs = [
-      { id: 0, label: '🌲 守林神树卫士 (5/5)' },
-      { id: 1, label: '🐛 暗黑虫潮首领 (16/16)' },
-      { id: 2, label: '📜 领袖战术心得' },
-      { id: 3, label: '🏆 战术成就殿堂 (20)' }
+      { id: 0, label: '🍄 蘑菇守卫 (5/5)' },
+      { id: 1, label: '🐛 林区害虫 (16/16)' },
+      { id: 2, label: '🌿 远古真菌知识之树' },
+      { id: 3, label: '🏆 王国成就 (20)' }
     ];
     const tabY = my + 40;
     const tabW = 180;
@@ -17536,7 +18956,11 @@ class UiManager {
     } else if (this.codexTab === 1) {
       this.renderCodexBestiaryTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     } else if (this.codexTab === 2) {
-      this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+      if (curScene && curScene.ancientKnowledgeTree) {
+        curScene.ancientKnowledgeTree.renderKnowledgePanel(ctx, mx + 16, bodyY, mw - 32, bodyH, this);
+      } else {
+        this.renderCodexTacticsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
+      }
     } else {
       this.renderCodexAchievementsTab(ctx, mx + 16, bodyY, mw - 32, bodyH);
     }
@@ -18197,6 +19621,10 @@ const ElementalComboEngine = require('../game/elementalCombos');
 const GuardianSynergies = require('../game/guardianSynergies');
 const CombatVfxEngine = require('../game/combatVfxEngine');
 const TacticalFeats = require('../game/tacticalFeats');
+const { AncientKnowledgeTree } = require('../game/ancientKnowledgeTree');
+const { TacticalTargetingAI } = require('../game/tacticalTargetingAI');
+const CombatScreenJuice = require('../game/combatScreenJuice');
+const BossOverdriveEngine = require('../game/bossOverdriveEngine');
 const BulletManager = require('../game/bullet');
 const TowerManager = require('../game/tower');
 const WaveManager = require('../game/wave');
@@ -18250,17 +19678,17 @@ class SceneController {
     this.guardianSynergies = new GuardianSynergies();
     this.combatVfx = new CombatVfxEngine();
     this.tacticalFeats = new TacticalFeats();
+    this.ancientKnowledgeTree = new AncientKnowledgeTree();
+    this.tacticalTargeting = new TacticalTargetingAI();
+    this.combatScreenJuice = new CombatScreenJuice();
+    this.bossOverdriveEngine = new BossOverdriveEngine();
+    this.ancientKnowledgeTree.applyToCombatScene(this);
     if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
     this.enemyManager.tacticalFeats = this.tacticalFeats;
     this.towerManager.guardianSynergies = this.guardianSynergies;
-    this.heroTranscendence = new HeroTranscendence(this.hero);
-    this.elementalCombos = new ElementalComboEngine();
-    this.guardianSynergies = new GuardianSynergies();
-    this.combatVfx = new CombatVfxEngine();
-    this.tacticalFeats = new TacticalFeats();
     if (this.hero) this.hero.transcendence = this.heroTranscendence;
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
@@ -18365,7 +19793,7 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
+    this.tacticalTargeting = new TacticalTargetingAI();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
     this.heroTranscendence = new HeroTranscendence(this.hero);
@@ -18387,6 +19815,9 @@ class SceneController {
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
     this.bulletManager.scene = this;
+    if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
+    if (this.combatScreenJuice) this.combatScreenJuice.reset();
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
     this.activeAwakeningTargeting = false;
@@ -18403,11 +19834,11 @@ class SceneController {
     this.logicalCombatTimeSec = 0;
     this.state = 'BATTLE';
 
-    // 首次进入关卡弹出三步简短操作引导
+    // 首次进入关卡不阻断玩家，弹出轻量化横幅指引，保证零阻塞极致丝滑
     const save = storage.getSave();
     if (!save.guideSeen) {
-      this.ui.guideStep = 0;
-      this.ui.showGuideModal = true;
+      storage.markGuideSeen();
+      this.fx.showBanner('🌲 欢迎来到守林前线！', '#BAE7FF', '点击底部卡牌在绿地扎根守卫，点击右上角【图鉴】随时查阅秘典与天赋！', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -18988,6 +20419,10 @@ class SceneController {
     if (this.achievements) {
       this.achievements.update(dt, this.fx);
     }
+    if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.update(dt, this);
+    if (this.tacticalTargeting) this.tacticalTargeting.update(dt);
+    if (this.combatScreenJuice) this.combatScreenJuice.update(dt, this.state === 'BATTLE');
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.update(dt, this);
     if (this.elderRootActiveTimer > 0) {
       this.elderRootActiveTimer = Math.max(0, this.elderRootActiveTimer - dt);
     }
@@ -19096,6 +20531,7 @@ class SceneController {
       this.comboKillCount = 1;
     }
     this.comboKillTimer = 1.4;
+    if (this.combatScreenJuice) this.combatScreenJuice.onKill(enemy, this);
 
     platform.playMusicalScale(this.comboKillCount - 1);
     if (this.achievements) {
@@ -19220,6 +20656,18 @@ class SceneController {
     // 天候生态全屏环境滤镜、雨滴与雾气
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
+    }
+    if (this.bossOverdriveEngine) {
+      this.bossOverdriveEngine.renderBossHud(ctx);
+    }
+    if (this.combatScreenJuice) {
+      this.combatScreenJuice.renderJuiceOverlays(ctx);
+    }
+    if (this.selectedTile && this.selectedTile.col >= 0) {
+      const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
+      if (tw && this.tacticalTargeting && this.tacticalTargeting.renderTargetHighlight) {
+        this.tacticalTargeting.renderTargetHighlight(ctx, tw, this.map, this.enemyManager);
+      }
     }
 
     // 屏幕级特效横幅与红边闪烁

@@ -1260,6 +1260,55 @@
         });
         return;
       }
+
+      if (location.hash === '#test_pause_shot') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            ensureGuideSeen();
+            S.startLevel('map1');
+            S.pauseGame();
+            document.title = 'PAUSE_OK';
+          } catch (e) {
+            document.title = 'PAUSE_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
+      if (location.hash === '#test_inspector_shot') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            ensureGuideSeen();
+            S.startLevel('map1');
+            const tw = S.towerManager.buildTower('watch', 5, 3, S.map, S.economy, S.fx);
+            tw.isSelected = true;
+            S.selectedTile = { col: 5, row: 3 };
+            S.ui.inspectorOpen = true;
+            document.title = 'INSPECTOR_OK';
+          } catch (e) {
+            document.title = 'INSPECTOR_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
+      if (location.hash === '#test_codex_tree_shot') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            ensureGuideSeen();
+            S.startLevel('map1');
+            S.ui.codexTab = 2;
+            S.ui.showGuideModal = true;
+            document.title = 'CODEX_TREE_OK';
+          } catch (e) {
+            document.title = 'CODEX_TREE_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
     })();
   </script>
   <script>
