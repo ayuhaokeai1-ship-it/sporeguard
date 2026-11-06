@@ -820,7 +820,8 @@ class SceneController {
       this.fx,
       () => {
         this.onVictory();
-      }
+      },
+      this
     );
 
     // 1.5 战利品与菇精卫小队更新

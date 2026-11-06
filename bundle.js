@@ -1575,9 +1575,6 @@ const WAVES = {
     {
       wave: 10,
       groups: [
-        {
-      wave: 10,
-      groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
         { type: 'armored', count: 2, interval: 2.5, start: 5 },
         { type: 'moth', count: 6, interval: 1.2, start: 14 },
@@ -1585,8 +1582,6 @@ const WAVES = {
         { type: 'splitter', count: 3, interval: 2.0, start: 24 },
         { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
         { type: 'swift', count: 8, interval: 0.7, start: 32 }
-      ]
-    }
       ]
     }
   ],
@@ -6074,6 +6069,7 @@ class EnemyManager {
 
   clear() {
     this.pool.clear();
+    this.flyingWebs.length = 0;
   }
 
   /**
@@ -6807,6 +6803,29 @@ class EnemyManager {
       e.y = sample.y;
       e.vx = sample.dx * speedPxPerSec;
       e.vy = sample.dy * speedPxPerSec;
+    }
+
+    // 更新空中飞行的蛛丝飞弹（弹道移动、碰撞判定、命中上状态、回收）
+    for (let i = this.flyingWebs.length - 1; i >= 0; i--) {
+      const w = this.flyingWebs[i];
+      w.timer += dt;
+      const duration = w.duration || 0.38;
+      const progress = Math.min(1.0, w.timer / duration);
+      // 抛物线轨迹
+      const arcHeight = Math.sin(progress * Math.PI) * 28;
+      w.curX = w.startX + (w.targetX - w.startX) * progress;
+      w.curY = w.startY + (w.targetY - w.startY) * progress - arcHeight;
+
+      if (progress >= 1.0) {
+        if (w.targetTower && towerManager && towerManager.towers && towerManager.towers.includes(w.targetTower)) {
+          if (!w.targetTower.isWebbed && typeof towerManager.applyWeb === 'function') {
+            towerManager.applyWeb(w.targetTower, 3, fx);
+          }
+        } else if (fx) {
+          fx.spawnParticles(w.targetX, w.targetY, 8, ['#BAE7FF', '#FFFFFF', '#D3ADF7'], 20, 45, 0.2, 0.4, 3);
+        }
+        this.flyingWebs.splice(i, 1);
+      }
     }
   }
 
@@ -15807,6 +15826,7 @@ class WaveManager {
     const order = [];
     for (let i = 0; i < waveDef.groups.length; i++) {
       const g = waveDef.groups[i];
+      if (!g || !g.type || typeof g.count !== 'number') continue;
       if (!counts[g.type]) {
         counts[g.type] = 0;
         order.push(g.type);
@@ -15817,7 +15837,7 @@ class WaveManager {
     return order.map((type) => ({
       type,
       def: ENEMIES[type],
-      count: counts[type]
+      count: counts[type] || 0
     }));
   }
 
@@ -15938,7 +15958,7 @@ class WaveManager {
       let allGroupsFinished = true;
       for (let i = 0; i < this.activeGroups.length; i++) {
         const g = this.activeGroups[i];
-        if (g.spawned >= g.count) continue;
+        if (!g.type || typeof g.count !== 'number' || g.spawned >= g.count) continue;
         allGroupsFinished = false;
 
         if (this.waveElapsedSec < g.start) continue;
@@ -17177,16 +17197,18 @@ class UiManager {
       this.drawAiFrame(ctx, 'btn_wood', callX, callY, callW, callH, 0.92);
       if (summary.length > 0) {
         const first = summary[0];
-        drawEnemySprite(ctx, first.type, 'walk', 0, callX + 14, callY + 16, false);
-        drawArtText(ctx, `×${first.count}`, callX + 32, callY + 16, {
-          style: 'parchment',
-          size: 10.5,
-          align: 'left',
-          baseline: 'middle',
-          strokeWidth: 1.0
-        });
+        if (first && first.type && Number.isFinite(first.count)) {
+          drawEnemySprite(ctx, first.type, 'walk', 0, callX + 14, callY + 16, false);
+          drawArtText(ctx, `×${first.count}`, callX + 32, callY + 16, {
+            style: 'parchment',
+            size: 10.5,
+            align: 'left',
+            baseline: 'middle',
+            strokeWidth: 1.0
+          });
+        }
       } else {
-        drawArtText(ctx, '波次激战', callX + callW * 0.5, callY + 16, {
+        drawArtText(ctx, '迎敌就绪', callX + callW * 0.5, callY + 16, {
           style: 'gold',
           size: 10.5,
           align: 'center',
@@ -20307,7 +20329,8 @@ class SceneController {
       this.fx,
       () => {
         this.onVictory();
-      }
+      },
+      this
     );
 
     // 1.5 战利品与菇精卫小队更新

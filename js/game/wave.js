@@ -48,6 +48,7 @@ class WaveManager {
     const order = [];
     for (let i = 0; i < waveDef.groups.length; i++) {
       const g = waveDef.groups[i];
+      if (!g || !g.type || typeof g.count !== 'number') continue;
       if (!counts[g.type]) {
         counts[g.type] = 0;
         order.push(g.type);
@@ -58,7 +59,7 @@ class WaveManager {
     return order.map((type) => ({
       type,
       def: ENEMIES[type],
-      count: counts[type]
+      count: counts[type] || 0
     }));
   }
 
@@ -179,7 +180,7 @@ class WaveManager {
       let allGroupsFinished = true;
       for (let i = 0; i < this.activeGroups.length; i++) {
         const g = this.activeGroups[i];
-        if (g.spawned >= g.count) continue;
+        if (!g.type || typeof g.count !== 'number' || g.spawned >= g.count) continue;
         allGroupsFinished = false;
 
         if (this.waveElapsedSec < g.start) continue;

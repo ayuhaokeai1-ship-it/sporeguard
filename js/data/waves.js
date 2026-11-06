@@ -115,9 +115,6 @@ const WAVES = {
     {
       wave: 10,
       groups: [
-        {
-      wave: 10,
-      groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
         { type: 'armored', count: 2, interval: 2.5, start: 5 },
         { type: 'moth', count: 6, interval: 1.2, start: 14 },
@@ -125,8 +122,6 @@ const WAVES = {
         { type: 'splitter', count: 3, interval: 2.0, start: 24 },
         { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
         { type: 'swift', count: 8, interval: 0.7, start: 32 }
-      ]
-    }
       ]
     }
   ],

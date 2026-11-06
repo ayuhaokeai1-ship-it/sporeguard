@@ -1153,16 +1153,18 @@ class UiManager {
       this.drawAiFrame(ctx, 'btn_wood', callX, callY, callW, callH, 0.92);
       if (summary.length > 0) {
         const first = summary[0];
-        drawEnemySprite(ctx, first.type, 'walk', 0, callX + 14, callY + 16, false);
-        drawArtText(ctx, `×${first.count}`, callX + 32, callY + 16, {
-          style: 'parchment',
-          size: 10.5,
-          align: 'left',
-          baseline: 'middle',
-          strokeWidth: 1.0
-        });
+        if (first && first.type && Number.isFinite(first.count)) {
+          drawEnemySprite(ctx, first.type, 'walk', 0, callX + 14, callY + 16, false);
+          drawArtText(ctx, `×${first.count}`, callX + 32, callY + 16, {
+            style: 'parchment',
+            size: 10.5,
+            align: 'left',
+            baseline: 'middle',
+            strokeWidth: 1.0
+          });
+        }
       } else {
-        drawArtText(ctx, '波次激战', callX + callW * 0.5, callY + 16, {
+        drawArtText(ctx, '迎敌就绪', callX + callW * 0.5, callY + 16, {
           style: 'gold',
           size: 10.5,
           align: 'center',

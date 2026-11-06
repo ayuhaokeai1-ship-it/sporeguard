@@ -103,6 +103,7 @@ class EnemyManager {
 
   clear() {
     this.pool.clear();
+    this.flyingWebs.length = 0;
   }
 
   /**
@@ -836,6 +837,29 @@ class EnemyManager {
       e.y = sample.y;
       e.vx = sample.dx * speedPxPerSec;
       e.vy = sample.dy * speedPxPerSec;
+    }
+
+    // 更新空中飞行的蛛丝飞弹（弹道移动、碰撞判定、命中上状态、回收）
+    for (let i = this.flyingWebs.length - 1; i >= 0; i--) {
+      const w = this.flyingWebs[i];
+      w.timer += dt;
+      const duration = w.duration || 0.38;
+      const progress = Math.min(1.0, w.timer / duration);
+      // 抛物线轨迹
+      const arcHeight = Math.sin(progress * Math.PI) * 28;
+      w.curX = w.startX + (w.targetX - w.startX) * progress;
+      w.curY = w.startY + (w.targetY - w.startY) * progress - arcHeight;
+
+      if (progress >= 1.0) {
+        if (w.targetTower && towerManager && towerManager.towers && towerManager.towers.includes(w.targetTower)) {
+          if (!w.targetTower.isWebbed && typeof towerManager.applyWeb === 'function') {
+            towerManager.applyWeb(w.targetTower, 3, fx);
+          }
+        } else if (fx) {
+          fx.spawnParticles(w.targetX, w.targetY, 8, ['#BAE7FF', '#FFFFFF', '#D3ADF7'], 20, 45, 0.2, 0.4, 3);
+        }
+        this.flyingWebs.splice(i, 1);
+      }
     }
   }
 
