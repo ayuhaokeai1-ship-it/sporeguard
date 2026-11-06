@@ -81,7 +81,7 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 45; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
+    const hitRadius = 54; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;

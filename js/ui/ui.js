@@ -249,7 +249,8 @@ class UiManager {
       this.dragCurrentX = x;
       this.dragCurrentY = y;
       const dist = Math.hypot(x - this.dragStartX, y - this.dragStartY);
-      if (dist >= 7) {
+      // 只有当玩家手指明确向上拖出底栏（y < 425）且移动距离达到 18px 时，才进入拖拽放置模式
+      if (dist >= 18 && y < 425) {
         this.isDragging = true;
         if (scene) {
           scene.selectedBuildTowerId = this.draggingTowerId;
@@ -395,6 +396,10 @@ class UiManager {
           const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
           this.draggingTowerId = tId;
           this.pressedSlotButton = b;
+          // 手机端关键优化：按下瞬间即时选中卡牌（零延迟响应，告别卡顿感）
+          if (scene && typeof scene.selectBuildTowerType === 'function') {
+            scene.selectBuildTowerType(tId);
+          }
           platform.playSfx('sfx_click');
           return true;
         } else {
@@ -425,6 +430,19 @@ class UiManager {
    * 处理释放事件（松手放置守卫或响应按钮短按）
    */
   handlePointerUp(x, y, scene) {
+    // 手机端防误触：若松手仍在底栏卡牌区（y >= 430），则视为点击选中，保持选中状态并杜绝播放误触受创音效
+    if (y >= 430 && this.pressedSlotButton) {
+      if (this.pressedSlotButton.onClick) {
+        try {
+          this.pressedSlotButton.onClick(this.pressedSlotButton);
+        } catch (btnErr) {}
+      }
+      this.draggingTowerId = null;
+      this.isDragging = false;
+      this.pressedSlotButton = null;
+      return;
+    }
+
     if (this.isDragging && this.draggingTowerId && scene && scene.state === 'BATTLE') {
       const tId = this.draggingTowerId;
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
@@ -499,7 +517,7 @@ class UiManager {
       ctx.globalAlpha = alpha;
       ctx.imageSmoothingEnabled = true;
       if (typeof ctx.imageSmoothingQuality !== 'undefined') {
-        ctx.imageSmoothingQuality = 'high';
+        ctx.imageSmoothingQuality = 'low';
       }
 
       const k = (uiImg.width && uiImg.width >= 1024) ? 4 : 1;

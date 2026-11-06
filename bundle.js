@@ -2284,7 +2284,7 @@ module.exports = {
   mist_a3_desc: '减速达55%，雾团内敌人护甲-2',
   mist_b2_name: 'B2 宽菌伞',
   mist_b2_desc: '雾团半径+0.5格，持续伤害+2/秒',
-  mist_b3_name: 'B3 橙色雾团',
+  mist_b3_name: 'B线 炽焰硫磺火雾',
   mist_b3_desc: '雾团半径2.5格，高温燃烧每秒10点伤害',
 
   tower_thorn_name: '尖刺菇',
@@ -2293,13 +2293,13 @@ module.exports = {
   thorn_base_desc: '高速直线尖刺，可穿透2个地面目标',
   thorn_lv1_name: 'Lv1 荧光孢囊',
   thorn_lv1_desc: '长出3根短刺，伤害+20%，射程+0.5格',
-  thorn_a2_name: 'A2 长刺',
+  thorn_a2_name: 'A线 淬毒连环骨刺',
   thorn_a2_desc: '青蓝长刺，穿透目标数+2（共4个）',
-  thorn_a3_name: 'A3 箭袋',
+  thorn_a3_name: 'A线 千刃万刺林',
   thorn_a3_desc: '穿透7个目标，每次齐射增发2根12°侧刺（50%伤害）',
-  thorn_b2_name: 'B2 厚刺根',
+  thorn_b2_name: 'B线 巨棘贯甲重刺',
   thorn_b2_desc: '橙黄粗刺根，单发伤害+30%',
-  thorn_b3_name: 'B3 锯齿刺',
+  thorn_b3_name: 'B线 倒钩撕裂连环刃',
   thorn_b3_desc: '攻速+10%，每穿透1个目标后续伤害+20%（最高+100%）',
 
   tower_burst_name: '爆裂菇',
@@ -2308,39 +2308,39 @@ module.exports = {
   burst_base_desc: '锁定落点爆炸，1.25格内完整溅射伤害',
   burst_lv1_name: 'Lv1 荧光孢囊',
   burst_lv1_desc: '菌盖裂纹透光，伤害+20%',
-  burst_a2_name: 'A2 扩口',
+  burst_a2_name: 'A线 剧毒广域迸射',
   burst_a2_desc: '青蓝裂口扩大，溅射半径+0.5格（1.75格）',
-  burst_a3_name: 'A3 大口径',
+  burst_a3_name: 'A线 毁灭风暴重炮',
   burst_a3_desc: '大口径开裂，溅射半径2.25格，伤害+15%',
-  burst_b2_name: 'B2 熔炉菌盖',
+  burst_b2_name: 'B线 炽热聚能孢囊',
   burst_b2_desc: '菌盖冒热烟，爆炸伤害+30%',
-  burst_b3_name: 'B3 熔金',
+  burst_b3_name: 'B线 熔岩流火炼狱',
   burst_b3_desc: '爆心留下1.0格熔金灼烧区3秒，每秒8点伤害',
 
   // 敌人名称与特性
-  enemy_beetle_name: '小甲虫',
-  enemy_type_basic: '基础',
+  enemy_beetle_name: '腐蚀幼甲虫',
+  enemy_type_basic: '基础步兵',
   enemy_beetle_tip: '沿地面匀速前进，所有炮塔均可应对。',
-  enemy_swift_name: '疾蛾',
-  enemy_type_fast: '快速',
+  enemy_swift_name: '疾风飞蛾',
+  enemy_type_fast: '极速突袭',
   enemy_swift_tip: '移速极快但生命较低，配合雾菇减速群清。',
-  enemy_armored_name: '甲壳虫',
-  enemy_type_armored: '重甲',
+  enemy_armored_name: '重装坚盾甲虫',
+  enemy_type_armored: '坚甲前锋',
   enemy_armored_tip: '护甲4且减速减半，宜用高单发瞭望菇或爆裂菇B线加上破甲应对。',
-  enemy_moth_name: '飞蛾',
-  enemy_type_flying: '飞行',
+  enemy_moth_name: '幻翼魔蛾',
+  enemy_type_flying: '掠空飞兽',
   enemy_moth_tip: '沿空中捷径飞行，只有瞭望菇与雾菇能攻击。',
-  enemy_splitter_name: '裂殖虫',
-  enemy_type_splitter: '分裂',
+  enemy_splitter_name: '母体裂殖虫',
+  enemy_type_splitter: '死亡分化',
   enemy_splitter_tip: '死亡时分裂出2只幼体继续前进，宜用爆裂菇清群。',
-  enemy_larva_name: '幼体',
-  enemy_type_larva: '分裂体',
+  enemy_larva_name: '分裂幼虫',
+  enemy_type_larva: '微型裂幼',
   enemy_larva_tip: '裂殖虫分裂产物，体型小移速快。',
-  enemy_boss_m1_name: '蛀王',
+  enemy_boss_m1_name: '腐化蛀王',
   enemy_boss_m1_tip: '66%生命召唤小甲虫；33%生命移速+30%且护甲升至8。',
-  enemy_boss_m2_name: '蛾后',
+  enemy_boss_m2_name: '剧毒幽蛾后',
   enemy_boss_m2_tip: '空中首领！66%生命释放飞蛾；33%生命免疫减速。',
-  enemy_boss_m3_name: '裂殖母体',
+  enemy_boss_m3_name: '万巢裂殖母体',
   enemy_boss_m3_tip: '66%生命分裂幼体；死亡时分裂为3只裂殖虫！',
   enemy_type_boss: '首领',
 
@@ -3242,7 +3242,7 @@ function createAudioInstance(src, loop, volume) {
       audio.src = src;
       audio.loop = Boolean(loop);
       audio.volume = volume !== undefined ? volume : 0.6;
-      audio.preload = 'auto';
+      audio.preload = 'none';
       return audio;
     }
   } catch (e) {
@@ -3272,10 +3272,12 @@ function playBgm(bgmKey) {
   }
   const inst = bgmContexts[bgmKey];
   if (inst) {
-    try {
-      const p = inst.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch (e) {}
+    setTimeout(() => {
+      try {
+        const p = inst.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
+    }, 16);
   }
 }
 
@@ -3635,22 +3637,22 @@ const storage = require('../save/storage');
 const platform = require('../core/platform');
 
 const ACHIEVEMENTS_DATA = [
-  { id: 'first_blood', title: '🌲 树林见血', desc: '击杀首只入侵甲虫，打响林地保卫战第一枪', icon: '⚔️', rewardStars: 1 },
+  { id: 'first_blood', title: '🌲 丛林初捷', desc: '击杀首只入侵甲虫，打响林地保卫战第一枪', icon: '⚔️', rewardStars: 1 },
   { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '以 20 颗种子完全无损的完美战绩通关任意地图', icon: '👑', rewardStars: 2 },
   { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树英雄达到 5 级并释放「大地轰鸣」奥义', icon: '🌟', rewardStars: 1 },
-  { id: 'subterranean_slayer', title: '🕳️ 潜行破灭', desc: '全歼自侧翼腐化地穴绕行的全部暗影潜行突袭怪', icon: '🐛', rewardStars: 1 },
+  { id: 'subterranean_slayer', title: '🕳️ 潜行覆灭', desc: '全歼自侧翼腐化地穴绕行的全部暗影潜行突袭怪', icon: '🐛', rewardStars: 1 },
   { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局积累超过 2500 黄金孢子，经济命脉固若金汤', icon: '🪙', rewardStars: 2 },
-  { id: 'multikill_overload', title: '💥 割草狂潮', desc: '触发 10 只以上敌军瞬间连环爆裂群杀', icon: '🔥', rewardStars: 1 },
+  { id: 'multikill_overload', title: '💥 破军狂澜', desc: '触发 10 只以上敌军瞬间连环爆裂群杀', icon: '🔥', rewardStars: 1 },
   { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座三阶终极进阶形态防御塔', icon: '💎', rewardStars: 2 },
   { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在狂暴血月天候下坚守阵地并全歼狂暴虫潮', icon: '🌙', rewardStars: 1 },
-  { id: 'spider_regicide', title: '🕷️ 蛛后除根', desc: '击破第 10 波织网蜘蛛女王，光复图一晨曦薄雾', icon: '🏆', rewardStars: 3 },
+  { id: 'spider_regicide', title: '🕷️ 斩灭蛛后', desc: '击破第 10 波织网蜘蛛女王，光复图一晨曦薄雾', icon: '🏆', rewardStars: 3 },
   { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '在无尽深渊极限模式中突破第 15 波狂暴挑战', icon: '✨', rewardStars: 3 },
-  { id: 'pitcher_gluttony', title: '🪴 贪食猪笼草', desc: '激活食人猪笼草捕食巨怪并成功消化 3 次', icon: '🍃', rewardStars: 1 },
+  { id: 'pitcher_gluttony', title: '🪴 奇幻猪笼草', desc: '激活食人猪笼草捕食巨怪并成功消化 3 次', icon: '🍃', rewardStars: 1 },
   { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '激活古树雷石释放连锁闪电轰击 6 只以上虫群', icon: '🌩️', rewardStars: 1 },
   { id: 'tactical_stances', title: '🥋 兵无常势', desc: '在同一场战斗中灵活切换大橡树的三大战斗姿态', icon: '🎖️', rewardStars: 1 },
   { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '建造神圣灵光菇并在单局产出超过 800 黄金孢子', icon: '🍄', rewardStars: 1 },
   { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '使用极寒雾菇使至少 8 只敌人同时陷入重度减速', icon: '🧊', rewardStars: 1 },
-  { id: 'laceration_field', title: '🩸 荆棘修罗场', desc: '尖刺菇单场割裂创伤累计造成超过 3000 点物理伤害', icon: '🌵', rewardStars: 1 },
+  { id: 'laceration_field', title: '🌵 荆棘绝阵', desc: '尖刺菇单场割裂创伤累计造成超过 3000 点物理伤害', icon: '🌵', rewardStars: 1 },
   { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂重炮单发熔岩迫击炮弹直接消灭 5 只聚集敌怪', icon: '🎯', rewardStars: 1 },
   { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次提前吹响号角迎战，累积丰厚军功孢子', icon: '📯', rewardStars: 1 },
   { id: 'last_stand', title: '❤️ 绝境逆转', desc: '在生命种子仅剩最后 1 颗时绝境反击取得关卡胜利', icon: '🔥', rewardStars: 2 },
@@ -8596,7 +8598,7 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 45; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
+    const hitRadius = 54; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
@@ -8748,7 +8750,7 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 45; // 手机端友好大判定圈 (45px)
+    const hitRadius = 54; // 手机端友好大判定圈 (45px)
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
@@ -16293,7 +16295,8 @@ class UiManager {
       this.dragCurrentX = x;
       this.dragCurrentY = y;
       const dist = Math.hypot(x - this.dragStartX, y - this.dragStartY);
-      if (dist >= 7) {
+      // 只有当玩家手指明确向上拖出底栏（y < 425）且移动距离达到 18px 时，才进入拖拽放置模式
+      if (dist >= 18 && y < 425) {
         this.isDragging = true;
         if (scene) {
           scene.selectedBuildTowerId = this.draggingTowerId;
@@ -16439,6 +16442,10 @@ class UiManager {
           const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
           this.draggingTowerId = tId;
           this.pressedSlotButton = b;
+          // 手机端关键优化：按下瞬间即时选中卡牌（零延迟响应，告别卡顿感）
+          if (scene && typeof scene.selectBuildTowerType === 'function') {
+            scene.selectBuildTowerType(tId);
+          }
           platform.playSfx('sfx_click');
           return true;
         } else {
@@ -16469,6 +16476,19 @@ class UiManager {
    * 处理释放事件（松手放置守卫或响应按钮短按）
    */
   handlePointerUp(x, y, scene) {
+    // 手机端防误触：若松手仍在底栏卡牌区（y >= 430），则视为点击选中，保持选中状态并杜绝播放误触受创音效
+    if (y >= 430 && this.pressedSlotButton) {
+      if (this.pressedSlotButton.onClick) {
+        try {
+          this.pressedSlotButton.onClick(this.pressedSlotButton);
+        } catch (btnErr) {}
+      }
+      this.draggingTowerId = null;
+      this.isDragging = false;
+      this.pressedSlotButton = null;
+      return;
+    }
+
     if (this.isDragging && this.draggingTowerId && scene && scene.state === 'BATTLE') {
       const tId = this.draggingTowerId;
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
@@ -16543,7 +16563,7 @@ class UiManager {
       ctx.globalAlpha = alpha;
       ctx.imageSmoothingEnabled = true;
       if (typeof ctx.imageSmoothingQuality !== 'undefined') {
-        ctx.imageSmoothingQuality = 'high';
+        ctx.imageSmoothingQuality = 'low';
       }
 
       const k = (uiImg.width && uiImg.width >= 1024) ? 4 : 1;
@@ -20146,6 +20166,7 @@ class SceneController {
                 this.selectedTile.col = col;
                 this.selectedTile.row = row;
                 this.selectedTileAgeSec = 0;
+                this.selectedBuildTowerId = null; // 切换至检视模式，取消待建造卡牌
                 this.ui.inspectorOpen = true;
                 input.setGridCursor(col, row, false);
                 platform.playSfx('sfx_click');

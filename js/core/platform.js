@@ -575,7 +575,7 @@ function createAudioInstance(src, loop, volume) {
       audio.src = src;
       audio.loop = Boolean(loop);
       audio.volume = volume !== undefined ? volume : 0.6;
-      audio.preload = 'auto';
+      audio.preload = 'none';
       return audio;
     }
   } catch (e) {
@@ -605,10 +605,12 @@ function playBgm(bgmKey) {
   }
   const inst = bgmContexts[bgmKey];
   if (inst) {
-    try {
-      const p = inst.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch (e) {}
+    setTimeout(() => {
+      try {
+        const p = inst.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
+    }, 16);
   }
 }
 

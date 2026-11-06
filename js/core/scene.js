@@ -637,6 +637,7 @@ class SceneController {
                 this.selectedTile.col = col;
                 this.selectedTile.row = row;
                 this.selectedTileAgeSec = 0;
+                this.selectedBuildTowerId = null; // 切换至检视模式，取消待建造卡牌
                 this.ui.inspectorOpen = true;
                 input.setGridCursor(col, row, false);
                 platform.playSfx('sfx_click');

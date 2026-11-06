@@ -31,7 +31,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      touch-action: none;
+      touch-action: manipulation;
       font-family: "Noto Serif SC", "ZCOOL XiaoWei", "Cinzel", "Microsoft YaHei UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
     }
     #gameCanvas {
@@ -43,7 +43,7 @@
       cursor: pointer;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: auto;
-      touch-action: none;
+      touch-action: manipulation;
       -webkit-touch-callout: none;
     }
 
@@ -135,8 +135,8 @@
     #floatingAppBadge {
       position: fixed;
       top: 8px;
-      right: 12px;
-      left: auto;
+      left: 12px;
+      right: auto;
       height: 28px;
       padding: 0 10px;
       border-radius: 14px;
@@ -330,7 +330,7 @@
 </head>
 <body>
   <!-- 手机端顶部菜单 -->
-  <div id="mobileAppToolbar">
+  <div id="mobileAppToolbar" class="hidden">
     <div class="toolbar-left">
       <span class="app-icon">🍄</span>
       <span>蘑菇保卫战</span>
@@ -343,7 +343,7 @@
     </div>
   </div>
 
-  <div id="floatingAppBadge" style="display:none;" title="打开安装与全屏菜单">🍄 菜单</div>
+  <div id="floatingAppBadge" style="display:flex;" title="打开安装与全屏菜单">🍄 菜单</div>
 
   <!-- 安装到手机桌面教程弹窗 -->
   <div id="iosInstallModal">

@@ -60,7 +60,7 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 45; // 手机端友好大判定圈 (45px)
+    const hitRadius = 54; // 手机端友好大判定圈 (45px)
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
