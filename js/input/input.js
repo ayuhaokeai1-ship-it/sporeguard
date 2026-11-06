@@ -84,7 +84,7 @@ function initInput() {
 }
 
 function screenToMapCoords(lx, ly) {
-  const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
+  const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
   const sx = mv.SCALE_X || mv.SCALE || 1;
   const sy = mv.SCALE_Y || mv.SCALE || 1;
   return {

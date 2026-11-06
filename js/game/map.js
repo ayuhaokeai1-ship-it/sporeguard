@@ -346,7 +346,7 @@ class GameMap {
     // 1. 优先绘制 AI 预合成的完整 16:9 全景手绘战场画卷 (960x540，无任何拼接裁切)
     if (atlasImg && MAP_ATLAS_LAYOUT.sceneBg) {
       const sb = MAP_ATLAS_LAYOUT.sceneBg;
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
       const bgX = -mv.OFFSET_X / mv.SCALE;
       const bgY = -mv.OFFSET_Y / mv.SCALE;
       const bgW = (CONFIG.RESOLUTION.LOGICAL_WIDTH || 960) / mv.SCALE;
