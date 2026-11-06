@@ -256,7 +256,7 @@ class UiManager {
       this.dragCurrentY = y;
       const dist = Math.hypot(x - this.dragStartX, y - this.dragStartY);
       // 只有当玩家手指明确向上拖出底栏（y < 425）且移动距离达到 18px 时，才进入拖拽放置模式
-      if (dist >= 18 && y < 425) {
+      if (dist >= 14 && (y < 460 || dist >= 22)) {
         this.isDragging = true;
         if (scene) {
           scene.selectedBuildTowerId = this.draggingTowerId;
@@ -3820,7 +3820,7 @@ class UiManager {
   // =========================================================================
   renderPvZTopSeedBank(ctx, scene) {
     const bankX = 10;
-    const bankY = 4;
+    const bankY = 470;
     const bankH = 64; // 充足充裕的高度，完全不压平卡牌尺寸！
 
     // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque: 90x60px 舒展大气)
@@ -4042,9 +4042,9 @@ class UiManager {
   // =========================================================================
   renderPvZTopWaveBar(ctx, scene) {
     const waveMgr = scene.waveManager;
-    const barX = 490;
-    const barY = 12;
-    const barW = 202;
+    const barX = 512;
+    const barY = 481;
+    const barW = 182;
     const barH = 42; // 高度 42px，按键舒适，大字号完全舒展
 
     if (waveMgr.isPrepPhase()) {
@@ -4102,7 +4102,7 @@ class UiManager {
   // =========================================================================
   renderPvZTopRightMenu(ctx, scene) {
     const btnH = 42;
-    const btnY = 12;
+    const btnY = 481;
 
     this.drawPixelButton(
       ctx,
@@ -4165,9 +4165,9 @@ class UiManager {
     if (!hero) return;
 
     // 1. 英雄圆形头像盘 (位于左下角 Y: 494，不遮挡任何草地)
-    const hx = 32;
-    const hy = 494;
-    const hr = 26;
+    const hx = 34;
+    const hy = 436;
+    const hr = 22;
 
     ctx.save();
     ctx.beginPath();
@@ -4232,9 +4232,9 @@ class UiManager {
       { id: 'harvest', name: '丰饶', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' }
     ];
 
-    const orbR = 19;
+    const orbR = 17;
     const orbStartY = hy;
-    const orbStartX = hx + hr + 20;
+    const orbStartX = hx + hr + 18;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
       const spItem = spellList[sIdx];
@@ -4242,7 +4242,7 @@ class UiManager {
       const spCd = (sp && sp.timer) || 0;
       const spMaxCd = (sp && sp.cooldown) || 15;
       const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 12);
+      const ox = orbStartX + sIdx * (orbR * 2 + 10);
       const oy = orbStartY;
 
       ctx.save();
