@@ -17,7 +17,7 @@ const CONFIG = {
   LAYOUT: {
     MAP: { X: 0, Y: 0, WIDTH: 640, HEIGHT: 480, COLS: 20, ROWS: 15 },
     // 黄金比例视口布局：全图 20x15 格局完美自适应于 [X:208..752, Y:24..432] 核心视窗，底部严密留出 108px 卡牌与法术专区，绝对不遮挡底部任何守卫与防御塔！
-    MAP_VIEW: { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85, SCALE_X: 0.85, SCALE_Y: 0.85, FULL_W: 960, FULL_H: 540 },
+    MAP_VIEW: { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85, SCALE_X: 0.85, SCALE_Y: 0.85, FULL_W: 960, FULL_H: 540 },
     BOTTOM_BAR: { X: 218, Y: 442, WIDTH: 524, HEIGHT: 92 },
     LEFT_HERO_DOCK: { X: 14, Y: 260, WIDTH: 184, HEIGHT: 270 },
     RIGHT_PANEL: { X: 760, Y: 10, WIDTH: 190, HEIGHT: 520 }

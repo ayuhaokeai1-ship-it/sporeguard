@@ -112,7 +112,7 @@ const CONFIG = {
   LAYOUT: {
     MAP: { X: 0, Y: 0, WIDTH: 640, HEIGHT: 480, COLS: 20, ROWS: 15 },
     // 黄金比例视口布局：全图 20x15 格局完美自适应于 [X:208..752, Y:24..432] 核心视窗，底部严密留出 108px 卡牌与法术专区，绝对不遮挡底部任何守卫与防御塔！
-    MAP_VIEW: { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85, SCALE_X: 0.85, SCALE_Y: 0.85, FULL_W: 960, FULL_H: 540 },
+    MAP_VIEW: { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85, SCALE_X: 0.85, SCALE_Y: 0.85, FULL_W: 960, FULL_H: 540 },
     BOTTOM_BAR: { X: 218, Y: 442, WIDTH: 524, HEIGHT: 92 },
     LEFT_HERO_DOCK: { X: 14, Y: 260, WIDTH: 184, HEIGHT: 270 },
     RIGHT_PANEL: { X: 760, Y: 10, WIDTH: 190, HEIGHT: 520 }
@@ -4241,7 +4241,7 @@ function initInput() {
 }
 
 function screenToMapCoords(lx, ly) {
-  const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+  const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
   const sx = mv.SCALE_X || mv.SCALE || 1;
   const sy = mv.SCALE_Y || mv.SCALE || 1;
   return {
@@ -5063,9 +5063,9 @@ class FxSystem {
     // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
     if (this.banner.active) {
       const b = this.banner;
-      const bx = 340;
-      const by = 68;
-      const bw = 280;
+      const bx = 300;
+      const by = 74;
+      const bw = 360;
       const bh = b.subText ? 42 : 30;
 
       ctx.save();
@@ -8790,7 +8790,7 @@ class SporeDropManager {
    */
   handlePointerDown(inputX, inputY, economy, fx) {
     const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极速拾取零失误
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const scale = mv.SCALE || 0.85;
 
     for (let i = this.drops.length - 1; i >= 0; i--) {
@@ -8974,7 +8974,7 @@ class RelicDropManager {
 
   checkClick(clickX, clickY, scene) {
     const hitRadius = 88; // 手机端超大触控判定圈 (88px)，极其灵敏容易点击
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const scale = mv.SCALE || 1.0;
     const offX = mv.OFFSET_X || 0;
     const offY = mv.OFFSET_Y || 0;
@@ -9009,7 +9009,7 @@ class RelicDropManager {
     const ry = relic.baseY + relic.bounceY;
 
     if (fx && typeof fx.spawnHomingMotes === 'function') {
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
       fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 0.85), mv.OFFSET_Y + ry * (mv.SCALE || 0.85), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {
@@ -16617,7 +16617,7 @@ class UiManager {
           this.dockTargetExpansion = 0.0;
         }
       }
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
       const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
       const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
       if (scene.sporeDropManager) {
@@ -16687,7 +16687,7 @@ class UiManager {
       }
 
       // 计算精准地图世界坐标 (mx, my)
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
       const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
       const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
 
@@ -16737,7 +16737,7 @@ class UiManager {
 
       // (D) 铲子模式点击铲除移植
       if (scene.shovelActive && scene.towerManager) {
-        const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+        const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
         const mx = (x - mv.OFFSET_X) / mv.SCALE;
         const my = (y - mv.OFFSET_Y) / mv.SCALE;
         const col = Math.floor(mx / TILE_SIZE);
@@ -16820,7 +16820,7 @@ class UiManager {
 
     if (this.isDragging && this.draggingTowerId && scene && scene.state === 'BATTLE') {
       const tId = this.draggingTowerId;
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
       const mx = (x - mv.OFFSET_X) / mv.SCALE;
       const my = (y - mv.OFFSET_Y) / mv.SCALE;
       const col = Math.floor(mx / TILE_SIZE);
@@ -17310,7 +17310,11 @@ class UiManager {
       return;
     }
 
-    // 若处于暂停状态，直接渲染专属高质感暗黑暂停面板并返回，彻底杜绝下层任何UI残留
+    // 若处于结算或暂停状态，直接渲染专属结算/暂停面板并返回，彻底杜绝下层任何操作冲突与UI残留
+    if (scene.state === 'SETTLEMENT') {
+      this.renderSettlementOverlay(ctx, scene);
+      return;
+    }
     if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
       return;
@@ -17743,7 +17747,7 @@ class UiManager {
 
     const curX = this.dragCurrentX;
     const curY = this.dragCurrentY;
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const mx = (curX - mv.OFFSET_X) / mv.SCALE;
     const my = (curY - mv.OFFSET_Y) / mv.SCALE;
     const col = Math.floor(mx / TILE_SIZE);
@@ -18579,7 +18583,7 @@ class UiManager {
       return;
     }
 
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const tileScreenX = mv.OFFSET_X + (col + 0.5) * TILE_SIZE * mv.SCALE;
     const tileScreenY = mv.OFFSET_Y + (row + 0.5) * TILE_SIZE * mv.SCALE;
 
@@ -20157,532 +20161,60 @@ class UiManager {
   }
 
   // =========================================================================
-  // 【植物大战僵尸经典一体化顶栏 Seed Bank】
+  // 【植物大战僵尸经典一体化顶栏 Seed Bank】(全高度饱满卡牌、彻底告别压平挤压)
   // =========================================================================
   renderPvZTopSeedBank(ctx, scene) {
     const bankX = 10;
-    const bankY = 8;
-    const bankH = 54;
+    const bankY = 4;
+    const bankH = 64; // 充足充裕的高度，完全不压平卡牌尺寸！
 
-    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque)
-    const sporeW = 84;
-    const sporeH = 50;
-    const sporeX = bankX + 4;
+    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque: 88x62px 舒展大气)
+    const sporeW = 86;
+    const sporeH = 60;
+    const sporeX = bankX + 2;
     const sporeY = bankY + 2;
 
     ctx.save();
-    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 10);
-    ctx.fillStyle = 'rgba(26, 18, 10, 0.94)';
+    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 12);
+    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(230, 187, 96, 0.70)';
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(230, 187, 96, 0.80)';
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
+    // 阳光金孢大珍珠图标 (30x30)
     const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
     if (sporeImg && sporeImg.width) {
-      ctx.drawImage(sporeImg, sporeX + 5, sporeY + 12, 26, 26);
+      ctx.drawImage(sporeImg, sporeX + 6, sporeY + 16, 30, 30);
     } else {
-      drawUiIcon(ctx, 16, 'spore', sporeX + 6, sporeY + 14, 24);
+      drawUiIcon(ctx, 16, 'spore', sporeX + 8, sporeY + 18, 26);
     }
 
+    // 金黄粗体孢子数字 (大号成熟友好字体)
     const spores = scene.economy.spores;
-    drawArtText(ctx, String(spores), sporeX + 53, sporeY + 29, {
+    drawArtText(ctx, String(spores), sporeX + 54, sporeY + 36, {
       style: 'gold',
-      size: 14,
+      size: 15,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.5
+      strokeWidth: 1.6
     });
 
+    // 顶部小巧显示生命守护值 (❤️ 20)
     const seeds = scene.economy.seeds;
-    drawArtText(ctx, `❤️${seeds}`, sporeX + 53, sporeY + 11, {
+    drawArtText(ctx, '❤️ ' + seeds, sporeX + 54, sporeY + 13, {
       style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 9.5,
+      size: 10,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.8
     });
     ctx.restore();
 
-    // 2. 5大蘑菇卡牌栏 (PvZ 经典横向卡槽)
+    // 2. 5大蘑菇植物卡牌栏 (PvZ 经典纵向饱满卡槽: 52x60px 经典卡牌高宽比)
     const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
-    const cardW = 54;
-    const cardH = 50;
-    const startX = sporeX + sporeW + 6;
-
-    for (let i = 0; i < towerOrder.length; i++) {
-      const tId = towerOrder[i];
-      const def = TOWER_DEFINITIONS[tId];
-      if (!def) continue;
-
-      const cx = startX + i * (cardW + 4);
-      const cy = bankY + 2;
-      const cost = def.baseCost;
-      const affordable = scene.economy.spores >= cost;
-      const isSelected = scene.selectedBuildTowerId === tId;
-
-      ctx.save();
-      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
-      ctx.fillStyle = isSelected
-        ? 'rgba(56, 42, 22, 0.96)'
-        : (affordable ? 'rgba(32, 22, 14, 0.94)' : 'rgba(22, 16, 12, 0.88)');
-      ctx.fill();
-      ctx.strokeStyle = isSelected
-        ? '#FFD700'
-        : (affordable ? 'rgba(198, 143, 69, 0.75)' : 'rgba(100, 75, 50, 0.40)');
-      ctx.lineWidth = isSelected ? 2.0 : 1.0;
-      ctx.stroke();
-
-      // 卡牌手绘原画
-      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
-      if (cardArtImg && cardArtImg.width) {
-        ctx.save();
-        if (!affordable) ctx.globalAlpha = 0.48;
-        ctx.drawImage(cardArtImg, cx + 5, cy + 2, cardW - 10, cardH - 16);
-        ctx.restore();
-      } else {
-        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 18);
-      }
-
-      // 底部金黄色标价药丸
-      roundRectPath(ctx, cx + 4, cy + cardH - 14, cardW - 8, 12, 4);
-      ctx.fillStyle = 'rgba(10, 6, 3, 0.88)';
-      ctx.fill();
-      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 8, {
-        style: affordable ? 'gold' : 'crimson',
-        size: 9.5,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0.8
-      });
-
-      // 快捷键角标 [1..5]
-      roundRectPath(ctx, cx + 2, cy + 2, 11, 10, 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      ctx.fill();
-      drawArtText(ctx, String(i + 1), cx + 7.5, cy + 7, {
-        style: 'gold',
-        size: 8,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0.6
-      });
-
-      // 选中卡牌明亮金边律动高亮
-      if (isSelected) {
-        ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 1.6;
-        ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
-      }
-
-      ctx.restore();
-
-      this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
-        scene.selectBuildTowerType(tId);
-        platform.playSfx('sfx_click');
-      }, { towerId: tId });
-    }
-
-    // 3. 经典铲子槽 (Shovel Slot)
-    const shvX = startX + towerOrder.length * (cardW + 4) + 4;
-    const shvY = bankY + 2;
-    const shvW = 42;
-    const shvH = cardH;
-    const isShovel = scene.shovelActive;
-
-    ctx.save();
-    roundRectPath(ctx, shvX, shvY, shvW, shvH, 6);
-    ctx.fillStyle = isShovel ? 'rgba(140, 29, 24, 0.95)' : 'rgba(28, 18, 12, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = isShovel ? '#FFA39E' : 'rgba(198, 143, 69, 0.70)';
-    ctx.lineWidth = isShovel ? 2.0 : 1.0;
-    ctx.stroke();
-
-    const shovelImg = platform.getImage('assets/ui/icons/icon_sell.png');
-    if (shovelImg && shovelImg.width) {
-      ctx.drawImage(shovelImg, shvX + (shvW - 22) * 0.5, shvY + 5, 22, 22);
-    } else {
-      drawArtText(ctx, '铲', shvX + shvW * 0.5, shvY + 15, {
-        style: isShovel ? 'crimson' : 'gold',
-        size: 13,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.0
-      });
-    }
-
-    drawArtText(ctx, isShovel ? '已拿' : '铲除', shvX + shvW * 0.5, shvY + shvH - 9, {
-      style: isShovel ? 'crimson' : 'parchment',
-      size: 8.5,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 0.6
-    });
-    ctx.restore();
-
-    this.registerButton('pvz_shovel', shvX, shvY, shvW, shvH, () => {
-      scene.toggleShovel();
-      platform.playSfx('sfx_click');
-    });
-
-    // 4. 远古灵能觉醒槽 (Awakening Plant Food Beans: 相当于 PvZ2 能量豆)
-    const awkX = shvX + shvW + 6;
-    const awkY = bankY + 2;
-    const awkW = 54;
-    const awkH = cardH;
-
-    ctx.save();
-    roundRectPath(ctx, awkX, awkY, awkW, awkH, 6);
-    ctx.fillStyle = scene.awakeningActive ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = scene.awakeningActive ? '#D3F261' : 'rgba(115, 209, 61, 0.60)';
-    ctx.lineWidth = scene.awakeningActive ? 2.0 : 1.0;
-    ctx.stroke();
-
-    const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
-    if (seedImg && seedImg.width) {
-      ctx.drawImage(seedImg, awkX + (awkW - 22) * 0.5, awkY + 5, 22, 22);
-    } else {
-      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 16, {
-        style: 'emerald',
-        size: 13,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.0
-      });
-    }
-
-    drawArtText(ctx, `觉醒×${Math.min(5, scene.economy.seeds || 0)}`, awkX + awkW * 0.5, awkY + awkH - 9, {
-      style: 'emerald',
-      size: 8.5,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 0.6
-    });
-    ctx.restore();
-
-    this.registerButton('pvz_awakening', awkX, awkY, awkW, awkH, () => {
-      if (typeof scene.activateAwakeningMode === 'function') {
-        scene.activateAwakeningMode();
-      }
-      platform.playSfx('sfx_upgrade');
-    });
-  }
-
-  // =========================================================================
-  // 【顶部波次推进旗舰进度槽 PvZ Wave Flag】
-  // =========================================================================
-  renderPvZTopWaveBar(ctx, scene) {
-    const waveMgr = scene.waveManager;
-    const barX = 520;
-    const barY = 14;
-    const barW = 168;
-    const barH = 26;
-
-    if (waveMgr.isPrepPhase()) {
-      const earlyBonus = Math.min(
-        CONFIG.ECONOMY.EARLY_CALL_MAX,
-        Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
-      );
-      this.drawPixelButton(
-        ctx,
-        'pvz_call_wave',
-        barX,
-        barY - 2,
-        barW,
-        30,
-        `📢 提前迎战 +${earlyBonus} 🪙`,
-        {
-          skin: 'btn_green',
-          font: `bold 11px ${CN_FONT}`
-        },
-        () => {
-          scene.callWaveEarly();
-        }
-      );
-      return;
-    }
-
-    ctx.save();
-    roundRectPath(ctx, barX, barY, barW, barH, 6);
-    ctx.fillStyle = 'rgba(18, 12, 8, 0.85)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.60)';
-    ctx.lineWidth = 1.0;
-    ctx.stroke();
-
-    const currentW = waveMgr.currentWaveIndex;
-    const totalW = waveMgr.totalWaves;
-    const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
-
-    roundRectPath(ctx, barX + 2, barY + 2, (barW - 4) * ratio, barH - 4, 4);
-    ctx.fillStyle = 'rgba(82, 196, 26, 0.55)';
-    ctx.fill();
-
-    drawArtText(ctx, `第 ${currentW} / ${totalW} 波`, barX + barW * 0.5, barY + barH * 0.5, {
-      style: currentW >= totalW ? 'crimson' : 'gold',
-      size: 11,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 1.0
-    });
-    ctx.restore();
-  }
-
-  // =========================================================================
-  // 【右上角仅 3 个极简功能键 PvZ Top Right Menu】
-  // =========================================================================
-  renderPvZTopRightMenu(ctx, scene) {
-    this.drawPixelButton(
-      ctx,
-      'pvz_speed',
-      794,
-      12,
-      44,
-      32,
-      `${scene.speedMultiplier}×`,
-      {
-        skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: `bold 11.5px ${CN_FONT}`
-      },
-      () => {
-        scene.cycleSpeed();
-      }
-    );
-
-    this.drawPixelButton(
-      ctx,
-      'pvz_pause',
-      842,
-      12,
-      44,
-      32,
-      '⏸',
-      {
-        skin: 'btn_wood',
-        font: `bold 12px ${CN_FONT}`
-      },
-      () => {
-        scene.pauseGame();
-      }
-    );
-
-    this.drawPixelButton(
-      ctx,
-      'pvz_menu',
-      890,
-      12,
-      56,
-      32,
-      '⚙️菜单',
-      {
-        skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`
-      },
-      () => {
-        platform.playSfx('sfx_click');
-        this.showSettingsModal = true;
-      }
-    );
-  }
-
-  // =========================================================================
-  // 【左下角极简圆盘英雄徽章与神术法球 PvZ Hero Emblem & Spell Orbs】
-  // =========================================================================
-  renderPvZBottomLeftHeroAndSpells(ctx, scene) {
-    const hero = scene.hero;
-    if (!hero) return;
-
-    // 1. 极简英雄圆形头像盘 (远古树人·奥克)
-    const hx = 26;
-    const hy = 494;
-    const hr = 24;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(20, 14, 8, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = '#C68F45';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
-    ctx.beginPath();
-    ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
-    ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
-    ctx.lineWidth = 3.0;
-    ctx.stroke();
-
-    const heroImg = platform.getImage('assets/vfx/hero_oak.png');
-    if (heroImg && heroImg.width) {
-      ctx.drawImage(heroImg, hx - 18, hy - 18, 36, 36);
-    } else {
-      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 16, align: 'center', baseline: 'middle' });
-    }
-
-    const ultReady = (hero.ultCooldownTimer || 0) <= 0;
-    if (ultReady) {
-      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.12;
-      ctx.strokeStyle = `rgba(255, 215, 0, ${0.7 + Math.sin(this.uiAnimTime * 8) * 0.3})`;
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    roundRectPath(ctx, hx - 12, hy + hr - 8, 24, 11, 4);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-    ctx.fill();
-    drawArtText(ctx, `Lv.${hero.level || 1}`, hx, hy + hr - 2.5, {
-      style: 'gold',
-      size: 8.5,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 0.6
-    });
-    ctx.restore();
-
-    this.registerButton('pvz_hero_badge', hx - hr, hy - hr, hr * 2, hr * 2, () => {
-      if (ultReady && typeof hero.castUltimate === 'function') {
-        hero.castUltimate(scene);
-        platform.playSfx('sfx_thunder');
-      } else {
-        scene.activeHeroRally = true;
-        hero.isSelected = true;
-        platform.playSfx('sfx_click');
-      }
-    });
-
-    // 2. 3 大自然神术法球 (甘霖 45, 天雷 75, 丰饶 10s)
-    const spellList = [
-      { id: 'rain', name: '甘霖', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
-      { id: 'shock', name: '天雷', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
-      { id: 'harvest', name: '丰饶', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' }
-    ];
-
-    const orbR = 17;
-    const orbStartY = hy;
-    const orbStartX = hx + hr + 18;
-
-    for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
-      const spItem = spellList[sIdx];
-      const sp = scene.spells ? scene.spells[spItem.id] : null;
-      const spCd = (sp && sp.timer) || 0;
-      const spMaxCd = (sp && sp.cooldown) || 15;
-      const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 10);
-      const oy = orbStartY;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(ox, oy, orbR, 0, Math.PI * 2);
-      ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.92)' : 'rgba(16, 14, 12, 0.85)';
-      ctx.fill();
-      ctx.strokeStyle = canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      const spImg = platform.getImage(spItem.icon) || platform.getImage(spItem.vfx);
-      if (spImg && spImg.width) {
-        if (!canCast) ctx.globalAlpha = 0.45;
-        ctx.drawImage(spImg, ox - 11, oy - 11, 22, 22);
-      } else {
-        drawArtText(ctx, spItem.name[0], ox, oy - 2, {
-          style: canCast ? 'emerald' : 'dim',
-          size: 11,
-          align: 'center',
-          baseline: 'middle'
-        });
-      }
-
-      if (spItem.cost > 0) {
-        roundRectPath(ctx, ox - 14, oy + orbR - 7, 28, 10, 3);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
-        ctx.fill();
-        drawArtText(ctx, `${spItem.cost}🪙`, ox, oy + orbR - 2, {
-          style: canCast ? 'gold' : 'dim',
-          size: 7.5,
-          align: 'center',
-          baseline: 'middle',
-          strokeWidth: 0.5
-        });
-      }
-
-      if (spCd > 0) {
-        const sweepRatio = spCd / Math.max(1, spMaxCd);
-        ctx.beginPath();
-        ctx.moveTo(ox, oy);
-        ctx.arc(ox, oy, orbR, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * sweepRatio);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-        ctx.fill();
-      }
-
-      ctx.restore();
-
-      this.registerButton('pvz_spell_' + spItem.id, ox - orbR, oy - orbR, orbR * 2, orbR * 2, () => {
-        if (canCast) {
-          scene.triggerSpell(spItem.id);
-          platform.playSfx('sfx_laser');
-        }
-      });
-    }
-  }
-
-
-  // =========================================================================
-  // 【植物大战僵尸经典一体化顶栏 Seed Bank】
-  // =========================================================================
-  renderPvZTopSeedBank(ctx, scene) {
-    const bankX = 10;
-    const bankY = 8;
-    const bankH = 54;
-
-    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque)
-    const sporeW = 84;
-    const sporeH = 50;
-    const sporeX = bankX + 4;
-    const sporeY = bankY + 2;
-
-    ctx.save();
-    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 10);
-    ctx.fillStyle = 'rgba(26, 18, 10, 0.94)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(230, 187, 96, 0.70)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
-    if (sporeImg && sporeImg.width) {
-      ctx.drawImage(sporeImg, sporeX + 5, sporeY + 12, 26, 26);
-    } else {
-      drawUiIcon(ctx, 16, 'spore', sporeX + 6, sporeY + 14, 24);
-    }
-
-    const spores = scene.economy.spores;
-    drawArtText(ctx, String(spores), sporeX + 53, sporeY + 29, {
-      style: 'gold',
-      size: 14,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 1.5
-    });
-
-    const seeds = scene.economy.seeds;
-    drawArtText(ctx, `❤️${seeds}`, sporeX + 53, sporeY + 11, {
-      style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 9.5,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 0.8
-    });
-    ctx.restore();
-
-    // 2. 5大蘑菇卡牌栏 (PvZ 经典横向卡槽)
-    const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
-    const cardW = 54;
-    const cardH = 50;
+    const cardW = 52;
+    const cardH = 60; // 60px 纵向高度，给手绘蘑菇原画充分舒展空间！
     const startX = sporeX + sporeW + 6;
 
     for (let i = 0; i < towerOrder.length; i++) {
@@ -20690,63 +20222,69 @@ class UiManager {
       const def = TOWERS[tId];
       if (!def) continue;
 
-      const cx = startX + i * (cardW + 4);
+      const cx = startX + i * (cardW + 5);
       const cy = bankY + 2;
       const cost = def.nodes ? def.nodes.base.cost : 100;
       const affordable = scene.economy.spores >= cost;
       const isSelected = scene.selectedBuildTowerId === tId;
 
       ctx.save();
-      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
+      // 卡牌木质底板
+      roundRectPath(ctx, cx, cy, cardW, cardH, 7);
       ctx.fillStyle = isSelected
-        ? 'rgba(56, 42, 22, 0.96)'
-        : (affordable ? 'rgba(32, 22, 14, 0.94)' : 'rgba(22, 16, 12, 0.88)');
+        ? 'rgba(60, 44, 22, 0.98)'
+        : (affordable ? 'rgba(32, 22, 14, 0.95)' : 'rgba(22, 16, 12, 0.88)');
       ctx.fill();
       ctx.strokeStyle = isSelected
         ? '#FFD700'
-        : (affordable ? 'rgba(198, 143, 69, 0.75)' : 'rgba(100, 75, 50, 0.40)');
-      ctx.lineWidth = isSelected ? 2.0 : 1.0;
+        : (affordable ? 'rgba(198, 143, 69, 0.80)' : 'rgba(95, 70, 45, 0.45)');
+      ctx.lineWidth = isSelected ? 2.2 : 1.2;
       ctx.stroke();
 
-      // 卡牌手绘原画
+      // 手绘蘑菇大原画 (居中充分展示，绝不压扁！)
       const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
       if (cardArtImg && cardArtImg.width) {
         ctx.save();
-        if (!affordable) ctx.globalAlpha = 0.48;
-        ctx.drawImage(cardArtImg, cx + 5, cy + 2, cardW - 10, cardH - 16);
+        if (!affordable) ctx.globalAlpha = 0.46;
+        // 原画尺寸 42x42 完整舒展
+        ctx.drawImage(cardArtImg, cx + 5, cy + 3, cardW - 10, 40);
         ctx.restore();
       } else {
-        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 18);
+        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 10, cy + 22);
       }
 
-      // 底部金黄色标价药丸
-      roundRectPath(ctx, cx + 4, cy + cardH - 14, cardW - 8, 12, 4);
-      ctx.fillStyle = 'rgba(10, 6, 3, 0.88)';
+      // 底部金黄色标价药丸胶囊
+      roundRectPath(ctx, cx + 4, cy + cardH - 16, cardW - 8, 14, 5);
+      ctx.fillStyle = 'rgba(12, 7, 4, 0.92)';
       ctx.fill();
-      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 8, {
+      ctx.strokeStyle = affordable ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 77, 79, 0.40)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 9, {
         style: affordable ? 'gold' : 'crimson',
-        size: 9.5,
+        size: 10.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 0.8
+        strokeWidth: 1.0
       });
 
       // 快捷键角标 [1..5]
-      roundRectPath(ctx, cx + 2, cy + 2, 11, 10, 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      roundRectPath(ctx, cx + 2, cy + 2, 12, 11, 2.5);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.70)';
       ctx.fill();
-      drawArtText(ctx, String(i + 1), cx + 7.5, cy + 7, {
+      drawArtText(ctx, String(i + 1), cx + 8, cy + 7.5, {
         style: 'gold',
-        size: 8,
+        size: 8.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.6
       });
 
-      // 选中卡牌明亮金边律动高亮
+      // 选中卡牌流金脉冲外框
       if (isSelected) {
         ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 1.6;
+        ctx.lineWidth = 2.0;
         ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
       }
 
@@ -20758,40 +20296,40 @@ class UiManager {
       }, { towerId: tId });
     }
 
-    // 3. 经典铲子槽 (Shovel Slot)
-    const shvX = startX + towerOrder.length * (cardW + 4) + 4;
+    // 3. 经典铲子鞘槽 (Shovel Slot: 44x60px)
+    const shvX = startX + towerOrder.length * (cardW + 5) + 4;
     const shvY = bankY + 2;
-    const shvW = 42;
+    const shvW = 44;
     const shvH = cardH;
     const isShovel = scene.shovelActive;
 
     ctx.save();
-    roundRectPath(ctx, shvX, shvY, shvW, shvH, 6);
-    ctx.fillStyle = isShovel ? 'rgba(140, 29, 24, 0.95)' : 'rgba(28, 18, 12, 0.92)';
+    roundRectPath(ctx, shvX, shvY, shvW, shvH, 7);
+    ctx.fillStyle = isShovel ? 'rgba(140, 29, 24, 0.95)' : 'rgba(28, 18, 12, 0.94)';
     ctx.fill();
-    ctx.strokeStyle = isShovel ? '#FFA39E' : 'rgba(198, 143, 69, 0.70)';
-    ctx.lineWidth = isShovel ? 2.0 : 1.0;
+    ctx.strokeStyle = isShovel ? '#FFA39E' : 'rgba(198, 143, 69, 0.75)';
+    ctx.lineWidth = isShovel ? 2.2 : 1.2;
     ctx.stroke();
 
     const shovelImg = platform.getImage('assets/ui/icons/icon_sell.png');
     if (shovelImg && shovelImg.width) {
-      ctx.drawImage(shovelImg, shvX + (shvW - 22) * 0.5, shvY + 5, 22, 22);
+      ctx.drawImage(shovelImg, shvX + (shvW - 24) * 0.5, shvY + 7, 24, 24);
     } else {
-      drawArtText(ctx, '铲', shvX + shvW * 0.5, shvY + 15, {
+      drawArtText(ctx, '铲', shvX + shvW * 0.5, shvY + 18, {
         style: isShovel ? 'crimson' : 'gold',
-        size: 13,
+        size: 14,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 1.0
       });
     }
 
-    drawArtText(ctx, isShovel ? '已拿' : '铲除', shvX + shvW * 0.5, shvY + shvH - 9, {
+    drawArtText(ctx, isShovel ? '已拿起' : '铲除', shvX + shvW * 0.5, shvY + shvH - 11, {
       style: isShovel ? 'crimson' : 'parchment',
-      size: 8.5,
+      size: 9.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.6
+      strokeWidth: 0.8
     });
     ctx.restore();
 
@@ -20800,39 +20338,40 @@ class UiManager {
       platform.playSfx('sfx_click');
     });
 
-    // 4. 远古灵能觉醒槽 (Awakening Plant Food Beans: 相当于 PvZ2 能量豆)
+    // 4. 远古灵能觉醒槽 (Awakening Plant Food: 54x60px 相当于 PvZ2 能量豆)
     const awkX = shvX + shvW + 6;
     const awkY = bankY + 2;
     const awkW = 54;
     const awkH = cardH;
 
     ctx.save();
-    roundRectPath(ctx, awkX, awkY, awkW, awkH, 6);
-    ctx.fillStyle = scene.awakeningActive ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.92)';
+    roundRectPath(ctx, awkX, awkY, awkW, awkH, 7);
+    ctx.fillStyle = scene.awakeningActive ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.94)';
     ctx.fill();
-    ctx.strokeStyle = scene.awakeningActive ? '#D3F261' : 'rgba(115, 209, 61, 0.60)';
-    ctx.lineWidth = scene.awakeningActive ? 2.0 : 1.0;
+    ctx.strokeStyle = scene.awakeningActive ? '#D3F261' : 'rgba(115, 209, 61, 0.65)';
+    ctx.lineWidth = scene.awakeningActive ? 2.2 : 1.2;
     ctx.stroke();
 
     const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
     if (seedImg && seedImg.width) {
-      ctx.drawImage(seedImg, awkX + (awkW - 22) * 0.5, awkY + 5, 22, 22);
+      ctx.drawImage(seedImg, awkX + (awkW - 24) * 0.5, awkY + 7, 24, 24);
     } else {
-      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 16, {
+      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 18, {
         style: 'emerald',
-        size: 13,
+        size: 14,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 1.0
       });
     }
 
-    drawArtText(ctx, `觉醒×${Math.min(5, scene.economy.seeds || 0)}`, awkX + awkW * 0.5, awkY + awkH - 9, {
+    const awkCount = Math.min(5, scene.economy.seeds || 0);
+    drawArtText(ctx, '觉醒×' + awkCount, awkX + awkW * 0.5, awkY + awkH - 11, {
       style: 'emerald',
-      size: 8.5,
+      size: 9.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.6
+      strokeWidth: 0.8
     });
     ctx.restore();
 
@@ -20849,10 +20388,10 @@ class UiManager {
   // =========================================================================
   renderPvZTopWaveBar(ctx, scene) {
     const waveMgr = scene.waveManager;
-    const barX = 520;
-    const barY = 14;
+    const barX = 502;
+    const barY = 16;
     const barW = 168;
-    const barH = 26;
+    const barH = 30;
 
     if (waveMgr.isPrepPhase()) {
       const earlyBonus = Math.min(
@@ -20863,13 +20402,13 @@ class UiManager {
         ctx,
         'pvz_call_wave',
         barX,
-        barY - 2,
+        barY - 1,
         barW,
-        30,
-        `📢 提前迎战 +${earlyBonus} 🪙`,
+        32,
+        '📢 提前迎战 +' + earlyBonus + ' 🪙',
         {
           skin: 'btn_green',
-          font: `bold 11px ${CN_FONT}`
+          font: 'bold 11.5px ' + CN_FONT
         },
         () => {
           scene.callWaveEarly();
@@ -20879,24 +20418,24 @@ class UiManager {
     }
 
     ctx.save();
-    roundRectPath(ctx, barX, barY, barW, barH, 6);
-    ctx.fillStyle = 'rgba(18, 12, 8, 0.85)';
+    roundRectPath(ctx, barX, barY, barW, barH, 7);
+    ctx.fillStyle = 'rgba(18, 12, 8, 0.90)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.60)';
-    ctx.lineWidth = 1.0;
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.70)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
 
     const currentW = waveMgr.currentWaveIndex;
     const totalW = waveMgr.totalWaves;
     const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
 
-    roundRectPath(ctx, barX + 2, barY + 2, (barW - 4) * ratio, barH - 4, 4);
-    ctx.fillStyle = 'rgba(82, 196, 26, 0.55)';
+    roundRectPath(ctx, barX + 2, barY + 2, (barW - 4) * ratio, barH - 4, 5);
+    ctx.fillStyle = 'rgba(82, 196, 26, 0.60)';
     ctx.fill();
 
-    drawArtText(ctx, `第 ${currentW} / ${totalW} 波`, barX + barW * 0.5, barY + barH * 0.5, {
+    drawArtText(ctx, '第 ' + currentW + ' / ' + totalW + ' 波', barX + barW * 0.5, barY + barH * 0.5, {
       style: currentW >= totalW ? 'crimson' : 'gold',
-      size: 11,
+      size: 11.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 1.0
@@ -20911,14 +20450,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'pvz_speed',
-      794,
-      12,
-      44,
-      32,
-      `${scene.speedMultiplier}×`,
+      786,
+      15,
+      46,
+      34,
+      scene.speedMultiplier + '×',
       {
         skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: `bold 11.5px ${CN_FONT}`
+        font: 'bold 12px ' + CN_FONT
       },
       () => {
         scene.cycleSpeed();
@@ -20928,14 +20467,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'pvz_pause',
-      842,
-      12,
-      44,
-      32,
+      838,
+      15,
+      46,
+      34,
       '⏸',
       {
         skin: 'btn_wood',
-        font: `bold 12px ${CN_FONT}`
+        font: 'bold 13px ' + CN_FONT
       },
       () => {
         scene.pauseGame();
@@ -20946,13 +20485,13 @@ class UiManager {
       ctx,
       'pvz_menu',
       890,
-      12,
-      56,
-      32,
+      15,
+      58,
+      34,
       '⚙️菜单',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`
+        font: 'bold 11.5px ' + CN_FONT
       },
       () => {
         platform.playSfx('sfx_click');
@@ -20968,25 +20507,25 @@ class UiManager {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 1. 极简英雄圆形头像盘 (远古树人·奥克)
-    const hx = 26;
-    const hy = 494;
+    // 1. 极简英雄圆形头像盘 (严格位于 Y: 504 底部留白区域，与下移后的战场完全隔开)
+    const hx = 28;
+    const hy = 504;
     const hr = 24;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(hx, hy, hr, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(20, 14, 8, 0.92)';
+    ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
     ctx.strokeStyle = '#C68F45';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
     const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
     ctx.beginPath();
     ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
     ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 3.2;
     ctx.stroke();
 
     const heroImg = platform.getImage('assets/vfx/hero_oak.png');
@@ -20999,7 +20538,7 @@ class UiManager {
     const ultReady = (hero.ultCooldownTimer || 0) <= 0;
     if (ultReady) {
       const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.12;
-      ctx.strokeStyle = `rgba(255, 215, 0, ${0.7 + Math.sin(this.uiAnimTime * 8) * 0.3})`;
+      ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.7 + Math.sin(this.uiAnimTime * 8) * 0.3) + ')';
       ctx.lineWidth = 2.0;
       ctx.beginPath();
       ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
@@ -21007,9 +20546,9 @@ class UiManager {
     }
 
     roundRectPath(ctx, hx - 12, hy + hr - 8, 24, 11, 4);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
     ctx.fill();
-    drawArtText(ctx, `Lv.${hero.level || 1}`, hx, hy + hr - 2.5, {
+    drawArtText(ctx, 'Lv.' + (hero.level || 1), hx, hy + hr - 2.5, {
       style: 'gold',
       size: 8.5,
       align: 'center',
@@ -21052,7 +20591,7 @@ class UiManager {
       ctx.save();
       ctx.beginPath();
       ctx.arc(ox, oy, orbR, 0, Math.PI * 2);
-      ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.92)' : 'rgba(16, 14, 12, 0.85)';
+      ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.94)' : 'rgba(16, 14, 12, 0.88)';
       ctx.fill();
       ctx.strokeStyle = canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)';
       ctx.lineWidth = 1.2;
@@ -21073,9 +20612,9 @@ class UiManager {
 
       if (spItem.cost > 0) {
         roundRectPath(ctx, ox - 14, oy + orbR - 7, 28, 10, 3);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.fill();
-        drawArtText(ctx, `${spItem.cost}🪙`, ox, oy + orbR - 2, {
+        drawArtText(ctx, spItem.cost + '🪙', ox, oy + orbR - 2, {
           style: canCast ? 'gold' : 'dim',
           size: 7.5,
           align: 'center',
@@ -21104,7 +20643,6 @@ class UiManager {
       });
     }
   }
-
 }
 
 module.exports = UiManager;
@@ -21363,7 +20901,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '点击底部卡牌，再点击发光的绿色草地即可种植；右上角「图鉴」可随时查看说明。', 3.8);
+      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -21531,6 +21069,10 @@ class SceneController {
   onVictory() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    this.shovelActive = false;
+    this.activeAwakeningTargeting = false;
+    this.selectedBuildTowerId = null;
+    if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -21572,6 +21114,10 @@ class SceneController {
   onDefeat() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    this.shovelActive = false;
+    this.activeAwakeningTargeting = false;
+    this.selectedBuildTowerId = null;
+    if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -21658,7 +21204,7 @@ class SceneController {
     }
 
     sp.timer = sp.cd;
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const mx = (lx - mv.OFFSET_X) / mv.SCALE;
     const my = (ly - mv.OFFSET_Y) / mv.SCALE;
 
@@ -21717,7 +21263,7 @@ class SceneController {
 
         // 0.5 如果处于菇精卫集结防线布防模式，点击道路任意点设定集结旗帜
         if (this.activeRallyTargeting && this.sporelingPatrol) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           const col = Math.floor(mx / TILE_SIZE);
@@ -21735,7 +21281,7 @@ class SceneController {
         }
         // 1. 如果处于灵能觉醒目标指定模式，点击防御塔直接超频觉醒
         if (this.activeAwakeningTargeting) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           const col = Math.floor(mx / TILE_SIZE);
@@ -21753,7 +21299,7 @@ class SceneController {
 
         // 2. 如果处于英雄集结驻守指派模式，点击战场任意坐标命令英雄移动
         if (this.activeHeroRally && this.hero) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           this.hero.moveTo(mx, my, this.fx);
@@ -21765,7 +21311,7 @@ class SceneController {
         // 先交给 UI 按钮与拖拽系统处理；若未命中 UI，则转换为全屏战场网格坐标
         const consumedByUi = this.ui.handlePointerDown(act.x, act.y, this);
         if (!consumedByUi && this.state === 'BATTLE') {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
 
@@ -22260,7 +21806,7 @@ class SceneController {
     }
 
     // 战斗场景（含 BATTLE, PAUSED, SETTLEMENT）：全屏 960x540 森林战场作为第一视觉主体
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);

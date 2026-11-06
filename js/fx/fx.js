@@ -594,9 +594,9 @@ class FxSystem {
     // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
     if (this.banner.active) {
       const b = this.banner;
-      const bx = 340;
-      const by = 68;
-      const bw = 280;
+      const bx = 300;
+      const by = 74;
+      const bw = 360;
       const bh = b.subText ? 42 : 30;
 
       ctx.save();

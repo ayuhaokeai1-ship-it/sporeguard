@@ -248,7 +248,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '点击底部卡牌，再点击发光的绿色草地即可种植；右上角「图鉴」可随时查看说明。', 3.8);
+      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -416,6 +416,10 @@ class SceneController {
   onVictory() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    this.shovelActive = false;
+    this.activeAwakeningTargeting = false;
+    this.selectedBuildTowerId = null;
+    if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -457,6 +461,10 @@ class SceneController {
   onDefeat() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    this.shovelActive = false;
+    this.activeAwakeningTargeting = false;
+    this.selectedBuildTowerId = null;
+    if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -543,7 +551,7 @@ class SceneController {
     }
 
     sp.timer = sp.cd;
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const mx = (lx - mv.OFFSET_X) / mv.SCALE;
     const my = (ly - mv.OFFSET_Y) / mv.SCALE;
 
@@ -602,7 +610,7 @@ class SceneController {
 
         // 0.5 如果处于菇精卫集结防线布防模式，点击道路任意点设定集结旗帜
         if (this.activeRallyTargeting && this.sporelingPatrol) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           const col = Math.floor(mx / TILE_SIZE);
@@ -620,7 +628,7 @@ class SceneController {
         }
         // 1. 如果处于灵能觉醒目标指定模式，点击防御塔直接超频觉醒
         if (this.activeAwakeningTargeting) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           const col = Math.floor(mx / TILE_SIZE);
@@ -638,7 +646,7 @@ class SceneController {
 
         // 2. 如果处于英雄集结驻守指派模式，点击战场任意坐标命令英雄移动
         if (this.activeHeroRally && this.hero) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
           this.hero.moveTo(mx, my, this.fx);
@@ -650,7 +658,7 @@ class SceneController {
         // 先交给 UI 按钮与拖拽系统处理；若未命中 UI，则转换为全屏战场网格坐标
         const consumedByUi = this.ui.handlePointerDown(act.x, act.y, this);
         if (!consumedByUi && this.state === 'BATTLE') {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
 
@@ -1145,7 +1153,7 @@ class SceneController {
     }
 
     // 战斗场景（含 BATTLE, PAUSED, SETTLEMENT）：全屏 960x540 森林战场作为第一视觉主体
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);

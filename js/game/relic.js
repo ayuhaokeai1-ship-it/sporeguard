@@ -75,7 +75,7 @@ class RelicDropManager {
 
   checkClick(clickX, clickY, scene) {
     const hitRadius = 88; // 手机端超大触控判定圈 (88px)，极其灵敏容易点击
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const scale = mv.SCALE || 1.0;
     const offX = mv.OFFSET_X || 0;
     const offY = mv.OFFSET_Y || 0;
@@ -110,7 +110,7 @@ class RelicDropManager {
     const ry = relic.baseY + relic.bounceY;
 
     if (fx && typeof fx.spawnHomingMotes === 'function') {
-      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
       fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 0.85), mv.OFFSET_Y + ry * (mv.SCALE || 0.85), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {

@@ -129,7 +129,7 @@ class SporeDropManager {
    */
   handlePointerDown(inputX, inputY, economy, fx) {
     const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极速拾取零失误
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 72, SCALE: 0.85 };
     const scale = mv.SCALE || 0.85;
 
     for (let i = this.drops.length - 1; i >= 0; i--) {
