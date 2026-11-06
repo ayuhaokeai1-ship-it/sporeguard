@@ -10,6 +10,7 @@ const { WAVES } = require('../data/waves');
 const { ENEMIES } = require('../data/enemies');
 const platform = require('../core/platform');
 const i18n = require('../i18n/index');
+const storage = require('../save/storage');
 
 class WaveManager {
   constructor(mapId) {

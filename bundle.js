@@ -2150,7 +2150,7 @@ module.exports = {
   lumina_a3_name: '甲线: 神圣圣所',
   lumina_a3_desc: '神圣领域：邻塔攻速+35%，脉冲群疗，使邻塔免疫蛛网与酸蚀！',
   lumina_b2_name: '乙线: 黄金松露伞',
-  lumina_b2_desc: '极致贪婪：每5.5秒产出55孢子，提升金币掉落率。',
+  lumina_b2_desc: '丰收之光：每 5.5 秒产出 55 孢子，并提高孢子掉落率。',
   lumina_b3_name: '乙线: 聚宝金蕈皇',
   lumina_b3_desc: '招财进宝：每5秒产出90孢子，范围内敌军死亡额外掉落孢子，战利品翻倍！',
 
@@ -2364,7 +2364,7 @@ module.exports = {
   guide_step2_title: '四类蘑菇 · 双线进化',
   guide_step2_body: '瞭望菇防空远程、雾菇减速破甲、尖刺菇直线群穿、爆裂菇范围轰炸。升至 Lv1 后可选择青蓝【A线】或橙黄【B线】特化！',
   guide_step3_title: '群杀奖励与失误补救',
-  guide_step3_body: '0.5秒内成群击杀3只以上敌人可获额外孢子与爽快连锁！建错位置随时可【出售】返还 60% 投入。支持触屏、键鼠(WASD/1-4)与手柄操作！',
+  guide_step3_body: '短时间内连续击退多名敌人可获额外孢子与连击奖赏！建错位置随时可【出售】返还 60% 投入。支持触屏、键鼠(WASD/1-4)与手柄操作！',
   guide_next: '下一步',
   guide_done: '开始战斗'
 ,
@@ -3302,7 +3302,7 @@ function stopBgm() {
 const sfxThrottle = {};
 function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  const now = platform.nowMs ? platform.nowMs() : Date.now();
+  const now = nowMs();
   if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
     return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
   }
@@ -3633,7 +3633,7 @@ module.exports = {
   __modules['js/game/achievements'] = function(require, module, exports) {
 /**
  * 战术成就殿堂与勋章进阶系统 (js/game/achievements.js)
- * 深度对标《王国保卫战》经典成就殿堂，包含 20 大战术勋章与即时弹窗
+ * 丛林战术成就殿堂，包含 20 大战术勋章与即时弹窗
  */
 
 const storage = require('../save/storage');
@@ -3654,7 +3654,7 @@ const ACHIEVEMENTS_DATA = [
   { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '激活古树雷石释放连锁闪电轰击 6 只以上虫群', icon: '🌩️', rewardStars: 1 },
   { id: 'tactical_stances', title: '🥋 兵无常势', desc: '在同一场战斗中灵活切换大橡树的三大战斗姿态', icon: '🎖️', rewardStars: 1 },
   { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '建造神圣灵光菇并在单局产出超过 800 黄金孢子', icon: '🍄', rewardStars: 1 },
-  { id: 'permafrost_hold', title: '❄️ 绝对零度', desc: '使用极寒雾菇使至少 8 只敌人同时陷入重度减速', icon: '🧊', rewardStars: 1 },
+  { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '使用极寒雾菇使至少 8 只敌人同时陷入重度减速', icon: '🧊', rewardStars: 1 },
   { id: 'laceration_field', title: '🩸 荆棘修罗场', desc: '尖刺菇单场割裂创伤累计造成超过 3000 点物理伤害', icon: '🌵', rewardStars: 1 },
   { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂重炮单发熔岩迫击炮弹直接消灭 5 只聚集敌怪', icon: '🎯', rewardStars: 1 },
   { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次提前吹响号角迎战，累积丰厚军功孢子', icon: '📯', rewardStars: 1 },
@@ -4299,6 +4299,8 @@ function handleKeyDown(rawKey) {
   } else if (key === 'keyc' || key === 'c') {
     emitAction('call_wave');
   } else if (key === 'keyr' || key === 'r') {
+    emitAction('trigger_spell', { spellId: 'rally' });
+  } else if (key === 'keyv' || key === 'v') {
     emitAction('cycle_speed');
   } else if (key === 'keyf' || key === 'f') {
     emitAction('hero_ultimate');
@@ -4962,7 +4964,7 @@ module.exports = FxSystem;
   __modules['js/game/weather'] = function(require, module, exports) {
 /**
  * 林地生态天候与动态战场环境系统 (js/game/weather.js)
- * 深度对标《王国保卫战》《植物大战僵尸2》战场动态天候与环境机制
+ * 林地自然天候与动态战场生态系统
  * 
  * 包含四大天候形态：
  * 1. ☀️ 晨曦晴空 (Sunny): 孢子产出 +25%，英雄生命自然恢复 +50%
@@ -6403,6 +6405,34 @@ class EnemyManager {
    * 处理敌人死亡、奖励结算及分裂（裂殖虫 -> 2幼体；裂殖母体 -> 3裂殖虫）
    */
 
+  /**
+   * 统一伤害结算接口 (天候雷暴、英雄斩击、反伤震击、法术轰炸、神术惩戒等)
+   */
+  applyDamage(enemy, amount, isCrit = false, dType = 'physical', fx = null, source = null) {
+    if (!enemy || enemy.state === 'death' || enemy.hp <= 0) return 0;
+    const finalFx = fx || (this.scene ? this.scene.fx : null);
+    let dmg = Math.max(1, Math.round(amount));
+
+    if (dType === 'physical' && enemy.baseArmor && !isCrit) {
+      const reduction = Math.max(0.2, 1 - (enemy.baseArmor * 0.05));
+      dmg = Math.max(1, Math.round(dmg * reduction));
+    }
+
+    enemy.hp -= dmg;
+    enemy.whiteFlashFrames = 3;
+
+    if (finalFx && typeof finalFx.spawnFloatingText === 'function') {
+      const color = isCrit ? '#FFD700' : (dType === 'magic' ? '#69C0FF' : (dType === 'pierce' ? '#FF7A45' : '#FF4D4F'));
+      const text = isCrit ? `暴击 -${dmg}` : `-${dmg}`;
+      finalFx.spawnFloatingText(Math.round(enemy.x), Math.round(enemy.y - 14), text, color, isCrit ? 1.2 : 0.9);
+    }
+
+    if (enemy.hp <= 0) {
+      this.killEnemy(enemy, finalFx);
+    }
+    return dmg;
+  }
+
   killEnemy(enemy, fx = null, relicManager = null) {
     if (!enemy || enemy.state === 'death') return;
     const economy = this.scene ? this.scene.economy : null;
@@ -7101,7 +7131,7 @@ module.exports = EnemyManager;
   __modules['js/game/hero'] = function(require, module, exports) {
 /**
  * 奇幻森林守护巨木神树英雄系统 (js/game/hero.js)
- * 深度对标《王国保卫战》(Kingdom Rush) 英雄微操、战术姿态与天赋树系统：
+ * 远古树人英雄微操、战术姿态与天赋树系统：
  * 
  * 1. 【战术三姿态体系】(Tactical Stances)：
  *    - 🛡️ 守卫姿态 (Guardian Stance): 护甲减免 +35%，最多阻挡 3 名敌军，每秒自然回春愈合 4% 生命
@@ -12203,7 +12233,7 @@ class TacticalFeatsSystem {
       },
       absolute_zero: {
         id: 'absolute_zero',
-        title: '绝对零度',
+        title: '深度冻结',
         desc: '使用迷雾与玄冰使 8 只敌军减速超过 50%',
         rewardSpores: 100,
         unlocked: false,
@@ -12962,142 +12992,15 @@ module.exports = {
   /* --- js/game/tacticalTargetingAI.js --- */
   __modules['js/game/tacticalTargetingAI'] = function(require, module, exports) {
 /**
- * 战术索敌与集火控制引擎 (js/game/tacticalTargetingAI.js)
- * 深度汲取 Bloons TD6 与 Kingdom Rush 战术策略精髓
- * 提供五大核心索敌模式：首位、末位、强敌、极速、就近，并提供集火指示
+ * 目标指示器 (js/game/tacticalTargetingAI.js)
+ * 选中蘑菇时，在其当前锁定的敌人脚下绘制准星，并以细虚线连接，
+ * 让玩家直观看到「索敌」优先级的实际效果。
+ * 索敌逻辑本身由 TowerManager.selectTarget 负责，此处只负责显示。
  */
-
-const TARGET_MODES = {
-  FIRST: { id: 'FIRST', name: '首位先锋', icon: '🎯', desc: '锁定行进路程最远、最接近基地的敌人', color: '#52C41A' },
-  STRONG: { id: 'STRONG', name: '致命强敌', icon: '👑', desc: '优先集火生命值最高者、精英首领与攻城巨虫', color: '#FF4D4F' },
-  FAST: { id: 'FAST', name: '疾行截击', icon: '⚡', desc: '优先狙杀移动速度极快的迅捷虫与跃击潜行者', color: '#FAAD14' },
-  CLOSE: { id: 'CLOSE', name: '贴身护卫', icon: '📍', desc: '优先打击与守卫距离最近的敌人，确保安全防线', color: '#1890FF' },
-  LAST: { id: 'LAST', name: '殿后拦截', icon: '🛡️', desc: '锁定刚刚踏入林区的后排敌人，遏制后续援军', color: '#722ED1' }
-};
-
-const MODE_ORDER = ['FIRST', 'STRONG', 'FAST', 'CLOSE', 'LAST'];
 
 class TacticalTargetingAI {
   constructor() {
-    this.towerModes = {}; // tower.id -> mode string
     this.animTimer = 0;
-  }
-
-  getMode(tower) {
-    if (!tower) return TARGET_MODES.FIRST;
-    const modeKey = this.towerModes[tower.id] || tower.targetingMode || 'FIRST';
-    return TARGET_MODES[modeKey] || TARGET_MODES.FIRST;
-  }
-
-  cycleMode(tower) {
-    if (!tower) return TARGET_MODES.FIRST;
-    const curKey = (this.towerModes[tower.id] || tower.targetingMode || 'FIRST');
-    const idx = MODE_ORDER.indexOf(curKey);
-    const nextKey = MODE_ORDER[(idx + 1) % MODE_ORDER.length];
-    this.towerModes[tower.id] = nextKey;
-    tower.targetingMode = nextKey;
-    return TARGET_MODES[nextKey];
-  }
-
-  setMode(tower, modeKey) {
-    if (!tower || !TARGET_MODES[modeKey]) return;
-    this.towerModes[tower.id] = modeKey;
-    tower.targetingMode = modeKey;
-  }
-
-  /**
-   * 根据当前战术模式，从候选敌人列表中精准挑选最优目标
-   */
-  pickTarget(tower, candidates, map) {
-    return this.selectBestTarget(tower, candidates, map);
-  }
-
-  selectBestTarget(tower, candidates, map) {
-    if (!candidates || candidates.length === 0) return null;
-    if (candidates.length === 1) return candidates[0];
-
-    const modeKey = (this.towerModes[tower.id] || tower.targetingMode || 'FIRST');
-
-    switch (modeKey) {
-      case 'STRONG': {
-        // 优先集火当前最大血量 / 剩余生命值最高者（Boss/攻城巨虫优先）
-        let best = candidates[0];
-        let maxHp = best.hp || 1;
-        if (best.isBoss) maxHp += 50000;
-        if (best.type === 'siege') maxHp += 10000;
-
-        for (let i = 1; i < candidates.length; i++) {
-          const em = candidates[i];
-          let score = em.hp || 1;
-          if (em.isBoss) score += 50000;
-          if (em.type === 'siege') score += 10000;
-          if (score > maxHp) {
-            maxHp = score;
-            best = em;
-          }
-        }
-        return best;
-      }
-
-      case 'FAST': {
-        // 优先拦截疾速型敌兵（飞蛾、跃击者、迅捷甲虫）
-        let best = candidates[0];
-        let maxSpeed = best.speed || 1;
-        for (let i = 1; i < candidates.length; i++) {
-          const em = candidates[i];
-          const spd = (em.speed || 1) * (em.isFlying ? 1.5 : (em.type === 'leaper' ? 1.4 : 1.0));
-          if (spd > maxSpeed) {
-            maxSpeed = spd;
-            best = em;
-          }
-        }
-        return best;
-      }
-
-      case 'CLOSE': {
-        // 优先打击离守卫几何距离最近的敌人
-        let best = candidates[0];
-        let minDistSq = Math.hypot(best.x - tower.x, best.y - tower.y);
-        for (let i = 1; i < candidates.length; i++) {
-          const em = candidates[i];
-          const dist = Math.hypot(em.x - tower.x, em.y - tower.y);
-          if (dist < minDistSq) {
-            minDistSq = dist;
-            best = em;
-          }
-        }
-        return best;
-      }
-
-      case 'LAST': {
-        // 优先锁定行进距离最短的敌人（殿后截击）
-        let best = candidates[0];
-        let minDist = best.distPx || 0;
-        for (let i = 1; i < candidates.length; i++) {
-          const em = candidates[i];
-          if ((em.distPx || 0) < minDist) {
-            minDist = em.distPx || 0;
-            best = em;
-          }
-        }
-        return best;
-      }
-
-      case 'FIRST':
-      default: {
-        // 默认首位先锋：锁定最接近基地的敌人（行进路程最远）
-        let best = candidates[0];
-        let maxDist = best.distPx || 0;
-        for (let i = 1; i < candidates.length; i++) {
-          const em = candidates[i];
-          if ((em.distPx || 0) > maxDist) {
-            maxDist = em.distPx || 0;
-            best = em;
-          }
-        }
-        return best;
-      }
-    }
   }
 
   update(dt) {
@@ -13105,105 +13008,48 @@ class TacticalTargetingAI {
   }
 
   /**
-   * 绘制当前选中守卫正在集火的目标光环与索敌射线
+   * 在地图坐标系内绘制。target 为 null 时不绘制。
    */
-  renderTargetHighlight(ctx, selectedTower, map, enemyManager) {
-    if (!selectedTower || !enemyManager) return;
-    const candidates = enemyManager.getAliveEnemies().filter(em => {
-      if (em.state === 'death' || em.hp <= 0) return false;
-      const d = Math.hypot(em.x - selectedTower.x, em.y - selectedTower.y);
-      return d <= selectedTower.range;
-    });
-
-    if (candidates.length === 0) return;
-    const target = this.selectBestTarget(selectedTower, candidates, map);
-    if (!target) return;
+  renderTargetHighlight(ctx, tower, target) {
+    if (!tower || !target || target.state === 'death' || target.hp <= 0) return;
 
     ctx.save();
-    const mode = this.getMode(selectedTower);
-    const pulse = 1.0 + Math.sin(this.animTimer * 10) * 0.12;
+    const pulse = 1.0 + Math.sin(this.animTimer * 8) * 0.08;
+    const color = '#FFE58F';
 
-    // 1. 守卫至目标之间的幽光微导引线
-    ctx.strokeStyle = mode.color;
+    ctx.strokeStyle = color;
     ctx.lineWidth = 1.2;
-    ctx.globalAlpha = 0.35 + Math.sin(this.animTimer * 8) * 0.15;
+    ctx.globalAlpha = 0.4;
     ctx.setLineDash([4, 4]);
     ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 8);
     ctx.beginPath();
-    ctx.moveTo(selectedTower.x, selectedTower.y - 12);
+    ctx.moveTo(tower.x, tower.y - 12);
     ctx.lineTo(target.x, target.y);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 2. 目标脚下的战术聚焦光环
-    ctx.translate(target.x, target.y);
+    ctx.translate(target.x, target.y + 4);
     ctx.scale(pulse, pulse);
-    ctx.strokeStyle = mode.color;
-    ctx.lineWidth = 1.8;
     ctx.globalAlpha = 0.85;
-
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 战术准星四角羽标
-    const mk = 14;
+    const mk = 13;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(-mk, 0); ctx.lineTo(-mk + 4, 0);
-    ctx.moveTo(mk, 0); ctx.lineTo(mk - 4, 0);
-    ctx.moveTo(0, -mk * 0.65); ctx.lineTo(0, -mk * 0.65 + 3);
-    ctx.moveTo(0, mk * 0.65); ctx.lineTo(0, mk * 0.65 - 3);
+    ctx.moveTo(-mk, 0); ctx.lineTo(-mk + 5, 0);
+    ctx.moveTo(mk, 0); ctx.lineTo(mk - 5, 0);
+    ctx.moveTo(0, -mk * 0.6); ctx.lineTo(0, -mk * 0.6 + 3);
+    ctx.moveTo(0, mk * 0.6); ctx.lineTo(0, mk * 0.6 - 3);
     ctx.stroke();
-
-    ctx.restore();
-  }
-
-  /**
-   * 绘制守卫检查面板 (Inspector) 中的索敌切换按钮
-   */
-  renderInspectorTargetingBadge(ctx, tower, bx, by, bw, bh, ui) {
-    if (!tower) return;
-    const mode = this.getMode(tower);
-
-    ctx.save();
-    // 按钮背景
-    ctx.fillStyle = 'rgba(26, 18, 14, 0.92)';
-    ctx.strokeStyle = mode.color;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 6) : ctx.rect(bx, by, bw, bh);
-    ctx.fill();
-    ctx.stroke();
-
-    // 图标与标题
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(mode.icon, bx + 8, by + bh * 0.5);
-
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = mode.color;
-    ctx.fillText(mode.name, bx + 28, by + bh * 0.5 - 5);
-
-    ctx.font = '9.5px sans-serif';
-    ctx.fillStyle = '#CCCCCC';
-    ctx.fillText('点击切换索敌偏好', bx + 28, by + bh * 0.5 + 7);
-
-    // 切换按钮注册
-    if (ui) {
-      ui.registerButton('tower_target_mode_' + tower.id, bx, by, bw, bh, () => {
-        this.cycleMode(tower);
-      });
-    }
-
     ctx.restore();
   }
 }
 
 module.exports = {
-  TacticalTargetingAI,
-  TARGET_MODES
+  TacticalTargetingAI
 };
 
   };
@@ -13215,6 +13061,8 @@ module.exports = {
  * 深度汲取《Dead Cells》《Hades》与《Kingdom Rush》顶级打击反馈
  * 提供真实弹簧阻尼旋转晃屏、动态击飞伤害跳字、连杀里程碑与微环境粒子
  */
+
+const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
 class CombatScreenJuice {
   constructor() {
@@ -13411,7 +13259,7 @@ class CombatScreenJuice {
       ctx.scale(ft.scale * (0.8 + 0.2 * prog), ft.scale * (0.8 + 0.2 * prog));
       ctx.globalAlpha = Math.min(1.0, prog * 1.5);
 
-      ctx.font = ft.isCrit ? '900 16px "Cinzel", sans-serif' : 'bold 13px sans-serif';
+      ctx.font = ft.isCrit ? `bold 16px ${UI_FONT}` : `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -13428,8 +13276,8 @@ class CombatScreenJuice {
 
     // 3. 绘制激燃连杀战绩徽章 (Combo Milestone Badge)
     if (this.comboCount >= 3) {
-      const bx = 480;
-      const by = 86;
+      const bx = 862;
+      const by = 66;
       ctx.save();
       ctx.translate(bx, by);
       ctx.scale(this.comboScale, this.comboScale);
@@ -13439,7 +13287,7 @@ class CombatScreenJuice {
       ctx.strokeStyle = isHigh ? '#FFA39E' : '#FFE58F';
       ctx.lineWidth = 2.0;
 
-      const badgeW = 160;
+      const badgeW = 148;
       const badgeH = 28;
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH, 14) : ctx.rect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH);
@@ -13447,10 +13295,10 @@ class CombatScreenJuice {
       ctx.stroke();
 
       ctx.fillStyle = isHigh ? '#FFF1F0' : '#FFE58F';
-      ctx.font = '900 13px sans-serif';
+      ctx.font = `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const title = this.comboCount >= 20 ? '🔥 狂暴超神!' : (this.comboCount >= 10 ? '⚡ 势如破竹!' : '⚔️ 连续斩获!');
+      const title = this.comboCount >= 20 ? '狂暴超神' : (this.comboCount >= 10 ? '势如破竹' : '连续斩获');
       ctx.fillText(`${title} ${this.comboCount} 连杀`, 0, 0);
       ctx.restore();
     }
@@ -13472,6 +13320,8 @@ module.exports = CombatScreenJuice;
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+
 class BossOverdriveEngine {
   constructor() {
     this.activeBoss = null;
@@ -13482,6 +13332,7 @@ class BossOverdriveEngine {
     this.stompCooldown = 8.0;
     this.summonCooldown = 12.0;
     this.overdriveAuraAnim = 0;
+    this.pendingSpawns = [];
   }
 
   registerBoss(bossEnemy) {
@@ -13496,6 +13347,7 @@ class BossOverdriveEngine {
   }
 
   clear() {
+    this.pendingSpawns = [];
     this.activeBoss = null;
     this.phase = 1;
     this.currentHp = 0;
@@ -13506,6 +13358,16 @@ class BossOverdriveEngine {
   }
 
   update(dt, scene) {
+    if (this.pendingSpawns && this.pendingSpawns.length > 0 && scene && scene.state === 'BATTLE') {
+      for (let i = this.pendingSpawns.length - 1; i >= 0; i--) {
+        const ps = this.pendingSpawns[i];
+        ps.delay -= dt;
+        if (ps.delay <= 0) {
+          this.pendingSpawns.splice(i, 1);
+          if (scene.enemyManager && scene.map) scene.enemyManager.spawnEnemy(ps.type, scene.map, ps.waveIdx);
+        }
+      }
+    }
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) {
       this.activeBoss = null;
       return;
@@ -13613,31 +13475,26 @@ class BossOverdriveEngine {
       scene.fx.spawnFloatingText(sx, sy - 18, '🕳️ 地穴裂隙援军涌出!', '#B37FEB', 1.2);
     }
 
+    const waveIdx = (scene.waveManager && scene.waveManager.currentWaveIndex) || 1;
     for (let i = 0; i < 3; i++) {
-      setTimeout(() => {
-        if (scene && scene.enemyManager) {
-          scene.enemyManager.spawnEnemy('swift', map, i % 2);
-        }
-      }, i * 350);
+      this.pendingSpawns.push({ delay: i * 0.35, type: 'swift', waveIdx });
     }
   }
 
   /**
    * 渲染首领身下战术过载光环与顶部史诗级 Boss 血条
    */
-  renderBossHud(ctx) {
+  /**
+   * 首领脚下过载光环（须在地图坐标系内调用）
+   */
+  renderBossAura(ctx) {
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
-
-    ctx.save();
-
-    // 1. 首领脚下多层流光过载阵法
     const bx = this.activeBoss.x;
     const by = this.activeBoss.y;
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 8) * 0.15;
-
     ctx.save();
-    ctx.translate(bx, by);
+    ctx.translate(bx, by + 6);
     ctx.scale(pulse, pulse * 0.7);
     ctx.strokeStyle = auraColor;
     ctx.lineWidth = 2.0;
@@ -13645,19 +13502,27 @@ class BossOverdriveEngine {
     ctx.beginPath();
     ctx.ellipse(0, 0, 32, 20, 0, 0, Math.PI * 2);
     ctx.stroke();
-
     ctx.rotate(this.overdriveAuraAnim * 2.0);
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
     ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  }
+
+  /**
+   * 屏幕顶部分段首领血条（屏幕坐标）
+   */
+  renderBossHud(ctx) {
+    if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
+    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
+    ctx.save();
 
     // 2. 屏幕顶部史诗级分段 Boss 血条 (Epic Segmented Boss Bar)
     const barW = 380;
     const barH = 18;
     const barX = (960 - barW) * 0.5;
-    const barY = 46;
+    const barY = 74;
     const hpRatio = Math.max(0, Math.min(1.0, this.currentHp / this.maxHp));
 
     // 血条底座背框
@@ -13673,10 +13538,10 @@ class BossOverdriveEngine {
     const bossName = this.activeBoss.name || '远古腐化甲虫皇';
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = `bold 12px ${UI_FONT}`;
     ctx.fillStyle = auraColor;
     ctx.textAlign = 'left';
-    ctx.fillText(`👑 ${bossName} ${phaseLabel}`, barX + 6, barY - 4);
+    ctx.fillText(`${bossName} ${phaseLabel}`, barX + 6, barY - 4);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
@@ -13689,7 +13554,14 @@ class BossOverdriveEngine {
     ctx.fill();
 
     // 动态多段渐变血条
-    ctx.fillStyle = this.phase === 3 ? 'linear-gradient(to right, #722ED1, #F5222D)' : (this.phase === 2 ? '#F5222D' : '#FA8C16');
+    if (this.phase === 3) {
+      const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      grad.addColorStop(0, '#722ED1');
+      grad.addColorStop(1, '#F5222D');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = this.phase === 2 ? '#F5222D' : '#FA8C16';
+    }
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(barX, barY, barW * hpRatio, barH, 4) : ctx.rect(barX, barY, barW * hpRatio, barH);
     ctx.fill();
@@ -15018,10 +14890,6 @@ class TowerManager {
     }
 
     if (candidates.length === 0) return null;
-    if (this.tacticalTargeting) {
-      const chosen = this.tacticalTargeting.pickTarget(tower, candidates.map(c => c.enemy), map);
-      if (chosen) return chosen;
-    }
 
     const prio = tower.priority;
 
@@ -15293,6 +15161,11 @@ class TowerManager {
       if (t.buffTimer > 0) {
         t.buffTimer = Math.max(0, t.buffTimer - dt);
       }
+      if (t.stunTimer > 0) {
+        t.stunTimer = Math.max(0, t.stunTimer - dt);
+        t.animState = 'idle';
+        continue; // 被首领践踏震晕，暂停攻击
+      }
       if (t.dormantTimer > 0) {
         t.dormantTimer = Math.max(0, t.dormantTimer - dt);
         if (t.dormantTimer <= 0) {
@@ -15546,9 +15419,6 @@ class TowerManager {
         platform.recordDrawCall(1);
       } else {
         const drawn = drawTowerSprite(ctx, t.typeId, t.nodeId, t.animState, t.animFrame, tileX, tileY);
-      if (t.isSelected && this.tacticalTargeting) {
-        this.tacticalTargeting.renderSelectedTacticalBadge(ctx, t, false);
-      }
         if (!drawn) {
           ctx.fillStyle = t.branch === 'A' ? PALETTE.BRANCH_A : (t.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.MUSHROOM_CAP);
           ctx.fillRect(tileX + 4, tileY - 8, 24, 36);
@@ -15884,6 +15754,7 @@ const { WAVES } = require('../data/waves');
 const { ENEMIES } = require('../data/enemies');
 const platform = require('../core/platform');
 const i18n = require('../i18n/index');
+const storage = require('../save/storage');
 
 class WaveManager {
   constructor(mapId) {
@@ -17289,20 +17160,18 @@ class UiManager {
     }
   }
   renderTopRightControls(ctx, scene) {
-    // 1. 纯净全景地图切换按钮 (Zen Mode: [👁️ 纯净])
+    // 1. 纯净全景地图切换按钮 (Zen Mode: [纯净[H]])
     this.drawPixelButton(
       ctx,
       'hud_zen',
       668,
       12,
-      52,
+      50,
       34,
-      '纯净[H]',
+      '全景',
       {
         skin: 'btn_wood',
-        font: `bold 10.5px ${CN_FONT}`,
-        iconKey: 'guide',
-        iconSize: 15
+        font: `bold 10.5px ${CN_FONT}`
       },
       () => {
         this.toggleZenMode(scene.fx);
@@ -17313,16 +17182,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_speed',
-      724,
+      722,
       12,
       50,
       34,
       `${scene.speedMultiplier}×速`,
       {
         skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: `bold 10.5px ${CN_FONT}`,
-        iconKey: 'speed',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         scene.cycleSpeed();
@@ -17333,16 +17200,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_pause',
-      778,
+      776,
       12,
       50,
       34,
       '暂停',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'pause',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         scene.pauseGame();
@@ -17353,16 +17218,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_guide',
-      832,
+      830,
       12,
       50,
       34,
       '图鉴',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'guide',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         platform.playSfx('sfx_click');
@@ -17375,16 +17238,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_settings',
-      886,
+      884,
       12,
-      54,
+      52,
       34,
       '设置',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'settings',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         platform.playSfx('sfx_click');
@@ -17953,7 +17814,8 @@ class UiManager {
       ctx.restore();
 
       this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
-        scene.selectBuildTower(tId);
+        scene.selectBuildTowerType(tId);
+        platform.playSfx('sfx_click');
       }, { towerId: tId });
     }
 
@@ -17994,7 +17856,7 @@ class UiManager {
     roundRectPath(ctx, shvX + 6, shvY + 56, shvW - 12, 16, 3);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fill();
-    drawArtText(ctx, '空格键', shvX + shvW * 0.5, shvY + 64, {
+    drawArtText(ctx, '[T]', shvX + shvW * 0.5, shvY + 64, {
       style: 'azure',
       size: 9,
       align: 'center',
@@ -18028,7 +17890,7 @@ class UiManager {
       ctx.drawImage(seedImg, awkX + 8, awkY + 22, 28, 28);
     }
 
-    drawArtText(ctx, '灵能觉醒 [T]', awkX + 68, awkY + 14, {
+    drawArtText(ctx, '灵能觉醒 [空格]', awkX + 68, awkY + 14, {
       style: isAwkTargeting ? 'gold' : 'parchment',
       size: 11,
       align: 'center',
@@ -18268,11 +18130,6 @@ class UiManager {
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const btnW = 276;
     const bx = x + 26;
-
-    // 战术索敌偏好切换按钮 (Tactical Targeting AI)
-    if (scene.tacticalTargeting && scene.tacticalTargeting.renderInspectorTargetingBadge) {
-      scene.tacticalTargeting.renderInspectorTargetingBadge(ctx, tower, bx, y + 195, btnW, 32, this);
-    }
 
     if (upgrades.length === 0) {
       // 已升至顶级
@@ -18861,7 +18718,7 @@ class UiManager {
    * 包含 3 大核心篇章：
    * 1. 🌲 守林神树卫士 (5大蘑菇炮塔：立绘、基础数值、双分支终极形态、灵能觉醒超载大招)
    * 2. 🐛 暗黑虫潮首领 (16大怪物种群：高清手绘立绘、数值抗性、特殊行为机制、针对弱点与克制战法)
-   * 3. 📜 领袖战术心得 (深度对标《王国保卫战》《植物大战僵尸》核心微操与无尽深渊法则)
+   * 3. 📜 领袖战术心得 (森林守卫前线战术总则与无尽深渊微操)
    */
   /**
    * 【林地秘典 · 全景手绘图鉴与战术殿堂】 (Grand Codex & Bestiary)
@@ -19218,7 +19075,7 @@ class UiManager {
       { id: 'burrower', name: '掘地潜行者', danger: '★★★★☆', hp: 80, speed: '快速', armor: '地底免伤', tag: '潜地特种' },
       { id: 'volatile_pod', name: '自爆恶蝉', danger: '★★★★☆', hp: 70, speed: '快速', armor: '轻甲', tag: '蓄力自爆' },
       { id: 'weaver', name: '纺织毒蛛', danger: '★★★★☆', hp: 110, speed: '中速', armor: '中甲', tag: '吐网封塔' },
-      { id: 'leaper', name: '跃迁跳蚤', danger: '★★★★☆', hp: 75, speed: '跳跃', armor: '轻甲', tag: '越线偷袭' },
+      { id: 'leaper', name: '跃迁跳蚤', danger: '★★★★☆', hp: 75, speed: '跳跃', armor: '轻甲', tag: '跃迁突袭' },
       { id: 'shaman', name: '巫毒蝉俑', danger: '★★★★☆', hp: 130, speed: '缓慢', armor: '高抗性', tag: '群体治疗' },
       { id: 'skeletal_husk', name: '枯骨巨蝎', danger: '★★★★☆', hp: 160, speed: '缓慢', armor: '坚韧骨盾', tag: '正面减伤' },
       { id: 'siege_beetle', name: '攻城巨角兽', danger: '★★★★★', hp: 280, speed: '极慢', armor: '重型装甲', tag: '践踏震晕' },
@@ -19307,7 +19164,7 @@ class UiManager {
       },
       swift: {
         behavior: '长有高速双翼的疾风飞虫，移动极快，极易穿透单体防线造成漏怪。',
-        counter: '【战法】雾菇范围减速是其绝对克星！将其减速至蜗牛爬行后，由后排防御塔轻松收割。'
+        counter: '【战法】雾菇的范围减速对其非常有效。先用雾气压低它的速度，再由后排蘑菇集中输出。'
       },
       armored: {
         behavior: '身披厚重硬质角质甲壳，大幅度削减普通物理投射物伤害。',
@@ -19319,7 +19176,7 @@ class UiManager {
       },
       splitter: {
         behavior: '死亡时腹部会爆裂并分裂出数只极速幼虫，极易引发漏怪悲剧。',
-        counter: '【战法】预先在其行进后方部署尖刺菇或爆裂菇，在其爆裂瞬间立即AOE秒杀幼虫。'
+        counter: '【战法】预先在其行进后方部署尖刺菇或爆裂菇，在其爆裂瞬间立即以范围伤害歼灭幼虫。'
       },
       larva: {
         behavior: '极速奔跑的微型幼虫，单只血薄，但成群狂奔时极具威胁。',
@@ -19351,7 +19208,7 @@ class UiManager {
       },
       siege_beetle: {
         behavior: '体型庞大的攻城重装怪，践踏地面产生震荡波短暂震晕周围防御塔。',
-        counter: '【战法】派遣森林英雄在前线肉搏拉住仇恨，后排全员开启灵能觉醒超载秒杀！'
+        counter: '【战法】派遣森林英雄在前线坚守阻击，后排全员开启灵能觉醒全力歼灭！'
       },
       boss_m1: {
         behavior: '第一关首领【巨角天牛王】：高血量冲锋首领，具备硬化甲壳与震地狂暴。',
@@ -19420,20 +19277,20 @@ class UiManager {
 
     const scrolls = [
       {
-        title: '一、英雄调遣与肉搏接怪法则',
-        body: '对标《王国保卫战》：森林领袖·奥克拥有全图自由集结能力。点击英雄头像或战场英雄本体，即可指挥其驻守任意要塞路口。英雄最多可肉搏拦截 2 只地面敌人！杀敌与承受伤害可提升英雄等级（Lv.1 ~ Lv.5），升级不仅大幅强化攻防血量，更会瞬间恢复满血！善用【F 裂地斩】在虫潮扎堆时打出全屏大范围群体眩晕！'
+        title: '一、英雄调遣与近身拦截',
+        body: '森林领袖·奥克可以前往地图任意位置驻守。点击英雄后再点击地面，即可下达移动指令。英雄最多拦截 2 只地面敌人；击杀与承伤会积累经验，升级（最高 Lv.5）时恢复全部生命。敌人扎堆时，按 F 释放大招「撼地」可造成范围眩晕。'
       },
       {
-        title: '二、灵能觉醒超载与大招时刻',
-        body: '对标《植物大战僵尸》能量豆：击败精英敌人或首领均有高概率掉落【灵能觉醒种子】。按下空格或点击灵能种子后，点击场上任意蘑菇，即可瞬间引爆华丽的全屏大招！瞭望菇万矢齐发全屏秒杀飞蛾、尖刺菇千刃破土定身全屏、爆裂菇天坠流星轰碎重甲、灵光菇万木逢春攻速狂暴！'
+        title: '二、灵能觉醒种子',
+        body: '击败精英敌人或首领有较高概率掉落灵能觉醒种子。按空格键或点击底部「灵能觉醒」后，再点击场上任意蘑菇，即可释放该蘑菇的专属大招：瞭望菇齐射、尖刺菇破土、爆裂菇陨落、灵光菇增益。'
       },
       {
-        title: '三、即时战场微操手册 (Tap-to-Action)',
-        body: '1. 快速救塔：纺织毒蛛喷吐蛛网封印防御塔时，用手指三连点击被封印的蘑菇即可破茧救出，破茧后更附带狂暴攻速加成！\n2. 潜地踩踏：掘地潜行者潜地免伤时，点击地面土堆直接将其踩出硬控！\n3. 恶蝉泄气：自爆恶蝉蓄力变红时快速点击泄气，避免防御塔被毁！'
+        title: '三、战场即时操作',
+        body: '1. 蛛网封印：连续点击被封印的蘑菇 3 次可将其解救，解救后短时间内攻速提升。\n2. 掘地敌人：点击其潜行的土堆，可将其踩出地面。\n3. 自爆蝉：它变红蓄力时快速点击可使其泄气，避免蘑菇被炸毁。'
       },
       {
-        title: '四、深渊生存与铲除移植优化',
-        body: '通关战役后将解锁【无尽深渊试炼模式】！深渊虫潮将无止境增强，属性指数级提升。充分利用【铲子 [T]】功能随时铲除前期过渡蘑菇，无损回收孢子并根据后期怪群结构动态转型极寒减速与高爆重炮阵型，创造全网最高生存记录！'
+        title: '四、无尽模式与铲除重种',
+        body: '通关后解锁无尽模式，敌人的属性会逐波提升。按 T 键或点击「铲除回收」，可铲除蘑菇并返还 70% 孢子，用来根据敌人构成调整阵型。选中蘑菇后按 P 键可切换索敌偏好。'
       }
     ];
 
@@ -19670,7 +19527,6 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
     this.heroTranscendence = new HeroTranscendence(this.hero);
@@ -19838,7 +19694,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('🌲 欢迎来到守林前线！', '#BAE7FF', '点击底部卡牌在绿地扎根守卫，点击右上角【图鉴】随时查阅秘典与天赋！', 3.8);
+      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '点击底部卡牌，再点击发光的绿色草地即可种植；右上角「图鉴」可随时查看说明。', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -20045,6 +19901,16 @@ class SceneController {
       this.ui.showToast('孢子不足，无法施法！');
       return;
     }
+    if (spellId === 'rally') {
+      this.activeRallyTargeting = !this.activeRallyTargeting;
+      if (this.activeRallyTargeting) {
+        this.activeSpellCasting = null;
+        this.activeHeroRally = false;
+        platform.playSfx('sfx_click');
+        this.fx.spawnFloatingText(480, 240, '请在巡逻道路上点击设防集合点!', '#95DE64', 1.5);
+      }
+      return;
+    }
     if (spellId === 'harvest') {
       sp.timer = sp.cd;
       this.economy.spores += sp.gain;
@@ -20131,6 +19997,25 @@ class SceneController {
         if (this.activeSpellCasting) {
           this.castActiveSpell(act.x, act.y);
           continue;
+        }
+
+        // 0.5 如果处于菇精卫集结防线布防模式，点击道路任意点设定集结旗帜
+        if (this.activeRallyTargeting && this.sporelingPatrol) {
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
+          const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
+          const col = Math.floor(mx / TILE_SIZE);
+          const row = Math.floor(my / TILE_SIZE);
+          if (this.map.inBounds(col, row) && this.map.isPath(col, row)) {
+            this.sporelingPatrol.setRallyPoint(col, row, this.map, this.fx, false);
+            platform.playSfx('sfx_place');
+            this.activeRallyTargeting = false;
+            continue;
+          } else {
+            this.fx.spawnFloatingText(act.x, act.y - 14, '只能在行进道路上设防集结!', '#FF7875', 1.0);
+            this.activeRallyTargeting = false;
+            continue;
+          }
         }
         // 1. 如果处于灵能觉醒目标指定模式，点击防御塔直接超频觉醒
         if (this.activeAwakeningTargeting) {
@@ -20273,7 +20158,10 @@ class SceneController {
         if (this.state === 'BATTLE') {
           const tower = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
           if (tower) {
-            this.towerManager.cyclePriority(tower);
+            const prio = this.towerManager.cyclePriority(tower);
+            if (prio && this.fx) {
+              this.fx.spawnFloatingText(tower.x, tower.y - 26, '索敌：' + i18n.t('prio_' + prio), '#FFE58F', 1.0);
+            }
           }
         }
       } else if (act.type === 'call_wave') {
@@ -20323,13 +20211,6 @@ class SceneController {
       } else if (act.type === 'toggle_zen_mode') {
         if (this.state === 'BATTLE') {
           this.ui.toggleZenMode(this.fx);
-        }
-      } else if (act.type === 'cycle_priority') {
-        if (this.state === 'BATTLE') {
-          const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
-          if (tw && this.tacticalTargeting) {
-            this.tacticalTargeting.cycleMode(tw.uid || `${tw.col}_${tw.row}`, this.fx, tw.x, tw.y);
-          }
         }
       } else if (act.type === 'toggle_mastery') {
         if (this.mushroomMastery) {
@@ -20584,7 +20465,9 @@ class SceneController {
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);
     ctx.clip();
-    ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX, mv.OFFSET_Y + this.fx.shakeOffsetY);
+    const jx = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0;
+    const jy = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0;
+    ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX + jx, mv.OFFSET_Y + this.fx.shakeOffsetY + jy);
     ctx.scale(mv.SCALE, mv.SCALE);
 
     this.map.render(ctx, this.animTimeSec, this.waveManager.currentWaveIndex);
@@ -20650,6 +20533,17 @@ class SceneController {
       this.combatJuice.renderFx(ctx);
       this.combatJuice.renderStreakWidget(ctx);
     }
+    // 以下元素使用地图坐标，必须在地图变换内绘制
+    if (this.bossOverdriveEngine) {
+      this.bossOverdriveEngine.renderBossAura(ctx);
+    }
+    if (this.state === 'BATTLE' && this.selectedTile && this.selectedTile.col >= 0 && this.tacticalTargeting) {
+      const hlTower = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
+      if (hlTower && hlTower.typeId !== 'lumina' && !hlTower.isWebbed) {
+        const hlTarget = this.towerManager.selectTarget(hlTower, this.enemyManager.getAliveEnemies(), this.map);
+        this.tacticalTargeting.renderTargetHighlight(ctx, hlTower, hlTarget);
+      }
+    }
 
     ctx.restore();
 
@@ -20657,16 +20551,12 @@ class SceneController {
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
     }
-    if (this.bossOverdriveEngine) {
-      this.bossOverdriveEngine.renderBossHud(ctx);
-    }
-    if (this.combatScreenJuice) {
-      this.combatScreenJuice.renderJuiceOverlays(ctx);
-    }
-    if (this.selectedTile && this.selectedTile.col >= 0) {
-      const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
-      if (tw && this.tacticalTargeting && this.tacticalTargeting.renderTargetHighlight) {
-        this.tacticalTargeting.renderTargetHighlight(ctx, tw, this.map, this.enemyManager);
+    if (!this.ui.uiZenMode && this.state !== 'PAUSED') {
+      if (this.bossOverdriveEngine) {
+        this.bossOverdriveEngine.renderBossHud(ctx);
+      }
+      if (this.combatScreenJuice) {
+        this.combatScreenJuice.renderJuiceOverlays(ctx);
       }
     }
 

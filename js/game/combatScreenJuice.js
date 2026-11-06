@@ -4,6 +4,8 @@
  * 提供真实弹簧阻尼旋转晃屏、动态击飞伤害跳字、连杀里程碑与微环境粒子
  */
 
+const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+
 class CombatScreenJuice {
   constructor() {
     this.trauma = 0; // 0..1 震动创伤值
@@ -199,7 +201,7 @@ class CombatScreenJuice {
       ctx.scale(ft.scale * (0.8 + 0.2 * prog), ft.scale * (0.8 + 0.2 * prog));
       ctx.globalAlpha = Math.min(1.0, prog * 1.5);
 
-      ctx.font = ft.isCrit ? '900 16px "Cinzel", sans-serif' : 'bold 13px sans-serif';
+      ctx.font = ft.isCrit ? `bold 16px ${UI_FONT}` : `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -216,8 +218,8 @@ class CombatScreenJuice {
 
     // 3. 绘制激燃连杀战绩徽章 (Combo Milestone Badge)
     if (this.comboCount >= 3) {
-      const bx = 480;
-      const by = 86;
+      const bx = 862;
+      const by = 66;
       ctx.save();
       ctx.translate(bx, by);
       ctx.scale(this.comboScale, this.comboScale);
@@ -227,7 +229,7 @@ class CombatScreenJuice {
       ctx.strokeStyle = isHigh ? '#FFA39E' : '#FFE58F';
       ctx.lineWidth = 2.0;
 
-      const badgeW = 160;
+      const badgeW = 148;
       const badgeH = 28;
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH, 14) : ctx.rect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH);
@@ -235,10 +237,10 @@ class CombatScreenJuice {
       ctx.stroke();
 
       ctx.fillStyle = isHigh ? '#FFF1F0' : '#FFE58F';
-      ctx.font = '900 13px sans-serif';
+      ctx.font = `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const title = this.comboCount >= 20 ? '🔥 狂暴超神!' : (this.comboCount >= 10 ? '⚡ 势如破竹!' : '⚔️ 连续斩获!');
+      const title = this.comboCount >= 20 ? '狂暴超神' : (this.comboCount >= 10 ? '势如破竹' : '连续斩获');
       ctx.fillText(`${title} ${this.comboCount} 连杀`, 0, 0);
       ctx.restore();
     }

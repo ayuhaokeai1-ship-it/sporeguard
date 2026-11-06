@@ -238,10 +238,6 @@ class TowerManager {
     }
 
     if (candidates.length === 0) return null;
-    if (this.tacticalTargeting) {
-      const chosen = this.tacticalTargeting.pickTarget(tower, candidates.map(c => c.enemy), map);
-      if (chosen) return chosen;
-    }
 
     const prio = tower.priority;
 
@@ -513,6 +509,11 @@ class TowerManager {
       if (t.buffTimer > 0) {
         t.buffTimer = Math.max(0, t.buffTimer - dt);
       }
+      if (t.stunTimer > 0) {
+        t.stunTimer = Math.max(0, t.stunTimer - dt);
+        t.animState = 'idle';
+        continue; // 被首领践踏震晕，暂停攻击
+      }
       if (t.dormantTimer > 0) {
         t.dormantTimer = Math.max(0, t.dormantTimer - dt);
         if (t.dormantTimer <= 0) {
@@ -766,9 +767,6 @@ class TowerManager {
         platform.recordDrawCall(1);
       } else {
         const drawn = drawTowerSprite(ctx, t.typeId, t.nodeId, t.animState, t.animFrame, tileX, tileY);
-      if (t.isSelected && this.tacticalTargeting) {
-        this.tacticalTargeting.renderSelectedTacticalBadge(ctx, t, false);
-      }
         if (!drawn) {
           ctx.fillStyle = t.branch === 'A' ? PALETTE.BRANCH_A : (t.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.MUSHROOM_CAP);
           ctx.fillRect(tileX + 4, tileY - 8, 24, 36);

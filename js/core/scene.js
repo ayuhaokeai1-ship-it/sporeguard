@@ -78,7 +78,6 @@ class SceneController {
     this.heroSkills = new HeroSkillSystem(this.hero);
     this.combatAnalytics = new CombatAnalyticsSystem();
     this.relicArsenal = new RelicArsenalSystem();
-    this.tacticalTargeting = new TacticalTargetingSystem();
     this.combatJuice = new CombatJuiceEngine();
     this.mushroomMastery = new MushroomMasterySystem();
     this.heroTranscendence = new HeroTranscendence(this.hero);
@@ -246,7 +245,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('🌲 欢迎来到守林前线！', '#BAE7FF', '点击底部卡牌在绿地扎根守卫，点击右上角【图鉴】随时查阅秘典与天赋！', 3.8);
+      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '点击底部卡牌，再点击发光的绿色草地即可种植；右上角「图鉴」可随时查看说明。', 3.8);
     }
 
     platform.playBgm('bgm_battle');
@@ -453,6 +452,16 @@ class SceneController {
       this.ui.showToast('孢子不足，无法施法！');
       return;
     }
+    if (spellId === 'rally') {
+      this.activeRallyTargeting = !this.activeRallyTargeting;
+      if (this.activeRallyTargeting) {
+        this.activeSpellCasting = null;
+        this.activeHeroRally = false;
+        platform.playSfx('sfx_click');
+        this.fx.spawnFloatingText(480, 240, '请在巡逻道路上点击设防集合点!', '#95DE64', 1.5);
+      }
+      return;
+    }
     if (spellId === 'harvest') {
       sp.timer = sp.cd;
       this.economy.spores += sp.gain;
@@ -539,6 +548,25 @@ class SceneController {
         if (this.activeSpellCasting) {
           this.castActiveSpell(act.x, act.y);
           continue;
+        }
+
+        // 0.5 如果处于菇精卫集结防线布防模式，点击道路任意点设定集结旗帜
+        if (this.activeRallyTargeting && this.sporelingPatrol) {
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
+          const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
+          const col = Math.floor(mx / TILE_SIZE);
+          const row = Math.floor(my / TILE_SIZE);
+          if (this.map.inBounds(col, row) && this.map.isPath(col, row)) {
+            this.sporelingPatrol.setRallyPoint(col, row, this.map, this.fx, false);
+            platform.playSfx('sfx_place');
+            this.activeRallyTargeting = false;
+            continue;
+          } else {
+            this.fx.spawnFloatingText(act.x, act.y - 14, '只能在行进道路上设防集结!', '#FF7875', 1.0);
+            this.activeRallyTargeting = false;
+            continue;
+          }
         }
         // 1. 如果处于灵能觉醒目标指定模式，点击防御塔直接超频觉醒
         if (this.activeAwakeningTargeting) {
@@ -681,7 +709,10 @@ class SceneController {
         if (this.state === 'BATTLE') {
           const tower = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
           if (tower) {
-            this.towerManager.cyclePriority(tower);
+            const prio = this.towerManager.cyclePriority(tower);
+            if (prio && this.fx) {
+              this.fx.spawnFloatingText(tower.x, tower.y - 26, '索敌：' + i18n.t('prio_' + prio), '#FFE58F', 1.0);
+            }
           }
         }
       } else if (act.type === 'call_wave') {
@@ -731,13 +762,6 @@ class SceneController {
       } else if (act.type === 'toggle_zen_mode') {
         if (this.state === 'BATTLE') {
           this.ui.toggleZenMode(this.fx);
-        }
-      } else if (act.type === 'cycle_priority') {
-        if (this.state === 'BATTLE') {
-          const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
-          if (tw && this.tacticalTargeting) {
-            this.tacticalTargeting.cycleMode(tw.uid || `${tw.col}_${tw.row}`, this.fx, tw.x, tw.y);
-          }
         }
       } else if (act.type === 'toggle_mastery') {
         if (this.mushroomMastery) {
@@ -992,7 +1016,9 @@ class SceneController {
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);
     ctx.clip();
-    ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX, mv.OFFSET_Y + this.fx.shakeOffsetY);
+    const jx = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0;
+    const jy = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0;
+    ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX + jx, mv.OFFSET_Y + this.fx.shakeOffsetY + jy);
     ctx.scale(mv.SCALE, mv.SCALE);
 
     this.map.render(ctx, this.animTimeSec, this.waveManager.currentWaveIndex);
@@ -1058,6 +1084,17 @@ class SceneController {
       this.combatJuice.renderFx(ctx);
       this.combatJuice.renderStreakWidget(ctx);
     }
+    // 以下元素使用地图坐标，必须在地图变换内绘制
+    if (this.bossOverdriveEngine) {
+      this.bossOverdriveEngine.renderBossAura(ctx);
+    }
+    if (this.state === 'BATTLE' && this.selectedTile && this.selectedTile.col >= 0 && this.tacticalTargeting) {
+      const hlTower = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
+      if (hlTower && hlTower.typeId !== 'lumina' && !hlTower.isWebbed) {
+        const hlTarget = this.towerManager.selectTarget(hlTower, this.enemyManager.getAliveEnemies(), this.map);
+        this.tacticalTargeting.renderTargetHighlight(ctx, hlTower, hlTarget);
+      }
+    }
 
     ctx.restore();
 
@@ -1065,16 +1102,12 @@ class SceneController {
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
     }
-    if (this.bossOverdriveEngine) {
-      this.bossOverdriveEngine.renderBossHud(ctx);
-    }
-    if (this.combatScreenJuice) {
-      this.combatScreenJuice.renderJuiceOverlays(ctx);
-    }
-    if (this.selectedTile && this.selectedTile.col >= 0) {
-      const tw = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
-      if (tw && this.tacticalTargeting && this.tacticalTargeting.renderTargetHighlight) {
-        this.tacticalTargeting.renderTargetHighlight(ctx, tw, this.map, this.enemyManager);
+    if (!this.ui.uiZenMode && this.state !== 'PAUSED') {
+      if (this.bossOverdriveEngine) {
+        this.bossOverdriveEngine.renderBossHud(ctx);
+      }
+      if (this.combatScreenJuice) {
+        this.combatScreenJuice.renderJuiceOverlays(ctx);
       }
     }
 

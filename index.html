@@ -535,23 +535,34 @@
       }
 
       let isMouseDown = false;
+      let lastMouseMoveTime = 0;
       canvas.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
         isMouseDown = true;
         const m = mapClientCoords(e.clientX, e.clientY);
         const ev = { touches: [m], changedTouches: [m] };
-        touchStartListeners.forEach(function (fn) { fn(ev); });
+        for (let i = 0; i < touchStartListeners.length; i++) {
+          touchStartListeners[i](ev);
+        }
       });
       window.addEventListener('mousemove', function (e) {
+        const now = performance.now();
+        if (now - lastMouseMoveTime < 16) return;
+        lastMouseMoveTime = now;
         const m = mapClientCoords(e.clientX, e.clientY);
-        const ev = { touches: [m], changedTouches: [m] };
-        touchMoveListeners.forEach(function (fn) { fn(ev); });
-      });
+        const ev = { touches: isMouseDown ? [m] : [], changedTouches: [m] };
+        for (let i = 0; i < touchMoveListeners.length; i++) {
+          touchMoveListeners[i](ev);
+        }
+      }, { passive: true });
       window.addEventListener('mouseup', function (e) {
         if (!isMouseDown) return;
         isMouseDown = false;
         const m = mapClientCoords(e.clientX, e.clientY);
         const ev = { touches: [], changedTouches: [m] };
-        touchEndListeners.forEach(function (fn) { fn(ev); });
+        for (let i = 0; i < touchEndListeners.length; i++) {
+          touchEndListeners[i](ev);
+        }
       });
 
       canvas.addEventListener('touchstart', function (e) {

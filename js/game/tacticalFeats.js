@@ -30,7 +30,7 @@ class TacticalFeatsSystem {
       },
       absolute_zero: {
         id: 'absolute_zero',
-        title: '绝对零度',
+        title: '深度冻结',
         desc: '使用迷雾与玄冰使 8 只敌军减速超过 50%',
         rewardSpores: 100,
         unlocked: false,

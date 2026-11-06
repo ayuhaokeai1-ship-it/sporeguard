@@ -5,6 +5,8 @@
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+
 class BossOverdriveEngine {
   constructor() {
     this.activeBoss = null;
@@ -15,6 +17,7 @@ class BossOverdriveEngine {
     this.stompCooldown = 8.0;
     this.summonCooldown = 12.0;
     this.overdriveAuraAnim = 0;
+    this.pendingSpawns = [];
   }
 
   registerBoss(bossEnemy) {
@@ -29,6 +32,7 @@ class BossOverdriveEngine {
   }
 
   clear() {
+    this.pendingSpawns = [];
     this.activeBoss = null;
     this.phase = 1;
     this.currentHp = 0;
@@ -39,6 +43,16 @@ class BossOverdriveEngine {
   }
 
   update(dt, scene) {
+    if (this.pendingSpawns && this.pendingSpawns.length > 0 && scene && scene.state === 'BATTLE') {
+      for (let i = this.pendingSpawns.length - 1; i >= 0; i--) {
+        const ps = this.pendingSpawns[i];
+        ps.delay -= dt;
+        if (ps.delay <= 0) {
+          this.pendingSpawns.splice(i, 1);
+          if (scene.enemyManager && scene.map) scene.enemyManager.spawnEnemy(ps.type, scene.map, ps.waveIdx);
+        }
+      }
+    }
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) {
       this.activeBoss = null;
       return;
@@ -146,31 +160,26 @@ class BossOverdriveEngine {
       scene.fx.spawnFloatingText(sx, sy - 18, '🕳️ 地穴裂隙援军涌出!', '#B37FEB', 1.2);
     }
 
+    const waveIdx = (scene.waveManager && scene.waveManager.currentWaveIndex) || 1;
     for (let i = 0; i < 3; i++) {
-      setTimeout(() => {
-        if (scene && scene.enemyManager) {
-          scene.enemyManager.spawnEnemy('swift', map, i % 2);
-        }
-      }, i * 350);
+      this.pendingSpawns.push({ delay: i * 0.35, type: 'swift', waveIdx });
     }
   }
 
   /**
    * 渲染首领身下战术过载光环与顶部史诗级 Boss 血条
    */
-  renderBossHud(ctx) {
+  /**
+   * 首领脚下过载光环（须在地图坐标系内调用）
+   */
+  renderBossAura(ctx) {
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
-
-    ctx.save();
-
-    // 1. 首领脚下多层流光过载阵法
     const bx = this.activeBoss.x;
     const by = this.activeBoss.y;
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 8) * 0.15;
-
     ctx.save();
-    ctx.translate(bx, by);
+    ctx.translate(bx, by + 6);
     ctx.scale(pulse, pulse * 0.7);
     ctx.strokeStyle = auraColor;
     ctx.lineWidth = 2.0;
@@ -178,19 +187,27 @@ class BossOverdriveEngine {
     ctx.beginPath();
     ctx.ellipse(0, 0, 32, 20, 0, 0, Math.PI * 2);
     ctx.stroke();
-
     ctx.rotate(this.overdriveAuraAnim * 2.0);
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
     ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  }
+
+  /**
+   * 屏幕顶部分段首领血条（屏幕坐标）
+   */
+  renderBossHud(ctx) {
+    if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
+    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
+    ctx.save();
 
     // 2. 屏幕顶部史诗级分段 Boss 血条 (Epic Segmented Boss Bar)
     const barW = 380;
     const barH = 18;
     const barX = (960 - barW) * 0.5;
-    const barY = 46;
+    const barY = 74;
     const hpRatio = Math.max(0, Math.min(1.0, this.currentHp / this.maxHp));
 
     // 血条底座背框
@@ -206,10 +223,10 @@ class BossOverdriveEngine {
     const bossName = this.activeBoss.name || '远古腐化甲虫皇';
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = `bold 12px ${UI_FONT}`;
     ctx.fillStyle = auraColor;
     ctx.textAlign = 'left';
-    ctx.fillText(`👑 ${bossName} ${phaseLabel}`, barX + 6, barY - 4);
+    ctx.fillText(`${bossName} ${phaseLabel}`, barX + 6, barY - 4);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
@@ -222,7 +239,14 @@ class BossOverdriveEngine {
     ctx.fill();
 
     // 动态多段渐变血条
-    ctx.fillStyle = this.phase === 3 ? 'linear-gradient(to right, #722ED1, #F5222D)' : (this.phase === 2 ? '#F5222D' : '#FA8C16');
+    if (this.phase === 3) {
+      const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      grad.addColorStop(0, '#722ED1');
+      grad.addColorStop(1, '#F5222D');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = this.phase === 2 ? '#F5222D' : '#FA8C16';
+    }
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(barX, barY, barW * hpRatio, barH, 4) : ctx.rect(barX, barY, barW * hpRatio, barH);
     ctx.fill();

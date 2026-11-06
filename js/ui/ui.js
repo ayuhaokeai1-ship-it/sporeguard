@@ -1151,20 +1151,18 @@ class UiManager {
     }
   }
   renderTopRightControls(ctx, scene) {
-    // 1. 纯净全景地图切换按钮 (Zen Mode: [👁️ 纯净])
+    // 1. 纯净全景地图切换按钮 (Zen Mode: [纯净[H]])
     this.drawPixelButton(
       ctx,
       'hud_zen',
       668,
       12,
-      52,
+      50,
       34,
-      '纯净[H]',
+      '全景',
       {
         skin: 'btn_wood',
-        font: `bold 10.5px ${CN_FONT}`,
-        iconKey: 'guide',
-        iconSize: 15
+        font: `bold 10.5px ${CN_FONT}`
       },
       () => {
         this.toggleZenMode(scene.fx);
@@ -1175,16 +1173,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_speed',
-      724,
+      722,
       12,
       50,
       34,
       `${scene.speedMultiplier}×速`,
       {
         skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: `bold 10.5px ${CN_FONT}`,
-        iconKey: 'speed',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         scene.cycleSpeed();
@@ -1195,16 +1191,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_pause',
-      778,
+      776,
       12,
       50,
       34,
       '暂停',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'pause',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         scene.pauseGame();
@@ -1215,16 +1209,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_guide',
-      832,
+      830,
       12,
       50,
       34,
       '图鉴',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'guide',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         platform.playSfx('sfx_click');
@@ -1237,16 +1229,14 @@ class UiManager {
     this.drawPixelButton(
       ctx,
       'hud_settings',
-      886,
+      884,
       12,
-      54,
+      52,
       34,
       '设置',
       {
         skin: 'btn_wood',
-        font: `bold 11px ${CN_FONT}`,
-        iconKey: 'settings',
-        iconSize: 15
+        font: `bold 11px ${CN_FONT}`
       },
       () => {
         platform.playSfx('sfx_click');
@@ -1815,7 +1805,8 @@ class UiManager {
       ctx.restore();
 
       this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
-        scene.selectBuildTower(tId);
+        scene.selectBuildTowerType(tId);
+        platform.playSfx('sfx_click');
       }, { towerId: tId });
     }
 
@@ -1856,7 +1847,7 @@ class UiManager {
     roundRectPath(ctx, shvX + 6, shvY + 56, shvW - 12, 16, 3);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fill();
-    drawArtText(ctx, '空格键', shvX + shvW * 0.5, shvY + 64, {
+    drawArtText(ctx, '[T]', shvX + shvW * 0.5, shvY + 64, {
       style: 'azure',
       size: 9,
       align: 'center',
@@ -1890,7 +1881,7 @@ class UiManager {
       ctx.drawImage(seedImg, awkX + 8, awkY + 22, 28, 28);
     }
 
-    drawArtText(ctx, '灵能觉醒 [T]', awkX + 68, awkY + 14, {
+    drawArtText(ctx, '灵能觉醒 [空格]', awkX + 68, awkY + 14, {
       style: isAwkTargeting ? 'gold' : 'parchment',
       size: 11,
       align: 'center',
@@ -2130,11 +2121,6 @@ class UiManager {
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const btnW = 276;
     const bx = x + 26;
-
-    // 战术索敌偏好切换按钮 (Tactical Targeting AI)
-    if (scene.tacticalTargeting && scene.tacticalTargeting.renderInspectorTargetingBadge) {
-      scene.tacticalTargeting.renderInspectorTargetingBadge(ctx, tower, bx, y + 195, btnW, 32, this);
-    }
 
     if (upgrades.length === 0) {
       // 已升至顶级
@@ -2723,7 +2709,7 @@ class UiManager {
    * 包含 3 大核心篇章：
    * 1. 🌲 守林神树卫士 (5大蘑菇炮塔：立绘、基础数值、双分支终极形态、灵能觉醒超载大招)
    * 2. 🐛 暗黑虫潮首领 (16大怪物种群：高清手绘立绘、数值抗性、特殊行为机制、针对弱点与克制战法)
-   * 3. 📜 领袖战术心得 (深度对标《王国保卫战》《植物大战僵尸》核心微操与无尽深渊法则)
+   * 3. 📜 领袖战术心得 (森林守卫前线战术总则与无尽深渊微操)
    */
   /**
    * 【林地秘典 · 全景手绘图鉴与战术殿堂】 (Grand Codex & Bestiary)
@@ -3080,7 +3066,7 @@ class UiManager {
       { id: 'burrower', name: '掘地潜行者', danger: '★★★★☆', hp: 80, speed: '快速', armor: '地底免伤', tag: '潜地特种' },
       { id: 'volatile_pod', name: '自爆恶蝉', danger: '★★★★☆', hp: 70, speed: '快速', armor: '轻甲', tag: '蓄力自爆' },
       { id: 'weaver', name: '纺织毒蛛', danger: '★★★★☆', hp: 110, speed: '中速', armor: '中甲', tag: '吐网封塔' },
-      { id: 'leaper', name: '跃迁跳蚤', danger: '★★★★☆', hp: 75, speed: '跳跃', armor: '轻甲', tag: '越线偷袭' },
+      { id: 'leaper', name: '跃迁跳蚤', danger: '★★★★☆', hp: 75, speed: '跳跃', armor: '轻甲', tag: '跃迁突袭' },
       { id: 'shaman', name: '巫毒蝉俑', danger: '★★★★☆', hp: 130, speed: '缓慢', armor: '高抗性', tag: '群体治疗' },
       { id: 'skeletal_husk', name: '枯骨巨蝎', danger: '★★★★☆', hp: 160, speed: '缓慢', armor: '坚韧骨盾', tag: '正面减伤' },
       { id: 'siege_beetle', name: '攻城巨角兽', danger: '★★★★★', hp: 280, speed: '极慢', armor: '重型装甲', tag: '践踏震晕' },
@@ -3169,7 +3155,7 @@ class UiManager {
       },
       swift: {
         behavior: '长有高速双翼的疾风飞虫，移动极快，极易穿透单体防线造成漏怪。',
-        counter: '【战法】雾菇范围减速是其绝对克星！将其减速至蜗牛爬行后，由后排防御塔轻松收割。'
+        counter: '【战法】雾菇的范围减速对其非常有效。先用雾气压低它的速度，再由后排蘑菇集中输出。'
       },
       armored: {
         behavior: '身披厚重硬质角质甲壳，大幅度削减普通物理投射物伤害。',
@@ -3181,7 +3167,7 @@ class UiManager {
       },
       splitter: {
         behavior: '死亡时腹部会爆裂并分裂出数只极速幼虫，极易引发漏怪悲剧。',
-        counter: '【战法】预先在其行进后方部署尖刺菇或爆裂菇，在其爆裂瞬间立即AOE秒杀幼虫。'
+        counter: '【战法】预先在其行进后方部署尖刺菇或爆裂菇，在其爆裂瞬间立即以范围伤害歼灭幼虫。'
       },
       larva: {
         behavior: '极速奔跑的微型幼虫，单只血薄，但成群狂奔时极具威胁。',
@@ -3213,7 +3199,7 @@ class UiManager {
       },
       siege_beetle: {
         behavior: '体型庞大的攻城重装怪，践踏地面产生震荡波短暂震晕周围防御塔。',
-        counter: '【战法】派遣森林英雄在前线肉搏拉住仇恨，后排全员开启灵能觉醒超载秒杀！'
+        counter: '【战法】派遣森林英雄在前线坚守阻击，后排全员开启灵能觉醒全力歼灭！'
       },
       boss_m1: {
         behavior: '第一关首领【巨角天牛王】：高血量冲锋首领，具备硬化甲壳与震地狂暴。',
@@ -3282,20 +3268,20 @@ class UiManager {
 
     const scrolls = [
       {
-        title: '一、英雄调遣与肉搏接怪法则',
-        body: '对标《王国保卫战》：森林领袖·奥克拥有全图自由集结能力。点击英雄头像或战场英雄本体，即可指挥其驻守任意要塞路口。英雄最多可肉搏拦截 2 只地面敌人！杀敌与承受伤害可提升英雄等级（Lv.1 ~ Lv.5），升级不仅大幅强化攻防血量，更会瞬间恢复满血！善用【F 裂地斩】在虫潮扎堆时打出全屏大范围群体眩晕！'
+        title: '一、英雄调遣与近身拦截',
+        body: '森林领袖·奥克可以前往地图任意位置驻守。点击英雄后再点击地面，即可下达移动指令。英雄最多拦截 2 只地面敌人；击杀与承伤会积累经验，升级（最高 Lv.5）时恢复全部生命。敌人扎堆时，按 F 释放大招「撼地」可造成范围眩晕。'
       },
       {
-        title: '二、灵能觉醒超载与大招时刻',
-        body: '对标《植物大战僵尸》能量豆：击败精英敌人或首领均有高概率掉落【灵能觉醒种子】。按下空格或点击灵能种子后，点击场上任意蘑菇，即可瞬间引爆华丽的全屏大招！瞭望菇万矢齐发全屏秒杀飞蛾、尖刺菇千刃破土定身全屏、爆裂菇天坠流星轰碎重甲、灵光菇万木逢春攻速狂暴！'
+        title: '二、灵能觉醒种子',
+        body: '击败精英敌人或首领有较高概率掉落灵能觉醒种子。按空格键或点击底部「灵能觉醒」后，再点击场上任意蘑菇，即可释放该蘑菇的专属大招：瞭望菇齐射、尖刺菇破土、爆裂菇陨落、灵光菇增益。'
       },
       {
-        title: '三、即时战场微操手册 (Tap-to-Action)',
-        body: '1. 快速救塔：纺织毒蛛喷吐蛛网封印防御塔时，用手指三连点击被封印的蘑菇即可破茧救出，破茧后更附带狂暴攻速加成！\n2. 潜地踩踏：掘地潜行者潜地免伤时，点击地面土堆直接将其踩出硬控！\n3. 恶蝉泄气：自爆恶蝉蓄力变红时快速点击泄气，避免防御塔被毁！'
+        title: '三、战场即时操作',
+        body: '1. 蛛网封印：连续点击被封印的蘑菇 3 次可将其解救，解救后短时间内攻速提升。\n2. 掘地敌人：点击其潜行的土堆，可将其踩出地面。\n3. 自爆蝉：它变红蓄力时快速点击可使其泄气，避免蘑菇被炸毁。'
       },
       {
-        title: '四、深渊生存与铲除移植优化',
-        body: '通关战役后将解锁【无尽深渊试炼模式】！深渊虫潮将无止境增强，属性指数级提升。充分利用【铲子 [T]】功能随时铲除前期过渡蘑菇，无损回收孢子并根据后期怪群结构动态转型极寒减速与高爆重炮阵型，创造全网最高生存记录！'
+        title: '四、无尽模式与铲除重种',
+        body: '通关后解锁无尽模式，敌人的属性会逐波提升。按 T 键或点击「铲除回收」，可铲除蘑菇并返还 70% 孢子，用来根据敌人构成调整阵型。选中蘑菇后按 P 键可切换索敌偏好。'
       }
     ];
 

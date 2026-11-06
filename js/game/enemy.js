@@ -434,6 +434,34 @@ class EnemyManager {
    * 处理敌人死亡、奖励结算及分裂（裂殖虫 -> 2幼体；裂殖母体 -> 3裂殖虫）
    */
 
+  /**
+   * 统一伤害结算接口 (天候雷暴、英雄斩击、反伤震击、法术轰炸、神术惩戒等)
+   */
+  applyDamage(enemy, amount, isCrit = false, dType = 'physical', fx = null, source = null) {
+    if (!enemy || enemy.state === 'death' || enemy.hp <= 0) return 0;
+    const finalFx = fx || (this.scene ? this.scene.fx : null);
+    let dmg = Math.max(1, Math.round(amount));
+
+    if (dType === 'physical' && enemy.baseArmor && !isCrit) {
+      const reduction = Math.max(0.2, 1 - (enemy.baseArmor * 0.05));
+      dmg = Math.max(1, Math.round(dmg * reduction));
+    }
+
+    enemy.hp -= dmg;
+    enemy.whiteFlashFrames = 3;
+
+    if (finalFx && typeof finalFx.spawnFloatingText === 'function') {
+      const color = isCrit ? '#FFD700' : (dType === 'magic' ? '#69C0FF' : (dType === 'pierce' ? '#FF7A45' : '#FF4D4F'));
+      const text = isCrit ? `暴击 -${dmg}` : `-${dmg}`;
+      finalFx.spawnFloatingText(Math.round(enemy.x), Math.round(enemy.y - 14), text, color, isCrit ? 1.2 : 0.9);
+    }
+
+    if (enemy.hp <= 0) {
+      this.killEnemy(enemy, finalFx);
+    }
+    return dmg;
+  }
+
   killEnemy(enemy, fx = null, relicManager = null) {
     if (!enemy || enemy.state === 'death') return;
     const economy = this.scene ? this.scene.economy : null;

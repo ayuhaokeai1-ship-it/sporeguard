@@ -157,6 +157,8 @@ function handleKeyDown(rawKey) {
   } else if (key === 'keyc' || key === 'c') {
     emitAction('call_wave');
   } else if (key === 'keyr' || key === 'r') {
+    emitAction('trigger_spell', { spellId: 'rally' });
+  } else if (key === 'keyv' || key === 'v') {
     emitAction('cycle_speed');
   } else if (key === 'keyf' || key === 'f') {
     emitAction('hero_ultimate');

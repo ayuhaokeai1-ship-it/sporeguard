@@ -630,7 +630,7 @@ function stopBgm() {
 const sfxThrottle = {};
 function playSfx(sfxKey, volumeMod = 1.0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  const now = platform.nowMs ? platform.nowMs() : Date.now();
+  const now = nowMs();
   if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
     return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
   }
