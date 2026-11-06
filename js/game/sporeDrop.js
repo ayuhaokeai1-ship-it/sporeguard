@@ -81,14 +81,15 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 54; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
+    const hitRadius = 60; // 手机端超大触控判定圈 (60px)
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
       const dy = d.y + bob;
-      const dist = Math.hypot(mx - d.x, my - dy);
+      const distMap = Math.hypot(mx - d.x, my - dy);
+      const distScreen = Math.hypot((mx - 160) - d.x, (my - 30) - dy);
 
-      if (dist <= hitRadius) {
+      if (distMap <= hitRadius || distScreen <= hitRadius) {
         // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);

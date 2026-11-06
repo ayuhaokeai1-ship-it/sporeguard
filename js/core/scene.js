@@ -631,19 +631,39 @@ class SceneController {
                 continue;
               }
 
-              const canBuild = this.map.canBuildAt(col, row);
+              let targetCol = col;
+              let targetRow = row;
+              // 手机端智能微距吸附：如果在草地边缘差了几个像素，自动吸附到最近的有效建造格
+              if (!existingTower && !this.map.canBuildAt(targetCol, targetRow) && this.selectedBuildTowerId) {
+                const subX = (mx / TILE_SIZE) - col;
+                const subY = (my / TILE_SIZE) - row;
+                const offsets = [];
+                if (subX < 0.35) offsets.push([-1, 0]);
+                if (subX > 0.65) offsets.push([1, 0]);
+                if (subY < 0.35) offsets.push([0, -1]);
+                if (subY > 0.65) offsets.push([0, 1]);
+                for (const [ox, oy] of offsets) {
+                  if (this.map.inBounds(col + ox, row + oy) && this.map.canBuildAt(col + ox, row + oy)) {
+                    targetCol = col + ox;
+                    targetRow = row + oy;
+                    break;
+                  }
+                }
+              }
+
+              const canBuild = this.map.canBuildAt(targetCol, targetRow);
               if (existingTower) {
                 // 点击已种植的我方守卫：展开其专属地面轻柔范围法阵与升级面板
-                this.selectedTile.col = col;
-                this.selectedTile.row = row;
+                this.selectedTile.col = targetCol;
+                this.selectedTile.row = targetRow;
                 this.selectedTileAgeSec = 0;
                 this.selectedBuildTowerId = null; // 切换至检视模式，取消待建造卡牌
                 this.ui.inspectorOpen = true;
                 input.setGridCursor(col, row, false);
                 platform.playSfx('sfx_click');
               } else if (canBuild) {
-                this.selectedTile.col = col;
-                this.selectedTile.row = row;
+                this.selectedTile.col = targetCol;
+                this.selectedTile.row = targetRow;
                 this.selectedTileAgeSec = 0;
                 input.setGridCursor(col, row, false);
 

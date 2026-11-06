@@ -11,9 +11,6 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="images/icons/icon_192.png" />
   <title>《蘑菇守林》- 奇幻森林策略塔防</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Serif+SC:wght@700;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -32,7 +29,7 @@
       align-items: center;
       justify-content: center;
       touch-action: manipulation;
-      font-family: "Noto Serif SC", "ZCOOL XiaoWei", "Cinzel", "Microsoft YaHei UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     #gameCanvas {
       display: block;
@@ -488,6 +485,7 @@
           },
           createInnerAudioContext: function () {
             const audio = new Audio();
+            audio.preload = 'none';
             return {
               set src(v) { audio.src = v; },
               get src() { return audio.src; },

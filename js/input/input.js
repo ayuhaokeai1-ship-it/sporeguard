@@ -34,7 +34,7 @@ function initInput() {
   if (typeof wx !== 'undefined') {
     if (typeof wx.onTouchStart === 'function') {
       wx.onTouchStart((res) => {
-        const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
+        const touch = (res && res.changedTouches && res.changedTouches[0]) || (res && res.touches && res.touches[0]);
         if (!touch) return;
         const pos = platform.screenToLogical(touch.clientX, touch.clientY);
         pointerPos.x = pos.x;
@@ -47,7 +47,7 @@ function initInput() {
     let lastMoveEmitted = 0;
     if (typeof wx.onTouchMove === 'function') {
       wx.onTouchMove((res) => {
-        const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
+        const touch = (res && res.changedTouches && res.changedTouches[0]) || (res && res.touches && res.touches[0]);
         if (!touch) return;
         const pos = platform.screenToLogical(touch.clientX, touch.clientY);
         pointerPos.x = pos.x;

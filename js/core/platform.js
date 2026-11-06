@@ -638,6 +638,24 @@ function playSfx(sfxKey, volumeMod = 1.0) {
   }
   sfxThrottle[sfxKey] = now;
 
+  // 手机端原生微触感振动反馈 (零延迟增强打击感与触控反馈)
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      if (sfxKey === 'sfx_click') navigator.vibrate(8);
+      else if (sfxKey === 'sfx_build') navigator.vibrate(15);
+      else if (sfxKey === 'sfx_upgrade') navigator.vibrate([10, 30, 15]);
+      else if (sfxKey === 'sfx_hurt') navigator.vibrate(22);
+      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb') navigator.vibrate(30);
+    } catch (e) {}
+  }
+  if (typeof wx !== 'undefined' && wx.vibrateShort) {
+    try {
+      if (sfxKey === 'sfx_click') wx.vibrateShort({ type: 'light' });
+      else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_upgrade') wx.vibrateShort({ type: 'medium' });
+      else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_boom') wx.vibrateShort({ type: 'heavy' });
+    } catch (e) {}
+  }
+
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
   if (webAudioCtx) {
     if (audioBuffers[sfxKey]) {

@@ -2140,13 +2140,13 @@ module.exports = {
   lumina_base_desc: '基础增益：菌丝邻塔增伤+15%，每7秒产出20孢子。',
   lumina_lv1_name: '荧光金露伞',
   lumina_lv1_desc: '伞盖生金：邻塔增伤+20%，每6.5秒产出30孢子。',
-  lumina_a2_name: '甲线: 灵光信标',
+  lumina_a2_name: 'A线 灵光战地信标',
   lumina_a2_desc: '战地信标：邻塔攻速+25%，每5秒为受损单位疗愈25点生命。',
-  lumina_a3_name: '甲线: 神圣圣所',
+  lumina_a3_name: 'A线 翡翠神圣庇护所',
   lumina_a3_desc: '神圣领域：邻塔攻速+35%，脉冲群疗，使邻塔免疫蛛网与酸蚀！',
-  lumina_b2_name: '乙线: 黄金松露伞',
+  lumina_b2_name: 'B线 黄金松露丰收',
   lumina_b2_desc: '丰收之光：每 5.5 秒产出 55 孢子，并提高孢子掉落率。',
-  lumina_b3_name: '乙线: 聚宝金蕈皇',
+  lumina_b3_name: 'B线 聚宝金蟾圣窟',
   lumina_b3_desc: '招财进宝：每5秒产出90孢子，范围内敌军死亡额外掉落孢子，战利品翻倍！',
 
   // 新敌人群落体系
@@ -2261,29 +2261,29 @@ module.exports = {
   tower_watch_desc: '高耸菌塔，唯一主力远程防空火力，预判射击地面与空中目标。',
   node_base: '基础形态',
   watch_base_desc: '单体远程射击，兼顾地面与空中',
-  watch_lv1_name: 'Lv1 荧光孢囊',
-  watch_lv1_desc: '菌盖生花，伤害+20%，射程+0.5格',
-  watch_a2_name: 'A2 远镜柄',
-  watch_a2_desc: '双镜片加长柄，射程+1.5，弹速+25%，间隔-10%',
-  watch_a3_name: 'A3 星镜',
-  watch_a3_desc: '射程+1.0；命中标记目标3秒，受直接伤害+15%',
-  watch_b2_name: 'B2 厚冠护板',
-  watch_b2_desc: '环形护板加厚菌盖，伤害+35%',
-  watch_b3_name: 'B3 炮口共鸣',
-  watch_b3_desc: '菌盖化为炮口，获得15%暴击率（2倍暴击伤害）',
+  watch_lv1_name: 'Lv1 灵目初启',
+  watch_lv1_desc: '菌盖生花凝光，伤害+20%，视界射程+0.5格',
+  watch_a2_name: 'A线 翡翠劲弩',
+  watch_a2_desc: '加长菌茎强弓，射程+1.5格，箭矢极速穿云，射击间隔-10%',
+  watch_a3_name: 'A线 逐风鹰眼神射',
+  watch_a3_desc: '射程再拓1.0格；附带鹰眼猎印3秒，使其承受全额额外伤害+15%',
+  watch_b2_name: 'B线 毒腺浸染',
+  watch_b2_desc: '重装菌冠浸润剧毒，单发贯穿伤害+35%',
+  watch_b3_name: 'B线 轰雷狙击共鸣',
+  watch_b3_desc: '菌盖化身风暴之眼，获得25%致命暴击（造成200%毁灭伤害）',
 
   tower_mist_name: '雾菇',
   tower_mist_role: '控制 · 持续伤害',
   tower_mist_desc: '在敌人最密集处释放孢子雾团，减速并持续腐蚀地面与空中虫群。',
   mist_base_desc: '生成半径1.5格雾团，减速30%，每秒4点伤害',
-  mist_lv1_name: 'Lv1 荧光孢囊',
-  mist_lv1_desc: '雾丝变密，减速+5%，雾团持续+0.5秒',
-  mist_a2_name: 'A2 冷雾丝',
-  mist_a2_desc: '细环冷雾，减速+10%，离雾后减速残留1秒',
-  mist_a3_name: 'A3 冷蓝光圈',
-  mist_a3_desc: '减速达55%，雾团内敌人护甲-2',
-  mist_b2_name: 'B2 宽菌伞',
-  mist_b2_desc: '雾团半径+0.5格，持续伤害+2/秒',
+  mist_lv1_name: 'Lv1 寒霜微漾',
+  mist_lv1_desc: '雾丝加剧浓密，群体减速+15%，霜雾驻留延长0.5秒',
+  mist_a2_name: 'A线 极寒霜冻深雾',
+  mist_a2_desc: '凛冬冷雾环绕，额外减速+10%，敌军离雾后仍遭受寒气凝滞2秒',
+  mist_a3_name: 'A线 绝对零度凝滞',
+  mist_a3_desc: '极寒冻结达55%，极寒蚀骨使雾中敌军护甲瓦解-2点',
+  mist_b2_name: 'B线 熔岩毒孢广域',
+  mist_b2_desc: '剧毒雾团半径扩张+0.5格，持续侵蚀伤害+2点/秒',
   mist_b3_name: 'B线 炽焰硫磺火雾',
   mist_b3_desc: '雾团半径2.5格，高温燃烧每秒10点伤害',
 
@@ -2291,8 +2291,8 @@ module.exports = {
   tower_thorn_role: '直线群穿',
   tower_thorn_desc: '高频发射穿透尖刺，沿着长直路径放置可一穿多敌。仅攻击地面。',
   thorn_base_desc: '高速直线尖刺，可穿透2个地面目标',
-  thorn_lv1_name: 'Lv1 荧光孢囊',
-  thorn_lv1_desc: '长出3根短刺，伤害+20%，射程+0.5格',
+  thorn_lv1_name: 'Lv1 锐刺初生',
+  thorn_lv1_desc: '丛生3支锐利荆刺，穿刺伤害+20%，射程+0.5格',
   thorn_a2_name: 'A线 淬毒连环骨刺',
   thorn_a2_desc: '青蓝长刺，穿透目标数+2（共4个）',
   thorn_a3_name: 'A线 千刃万刺林',
@@ -2306,8 +2306,8 @@ module.exports = {
   tower_burst_role: '范围清群',
   tower_burst_desc: '锁定密集地面虫群投射孢子重炮，全额范围溅射无衰减。仅攻击地面。',
   burst_base_desc: '锁定落点爆炸，1.25格内完整溅射伤害',
-  burst_lv1_name: 'Lv1 荧光孢囊',
-  burst_lv1_desc: '菌盖裂纹透光，伤害+20%',
+  burst_lv1_name: 'Lv1 灼热烈核',
+  burst_lv1_desc: '菌盖熔岩裂纹透光，重炮冲击伤害+20%',
   burst_a2_name: 'A线 剧毒广域迸射',
   burst_a2_desc: '青蓝裂口扩大，溅射半径+0.5格（1.75格）',
   burst_a3_name: 'A线 毁灭风暴重炮',
@@ -2507,60 +2507,60 @@ module.exports = {
   tower_watch_desc: 'Tall sniper mushroom hitting both ground and air targets with predictive shots.',
   node_base: 'Base Form',
   watch_base_desc: 'Single-target ranged shot, hits ground & air',
-  watch_lv1_name: 'Lv1 Neon Spore Sac',
+  watch_lv1_name: 'Lv1 Verdant Bloom',
   watch_lv1_desc: 'Blooming cap, DMG +20%, Range +0.5',
-  watch_a2_name: 'A2 Tele-Stalk',
+  watch_a2_name: 'Branch A: Emerald Crossbow',
   watch_a2_desc: 'Twin lenses, Range +1.5, Bullet Spd +25%, CD -10%',
-  watch_a3_name: 'A3 Star Lens',
+  watch_a3_name: 'Branch A: Windseeker Hawkeye',
   watch_a3_desc: 'Range +1.0; Marks target for 3s (+15% direct DMG)',
-  watch_b2_name: 'B2 Heavy Crown',
+  watch_b2_name: 'Branch B: Venom Infusion',
   watch_b2_desc: 'Armored cap plates, DMG +35%',
-  watch_b3_name: 'B3 Cannon Resonance',
+  watch_b3_name: 'Branch B: Thunder Resonance Sniper',
   watch_b3_desc: 'Muzzle cap, 15% Crit Chance (2x Crit DMG)',
 
   tower_mist_name: 'Mist Shroom',
   tower_mist_role: 'Control · DoT',
   tower_mist_desc: 'Casts spore mist at the densest enemy cluster, slowing and corroding ground & air foes.',
   mist_base_desc: '1.5-tile mist for 3s, 30% Slow, 4 DPS',
-  mist_lv1_name: 'Lv1 Neon Spore Sac',
+  mist_lv1_name: 'Lv1 Glacial Whispers',
   mist_lv1_desc: 'Denser mist threads, Slow +5%, Duration +0.5s',
-  mist_a2_name: 'A2 Frost Silk',
+  mist_a2_name: 'Branch A: Permafrost Deep Chill',
   mist_a2_desc: 'Slow +10%, slow lingers 1.0s after leaving mist',
-  mist_a3_name: 'A3 Cryo Halo',
+  mist_a3_name: 'Branch A: Absolute Zero',
   mist_a3_desc: '55% Slow, enemies inside mist lose 2 Armor',
-  mist_b2_name: 'B2 Wide Umbrella',
+  mist_b2_name: 'Branch B: Magma Spore Brood',
   mist_b2_desc: 'Mist radius +0.5 tiles, DoT +2 DPS',
-  mist_b3_name: 'B3 Blazing Mist',
+  mist_b3_name: 'Branch B: Brimstone Conflagration',
   mist_b3_desc: '2.5-tile burning mist dealing 10 DPS',
 
   tower_thorn_name: 'Thorn Shroom',
   tower_thorn_role: 'Line Pierce',
   tower_thorn_desc: 'Rapidly fires straight piercing spikes along corridors. Ground targets only.',
   thorn_base_desc: 'Fast linear spike piercing 2 ground foes',
-  thorn_lv1_name: 'Lv1 Neon Spore Sac',
+  thorn_lv1_name: 'Lv1 Razor Thorns',
   thorn_lv1_desc: '3 short thorns, DMG +20%, Range +0.5',
-  thorn_a2_name: 'A2 Long Thorns',
+  thorn_a2_name: 'Branch A: Toxic Spine Barrage',
   thorn_a2_desc: 'Cyan tips, Pierce +2 (4 targets total)',
-  thorn_a3_name: 'A3 Quiver Volley',
+  thorn_a3_name: 'Branch A: Forest of Ten Thousand Needles',
   thorn_a3_desc: 'Pierce 7; fires 2 extra side spikes at ±12° (50% DMG)',
-  thorn_b2_name: 'B2 Thick Roots',
+  thorn_b2_name: 'Branch B: Titan Bramble Impaler',
   thorn_b2_desc: 'Heavy orange roots, DMG +30%',
-  thorn_b3_name: 'B3 Serrated Spikes',
+  thorn_b3_name: 'Branch B: Barbed Lacerator',
   thorn_b3_desc: 'CD -10%, +20% DMG per pierced foe (up to +100%)',
 
   tower_burst_name: 'Burst Shroom',
   tower_burst_role: 'AoE Splash',
   tower_burst_desc: 'Lobs heavy shells at the densest ground cluster for 100% splash damage. Ground only.',
   burst_base_desc: 'Locks landing spot, 1.25-tile full splash DMG',
-  burst_lv1_name: 'Lv1 Neon Spore Sac',
+  burst_lv1_name: 'Lv1 Magma Core',
   burst_lv1_desc: 'Glowing cap cracks, DMG +20%',
-  burst_a2_name: 'A2 Wide Bore',
+  burst_a2_name: 'Branch A: Toxic Shrapnel Mortar',
   burst_a2_desc: 'Cyan vent, Splash Radius +0.5 (1.75 tiles)',
-  burst_a3_name: 'A3 Heavy Caliber',
+  burst_a3_name: 'Branch A: Cataclysmic Tempest Mortar',
   burst_a3_desc: 'Splash Radius 2.25 tiles, DMG +15%',
-  burst_b2_name: 'B2 Furnace Cap',
+  burst_b2_name: 'Branch B: Searing Energy Sac',
   burst_b2_desc: 'Smoking cap, DMG +30%',
-  burst_b3_name: 'B3 Molten Gold',
+  burst_b3_name: 'Branch B: Molten Fire Purgatory',
   burst_b3_desc: 'Leaves 1.0-tile burn zone for 3s dealing 8 DPS',
 
   // Enemies
@@ -3304,6 +3304,24 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
   }
   sfxThrottle[sfxKey] = now;
+
+  // 手机端原生微触感振动反馈 (零延迟增强打击感与触控反馈)
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      if (sfxKey === 'sfx_click') navigator.vibrate(8);
+      else if (sfxKey === 'sfx_build') navigator.vibrate(15);
+      else if (sfxKey === 'sfx_upgrade') navigator.vibrate([10, 30, 15]);
+      else if (sfxKey === 'sfx_hurt') navigator.vibrate(22);
+      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb') navigator.vibrate(30);
+    } catch (e) {}
+  }
+  if (typeof wx !== 'undefined' && wx.vibrateShort) {
+    try {
+      if (sfxKey === 'sfx_click') wx.vibrateShort({ type: 'light' });
+      else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_upgrade') wx.vibrateShort({ type: 'medium' });
+      else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_boom') wx.vibrateShort({ type: 'heavy' });
+    } catch (e) {}
+  }
 
   // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
   if (webAudioCtx) {
@@ -4173,7 +4191,7 @@ function initInput() {
   if (typeof wx !== 'undefined') {
     if (typeof wx.onTouchStart === 'function') {
       wx.onTouchStart((res) => {
-        const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
+        const touch = (res && res.changedTouches && res.changedTouches[0]) || (res && res.touches && res.touches[0]);
         if (!touch) return;
         const pos = platform.screenToLogical(touch.clientX, touch.clientY);
         pointerPos.x = pos.x;
@@ -4186,7 +4204,7 @@ function initInput() {
     let lastMoveEmitted = 0;
     if (typeof wx.onTouchMove === 'function') {
       wx.onTouchMove((res) => {
-        const touch = (res && res.touches && res.touches[0]) || (res && res.changedTouches && res.changedTouches[0]);
+        const touch = (res && res.changedTouches && res.changedTouches[0]) || (res && res.touches && res.touches[0]);
         if (!touch) return;
         const pos = platform.screenToLogical(touch.clientX, touch.clientY);
         pointerPos.x = pos.x;
@@ -8598,14 +8616,15 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 54; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
+    const hitRadius = 60; // 手机端超大触控判定圈 (60px)
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
       const dy = d.y + bob;
-      const dist = Math.hypot(mx - d.x, my - dy);
+      const distMap = Math.hypot(mx - d.x, my - dy);
+      const distScreen = Math.hypot((mx - 160) - d.x, (my - 30) - dy);
 
-      if (dist <= hitRadius) {
+      if (distMap <= hitRadius || distScreen <= hitRadius) {
         // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);
@@ -8741,6 +8760,20 @@ class RelicDropManager {
         }
       }
 
+      // 英雄磁吸微距拾取
+      if (scene && scene.hero && scene.hero.state !== 'dead') {
+        const hDist = Math.hypot(r.x - scene.hero.x, r.baseY - scene.hero.y);
+        if (hDist < 64) {
+          r.x += (scene.hero.x - r.x) * dt * 4.5;
+          r.baseY += (scene.hero.y - r.baseY) * dt * 4.5;
+          if (hDist < 20) {
+            this.collect(r, scene, true);
+            this.relics.splice(i, 1);
+            continue;
+          }
+        }
+      }
+
       // 超时自动拾取保底
       if (r.life <= 0) {
         this.collect(r, scene);
@@ -8750,12 +8783,13 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 54; // 手机端友好大判定圈 (45px)
+    const hitRadius = 60; // 手机端超大触控判定圈 (60px，近2个完整格子)，极度灵敏
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
-      const dist = Math.hypot(clickX - r.x, clickY - ry);
-      if (dist <= hitRadius) {
+      const distMap = Math.hypot(clickX - r.x, clickY - ry);
+      const distScreen = Math.hypot((clickX - 160) - r.x, (clickY - 30) - ry);
+      if (distMap <= hitRadius || distScreen <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;
@@ -20160,19 +20194,39 @@ class SceneController {
                 continue;
               }
 
-              const canBuild = this.map.canBuildAt(col, row);
+              let targetCol = col;
+              let targetRow = row;
+              // 手机端智能微距吸附：如果在草地边缘差了几个像素，自动吸附到最近的有效建造格
+              if (!existingTower && !this.map.canBuildAt(targetCol, targetRow) && this.selectedBuildTowerId) {
+                const subX = (mx / TILE_SIZE) - col;
+                const subY = (my / TILE_SIZE) - row;
+                const offsets = [];
+                if (subX < 0.35) offsets.push([-1, 0]);
+                if (subX > 0.65) offsets.push([1, 0]);
+                if (subY < 0.35) offsets.push([0, -1]);
+                if (subY > 0.65) offsets.push([0, 1]);
+                for (const [ox, oy] of offsets) {
+                  if (this.map.inBounds(col + ox, row + oy) && this.map.canBuildAt(col + ox, row + oy)) {
+                    targetCol = col + ox;
+                    targetRow = row + oy;
+                    break;
+                  }
+                }
+              }
+
+              const canBuild = this.map.canBuildAt(targetCol, targetRow);
               if (existingTower) {
                 // 点击已种植的我方守卫：展开其专属地面轻柔范围法阵与升级面板
-                this.selectedTile.col = col;
-                this.selectedTile.row = row;
+                this.selectedTile.col = targetCol;
+                this.selectedTile.row = targetRow;
                 this.selectedTileAgeSec = 0;
                 this.selectedBuildTowerId = null; // 切换至检视模式，取消待建造卡牌
                 this.ui.inspectorOpen = true;
                 input.setGridCursor(col, row, false);
                 platform.playSfx('sfx_click');
               } else if (canBuild) {
-                this.selectedTile.col = col;
-                this.selectedTile.row = row;
+                this.selectedTile.col = targetCol;
+                this.selectedTile.row = targetRow;
                 this.selectedTileAgeSec = 0;
                 input.setGridCursor(col, row, false);
 

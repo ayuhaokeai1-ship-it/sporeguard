@@ -51,6 +51,20 @@ class RelicDropManager {
         }
       }
 
+      // 英雄磁吸微距拾取
+      if (scene && scene.hero && scene.hero.state !== 'dead') {
+        const hDist = Math.hypot(r.x - scene.hero.x, r.baseY - scene.hero.y);
+        if (hDist < 64) {
+          r.x += (scene.hero.x - r.x) * dt * 4.5;
+          r.baseY += (scene.hero.y - r.baseY) * dt * 4.5;
+          if (hDist < 20) {
+            this.collect(r, scene, true);
+            this.relics.splice(i, 1);
+            continue;
+          }
+        }
+      }
+
       // 超时自动拾取保底
       if (r.life <= 0) {
         this.collect(r, scene);
@@ -60,12 +74,13 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 54; // 手机端友好大判定圈 (45px)
+    const hitRadius = 60; // 手机端超大触控判定圈 (60px，近2个完整格子)，极度灵敏
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
-      const dist = Math.hypot(clickX - r.x, clickY - ry);
-      if (dist <= hitRadius) {
+      const distMap = Math.hypot(clickX - r.x, clickY - ry);
+      const distScreen = Math.hypot((clickX - 160) - r.x, (clickY - 30) - ry);
+      if (distMap <= hitRadius || distScreen <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;
