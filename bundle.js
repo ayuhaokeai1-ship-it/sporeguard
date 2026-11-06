@@ -8495,8 +8495,8 @@ module.exports = SporelingPatrol;
   /* --- js/game/sporeDrop.js --- */
   __modules['js/game/sporeDrop'] = function(require, module, exports) {
 /**
- * 植物大战僵尸式即时点击收集系统 (js/game/sporeDrop.js)
- * 学习 PvZ 阳光掉落与即时微操点击反馈：
+ * 森林晨露金孢自然凝结与战地能量收集系统 (js/game/sporeDrop.js)
+ * 奇幻森林晨露金孢随风飘落与即时触控收集机制：
  * 1. 战场自然凝结的晨露金孢（每 4~7 秒随风飘落一枚）
  * 2. 灵光菇收获时迸发的跳跃金露球
  * 3. 击败精英怪物或 Boss 阶段转换时爆出的丰收金孢囊
@@ -8544,9 +8544,9 @@ class SporeDropManager {
     this.naturalSpawnTimer -= dt;
     if (this.naturalSpawnTimer <= 0) {
       this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
-      // 随机落于地图草地视野内 (x: 180..760, y: 80..400)
-      const rx = 180 + Math.random() * 580;
-      const ry = 80 + Math.random() * 320;
+      // 随机落于地图草地与林径视野内 (x: 64..576, y: 50..390)
+      const rx = 64 + Math.random() * 512;
+      const ry = 50 + Math.random() * 340;
       this.spawnDrop(rx, ry, 15, true, 40);
     }
 
@@ -8577,7 +8577,7 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 28;
+    const hitRadius = 45; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
@@ -8585,18 +8585,25 @@ class SporeDropManager {
       const dist = Math.hypot(mx - d.x, my - dy);
 
       if (dist <= hitRadius) {
-        // 成功点击拾取！
+        // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);
         }
         if (fx) {
-          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 孢子!`, '#FFE58F', 1.35);
-          fx.spawnParticles(d.x, dy, 16, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 25, 60, 0.25, 0.5, 3);
-          if (fx.spawnShockwave) {
-            fx.spawnShockwave(d.x, dy, 26, '#FFE58F');
+          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 晨露孢子!`, '#FFE58F', 1.4);
+          fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
+          if (typeof fx.spawnShockwave === 'function') {
+            fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
           }
         }
         platform.playSfx('sfx_coin');
+        // 手机端原生轻微触感振动反馈
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(12); } catch (e) {}
+        }
+        if (typeof wx !== 'undefined' && wx.vibrateShort) {
+          try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
+        }
         this.drops.splice(i, 1);
         return true;
       }
@@ -8662,7 +8669,7 @@ module.exports = SporeDropManager;
   __modules['js/game/relic'] = function(require, module, exports) {
 /**
  * 战利品掉落与遗物拾取系统 (js/game/relic.js)
- * 学习 mature TD (王国保卫战/Bloons) 的战斗交互机制：
+ * 精英与首领战利品遗物掉落与战地即时拾取机制：
  * - 精英怪击杀或 Boss 转阶段爆出高价值战利品
  * - 在路径上带有金光粒子浮动呼吸
  * - 玩家点击快速拾取（或超时自动吸入），带来即时正向多巴胺反馈
@@ -8722,11 +8729,12 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
+    const hitRadius = 45; // 手机端友好大判定圈 (45px)
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
       const dist = Math.hypot(clickX - r.x, clickY - ry);
-      if (dist <= 24) {
+      if (dist <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;
@@ -8771,6 +8779,13 @@ class RelicDropManager {
         fx.spawnParticles(relic.x, ry, 18, ['#73D13D', '#D9F7BE', '#FFD700'], 30, 80, 0.3, 0.5, 3);
       }
       platform.playSfx('sfx_upgrade');
+    }
+    platform.playSfx('sfx_coin');
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(15); } catch (e) {}
+    }
+    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+      try { wx.vibrateShort({ type: 'medium' }); } catch (e) {}
     }
   }
 
@@ -16265,6 +16280,19 @@ class UiManager {
         }
       }
     }
+
+    // 手机移动端滑动扫线拾取能量 (Swipe-to-collect)
+    if (scene && scene.state === 'BATTLE') {
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
+      const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
+      if (scene.sporeDropManager) {
+        scene.sporeDropManager.handlePointerDown(mx, my, scene.economy, scene.fx);
+      }
+      if (scene.relicManager) {
+        scene.relicManager.checkClick(mx, my, scene);
+      }
+    }
   }
 
   /**
@@ -16304,7 +16332,7 @@ class UiManager {
     }
 
     if (scene && scene.state === 'BATTLE') {
-      // (0) 实时战斗统计面板开关与点击
+      // (0) 实时战斗统计面板开关与点击 (屏幕空间)
       if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
         return true;
       }
@@ -16312,13 +16340,23 @@ class UiManager {
         return true;
       }
 
-      // (A) PvZ 式阳光/晨露金孢点击即时收集
-      if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(x, y, scene.economy, scene.fx)) {
+      // 计算精准地图世界坐标 (mx, my)
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
+      const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
+
+      // (A) 晨露金孢即时触控点击收集 (支持手机大判定区)
+      if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(mx, my, scene.economy, scene.fx)) {
+        return true;
+      }
+
+      // (A2) 精英怪/Boss掉落战利品道具拾取 (Relic Coin/Clover/Shield/Lightning)
+      if (scene.relicManager && scene.relicManager.checkClick(mx, my, scene)) {
         return true;
       }
 
       // (B) 掘地潜行怪点击踩踏 & 自爆蝉点击泄气
-      if (scene.enemyManager && scene.enemyManager.handleClickOnEnemy(x, y, scene.fx)) {
+      if (scene.enemyManager && scene.enemyManager.handleClickOnEnemy(mx, my, scene.fx)) {
         return true;
       }
 
@@ -16326,7 +16364,7 @@ class UiManager {
       if (scene.towerManager && scene.towerManager.towers) {
         for (let i = 0; i < scene.towerManager.towers.length; i++) {
           const tw = scene.towerManager.towers[i];
-          if (tw.isWebbed && Math.hypot(x - tw.x, y - tw.y) <= 32) {
+          if (tw.isWebbed && Math.hypot(mx - tw.x, my - tw.y) <= 38) {
             tw.webTapCount = (tw.webTapCount || 0) + 1;
             scene.economy.addSpores(5);
             scene.fx.spawnFloatingText(tw.x, tw.y - 20, '+5 孢子 撕扯!', '#BAE7FF', 1.0);
@@ -20052,6 +20090,14 @@ class SceneController {
           const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
+
+          // 双重保险：战场能量与战利品拾取
+          if (this.sporeDropManager && this.sporeDropManager.handlePointerDown(mx, my, this.economy, this.fx)) {
+            continue;
+          }
+          if (this.relicManager && this.relicManager.checkClick(mx, my, this)) {
+            continue;
+          }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
             const col = Math.floor(mx / TILE_SIZE);
             const row = Math.floor(my / TILE_SIZE);

@@ -1,6 +1,6 @@
 /**
  * 战利品掉落与遗物拾取系统 (js/game/relic.js)
- * 学习 mature TD (王国保卫战/Bloons) 的战斗交互机制：
+ * 精英与首领战利品遗物掉落与战地即时拾取机制：
  * - 精英怪击杀或 Boss 转阶段爆出高价值战利品
  * - 在路径上带有金光粒子浮动呼吸
  * - 玩家点击快速拾取（或超时自动吸入），带来即时正向多巴胺反馈
@@ -60,11 +60,12 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
+    const hitRadius = 45; // 手机端友好大判定圈 (45px)
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
       const dist = Math.hypot(clickX - r.x, clickY - ry);
-      if (dist <= 24) {
+      if (dist <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;
@@ -109,6 +110,13 @@ class RelicDropManager {
         fx.spawnParticles(relic.x, ry, 18, ['#73D13D', '#D9F7BE', '#FFD700'], 30, 80, 0.3, 0.5, 3);
       }
       platform.playSfx('sfx_upgrade');
+    }
+    platform.playSfx('sfx_coin');
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(15); } catch (e) {}
+    }
+    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+      try { wx.vibrateShort({ type: 'medium' }); } catch (e) {}
     }
   }
 

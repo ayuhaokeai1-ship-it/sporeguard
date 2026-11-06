@@ -256,6 +256,19 @@ class UiManager {
         }
       }
     }
+
+    // 手机移动端滑动扫线拾取能量 (Swipe-to-collect)
+    if (scene && scene.state === 'BATTLE') {
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
+      const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
+      if (scene.sporeDropManager) {
+        scene.sporeDropManager.handlePointerDown(mx, my, scene.economy, scene.fx);
+      }
+      if (scene.relicManager) {
+        scene.relicManager.checkClick(mx, my, scene);
+      }
+    }
   }
 
   /**
@@ -295,7 +308,7 @@ class UiManager {
     }
 
     if (scene && scene.state === 'BATTLE') {
-      // (0) 实时战斗统计面板开关与点击
+      // (0) 实时战斗统计面板开关与点击 (屏幕空间)
       if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
         return true;
       }
@@ -303,13 +316,23 @@ class UiManager {
         return true;
       }
 
-      // (A) PvZ 式阳光/晨露金孢点击即时收集
-      if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(x, y, scene.economy, scene.fx)) {
+      // 计算精准地图世界坐标 (mx, my)
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
+      const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
+
+      // (A) 晨露金孢即时触控点击收集 (支持手机大判定区)
+      if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(mx, my, scene.economy, scene.fx)) {
+        return true;
+      }
+
+      // (A2) 精英怪/Boss掉落战利品道具拾取 (Relic Coin/Clover/Shield/Lightning)
+      if (scene.relicManager && scene.relicManager.checkClick(mx, my, scene)) {
         return true;
       }
 
       // (B) 掘地潜行怪点击踩踏 & 自爆蝉点击泄气
-      if (scene.enemyManager && scene.enemyManager.handleClickOnEnemy(x, y, scene.fx)) {
+      if (scene.enemyManager && scene.enemyManager.handleClickOnEnemy(mx, my, scene.fx)) {
         return true;
       }
 
@@ -317,7 +340,7 @@ class UiManager {
       if (scene.towerManager && scene.towerManager.towers) {
         for (let i = 0; i < scene.towerManager.towers.length; i++) {
           const tw = scene.towerManager.towers[i];
-          if (tw.isWebbed && Math.hypot(x - tw.x, y - tw.y) <= 32) {
+          if (tw.isWebbed && Math.hypot(mx - tw.x, my - tw.y) <= 38) {
             tw.webTapCount = (tw.webTapCount || 0) + 1;
             scene.economy.addSpores(5);
             scene.fx.spawnFloatingText(tw.x, tw.y - 20, '+5 孢子 撕扯!', '#BAE7FF', 1.0);

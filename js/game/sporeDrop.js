@@ -1,6 +1,6 @@
 /**
- * 植物大战僵尸式即时点击收集系统 (js/game/sporeDrop.js)
- * 学习 PvZ 阳光掉落与即时微操点击反馈：
+ * 森林晨露金孢自然凝结与战地能量收集系统 (js/game/sporeDrop.js)
+ * 奇幻森林晨露金孢随风飘落与即时触控收集机制：
  * 1. 战场自然凝结的晨露金孢（每 4~7 秒随风飘落一枚）
  * 2. 灵光菇收获时迸发的跳跃金露球
  * 3. 击败精英怪物或 Boss 阶段转换时爆出的丰收金孢囊
@@ -48,9 +48,9 @@ class SporeDropManager {
     this.naturalSpawnTimer -= dt;
     if (this.naturalSpawnTimer <= 0) {
       this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
-      // 随机落于地图草地视野内 (x: 180..760, y: 80..400)
-      const rx = 180 + Math.random() * 580;
-      const ry = 80 + Math.random() * 320;
+      // 随机落于地图草地与林径视野内 (x: 64..576, y: 50..390)
+      const rx = 64 + Math.random() * 512;
+      const ry = 50 + Math.random() * 340;
       this.spawnDrop(rx, ry, 15, true, 40);
     }
 
@@ -81,7 +81,7 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 28;
+    const hitRadius = 45; // 手机端友好大判定圈 (45px)，手指轻触即刻响应
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
@@ -89,18 +89,25 @@ class SporeDropManager {
       const dist = Math.hypot(mx - d.x, my - dy);
 
       if (dist <= hitRadius) {
-        // 成功点击拾取！
+        // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);
         }
         if (fx) {
-          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 孢子!`, '#FFE58F', 1.35);
-          fx.spawnParticles(d.x, dy, 16, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 25, 60, 0.25, 0.5, 3);
-          if (fx.spawnShockwave) {
-            fx.spawnShockwave(d.x, dy, 26, '#FFE58F');
+          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 晨露孢子!`, '#FFE58F', 1.4);
+          fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
+          if (typeof fx.spawnShockwave === 'function') {
+            fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
           }
         }
         platform.playSfx('sfx_coin');
+        // 手机端原生轻微触感振动反馈
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(12); } catch (e) {}
+        }
+        if (typeof wx !== 'undefined' && wx.vibrateShort) {
+          try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
+        }
         this.drops.splice(i, 1);
         return true;
       }

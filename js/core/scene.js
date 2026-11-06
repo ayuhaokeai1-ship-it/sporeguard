@@ -603,6 +603,14 @@ class SceneController {
           const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
+
+          // 双重保险：战场能量与战利品拾取
+          if (this.sporeDropManager && this.sporeDropManager.handlePointerDown(mx, my, this.economy, this.fx)) {
+            continue;
+          }
+          if (this.relicManager && this.relicManager.checkClick(mx, my, this)) {
+            continue;
+          }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
             const col = Math.floor(mx / TILE_SIZE);
             const row = Math.floor(my / TILE_SIZE);

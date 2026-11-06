@@ -580,6 +580,11 @@
         const ev = mapTouchEvent(e);
         touchEndListeners.forEach(function (fn) { fn(ev); });
       }, { passive: false });
+      canvas.addEventListener('touchcancel', function (e) {
+        e.preventDefault();
+        const ev = mapTouchEvent(e);
+        touchEndListeners.forEach(function (fn) { fn(ev); });
+      }, { passive: false });
 
       window.addEventListener('keydown', function (e) {
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].indexOf(e.code) !== -1) {
