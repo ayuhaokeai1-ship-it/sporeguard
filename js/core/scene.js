@@ -58,6 +58,7 @@ class SceneController {
     this.sporeDropManager = new SporeDropManager();
     this.shovelActive = false;
     this.flankAlertTimer = 0;
+    this.crisisSlowMoTriggered = false;
     this.contraptions = new ForestContraptions();
     this.elderRootTriggered = false;
     this.elderRootActiveTimer = 0;
@@ -67,6 +68,7 @@ class SceneController {
     this.activeRallyTargeting = false;
     this.waveManager = new WaveManager('map1');
     this.fx = new FxSystem();
+    this.fx.scene = this;
     this.ui = new UiManager();
 
     this.speedMultiplier = 1;
@@ -181,6 +183,7 @@ class SceneController {
     this.sporeDropManager.reset();
     this.shovelActive = false;
     this.flankAlertTimer = 0;
+    this.crisisSlowMoTriggered = false;
     this.contraptions.initForMap(this.currentMapId);
     this.elderRootTriggered = false;
     this.elderRootActiveTimer = 0;
@@ -233,8 +236,8 @@ class SceneController {
       this.spells[k].timer = 0;
     }
     this.activeSpellCasting = null;
-    const firstMoss = (mData.mossTiles && mData.mossTiles[0]) || [5, 3];
-    this.selectedTile = { col: firstMoss[0], row: firstMoss[1] };
+    this.selectedBuildTowerId = null;
+    this.selectedTile = { col: -1, row: -1 };
     this.ui.inspectorOpen = false;
     input.setGridCursor(this.selectedTile.col, this.selectedTile.row, false);
 
@@ -328,8 +331,13 @@ class SceneController {
       return false;
     }
     const built = this.towerManager.buildTower(this.selectedBuildTowerId, col, row, this.map, this.economy, this.fx);
-    if (built && this.ui.notifyTowerBuilt) {
-      this.ui.notifyTowerBuilt(this.selectedBuildTowerId);
+    if (built) {
+      if (this.ui.notifyTowerBuilt) {
+        this.ui.notifyTowerBuilt(this.selectedBuildTowerId);
+      }
+      this.selectedBuildTowerId = null;
+      this.selectedTile = { col: -1, row: -1 };
+      this.ui.inspectorOpen = false;
     }
     return Boolean(built);
   }
@@ -665,31 +673,37 @@ class SceneController {
                 input.setGridCursor(col, row, false);
                 platform.playSfx('sfx_click');
               } else if (canBuild) {
-                this.selectedTile.col = targetCol;
-                this.selectedTile.row = targetRow;
-                this.selectedTileAgeSec = 0;
-                input.setGridCursor(col, row, false);
-
-                // 选中卡牌后点击空草地直接种植（如植物大战僵尸般极致顺滑），未选中卡牌时则展开选择面板
                 if (this.selectedBuildTowerId) {
+                  this.selectedTile.col = targetCol;
+                  this.selectedTile.row = targetRow;
+                  this.selectedTileAgeSec = 0;
+                  input.setGridCursor(col, row, false);
                   const built = this.tryBuildOnSelectedTile();
                   if (built) {
                     this.ui.inspectorOpen = false;
-                  } else {
-                    this.ui.inspectorOpen = true;
-                    platform.playSfx('sfx_click');
                   }
                 } else {
-                  this.ui.inspectorOpen = true;
-                  platform.playSfx('sfx_click');
+                  // 手中未选中建造卡牌时，点击战场空草地使所有面板与范围自动褪去（轻度UI，零视觉遮挡）
+                  this.selectedTile.col = -1;
+                  this.selectedTile.row = -1;
+                  this.ui.inspectorOpen = false;
+                  this.ui.showTowerDetailBoard = false;
                 }
               } else {
-                // 点击道路、障碍物或空白无效区域：收起范围展示与面板
+                // 点击道路、障碍物或空白无效区域：收起范围展示与面板，战场自然褪去
                 this.ui.inspectorOpen = false;
+                this.ui.showTowerDetailBoard = false;
+                this.selectedTile.col = -1;
+                this.selectedTile.row = -1;
+                this.selectedBuildTowerId = null;
               }
             }
           } else {
             this.ui.inspectorOpen = false;
+            this.ui.showTowerDetailBoard = false;
+            this.selectedTile.col = -1;
+            this.selectedTile.row = -1;
+            this.selectedBuildTowerId = null;
           }
         }
       } else if (act.type === 'pointer_up') {
@@ -957,6 +971,33 @@ class SceneController {
     // 2. 炮塔索敌与开火
     this.towerManager.update(dt, this.map, this.enemyManager, this.bulletManager, this.economy, this.fx, this.sporelingPatrol);
     this.sporeDropManager.update(dt, this.map, this.economy, this.fx, this);
+    // 绝境缓时救急机制：当敌人逼近生命核心 (<= 68px) 或守护种子 <= 4 时触发一次电影级子弹时间
+    if (!this.crisisSlowMoTriggered && this.map && this.map.mapData) {
+      const wTile = this.map.mapData.warehouseTile || [19, 12];
+      const wx = (wTile[0] + 0.5) * TILE_SIZE;
+      const wy = (wTile[1] + 0.5) * TILE_SIZE;
+      const alive = this.enemyManager.getAliveEnemies();
+      let danger = false;
+      for (let i = 0; i < alive.length; i++) {
+        const em = alive[i];
+        if (em.state !== 'death' && Math.hypot(em.x - wx, em.y - wy) <= 68) {
+          danger = true;
+          break;
+        }
+      }
+      if (danger || this.economy.seeds <= 4) {
+        this.crisisSlowMoTriggered = true;
+        this.fx.triggerScreenShake(4.5, 0.35);
+        this.fx.showBanner('⚠️ 绝境破釜！圣树受袭，速出技能！', '#FF4D4F', '全场时光缓流 1.5s', 2.0);
+        this.fx.fxSlowMoTimerSec = 1.5;
+        this.fx.fxTimeScale = 0.38;
+        if (this.gameSpeed > 1) {
+          this.gameSpeed = 1;
+        }
+        platform.playSfx('sfx_bomb');
+      }
+    }
+
     if (this.flankAlertTimer > 0) {
       this.flankAlertTimer = Math.max(0, this.flankAlertTimer - dt);
     }

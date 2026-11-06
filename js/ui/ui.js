@@ -183,6 +183,7 @@ class UiManager {
     this.codexEnemyPage = 0;
     this.inspectorOpen = false;
     this.inspectorRect = null;
+    this.showTowerDetailBoard = false;
 
     // 顶部资源变化缩放反馈与建造冷却动画
     this.lastSeeds = null;
@@ -203,9 +204,7 @@ class UiManager {
     this.isDragging = false;
     this.pressedSlotButton = null;
 
-    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
-    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
-    this.dockTargetExpansion = 1.0;  // 目标展开度
+// 轻度UI与自动褪去：维持当前玩家期望的展开度，不强制重置展开
   }
 
   update(realDt) {
@@ -293,6 +292,9 @@ class UiManager {
    */
   handlePointerDown(x, y, scene) {
     this.hoverX = x;
+    if (scene && scene.fx && typeof scene.fx.spawnTouchRipple === 'function') {
+      scene.fx.spawnTouchRipple(x, y);
+    }
     this.hoverY = y;
     this.dragStartX = x;
     this.dragStartY = y;
@@ -478,6 +480,34 @@ class UiManager {
       const col = Math.floor(mx / TILE_SIZE);
       const row = Math.floor(my / TILE_SIZE);
 
+      // 智能磁吸吸附：若手指偏离在草地边缘或道路旁几个像素内，自动锁定最近的有效建造格
+      if (scene.map && scene.towerManager) {
+        if (!scene.map.canBuildAt(col, row) || scene.towerManager.getTowerAt(col, row)) {
+          const offsets = [
+            [0, -1], [0, 1], [-1, 0], [1, 0],
+            [-1, -1], [1, -1], [-1, 1], [1, 1]
+          ];
+          let bestD = 1.35;
+          let bestC = col, bestR = row;
+          for (let k = 0; k < offsets.length; k++) {
+            const nc = col + offsets[k][0];
+            const nr = row + offsets[k][1];
+            if (scene.map.inBounds(nc, nr) && scene.map.canBuildAt(nc, nr) && !scene.towerManager.getTowerAt(nc, nr)) {
+              const d = Math.hypot((nc + 0.5) - (mx / TILE_SIZE), (nr + 0.5) - (my / TILE_SIZE));
+              if (d < bestD) {
+                bestD = d;
+                bestC = nc;
+                bestR = nr;
+              }
+            }
+          }
+          if (bestD < 1.35) {
+            col = bestC;
+            row = bestR;
+          }
+        }
+      }
+
       if (scene.map && scene.map.inBounds(col, row)) {
         if (scene.map.canBuildAt(col, row)) {
           const tDef = TOWERS[tId];
@@ -528,9 +558,6 @@ class UiManager {
     this.isDragging = false;
     this.pressedSlotButton = null;
 
-    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
-    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
-    this.dockTargetExpansion = 1.0;  // 目标展开度
   }
 
   isPointHovered(x, y, w, h) {
@@ -2085,6 +2112,164 @@ class UiManager {
 
     ctx.restore();
   }
+  /**
+   * 战地即时灵动快捷环（Tower Tactical Micro Quick-Actions）
+   * 专为手机端触控优化：点击防御塔后，在塔身周围直接浮现「A线升级」「B线升级」「索敌」「铲除」微胶囊
+   * 拇指一键触达，无需将视线与手指大幅移动至屏幕侧板
+   */
+  renderTowerTacticalQuickRing(ctx, scene, tower, tileScreenX, tileScreenY) {
+    if (!tower) return;
+    const upgrades = scene.towerManager.getAvailableUpgrades(tower);
+    const refund = scene.economy.calculateSellRefund(tower);
+    const priMap = { first: '首怪', last: '末怪', strongest: '强敌', weakest: '残血' };
+    const priStr = priMap[tower.targetPriority || 'first'] || '首怪';
+
+    ctx.save();
+
+    // 1. 顶部：升级选项胶囊
+    if (upgrades.length === 1) {
+      const up = upgrades[0];
+      const canAfford = scene.economy.canAfford(up.cost);
+      const uw = 114;
+      const uh = 28;
+      const ux = Math.round(tileScreenX - uw * 0.5);
+      const uy = Math.round(tileScreenY - 50);
+
+      roundRectPath(ctx, ux, uy, uw, uh, 14);
+      ctx.fillStyle = canAfford ? 'rgba(16, 42, 28, 0.94)' : 'rgba(28, 20, 16, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = canAfford ? 'rgba(82, 196, 26, 0.85)' : 'rgba(140, 100, 70, 0.55)';
+      ctx.lineWidth = canAfford ? 1.6 : 1.0;
+      ctx.stroke();
+
+      ctx.fillStyle = canAfford ? '#FFE58F' : '#D9D9D9';
+      ctx.font = `bold 11px ${UI_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`⚡ 强化 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+
+      this.registerButton('quick_up_single', ux, uy, uw, uh, () => {
+        scene.tryUpgradeSelectedTower(up.nodeId);
+      });
+    } else if (upgrades.length === 2) {
+      // 双分支 A/B 并排胶囊
+      for (let i = 0; i < 2; i++) {
+        const up = upgrades[i];
+        const canAfford = scene.economy.canAfford(up.cost);
+        const uw = 96;
+        const uh = 28;
+        const ux = Math.round(i === 0 ? tileScreenX - uw - 4 : tileScreenX + 4);
+        const uy = Math.round(tileScreenY - 50);
+
+        roundRectPath(ctx, ux, uy, uw, uh, 14);
+        ctx.fillStyle = canAfford ? (i === 0 ? 'rgba(12, 36, 56, 0.94)' : 'rgba(16, 44, 28, 0.94)') : 'rgba(28, 20, 16, 0.92)';
+        ctx.fill();
+        ctx.strokeStyle = canAfford ? (i === 0 ? 'rgba(64, 169, 255, 0.85)' : 'rgba(82, 196, 26, 0.85)') : 'rgba(140, 100, 70, 0.55)';
+        ctx.lineWidth = canAfford ? 1.6 : 1.0;
+        ctx.stroke();
+
+        ctx.fillStyle = canAfford ? '#FFE58F' : '#D9D9D9';
+        ctx.font = `bold 10.5px ${UI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${i === 0 ? '⚡A线' : '🔥B线'} 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+
+        this.registerButton('quick_up_branch_' + up.nodeId, ux, uy, uw, uh, () => {
+          scene.tryUpgradeSelectedTower(up.nodeId);
+        });
+      }
+    } else {
+      // 已升至顶级
+      const uw = 96;
+      const uh = 24;
+      const ux = Math.round(tileScreenX - uw * 0.5);
+      const uy = Math.round(tileScreenY - 48);
+
+      roundRectPath(ctx, ux, uy, uw, uh, 12);
+      ctx.fillStyle = 'rgba(28, 24, 12, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.75)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFD700';
+      ctx.font = `bold 10.5px ${UI_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🌟 极意宗师', ux + uw * 0.5, uy + 12);
+    }
+
+    // 2. 底部：三位一体拇指微操胶囊（索敌 + 铲除回收 + 详情面板开关）
+    const ph = 26;
+    const py = Math.round(tileScreenY + 36);
+    const px1 = Math.round(tileScreenX - 98); // 索敌
+    const px2 = Math.round(tileScreenX - 30); // 铲除
+    const px3 = Math.round(tileScreenX + 38); // 详情属性
+
+    // (1) 索敌胶囊
+    roundRectPath(ctx, px1, py, 64, ph, 13);
+    ctx.fillStyle = 'rgba(20, 24, 28, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(100, 140, 180, 0.55)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    ctx.fillStyle = '#BAE7FF';
+    ctx.font = `bold 10px ${UI_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`🎯 ${priStr}`, px1 + 32, py + 13);
+
+    this.registerButton('quick_pri_btn', px1, py, 64, ph, () => {
+      tower.cyclePriority();
+      platform.playSfx('sfx_click');
+      if (scene.fx) scene.fx.spawnFloatingText(tower.x, tower.y - 18, `索敌: ${priStr}`, '#FFE58F', 1.0);
+    });
+
+    // (2) 铲除回收胶囊
+    roundRectPath(ctx, px2, py, 64, ph, 13);
+    ctx.fillStyle = 'rgba(42, 14, 16, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 77, 79, 0.65)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFA39E';
+    ctx.font = `bold 10px ${UI_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`💰 +${refund}`, px2 + 32, py + 13);
+
+    this.registerButton('quick_sell_btn', px2, py, 64, ph, () => {
+      scene.sellTower(tower);
+      scene.selectedTile = { col: -1, row: -1 };
+      this.inspectorOpen = false;
+      this.showTowerDetailBoard = false;
+      platform.playSfx('sfx_coin');
+    });
+
+    // (3) 详情面板轻量开关胶囊（用户主动点击才展示，杜绝大木板无端遮挡战场）
+    roundRectPath(ctx, px3, py, 58, ph, 13);
+    ctx.fillStyle = this.showTowerDetailBoard ? 'rgba(44, 34, 16, 0.94)' : 'rgba(22, 28, 36, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = this.showTowerDetailBoard ? 'rgba(255, 215, 0, 0.85)' : 'rgba(120, 160, 200, 0.55)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    ctx.fillStyle = this.showTowerDetailBoard ? '#FFD700' : '#E6F7FF';
+    ctx.font = `bold 10px ${UI_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ℹ️ 详情', px3 + 29, py + 13);
+
+    this.registerButton('quick_detail_btn', px3, py, 58, ph, () => {
+      this.showTowerDetailBoard = !this.showTowerDetailBoard;
+      platform.playSfx('sfx_click');
+    });
+
+    ctx.restore();
+  }
+
   renderTowerInspectorPopup(ctx, scene) {
     const col = scene.selectedTile.col;
     const row = scene.selectedTile.row;
@@ -2102,6 +2287,21 @@ class UiManager {
     if (!existingTower && !canBuild) {
       this.inspectorRect = null;
       return;
+    }
+
+    // 1. 若为已有防御塔：首先呈现轻量战地灵动快捷环（0 遮挡，无大木板阻挡视线）
+    if (existingTower) {
+      this.renderTowerTacticalQuickRing(ctx, scene, existingTower, tileScreenX, tileScreenY);
+      // 若玩家未主动开启详情属性木板，保持战地开阔纯净零遮挡（轻度UI）
+      if (!this.showTowerDetailBoard) {
+        this.inspectorRect = {
+          x: tileScreenX - 110,
+          y: tileScreenY - 60,
+          w: 220,
+          h: 128
+        };
+        return;
+      }
     }
 
     const pw = 328;
@@ -2143,7 +2343,11 @@ class UiManager {
       font: `bold 14px ${UI_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
-      this.inspectorOpen = false;
+      this.showTowerDetailBoard = false;
+      if (!existingTower) {
+        this.inspectorOpen = false;
+        scene.selectedTile = { col: -1, row: -1 };
+      }
     });
 
     if (existingTower) {
@@ -2152,6 +2356,7 @@ class UiManager {
       this.renderBuildSlotPopupBody(ctx, scene, col, row, px, py, pw, ph);
     }
   }
+
 
   /**
    * 已建塔状态面板：头像、等级徽章、属性药丸胶囊、分支升级按钮、索敌/出售
@@ -2217,7 +2422,7 @@ class UiManager {
       ctx.fillStyle = synBg;
       ctx.fill();
       ctx.fillStyle = '#FFFDF5';
-      ctx.font = `bold 10px ${UI_FONT}`;
+      ctx.font = `bold 10px ;${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(synName, synTagX + 29, y + 63);
@@ -2233,7 +2438,7 @@ class UiManager {
     ctx.stroke();
 
     ctx.fillStyle = THEME.INK_MID;
-    ctx.font = `bold 10px ${UI_FONT}`;
+    ctx.font = `bold 10px ;${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(roleStr, roleTagX + roleTagW * 0.5, y + 63);
@@ -2273,7 +2478,7 @@ class UiManager {
 
       drawUiIcon(ctx, st.cat, st.icon, sx + 5, statsY + 5, 20);
       ctx.fillStyle = '#855F38';
-      ctx.font = `10px ${UI_FONT}`;
+      ctx.font = `10px ;${UI_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(st.label, sx + 27, statsY + 10);

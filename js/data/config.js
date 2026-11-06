@@ -82,11 +82,11 @@ const CONFIG = {
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
     MAX_ACTIVE_WAVE_ENEMIES: 48,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
-    WAVE_HP_GROWTH_PER_WAVE: 0.18,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
+    WAVE_HP_GROWTH_PER_WAVE: 0.25,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
-      map2: 1.1,
-      map3: 1.2
+      map2: 1.15,
+      map3: 1.30
     }
   },
 

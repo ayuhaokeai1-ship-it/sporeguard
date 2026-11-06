@@ -45,6 +45,8 @@ class FxSystem {
 
     // 冲击波环（用于爆裂菇爆炸与升级闪光环）
     this.rings = [];
+    this.touchRipples = [];
+    this.homingMotes = [];
 
     this.resetBattleState();
   }
@@ -53,6 +55,8 @@ class FxSystem {
     this.particlePool.clear();
     this.textPool.clear();
     this.rings.length = 0;
+    this.touchRipples.length = 0;
+    this.homingMotes.length = 0;
 
     // 震屏状态（取最大值，不累加）
     this.shakePx = 0;
@@ -190,6 +194,55 @@ class FxSystem {
   }
 
   /**
+   * 仙露水波触控涟漪：零延迟实体触控反馈
+   * 每次手指点击战场，瞬间扩散出一圈青绿/翠玉色水波
+   */
+  spawnTouchRipple(x, y, color = 'rgba(168, 255, 140, 0.8)') {
+    if (this.touchRipples.length >= 16) {
+      this.touchRipples.shift();
+    }
+    this.touchRipples.push({
+      x,
+      y,
+      radius: 4,
+      maxRadius: 28,
+      life: 0,
+      maxLife: 0.32,
+      color
+    });
+  }
+
+  /**
+   * 战利品飞向金库流光光丝（Spore Homing Motes）
+   * 拾取孢子或古代遗物时，生成向上弹跳并沿贝塞尔弧线飞入顶部金库的光子
+   */
+  spawnHomingMotes(startX, startY, count = 3, color = '#FFD700') {
+    const targetX = 148;
+    const targetY = 22;
+    for (let i = 0; i < count; i++) {
+      if (this.homingMotes.length >= 32) {
+        this.homingMotes.shift();
+      }
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const burstDist = 18 + Math.random() * 16;
+      const arcMidX = (startX + targetX) * 0.5 + (Math.random() - 0.5) * 60;
+      const arcMidY = Math.min(startY, targetY) - (40 + Math.random() * 50);
+
+      this.homingMotes.push({
+        startX: startX + Math.cos(angle) * (burstDist * 0.3),
+        startY: startY + Math.sin(angle) * (burstDist * 0.3),
+        cpX: arcMidX,
+        cpY: arcMidY,
+        targetX,
+        targetY,
+        timer: 0,
+        duration: 0.45 + i * 0.06,
+        color
+      });
+    }
+  }
+
+  /**
    * 显示横幅（如“连锁！/Chain!”、“超载！/Overload!”、首领登场等）
    */
   showBanner(text, color = PALETTE.UI_SPORE, subText = '', duration = 1.35) {
@@ -297,6 +350,27 @@ class FxSystem {
     }
 
     // 顿帧计时（按真实时间递减）
+    // 更新触控仙露涟漪
+    for (let i = this.touchRipples.length - 1; i >= 0; i--) {
+      const rip = this.touchRipples[i];
+      rip.life += realDt;
+      if (rip.life >= rip.maxLife) {
+        this.touchRipples.splice(i, 1);
+      }
+    }
+
+    // 更新飞向金库的战利品光丝
+    for (let i = this.homingMotes.length - 1; i >= 0; i--) {
+      const m = this.homingMotes[i];
+      m.timer += realDt;
+      if (m.timer >= m.duration) {
+        if (this.scene && this.scene.ui) {
+          this.scene.ui.sporePopTimer = 0.24;
+        }
+        this.homingMotes.splice(i, 1);
+      }
+    }
+
     if (this.hitstopRemainingSec > 0 && !isPaused) {
       this.hitstopRemainingSec = Math.max(0, this.hitstopRemainingSec - realDt);
     }
@@ -460,6 +534,51 @@ class FxSystem {
    * 绘制屏幕级反馈叠加层（种子受损边缘泛红 + 连锁/超载横幅）
    */
   renderScreenOverlayFx(ctx) {
+    // 1. 仙露水波触控涟漪 (Organic Emerald Touch Ripples)
+    if (this.touchRipples && this.touchRipples.length > 0) {
+      for (let i = 0; i < this.touchRipples.length; i++) {
+        const rip = this.touchRipples[i];
+        const prog = rip.life / rip.maxLife;
+        const curR = rip.radius + (rip.maxRadius - rip.radius) * prog;
+        const alpha = (1 - prog) * 0.65;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(rip.x, rip.y, curR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(168, 255, 140, ${alpha})`;
+        ctx.lineWidth = Math.max(1, 2.2 * (1 - prog));
+        ctx.stroke();
+        // 柔和内光圈
+        ctx.beginPath();
+        ctx.arc(rip.x, rip.y, Math.max(1, curR * 0.45), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 235, 140, ${alpha * 0.4})`;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 2. 飞向顶部金库的战利品与金孢流光轨迹 (Spore Homing Motes)
+    if (this.homingMotes && this.homingMotes.length > 0) {
+      for (let i = 0; i < this.homingMotes.length; i++) {
+        const m = this.homingMotes[i];
+        const prog = Math.min(1.0, m.timer / m.duration);
+        const inv = 1 - prog;
+        const curX = inv * inv * m.startX + 2 * inv * prog * m.cpX + prog * prog * m.targetX;
+        const curY = inv * inv * m.startY + 2 * inv * prog * m.cpY + prog * prog * m.targetY;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.45)';
+        ctx.beginPath();
+        ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(curX, curY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     // 种子受损红边
     if (this.redEdgeTimerSec > 0) {
       const alpha = Math.min(0.55, (this.redEdgeTimerSec / 0.35) * 0.55);
@@ -467,7 +586,7 @@ class FxSystem {
       ctx.strokeStyle = PALETTE.UI_SEED;
       ctx.globalAlpha = alpha;
       ctx.lineWidth = 12;
-      ctx.strokeRect(6, 6, CONFIG.LAYOUT.MAP.WIDTH - 12, CONFIG.LAYOUT.MAP.HEIGHT - 12);
+      ctx.strokeRect(6, 6, (CONFIG.RESOLUTION.LOGICAL_WIDTH || 960) - 12, (CONFIG.RESOLUTION.LOGICAL_HEIGHT || 540) - 12);
       ctx.restore();
       platform.recordDrawCall(1);
     }

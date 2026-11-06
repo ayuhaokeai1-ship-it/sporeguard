@@ -9,9 +9,9 @@ const ENEMIES = {
     nameKey: 'enemy_beetle_name',
     typeKey: 'enemy_type_basic',
     tipKey: 'enemy_beetle_tip',
-    baseHp: 145,          // 基础血量从 40 提升至 95，需狙击菇 3 发击杀，形成有压迫感的步兵行进线
-    speed: 1.35,          // 格/秒
-    armor: 3,            // 基础轻甲免伤 2 点
+    baseHp: 185,          // 基础血量从 40 提升至 95，需狙击菇 3 发击杀，形成有压迫感的步兵行进线
+    speed: 1.40,          // 格/秒
+    armor: 4,            // 基础轻甲免伤 4 点
     threat: 1,
     reward: 4,
     isFlying: false,
@@ -30,8 +30,8 @@ const ENEMIES = {
     nameKey: 'enemy_swift_name',
     typeKey: 'enemy_type_fast',
     tipKey: 'enemy_swift_tip',
-    baseHp: 95,          // 从 22 提升至 60，不再被 1 枪秒杀，检验减速与多目标拦截
-    speed: 2.6,         // 格/秒（极速冲锋）
+    baseHp: 140,          // 从 22 提升至 60，不再被 1 枪秒杀，检验减速与多目标拦截
+    speed: 2.85,         // 格/秒（极速冲锋）
     armor: 1,
     threat: 1,
     reward: 3,
@@ -48,13 +48,13 @@ const ENEMIES = {
     nameKey: 'enemy_armored_name',
     typeKey: 'enemy_type_armored',
     tipKey: 'enemy_armored_tip',
-    baseHp: 650,         // 从 220 提升至 380，真正的前排坚盾重装坦克
+    baseHp: 920,         // 从 220 提升至 380，真正的前排坚盾重装坦克
     speed: 0.8,         // 格/秒，沉稳推进
-    armor: 16,           // 12 点扎实护甲，大幅抵挡单体针刺，逼出毒雾腐蚀或火炮破甲！
+    armor: 22,           // 12 点扎实护甲，大幅抵挡单体针刺，逼出毒雾腐蚀或火炮破甲！
     threat: 2,
     reward: 12,
     isFlying: false,
-    slowFactor: 0.6,     // 减速抗性 40%
+    slowFactor: 0.5,     // 减速抗性 40%
     artSize: { width: 16, height: 16 },
     animFrames: { walk: 4, hitArmor: 2, death: 3 },
     splitOnDeath: null,
@@ -66,8 +66,8 @@ const ENEMIES = {
     nameKey: 'enemy_moth_name',
     typeKey: 'enemy_type_flying',
     tipKey: 'enemy_moth_tip',
-    baseHp: 210,         // 从 55 提升至 125，需防空塔多轮专注射击
-    speed: 1.9,          // 格/秒，沿空中航线直穿树冠
+    baseHp: 295,         // 从 55 提升至 125，需防空塔多轮专注射击
+    speed: 2.15,          // 格/秒，沿空中航线直穿树冠
     armor: 1,
     threat: 1,
     reward: 5,
@@ -85,7 +85,7 @@ const ENEMIES = {
     nameKey: 'enemy_splitter_name',
     typeKey: 'enemy_type_splitter',
     tipKey: 'enemy_splitter_tip',
-    baseHp: 360,         // 从 90 提升至 210
+    baseHp: 480,         // 从 90 提升至 210
     speed: 1.15,          // 格/秒
     armor: 3,
     threat: 2,
@@ -106,8 +106,8 @@ const ENEMIES = {
     nameKey: 'enemy_larva_name',
     typeKey: 'enemy_type_larva',
     tipKey: 'enemy_larva_tip',
-    baseHp: 75,          // 从 24 提升至 45
-    speed: 2.2,          // 格/秒，高速分散奔逃
+    baseHp: 115,          // 从 24 提升至 45
+    speed: 2.50,          // 格/秒，高速分散奔逃
     armor: 0,
     threat: 1,
     reward: 2,
@@ -125,8 +125,8 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m1_name', // 腐化蛀王
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
-    baseHp: 7500,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
-    speed: 0.75,         // 格/秒
+    baseHp: 11800,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
+    speed: 0.80,         // 格/秒
     armor: 18,
     threat: 5,
     reward: 120,
@@ -158,8 +158,8 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 9200,        // 从 3200 提升至 5200
-    speed: 0.95,         // 格/秒（空中航线）
+    baseHp: 14800,        // 从 3200 提升至 5200
+    speed: 1.05,         // 格/秒（空中航线）
     armor: 10,
     threat: 5,
     reward: 140,
@@ -191,8 +191,8 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m3_name', // 腐化异变母体
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m3_tip',
-    baseHp: 12000,        // 从 4000 提升至 6500
-    speed: 0.72,          // 格/秒
+    baseHp: 19500,        // 从 4000 提升至 6500
+    speed: 0.78,          // 格/秒
     armor: 15,
     threat: 5,
     reward: 160,
@@ -227,9 +227,9 @@ const ENEMIES = {
     nameKey: 'enemy_burrower_name',
     typeKey: 'enemy_burrower_type',
     tipKey: 'enemy_burrower_tip',
-    baseHp: 520,
+    baseHp: 1080,
     speed: 1.5,
-    armor: 6,
+    armor: 8,
     threat: 2,
     reward: 12,
     isFlying: false,
@@ -245,15 +245,15 @@ const ENEMIES = {
     nameKey: 'enemy_volatile_pod_name',
     typeKey: 'enemy_volatile_pod_type',
     tipKey: 'enemy_volatile_pod_tip',
-    baseHp: 280,
-    speed: 2.4,
+    baseHp: 380,
+    speed: 2.70,
     armor: 0,
     threat: 2,
     reward: 9,
     isFlying: false,
     isSuicideBomber: true,
     explosionRadius: 42,
-    explosionDamage: 60,
+    explosionDamage: 85,
     slowFactor: 1.0,
     artSize: { width: 12, height: 12 },
     animFrames: { walk: 4, death: 3 },
@@ -274,7 +274,7 @@ const ENEMIES = {
     isHealerShaman: true,
     healCooldown: 3.5,
     healRadius: 80,
-    healAmount: 40,
+    healAmount: 65,
     resurrectCooldown: 8.0,
     slowFactor: 0.8,
     artSize: { width: 16, height: 16 },
@@ -304,14 +304,14 @@ const ENEMIES = {
     nameKey: 'enemy_weaver_name',
     typeKey: 'enemy_weaver_type',
     tipKey: 'enemy_weaver_tip',
-    baseHp: 340,
+    baseHp: 460,
     speed: 1.3,
     armor: 2,
     threat: 2,
     reward: 8,
     isFlying: false,
     slowFactor: 1.0,
-    webCooldown: 6.5,
+    webCooldown: 5.5,
     webRangeTiles: 4.2,
     webMaxHp: 3,
     artSize: { width: 14, height: 14 },
@@ -325,14 +325,14 @@ const ENEMIES = {
     nameKey: 'enemy_leaper_name',
     typeKey: 'enemy_leaper_type',
     tipKey: 'enemy_leaper_tip',
-    baseHp: 310,
-    speed: 2.65,
+    baseHp: 460,
+    speed: 2.85,
     armor: 2,
     threat: 2,
     reward: 9,
     isFlying: false,
     isLeaper: true,
-    leapCooldown: 4.5,
+    leapCooldown: 3.8,
     leapDistancePx: 92,
     artSize: { width: 14, height: 14 },
     animFrames: { walk: 4, death: 3 },
@@ -344,7 +344,7 @@ const ENEMIES = {
     nameKey: 'enemy_siege_beetle_name',
     typeKey: 'enemy_siege_beetle_type',
     tipKey: 'enemy_siege_beetle_tip',
-    baseHp: 960,
+    baseHp: 1520,
     speed: 0.9,
     armor: 18,
     threat: 3,

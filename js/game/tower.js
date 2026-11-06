@@ -141,7 +141,9 @@ class TowerManager {
     tower.hp = tower.maxHp;
     tower.dormantTimer = 0;
     tower.poisonTimer = 0;
+    tower.nodeId = targetNodeId;
     tower.node = nextNode;
+    tower.level = (targetNodeId === 'base' ? 1 : (targetNodeId === 'lv1' ? 2 : 3));
     if (nextNode.branch) {
       tower.branch = nextNode.branch;
     }

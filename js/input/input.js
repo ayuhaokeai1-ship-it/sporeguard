@@ -16,6 +16,10 @@ let prevGamepadButtons = [];
 let stickCooldown = 0;
 
 function emitAction(type, payload = {}) {
+  if (typeof type === 'object' && type !== null) {
+    payload = type;
+    type = payload.type || 'unknown';
+  }
   if (type === 'pointer_down' || type === 'confirm_tile') {
     platform.unlockAudio();
   }

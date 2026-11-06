@@ -161,6 +161,9 @@ class SporeDropManager {
           if (typeof fx.spawnShockwave === 'function') {
             fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
           }
+          if (typeof fx.spawnHomingMotes === 'function') {
+            fx.spawnHomingMotes(screenDx, screenDy, 3, '#FFD700');
+          }
         }
         platform.playSfx('sfx_coin');
         // 手机端原生轻微触感振动反馈

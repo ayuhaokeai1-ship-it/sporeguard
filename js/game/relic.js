@@ -109,6 +109,10 @@ class RelicDropManager {
     const fx = scene.fx;
     const ry = relic.baseY + relic.bounceY;
 
+    if (fx && typeof fx.spawnHomingMotes === 'function') {
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+      fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 0.85), mv.OFFSET_Y + ry * (mv.SCALE || 0.85), 4, '#FFD700');
+    }
     if (relic.kind === 'coin') {
       scene.economy.addSpores(relic.value || 60);
       if (fx) {

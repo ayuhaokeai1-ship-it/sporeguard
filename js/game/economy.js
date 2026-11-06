@@ -87,8 +87,11 @@ class EconomyManager {
   /**
    * 5.2 出售返还：按该炮塔已投入总额（基础 + 全部升级）的 60% 计算
    */
-  calculateSellRefund(totalInvested) {
-    return Math.round(totalInvested * CONFIG.ECONOMY.SELL_REFUND_RATE);
+  calculateSellRefund(input) {
+    const total = (typeof input === 'object' && input !== null)
+      ? (input.totalInvested || (input.node && input.node.cost) || (input.def && input.def.nodes && input.def.nodes.base.cost) || 100)
+      : (typeof input === 'number' && Number.isFinite(input) ? input : 100);
+    return Math.round(total * (CONFIG.ECONOMY.SELL_REFUND_RATE || 0.6));
   }
 
   /**
