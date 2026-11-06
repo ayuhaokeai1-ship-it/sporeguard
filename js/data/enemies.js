@@ -125,7 +125,7 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m1_name', // 腐化蛀王
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
-    baseHp: 11800,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
+    baseHp: 1600,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
     speed: 0.80,         // 格/秒
     armor: 18,
     threat: 5,
@@ -158,7 +158,7 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 14800,        // 从 3200 提升至 5200
+    baseHp: 2200,        // 从 3200 提升至 5200
     speed: 1.05,         // 格/秒（空中航线）
     armor: 10,
     threat: 5,
@@ -191,7 +191,7 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m3_name', // 腐化异变母体
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m3_tip',
-    baseHp: 19500,        // 从 4000 提升至 6500
+    baseHp: 3200,        // 从 4000 提升至 6500
     speed: 0.78,          // 格/秒
     armor: 15,
     threat: 5,

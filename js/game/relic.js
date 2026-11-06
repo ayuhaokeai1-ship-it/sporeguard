@@ -74,25 +74,25 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极度灵敏
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
-    const scale = mv.SCALE || 0.85;
+    const hitRadius = 88; // 手机端超大触控判定圈 (88px)，极其灵敏容易点击
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const scale = mv.SCALE || 1.0;
+    const offX = mv.OFFSET_X || 0;
+    const offY = mv.OFFSET_Y || 0;
 
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
 
-      // 1. 地图坐标系距离
+      // 1. 地图坐标系直测
       const distMap = Math.hypot(clickX - r.x, clickY - ry);
-
-      // 2. 屏幕坐标系距离
-      const screenRx = mv.OFFSET_X + r.x * scale;
-      const screenRy = mv.OFFSET_Y + ry * scale;
+      // 2. 屏幕坐标系映射
+      const screenRx = offX + r.x * scale;
+      const screenRy = offY + ry * scale;
       const distScreen = Math.hypot(clickX - screenRx, clickY - screenRy);
-
-      // 3. 屏幕转地图坐标距离
-      const convertedMx = (clickX - mv.OFFSET_X) / scale;
-      const convertedMy = (clickY - mv.OFFSET_Y) / scale;
+      // 3. 屏幕转地图坐标映射
+      const convertedMx = (clickX - offX) / scale;
+      const convertedMy = (clickY - offY) / scale;
       const distConverted = Math.hypot(convertedMx - r.x, convertedMy - ry);
 
       if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
@@ -121,7 +121,7 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_upgrade');
     } else if (relic.kind === 'shield') {
-      scene.economy.lives = Math.min(CONFIG.RULES.START_LIVES, scene.economy.lives + 1);
+      scene.economy.lives = Math.min(20, scene.economy.lives + 1);
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '+1 守护生命!', '#52C41A', 1.4);
         fx.spawnParticles(relic.x, ry, 18, ['#52C41A', '#B7EB8F', '#FFFFFF'], 30, 80, 0.3, 0.6, 3);
@@ -138,10 +138,12 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_laser');
     } else if (relic.kind === 'clover') {
-      // 4秒全场暴击狂潮
+      // 四叶草神种：立即提供 60 孢子能量 + 1 远古种子能量豆 + 全场狂暴！
+      scene.economy.addSpores(60);
+      scene.economy.seeds = Math.min(5, (scene.economy.seeds || 0) + 1);
       if (fx) {
-        fx.spawnFloatingText(relic.x, ry - 18, '幸运四叶草: 全员暴击!', '#73D13D', 1.4);
-        fx.spawnParticles(relic.x, ry, 18, ['#73D13D', '#D9F7BE', '#FFD700'], 30, 80, 0.3, 0.5, 3);
+        fx.spawnFloatingText(relic.x, ry - 18, '+60 能量 & +1 觉醒神种!', '#73D13D', 1.45);
+        fx.spawnParticles(relic.x, ry, 22, ['#73D13D', '#D9F7BE', '#FFD700', '#52C41A'], 35, 95, 0.3, 0.6, 4);
       }
       platform.playSfx('sfx_upgrade');
     }
@@ -172,9 +174,7 @@ class RelicDropManager {
 
       // 发光战利品光环
       const glowAlpha = 0.35 + Math.sin(r.animTimer * 6) * 0.18;
-      ctx.fillStyle = r.kind === 'shield' ? 
-gba(82, 196, 26, ) : 
-gba(255, 215, 0, );
+      ctx.fillStyle = r.kind === 'shield' ? `rgba(82, 196, 26, ${glowAlpha})` : (r.kind === 'clover' ? `rgba(115, 209, 61, ${glowAlpha})` : `rgba(255, 215, 0, ${glowAlpha})`);
       ctx.beginPath();
       ctx.arc(rx, ry - 6, 15, 0, Math.PI * 2);
       ctx.fill();

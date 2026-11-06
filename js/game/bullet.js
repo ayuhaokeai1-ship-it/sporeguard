@@ -209,6 +209,18 @@ class BulletManager {
   }
 
   spawnMistCloud(x, y, node) {
+    // 检查附近是否已有同类毒雾：直接刷新持续时间与效果，杜绝重复实体在同一地面堆叠
+    const active = this.hazardPool.getActiveList();
+    for (let i = 0; i < active.length; i++) {
+      const ex = active[i];
+      if (ex.kind === 'mist' && Math.hypot(ex.x - x, ex.y - y) <= 28) {
+        ex.timer = 0;
+        ex.duration = Math.max(ex.duration, node.cloudDuration || 3.0);
+        ex.slow = Math.max(ex.slow, node.slow || 0.30);
+        ex.dps = Math.max(ex.dps, node.dps || 4);
+        return ex;
+      }
+    }
     const h = this.hazardPool.acquire(true);
     if (!h) return null;
 
@@ -570,42 +582,43 @@ class BulletManager {
     for (let i = 0; i < hazards.length; i++) {
       const h = hazards[i];
       const remain = h.duration - h.timer;
-      const fadeAlpha = remain < 0.5 ? (remain / 0.5) : 1.0;
-      const pulse = 0.70 + Math.sin(animTimeSec * 6 + i) * 0.12;
-      const alpha = Math.max(0.1, fadeAlpha * pulse);
+      const fadeAlpha = remain < 0.6 ? (remain / 0.6) : 1.0;
+      const pulse = 0.85 + Math.sin(animTimeSec * 4 + i * 1.5) * 0.15;
+      const alpha = Math.max(0.05, Math.min(1.0, fadeAlpha * pulse));
 
-      const vfxPath = h.kind === 'burn' ? 'assets/vfx/range_earthshaker.png' : 'assets/vfx/range_toxic_acid.png';
-      const vfxImg = platform.getImage(vfxPath);
+      ctx.save();
+      ctx.translate(Math.round(h.x), Math.round(h.y));
+      ctx.scale(1.0, 0.72); // 45度地面透视
 
-      if (vfxImg) {
-        ctx.save();
-        ctx.translate(Math.round(h.x), Math.round(h.y));
-        ctx.scale(1.0, 0.78); // 贴合 45 度地面斜视角透视
-        if (h.kind === 'mist') {
-          ctx.rotate(animTimeSec * 0.25 + i * 1.5);
-        }
-        ctx.globalAlpha = alpha * 0.46; // 轻柔透明的真菌毒雾/地裂表达
-        const dSize = h.radiusPx * 2.2;
-        ctx.drawImage(vfxImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
-        ctx.restore();
-        continue;
+      const r = h.radiusPx;
+      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+      if (h.kind === 'mist') {
+        grad.addColorStop(0, `rgba(179, 127, 235, ${0.28 * alpha})`);
+        grad.addColorStop(0.55, `rgba(146, 84, 222, ${0.16 * alpha})`);
+        grad.addColorStop(1, 'rgba(114, 46, 209, 0)');
+      } else {
+        grad.addColorStop(0, `rgba(255, 122, 69, ${0.35 * alpha})`);
+        grad.addColorStop(0.60, `rgba(212, 56, 13, ${0.18 * alpha})`);
+        grad.addColorStop(1, 'rgba(173, 33, 5, 0)');
       }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
 
-      let sKey = h.spriteKey;
-      if (h.kind === 'burn') {
-        sKey = (Math.floor(animTimeSec * 6) % 2 === 0) ? 'burn_0' : 'burn_1';
-      }
-
-      if (!drawHazardSprite(ctx, sKey, h.x, h.y, h.radiusPx, alpha)) {
-        ctx.save();
-        ctx.fillStyle = h.color;
-        ctx.globalAlpha = alpha * 0.35;
+      // 少量飘动的柔和微光孢子粒子
+      const pulseTime = animTimeSec * 2.2 + i;
+      ctx.fillStyle = h.kind === 'mist' ? `rgba(211, 173, 247, ${0.40 * alpha})` : `rgba(255, 213, 145, ${0.40 * alpha})`;
+      for (let pIdx = 0; pIdx < 3; pIdx++) {
+        const pAng = (pIdx / 3) * Math.PI * 2 + pulseTime * 0.35;
+        const pDist = r * 0.45 + Math.sin(pulseTime + pIdx) * (r * 0.15);
         ctx.beginPath();
-        ctx.ellipse(Math.round(h.x), Math.round(h.y), Math.round(h.radiusPx), Math.round(h.radiusPx * 0.78), 0, 0, Math.PI * 2);
+        ctx.arc(Math.cos(pAng) * pDist, Math.sin(pAng) * pDist, 2.0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
-        platform.recordDrawCall(1);
       }
+
+      ctx.restore();
+      platform.recordDrawCall(1);
     }
   }
 

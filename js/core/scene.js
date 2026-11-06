@@ -416,6 +416,27 @@ class SceneController {
   onVictory() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
     const stars = this.economy.calculateStars();
     this.settlementResult = {
       victory: true,
@@ -436,6 +457,27 @@ class SceneController {
   onDefeat() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
+    if (this.bulletManager) {
+      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
+      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
+    }
+    if (this.enemyManager && this.enemyManager.flyingWebs) {
+      this.enemyManager.flyingWebs.length = 0;
+    }
     this.settlementResult = {
       victory: false,
       stars: 0,

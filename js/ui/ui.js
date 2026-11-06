@@ -459,8 +459,9 @@ class UiManager {
    * 处理释放事件（松手放置守卫或响应按钮短按）
    */
   handlePointerUp(x, y, scene) {
-    // 手机端防误触：若松手仍在底栏卡牌区（y >= 430），则视为点击选中，保持选中状态并杜绝播放误触受创音效
-    if (y >= 430 && this.pressedSlotButton) {
+    // 手机端极速响应：若手指只是点按卡牌（未大幅拖拽），立即视为点击选中卡牌
+    const dragDist = Math.hypot(x - this.dragStartX, y - this.dragStartY);
+    if (this.pressedSlotButton && (!this.isDragging || dragDist < 14)) {
       if (this.pressedSlotButton.onClick) {
         try {
           this.pressedSlotButton.onClick(this.pressedSlotButton);
@@ -970,81 +971,36 @@ class UiManager {
       return;
     }
 
-    // 1. 左上角：深色木质资源栏 + 波次状态与提前召唤号角
-    this.renderTopResourceBar(ctx, scene);
+    // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 铲子 + 觉醒豆)
+    this.renderPvZTopSeedBank(ctx, scene);
 
-    // 1.25 顶部居中：自然天候生态实时徽章 (晴空 / 雷雨 / 迷雾 / 血月) - 独立 X:464 槽位
-    if (scene.weather) {
-      scene.weather.renderTopWeatherBadge(ctx, 390, 14);
-    }
+    // 2. 顶部波次推进旗舰进度槽 (PvZ Wave Flag Meter)
+    this.renderPvZTopWaveBar(ctx, scene);
 
-    // 1.35 顶部居中偏右：远古神器状态栏 (4大装备神器) - 独立 X:540 槽位
-    if (scene.relicArsenal) {
-      scene.relicArsenal.renderHudRelicBadges(ctx, 496, 15);
-    }
+    // 3. 顶部右上角极简控制栏 (仅 3 个清晰木质按钮: [倍速], [暂停], [菜单])
+    this.renderPvZTopRightMenu(ctx, scene);
 
-    // 1.4 顶部战况实时DPS分析按钮 - 独立 X:610 槽位
-    if (scene.combatAnalytics) {
-      scene.combatAnalytics.renderToggleButton(ctx, 598, 12);
-    }
+    // 4. 【彻底释放全屏战场】左下角极简圆盘英雄徽章与3大自然神术法球 (占据极小空间，95%画面完全纯净沉浸！)
+    this.renderPvZBottomLeftHeroAndSpells(ctx, scene);
 
-    // 1.5 战术成就达成即时滑入横幅 (Kingdom Rush 20大成就)
-    if (scene.achievements) {
-      scene.achievements.renderToast(ctx);
-    }
-
-    // 侧翼突袭动态警报横幅 (Flank Incursion Banner)
-    if (scene.flankAlertTimer > 0) {
-      ctx.save();
-      const bannerW = 420;
-      const bannerH = 40;
-      const bx = (960 - bannerW) * 0.5;
-      const by = 68;
-      const pulse = 1.0 + Math.sin(this.uiAnimTime * 12) * 0.04;
-
-      ctx.translate(480, 88);
-      ctx.scale(pulse, pulse);
-      ctx.translate(-480, -88);
-
-      roundRectPath(ctx, bx, by, bannerW, bannerH, 10);
-      ctx.fillStyle = 'rgba(140, 29, 24, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = '#FFA39E';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      drawArtText(ctx, '⚠️ 敌军侧翼突袭! 注意防范南路溪径!', 480, 88, {
-        style: 'gold',
-        size: 15,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.8
-      });
-      ctx.restore();
-    }
-
-    // 铲子模式全屏指示
+    // 铲子模式轻量指示
     if (scene.shovelActive) {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 77, 79, 0.15)';
+      ctx.fillStyle = 'rgba(255, 77, 79, 0.12)';
       ctx.fillRect(0, 0, 960, 540);
-      drawArtText(ctx, '【铲子模式】点击任意蘑菇进行移植回收，点击空地退出', 480, 395, {
+      drawArtText(ctx, '【铲子模式】轻触场上任意蘑菇即可铲除回收 70% 孢子，轻触空白处退出', 480, 78, {
         style: 'gold',
-        size: 13,
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 1.5
+        strokeWidth: 1.2
       });
       ctx.restore();
     }
 
-    // 2. 右上角：古铜木质快捷控制栏（倍速、暂停、图鉴、设置）
-    this.renderTopRightControls(ctx, scene);
-
-    // 3 & 4. 底部全功能一体化统御控制舱 (Unified Bottom Command Deck: 英雄+姿态+4大神术+5大守卫卡牌+铲子+觉醒)
-    // 黄金比例统御下沉托盘，严格限制于 Y:444..534 区域，杜绝任何左侧巨幅面板遮挡地图！
-    if (scene.state !== 'PAUSED' && !this.showSettingsModal && !this.showGuideModal) {
-      this.renderBottomUnifiedCommandDeck(ctx, scene);
+    // 战术成就达成即时滑入横幅
+    if (scene.achievements) {
+      scene.achievements.renderToast(ctx);
     }
 
     // 5. 动态弹出式：防御塔选中与升级羊皮纸木框面板（仅在点击交互时弹出）
@@ -2998,12 +2954,12 @@ class UiManager {
     ctx.restore();
   }
 
-  renderSettingsModal(ctx) {
-    ctx.fillStyle = 'rgba(10, 16, 12, 0.76)';
+  renderSettingsModal(ctx, scene) {
+    ctx.fillStyle = 'rgba(10, 16, 12, 0.82)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 370;
-    const mh = 290;
+    const mw = 380;
+    const mh = 360;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -3012,20 +2968,24 @@ class UiManager {
     ctx.fillStyle = THEME.INK_DARK;
     ctx.font = `bold 20px ${CN_FONT}`;
     ctx.textAlign = 'center';
-    ctx.fillText(i18n.t('settings_title'), mx + mw * 0.5, my + 42);
+    ctx.fillText('🌲 森林哨所指挥菜单 🌲', mx + mw * 0.5, my + 38);
 
     const audioCfg = platform.getAudioConfig();
-    const bx = mx + 45;
-    const bw = mw - 90;
+    const bx = mx + 40;
+    const bw = mw - 80;
+    const btnH = 34;
+    const gap = 8;
+    let curY = my + 54;
 
+    // 1. 音效开关
     this.drawPixelButton(
       ctx,
       'set_sfx',
       bx,
-      my + 72,
+      curY,
       bw,
-      40,
-      i18n.t('settings_sfx') + ': ' + (audioCfg.sfx ? i18n.t('on') : i18n.t('off')),
+      btnH,
+      '🔊 音效: ' + (audioCfg.sfx ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.sfx ? 'sfx_on' : 'sfx_off' },
       () => {
         const next = !audioCfg.sfx;
@@ -3034,15 +2994,17 @@ class UiManager {
         platform.playSfx('sfx_click');
       }
     );
+    curY += btnH + gap;
 
+    // 2. 音乐开关
     this.drawPixelButton(
       ctx,
       'set_bgm',
       bx,
-      my + 124,
+      curY,
       bw,
-      40,
-      i18n.t('settings_bgm') + ': ' + (audioCfg.bgm ? i18n.t('on') : i18n.t('off')),
+      btnH,
+      '🎵 背景音乐: ' + (audioCfg.bgm ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.bgm ? 'bgm_on' : 'bgm_off' },
       () => {
         const next = !audioCfg.bgm;
@@ -3051,24 +3013,69 @@ class UiManager {
         platform.playSfx('sfx_click');
       }
     );
+    curY += btnH + gap;
 
+    // 3. 查阅图鉴
     this.drawPixelButton(
       ctx,
-      'set_lang',
+      'set_codex',
       bx,
-      my + 176,
+      curY,
       bw,
-      40,
-      i18n.t('settings_lang') + ': ' + (i18n.getLang() === 'zh' ? i18n.t('lang_zh') : i18n.t('lang_en')),
+      btnH,
+      '📖 查阅森林图鉴与秘典',
       { skin: 'btn_wood' },
       () => {
-        const nextLang = i18n.toggleLang();
-        storage.updateSettings({ lang: nextLang });
         platform.playSfx('sfx_click');
+        this.guideStep = 0;
+        this.showGuideModal = true;
+        this.showSettingsModal = false;
       }
     );
+    curY += btnH + gap;
 
-    this.drawPixelButton(ctx, 'set_close', bx, my + 228, bw, 40, i18n.t('btn_back'), {
+    // 4. 战况战报统计
+    this.drawPixelButton(
+      ctx,
+      'set_analytics',
+      bx,
+      curY,
+      bw,
+      btnH,
+      '📊 查看实时战况与DPS统计',
+      { skin: 'btn_wood' },
+      () => {
+        platform.playSfx('sfx_click');
+        if (scene && scene.combatAnalytics) {
+          scene.combatAnalytics.isOpen = true;
+        }
+        this.showSettingsModal = false;
+      }
+    );
+    curY += btnH + gap;
+
+    // 5. 重新挑战本关
+    this.drawPixelButton(
+      ctx,
+      'set_restart',
+      bx,
+      curY,
+      bw,
+      btnH,
+      '🔁 重新挑战本关',
+      { skin: 'btn_wood' },
+      () => {
+        platform.playSfx('sfx_click');
+        this.showSettingsModal = false;
+        if (scene && typeof scene.startLevel === 'function') {
+          scene.startLevel(scene.currentMapId);
+        }
+      }
+    );
+    curY += btnH + gap;
+
+    // 6. 返回游戏继续战斗
+    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, '⚔️ 返回战场继续战斗', {
       skin: 'btn_green'
     }, () => {
       platform.playSfx('sfx_click');
@@ -3803,6 +3810,956 @@ class UiManager {
 
     ctx.restore();
   }
+
+  // =========================================================================
+  // 【植物大战僵尸经典一体化顶栏 Seed Bank】
+  // =========================================================================
+  renderPvZTopSeedBank(ctx, scene) {
+    const bankX = 10;
+    const bankY = 8;
+    const bankH = 54;
+
+    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque)
+    const sporeW = 84;
+    const sporeH = 50;
+    const sporeX = bankX + 4;
+    const sporeY = bankY + 2;
+
+    ctx.save();
+    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 10);
+    ctx.fillStyle = 'rgba(26, 18, 10, 0.94)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230, 187, 96, 0.70)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
+    if (sporeImg && sporeImg.width) {
+      ctx.drawImage(sporeImg, sporeX + 5, sporeY + 12, 26, 26);
+    } else {
+      drawUiIcon(ctx, 16, 'spore', sporeX + 6, sporeY + 14, 24);
+    }
+
+    const spores = scene.economy.spores;
+    drawArtText(ctx, String(spores), sporeX + 53, sporeY + 29, {
+      style: 'gold',
+      size: 14,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.5
+    });
+
+    const seeds = scene.economy.seeds;
+    drawArtText(ctx, `❤️${seeds}`, sporeX + 53, sporeY + 11, {
+      style: seeds <= 5 ? 'crimson' : 'parchment',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+    ctx.restore();
+
+    // 2. 5大蘑菇卡牌栏 (PvZ 经典横向卡槽)
+    const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
+    const cardW = 54;
+    const cardH = 50;
+    const startX = sporeX + sporeW + 6;
+
+    for (let i = 0; i < towerOrder.length; i++) {
+      const tId = towerOrder[i];
+      const def = TOWER_DEFINITIONS[tId];
+      if (!def) continue;
+
+      const cx = startX + i * (cardW + 4);
+      const cy = bankY + 2;
+      const cost = def.baseCost;
+      const affordable = scene.economy.spores >= cost;
+      const isSelected = scene.selectedBuildTowerId === tId;
+
+      ctx.save();
+      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
+      ctx.fillStyle = isSelected
+        ? 'rgba(56, 42, 22, 0.96)'
+        : (affordable ? 'rgba(32, 22, 14, 0.94)' : 'rgba(22, 16, 12, 0.88)');
+      ctx.fill();
+      ctx.strokeStyle = isSelected
+        ? '#FFD700'
+        : (affordable ? 'rgba(198, 143, 69, 0.75)' : 'rgba(100, 75, 50, 0.40)');
+      ctx.lineWidth = isSelected ? 2.0 : 1.0;
+      ctx.stroke();
+
+      // 卡牌手绘原画
+      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
+      if (cardArtImg && cardArtImg.width) {
+        ctx.save();
+        if (!affordable) ctx.globalAlpha = 0.48;
+        ctx.drawImage(cardArtImg, cx + 5, cy + 2, cardW - 10, cardH - 16);
+        ctx.restore();
+      } else {
+        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 18);
+      }
+
+      // 底部金黄色标价药丸
+      roundRectPath(ctx, cx + 4, cy + cardH - 14, cardW - 8, 12, 4);
+      ctx.fillStyle = 'rgba(10, 6, 3, 0.88)';
+      ctx.fill();
+      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 8, {
+        style: affordable ? 'gold' : 'crimson',
+        size: 9.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      // 快捷键角标 [1..5]
+      roundRectPath(ctx, cx + 2, cy + 2, 11, 10, 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fill();
+      drawArtText(ctx, String(i + 1), cx + 7.5, cy + 7, {
+        style: 'gold',
+        size: 8,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.6
+      });
+
+      // 选中卡牌明亮金边律动高亮
+      if (isSelected) {
+        ctx.strokeStyle = '#FFE58F';
+        ctx.lineWidth = 1.6;
+        ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+      }
+
+      ctx.restore();
+
+      this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
+        scene.selectBuildTowerType(tId);
+        platform.playSfx('sfx_click');
+      }, { towerId: tId });
+    }
+
+    // 3. 经典铲子槽 (Shovel Slot)
+    const shvX = startX + towerOrder.length * (cardW + 4) + 4;
+    const shvY = bankY + 2;
+    const shvW = 42;
+    const shvH = cardH;
+    const isShovel = scene.shovelActive;
+
+    ctx.save();
+    roundRectPath(ctx, shvX, shvY, shvW, shvH, 6);
+    ctx.fillStyle = isShovel ? 'rgba(140, 29, 24, 0.95)' : 'rgba(28, 18, 12, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = isShovel ? '#FFA39E' : 'rgba(198, 143, 69, 0.70)';
+    ctx.lineWidth = isShovel ? 2.0 : 1.0;
+    ctx.stroke();
+
+    const shovelImg = platform.getImage('assets/ui/icons/icon_sell.png');
+    if (shovelImg && shovelImg.width) {
+      ctx.drawImage(shovelImg, shvX + (shvW - 22) * 0.5, shvY + 5, 22, 22);
+    } else {
+      drawArtText(ctx, '铲', shvX + shvW * 0.5, shvY + 15, {
+        style: isShovel ? 'crimson' : 'gold',
+        size: 13,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 1.0
+      });
+    }
+
+    drawArtText(ctx, isShovel ? '已拿' : '铲除', shvX + shvW * 0.5, shvY + shvH - 9, {
+      style: isShovel ? 'crimson' : 'parchment',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_shovel', shvX, shvY, shvW, shvH, () => {
+      scene.toggleShovel();
+      platform.playSfx('sfx_click');
+    });
+
+    // 4. 远古灵能觉醒槽 (Awakening Plant Food Beans: 相当于 PvZ2 能量豆)
+    const awkX = shvX + shvW + 6;
+    const awkY = bankY + 2;
+    const awkW = 54;
+    const awkH = cardH;
+
+    ctx.save();
+    roundRectPath(ctx, awkX, awkY, awkW, awkH, 6);
+    ctx.fillStyle = scene.awakeningActive ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = scene.awakeningActive ? '#D3F261' : 'rgba(115, 209, 61, 0.60)';
+    ctx.lineWidth = scene.awakeningActive ? 2.0 : 1.0;
+    ctx.stroke();
+
+    const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
+    if (seedImg && seedImg.width) {
+      ctx.drawImage(seedImg, awkX + (awkW - 22) * 0.5, awkY + 5, 22, 22);
+    } else {
+      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 16, {
+        style: 'emerald',
+        size: 13,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 1.0
+      });
+    }
+
+    drawArtText(ctx, `觉醒×${Math.min(5, scene.economy.seeds || 0)}`, awkX + awkW * 0.5, awkY + awkH - 9, {
+      style: 'emerald',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_awakening', awkX, awkY, awkW, awkH, () => {
+      if (typeof scene.activateAwakeningMode === 'function') {
+        scene.activateAwakeningMode();
+      }
+      platform.playSfx('sfx_upgrade');
+    });
+  }
+
+  // =========================================================================
+  // 【顶部波次推进旗舰进度槽 PvZ Wave Flag】
+  // =========================================================================
+  renderPvZTopWaveBar(ctx, scene) {
+    const waveMgr = scene.waveManager;
+    const barX = 520;
+    const barY = 14;
+    const barW = 168;
+    const barH = 26;
+
+    if (waveMgr.isPrepPhase()) {
+      const earlyBonus = Math.min(
+        CONFIG.ECONOMY.EARLY_CALL_MAX,
+        Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
+      );
+      this.drawPixelButton(
+        ctx,
+        'pvz_call_wave',
+        barX,
+        barY - 2,
+        barW,
+        30,
+        `📢 提前迎战 +${earlyBonus} 🪙`,
+        {
+          skin: 'btn_green',
+          font: `bold 11px ${CN_FONT}`
+        },
+        () => {
+          scene.callWaveEarly();
+        }
+      );
+      return;
+    }
+
+    ctx.save();
+    roundRectPath(ctx, barX, barY, barW, barH, 6);
+    ctx.fillStyle = 'rgba(18, 12, 8, 0.85)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.60)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    const currentW = waveMgr.currentWaveIndex;
+    const totalW = waveMgr.totalWaves;
+    const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
+
+    roundRectPath(ctx, barX + 2, barY + 2, (barW - 4) * ratio, barH - 4, 4);
+    ctx.fillStyle = 'rgba(82, 196, 26, 0.55)';
+    ctx.fill();
+
+    drawArtText(ctx, `第 ${currentW} / ${totalW} 波`, barX + barW * 0.5, barY + barH * 0.5, {
+      style: currentW >= totalW ? 'crimson' : 'gold',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.0
+    });
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 【右上角仅 3 个极简功能键 PvZ Top Right Menu】
+  // =========================================================================
+  renderPvZTopRightMenu(ctx, scene) {
+    this.drawPixelButton(
+      ctx,
+      'pvz_speed',
+      794,
+      12,
+      44,
+      32,
+      `${scene.speedMultiplier}×`,
+      {
+        skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
+        font: `bold 11.5px ${CN_FONT}`
+      },
+      () => {
+        scene.cycleSpeed();
+      }
+    );
+
+    this.drawPixelButton(
+      ctx,
+      'pvz_pause',
+      842,
+      12,
+      44,
+      32,
+      '⏸',
+      {
+        skin: 'btn_wood',
+        font: `bold 12px ${CN_FONT}`
+      },
+      () => {
+        scene.pauseGame();
+      }
+    );
+
+    this.drawPixelButton(
+      ctx,
+      'pvz_menu',
+      890,
+      12,
+      56,
+      32,
+      '⚙️菜单',
+      {
+        skin: 'btn_wood',
+        font: `bold 11px ${CN_FONT}`
+      },
+      () => {
+        platform.playSfx('sfx_click');
+        this.showSettingsModal = true;
+      }
+    );
+  }
+
+  // =========================================================================
+  // 【左下角极简圆盘英雄徽章与神术法球 PvZ Hero Emblem & Spell Orbs】
+  // =========================================================================
+  renderPvZBottomLeftHeroAndSpells(ctx, scene) {
+    const hero = scene.hero;
+    if (!hero) return;
+
+    // 1. 极简英雄圆形头像盘 (远古树人·奥克)
+    const hx = 26;
+    const hy = 494;
+    const hr = 24;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 14, 8, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = '#C68F45';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
+    ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
+    ctx.lineWidth = 3.0;
+    ctx.stroke();
+
+    const heroImg = platform.getImage('assets/vfx/hero_oak.png');
+    if (heroImg && heroImg.width) {
+      ctx.drawImage(heroImg, hx - 18, hy - 18, 36, 36);
+    } else {
+      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 16, align: 'center', baseline: 'middle' });
+    }
+
+    const ultReady = (hero.ultCooldownTimer || 0) <= 0;
+    if (ultReady) {
+      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.12;
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.7 + Math.sin(this.uiAnimTime * 8) * 0.3})`;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    roundRectPath(ctx, hx - 12, hy + hr - 8, 24, 11, 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fill();
+    drawArtText(ctx, `Lv.${hero.level || 1}`, hx, hy + hr - 2.5, {
+      style: 'gold',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_hero_badge', hx - hr, hy - hr, hr * 2, hr * 2, () => {
+      if (ultReady && typeof hero.castUltimate === 'function') {
+        hero.castUltimate(scene);
+        platform.playSfx('sfx_thunder');
+      } else {
+        scene.activeHeroRally = true;
+        hero.isSelected = true;
+        platform.playSfx('sfx_click');
+      }
+    });
+
+    // 2. 3 大自然神术法球 (甘霖 45, 天雷 75, 丰饶 10s)
+    const spellList = [
+      { id: 'rain', name: '甘霖', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
+      { id: 'shock', name: '天雷', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
+      { id: 'harvest', name: '丰饶', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' }
+    ];
+
+    const orbR = 17;
+    const orbStartY = hy;
+    const orbStartX = hx + hr + 18;
+
+    for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
+      const spItem = spellList[sIdx];
+      const sp = scene.spells ? scene.spells[spItem.id] : null;
+      const spCd = (sp && sp.timer) || 0;
+      const spMaxCd = (sp && sp.cooldown) || 15;
+      const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
+      const ox = orbStartX + sIdx * (orbR * 2 + 10);
+      const oy = orbStartY;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ox, oy, orbR, 0, Math.PI * 2);
+      ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.92)' : 'rgba(16, 14, 12, 0.85)';
+      ctx.fill();
+      ctx.strokeStyle = canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      const spImg = platform.getImage(spItem.icon) || platform.getImage(spItem.vfx);
+      if (spImg && spImg.width) {
+        if (!canCast) ctx.globalAlpha = 0.45;
+        ctx.drawImage(spImg, ox - 11, oy - 11, 22, 22);
+      } else {
+        drawArtText(ctx, spItem.name[0], ox, oy - 2, {
+          style: canCast ? 'emerald' : 'dim',
+          size: 11,
+          align: 'center',
+          baseline: 'middle'
+        });
+      }
+
+      if (spItem.cost > 0) {
+        roundRectPath(ctx, ox - 14, oy + orbR - 7, 28, 10, 3);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
+        ctx.fill();
+        drawArtText(ctx, `${spItem.cost}🪙`, ox, oy + orbR - 2, {
+          style: canCast ? 'gold' : 'dim',
+          size: 7.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0.5
+        });
+      }
+
+      if (spCd > 0) {
+        const sweepRatio = spCd / Math.max(1, spMaxCd);
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.arc(ox, oy, orbR, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * sweepRatio);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fill();
+      }
+
+      ctx.restore();
+
+      this.registerButton('pvz_spell_' + spItem.id, ox - orbR, oy - orbR, orbR * 2, orbR * 2, () => {
+        if (canCast) {
+          scene.triggerSpell(spItem.id);
+          platform.playSfx('sfx_laser');
+        }
+      });
+    }
+  }
+
+
+  // =========================================================================
+  // 【植物大战僵尸经典一体化顶栏 Seed Bank】
+  // =========================================================================
+  renderPvZTopSeedBank(ctx, scene) {
+    const bankX = 10;
+    const bankY = 8;
+    const bankH = 54;
+
+    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque)
+    const sporeW = 84;
+    const sporeH = 50;
+    const sporeX = bankX + 4;
+    const sporeY = bankY + 2;
+
+    ctx.save();
+    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 10);
+    ctx.fillStyle = 'rgba(26, 18, 10, 0.94)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230, 187, 96, 0.70)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
+    if (sporeImg && sporeImg.width) {
+      ctx.drawImage(sporeImg, sporeX + 5, sporeY + 12, 26, 26);
+    } else {
+      drawUiIcon(ctx, 16, 'spore', sporeX + 6, sporeY + 14, 24);
+    }
+
+    const spores = scene.economy.spores;
+    drawArtText(ctx, String(spores), sporeX + 53, sporeY + 29, {
+      style: 'gold',
+      size: 14,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.5
+    });
+
+    const seeds = scene.economy.seeds;
+    drawArtText(ctx, `❤️${seeds}`, sporeX + 53, sporeY + 11, {
+      style: seeds <= 5 ? 'crimson' : 'parchment',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.8
+    });
+    ctx.restore();
+
+    // 2. 5大蘑菇卡牌栏 (PvZ 经典横向卡槽)
+    const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
+    const cardW = 54;
+    const cardH = 50;
+    const startX = sporeX + sporeW + 6;
+
+    for (let i = 0; i < towerOrder.length; i++) {
+      const tId = towerOrder[i];
+      const def = TOWERS[tId];
+      if (!def) continue;
+
+      const cx = startX + i * (cardW + 4);
+      const cy = bankY + 2;
+      const cost = def.nodes ? def.nodes.base.cost : 100;
+      const affordable = scene.economy.spores >= cost;
+      const isSelected = scene.selectedBuildTowerId === tId;
+
+      ctx.save();
+      roundRectPath(ctx, cx, cy, cardW, cardH, 6);
+      ctx.fillStyle = isSelected
+        ? 'rgba(56, 42, 22, 0.96)'
+        : (affordable ? 'rgba(32, 22, 14, 0.94)' : 'rgba(22, 16, 12, 0.88)');
+      ctx.fill();
+      ctx.strokeStyle = isSelected
+        ? '#FFD700'
+        : (affordable ? 'rgba(198, 143, 69, 0.75)' : 'rgba(100, 75, 50, 0.40)');
+      ctx.lineWidth = isSelected ? 2.0 : 1.0;
+      ctx.stroke();
+
+      // 卡牌手绘原画
+      const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
+      if (cardArtImg && cardArtImg.width) {
+        ctx.save();
+        if (!affordable) ctx.globalAlpha = 0.48;
+        ctx.drawImage(cardArtImg, cx + 5, cy + 2, cardW - 10, cardH - 16);
+        ctx.restore();
+      } else {
+        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 18);
+      }
+
+      // 底部金黄色标价药丸
+      roundRectPath(ctx, cx + 4, cy + cardH - 14, cardW - 8, 12, 4);
+      ctx.fillStyle = 'rgba(10, 6, 3, 0.88)';
+      ctx.fill();
+      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 8, {
+        style: affordable ? 'gold' : 'crimson',
+        size: 9.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      // 快捷键角标 [1..5]
+      roundRectPath(ctx, cx + 2, cy + 2, 11, 10, 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fill();
+      drawArtText(ctx, String(i + 1), cx + 7.5, cy + 7, {
+        style: 'gold',
+        size: 8,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.6
+      });
+
+      // 选中卡牌明亮金边律动高亮
+      if (isSelected) {
+        ctx.strokeStyle = '#FFE58F';
+        ctx.lineWidth = 1.6;
+        ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+      }
+
+      ctx.restore();
+
+      this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
+        scene.selectBuildTowerType(tId);
+        platform.playSfx('sfx_click');
+      }, { towerId: tId });
+    }
+
+    // 3. 经典铲子槽 (Shovel Slot)
+    const shvX = startX + towerOrder.length * (cardW + 4) + 4;
+    const shvY = bankY + 2;
+    const shvW = 42;
+    const shvH = cardH;
+    const isShovel = scene.shovelActive;
+
+    ctx.save();
+    roundRectPath(ctx, shvX, shvY, shvW, shvH, 6);
+    ctx.fillStyle = isShovel ? 'rgba(140, 29, 24, 0.95)' : 'rgba(28, 18, 12, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = isShovel ? '#FFA39E' : 'rgba(198, 143, 69, 0.70)';
+    ctx.lineWidth = isShovel ? 2.0 : 1.0;
+    ctx.stroke();
+
+    const shovelImg = platform.getImage('assets/ui/icons/icon_sell.png');
+    if (shovelImg && shovelImg.width) {
+      ctx.drawImage(shovelImg, shvX + (shvW - 22) * 0.5, shvY + 5, 22, 22);
+    } else {
+      drawArtText(ctx, '铲', shvX + shvW * 0.5, shvY + 15, {
+        style: isShovel ? 'crimson' : 'gold',
+        size: 13,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 1.0
+      });
+    }
+
+    drawArtText(ctx, isShovel ? '已拿' : '铲除', shvX + shvW * 0.5, shvY + shvH - 9, {
+      style: isShovel ? 'crimson' : 'parchment',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_shovel', shvX, shvY, shvW, shvH, () => {
+      scene.toggleShovel();
+      platform.playSfx('sfx_click');
+    });
+
+    // 4. 远古灵能觉醒槽 (Awakening Plant Food Beans: 相当于 PvZ2 能量豆)
+    const awkX = shvX + shvW + 6;
+    const awkY = bankY + 2;
+    const awkW = 54;
+    const awkH = cardH;
+
+    ctx.save();
+    roundRectPath(ctx, awkX, awkY, awkW, awkH, 6);
+    ctx.fillStyle = scene.awakeningActive ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = scene.awakeningActive ? '#D3F261' : 'rgba(115, 209, 61, 0.60)';
+    ctx.lineWidth = scene.awakeningActive ? 2.0 : 1.0;
+    ctx.stroke();
+
+    const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
+    if (seedImg && seedImg.width) {
+      ctx.drawImage(seedImg, awkX + (awkW - 22) * 0.5, awkY + 5, 22, 22);
+    } else {
+      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 16, {
+        style: 'emerald',
+        size: 13,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 1.0
+      });
+    }
+
+    drawArtText(ctx, `觉醒×${Math.min(5, scene.economy.seeds || 0)}`, awkX + awkW * 0.5, awkY + awkH - 9, {
+      style: 'emerald',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_awakening', awkX, awkY, awkW, awkH, () => {
+      if (typeof scene.activateAwakeningMode === 'function') {
+        scene.activateAwakeningMode();
+      }
+      platform.playSfx('sfx_upgrade');
+    });
+  }
+
+  // =========================================================================
+  // 【顶部波次推进旗舰进度槽 PvZ Wave Flag】
+  // =========================================================================
+  renderPvZTopWaveBar(ctx, scene) {
+    const waveMgr = scene.waveManager;
+    const barX = 520;
+    const barY = 14;
+    const barW = 168;
+    const barH = 26;
+
+    if (waveMgr.isPrepPhase()) {
+      const earlyBonus = Math.min(
+        CONFIG.ECONOMY.EARLY_CALL_MAX,
+        Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
+      );
+      this.drawPixelButton(
+        ctx,
+        'pvz_call_wave',
+        barX,
+        barY - 2,
+        barW,
+        30,
+        `📢 提前迎战 +${earlyBonus} 🪙`,
+        {
+          skin: 'btn_green',
+          font: `bold 11px ${CN_FONT}`
+        },
+        () => {
+          scene.callWaveEarly();
+        }
+      );
+      return;
+    }
+
+    ctx.save();
+    roundRectPath(ctx, barX, barY, barW, barH, 6);
+    ctx.fillStyle = 'rgba(18, 12, 8, 0.85)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.60)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    const currentW = waveMgr.currentWaveIndex;
+    const totalW = waveMgr.totalWaves;
+    const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
+
+    roundRectPath(ctx, barX + 2, barY + 2, (barW - 4) * ratio, barH - 4, 4);
+    ctx.fillStyle = 'rgba(82, 196, 26, 0.55)';
+    ctx.fill();
+
+    drawArtText(ctx, `第 ${currentW} / ${totalW} 波`, barX + barW * 0.5, barY + barH * 0.5, {
+      style: currentW >= totalW ? 'crimson' : 'gold',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.0
+    });
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 【右上角仅 3 个极简功能键 PvZ Top Right Menu】
+  // =========================================================================
+  renderPvZTopRightMenu(ctx, scene) {
+    this.drawPixelButton(
+      ctx,
+      'pvz_speed',
+      794,
+      12,
+      44,
+      32,
+      `${scene.speedMultiplier}×`,
+      {
+        skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
+        font: `bold 11.5px ${CN_FONT}`
+      },
+      () => {
+        scene.cycleSpeed();
+      }
+    );
+
+    this.drawPixelButton(
+      ctx,
+      'pvz_pause',
+      842,
+      12,
+      44,
+      32,
+      '⏸',
+      {
+        skin: 'btn_wood',
+        font: `bold 12px ${CN_FONT}`
+      },
+      () => {
+        scene.pauseGame();
+      }
+    );
+
+    this.drawPixelButton(
+      ctx,
+      'pvz_menu',
+      890,
+      12,
+      56,
+      32,
+      '⚙️菜单',
+      {
+        skin: 'btn_wood',
+        font: `bold 11px ${CN_FONT}`
+      },
+      () => {
+        platform.playSfx('sfx_click');
+        this.showSettingsModal = true;
+      }
+    );
+  }
+
+  // =========================================================================
+  // 【左下角极简圆盘英雄徽章与神术法球 PvZ Hero Emblem & Spell Orbs】
+  // =========================================================================
+  renderPvZBottomLeftHeroAndSpells(ctx, scene) {
+    const hero = scene.hero;
+    if (!hero) return;
+
+    // 1. 极简英雄圆形头像盘 (远古树人·奥克)
+    const hx = 26;
+    const hy = 494;
+    const hr = 24;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 14, 8, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = '#C68F45';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
+    ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
+    ctx.lineWidth = 3.0;
+    ctx.stroke();
+
+    const heroImg = platform.getImage('assets/vfx/hero_oak.png');
+    if (heroImg && heroImg.width) {
+      ctx.drawImage(heroImg, hx - 18, hy - 18, 36, 36);
+    } else {
+      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 16, align: 'center', baseline: 'middle' });
+    }
+
+    const ultReady = (hero.ultCooldownTimer || 0) <= 0;
+    if (ultReady) {
+      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.12;
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.7 + Math.sin(this.uiAnimTime * 8) * 0.3})`;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    roundRectPath(ctx, hx - 12, hy + hr - 8, 24, 11, 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fill();
+    drawArtText(ctx, `Lv.${hero.level || 1}`, hx, hy + hr - 2.5, {
+      style: 'gold',
+      size: 8.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_hero_badge', hx - hr, hy - hr, hr * 2, hr * 2, () => {
+      if (ultReady && typeof hero.castUltimate === 'function') {
+        hero.castUltimate(scene);
+        platform.playSfx('sfx_thunder');
+      } else {
+        scene.activeHeroRally = true;
+        hero.isSelected = true;
+        platform.playSfx('sfx_click');
+      }
+    });
+
+    // 2. 3 大自然神术法球 (甘霖 45, 天雷 75, 丰饶 10s)
+    const spellList = [
+      { id: 'rain', name: '甘霖', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
+      { id: 'shock', name: '天雷', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
+      { id: 'harvest', name: '丰饶', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' }
+    ];
+
+    const orbR = 17;
+    const orbStartY = hy;
+    const orbStartX = hx + hr + 18;
+
+    for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
+      const spItem = spellList[sIdx];
+      const sp = scene.spells ? scene.spells[spItem.id] : null;
+      const spCd = (sp && sp.timer) || 0;
+      const spMaxCd = (sp && sp.cooldown) || 15;
+      const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
+      const ox = orbStartX + sIdx * (orbR * 2 + 10);
+      const oy = orbStartY;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ox, oy, orbR, 0, Math.PI * 2);
+      ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.92)' : 'rgba(16, 14, 12, 0.85)';
+      ctx.fill();
+      ctx.strokeStyle = canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      const spImg = platform.getImage(spItem.icon) || platform.getImage(spItem.vfx);
+      if (spImg && spImg.width) {
+        if (!canCast) ctx.globalAlpha = 0.45;
+        ctx.drawImage(spImg, ox - 11, oy - 11, 22, 22);
+      } else {
+        drawArtText(ctx, spItem.name[0], ox, oy - 2, {
+          style: canCast ? 'emerald' : 'dim',
+          size: 11,
+          align: 'center',
+          baseline: 'middle'
+        });
+      }
+
+      if (spItem.cost > 0) {
+        roundRectPath(ctx, ox - 14, oy + orbR - 7, 28, 10, 3);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
+        ctx.fill();
+        drawArtText(ctx, `${spItem.cost}🪙`, ox, oy + orbR - 2, {
+          style: canCast ? 'gold' : 'dim',
+          size: 7.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0.5
+        });
+      }
+
+      if (spCd > 0) {
+        const sweepRatio = spCd / Math.max(1, spMaxCd);
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.arc(ox, oy, orbR, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * sweepRatio);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fill();
+      }
+
+      ctx.restore();
+
+      this.registerButton('pvz_spell_' + spItem.id, ox - orbR, oy - orbR, orbR * 2, orbR * 2, () => {
+        if (canCast) {
+          scene.triggerSpell(spItem.id);
+          platform.playSfx('sfx_laser');
+        }
+      });
+    }
+  }
+
 }
 
 module.exports = UiManager;
