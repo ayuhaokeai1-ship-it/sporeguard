@@ -202,10 +202,17 @@ class UiManager {
     this.dragCurrentY = -1;
     this.isDragging = false;
     this.pressedSlotButton = null;
+
+    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
+    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
+    this.dockTargetExpansion = 1.0;  // 目标展开度
   }
 
   update(realDt) {
     this.uiAnimTime += realDt;
+    // 底部一体化控制舱与轻语言药丸平滑弹性插值
+    const lerpSpeed = 14.0;
+    this.dockExpansion += (this.dockTargetExpansion - this.dockExpansion) * Math.min(1.0, realDt * lerpSpeed);
     if (this.toastTimer > 0) {
       this.toastTimer = Math.max(0, this.toastTimer - realDt);
     }
@@ -260,6 +267,12 @@ class UiManager {
 
     // 手机移动端滑动扫线拾取能量 (Swipe-to-collect)
     if (scene && scene.state === 'BATTLE') {
+      // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
+      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
+        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+          this.dockTargetExpansion = 0.0;
+        }
+      }
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
       const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
       const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
@@ -268,6 +281,9 @@ class UiManager {
       }
       if (scene.relicManager) {
         scene.relicManager.checkClick(mx, my, scene);
+      }
+      if (scene.contraptions) {
+        scene.contraptions.handlePointerDown(mx, my, scene);
       }
     }
   }
@@ -309,6 +325,12 @@ class UiManager {
     }
 
     if (scene && scene.state === 'BATTLE') {
+      // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
+      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
+        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+          this.dockTargetExpansion = 0.0;
+        }
+      }
       // (0) 实时战斗统计面板开关与点击 (屏幕空间)
       if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
         return true;
@@ -329,6 +351,11 @@ class UiManager {
 
       // (A2) 精英怪/Boss掉落战利品道具拾取 (Relic Coin/Clover/Shield/Lightning)
       if (scene.relicManager && scene.relicManager.checkClick(mx, my, scene)) {
+        return true;
+      }
+
+      // (A3) 奇幻森林环境晨露与生灵机关互动拾取
+      if (scene.contraptions && scene.contraptions.handlePointerDown(mx, my, scene)) {
         return true;
       }
 
@@ -500,6 +527,10 @@ class UiManager {
     this.draggingTowerId = null;
     this.isDragging = false;
     this.pressedSlotButton = null;
+
+    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
+    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
+    this.dockTargetExpansion = 1.0;  // 目标展开度
   }
 
   isPointHovered(x, y, w, h) {
@@ -1461,14 +1492,98 @@ class UiManager {
     const deckH = 90;
     const hero = scene.hero;
 
-    // 1. 远古灵木精工雕刻卡牌底座托盘 (Ancient Carved Bark Command Deck)
+    // (A) 若处于收缩/沉浸轻度状态，绘制悬浮“轻语言UI”微光胶囊 (Whisper Command Capsule)
+    if (this.dockExpansion < 0.88) {
+      const pillW = 360;
+      const pillH = 32;
+      const pillX = Math.round((960 - pillW) * 0.5);
+      const pillY = 502;
+      const pillAlpha = Math.min(1.0, (0.88 - this.dockExpansion) / 0.65);
+
+      ctx.save();
+      ctx.globalAlpha = pillAlpha;
+
+      // 翡翠黑曜石透光玻璃胶囊
+      const pGrad = ctx.createLinearGradient(pillX, pillY, pillX, pillY + pillH);
+      pGrad.addColorStop(0, 'rgba(12, 28, 20, 0.94)');
+      pGrad.addColorStop(1, 'rgba(8, 18, 13, 0.96)');
+      roundRectPath(ctx, pillX, pillY, pillW, pillH, 16);
+      ctx.fillStyle = pGrad;
+      ctx.fill();
+
+      // 呼吸微光律动金边
+      const pulse = 1.0 + Math.sin(this.uiAnimTime * 3.8) * 0.25;
+      ctx.strokeStyle = `rgba(211, 242, 97, ${0.45 + pulse * 0.25})`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      drawArtText(ctx, '🍃 战备指令', pillX + 46, pillY + pillH * 0.5, {
+        style: 'emerald',
+        size: 11.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      drawArtText(ctx, '▲ 轻触展开 (5塔 / 4术 / 英雄)', pillX + pillW * 0.5 + 10, pillY + pillH * 0.5, {
+        style: 'gold',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      drawArtText(ctx, `🪙 ${scene.economy.spores}`, pillX + pillW - 38, pillY + pillH * 0.5, {
+        style: 'parchment',
+        size: 11.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      ctx.restore();
+
+      this.registerButton('dock_whisper_pill', pillX, pillY, pillW, pillH, () => {
+        this.dockTargetExpansion = 1.0;
+        platform.playSfx('sfx_click');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(10); } catch (e) {}
+        }
+      });
+    }
+
+    // (B) 若未完全隐藏，绘制平滑下滑与淡入淡出的一体化控制舱
+    if (this.dockExpansion <= 0.05) return;
+
+    const slideY = Math.round((1.0 - this.dockExpansion) * 105);
+    const deckAlpha = Math.max(0, Math.min(1.0, (this.dockExpansion - 0.15) / 0.85));
+
     ctx.save();
+    ctx.translate(0, slideY);
+    ctx.globalAlpha = deckAlpha;
+
+    // 1. 远古灵木精工雕刻卡牌底座托盘 (Ancient Carved Bark Command Deck)
     roundRectPath(ctx, 10, baseY, 940, deckH, 12);
     ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(198, 143, 69, 0.70)';
     ctx.lineWidth = 1.6;
     ctx.stroke();
+
+    // 右上角折叠/沉浸战场小按钮
+    roundRectPath(ctx, 894, baseY + 3, 52, 16, 4);
+    ctx.fillStyle = 'rgba(40, 28, 16, 0.75)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, '⌵ 沉浸', 920, baseY + 11, {
+      style: 'parchment',
+      size: 9,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
 
     // 区域垂直分割金线 (不绘制贯穿文字的水平横线，确保全部文字清晰利落)
     ctx.strokeStyle = 'rgba(198, 143, 69, 0.40)';
@@ -1960,6 +2075,15 @@ class UiManager {
         scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
       }
     });
+
+    if (this.dockExpansion >= 0.65) {
+      this.registerButton('dock_fold_btn', 894, baseY + 3, 52, 16, () => {
+        this.dockTargetExpansion = 0.0;
+        platform.playSfx('sfx_click');
+      });
+    }
+
+    ctx.restore();
   }
   renderTowerInspectorPopup(ctx, scene) {
     const col = scene.selectedTile.col;

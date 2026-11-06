@@ -74,13 +74,28 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 60; // 手机端超大触控判定圈 (60px，近2个完整格子)，极度灵敏
+    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极度灵敏
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
+
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
+
+      // 1. 地图坐标系距离
       const distMap = Math.hypot(clickX - r.x, clickY - ry);
-      const distScreen = Math.hypot((clickX - 160) - r.x, (clickY - 30) - ry);
-      if (distMap <= hitRadius || distScreen <= hitRadius) {
+
+      // 2. 屏幕坐标系距离
+      const screenRx = mv.OFFSET_X + r.x * scale;
+      const screenRy = mv.OFFSET_Y + ry * scale;
+      const distScreen = Math.hypot(clickX - screenRx, clickY - screenRy);
+
+      // 3. 屏幕转地图坐标距离
+      const convertedMx = (clickX - mv.OFFSET_X) / scale;
+      const convertedMy = (clickY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - r.x, convertedMy - ry);
+
+      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;

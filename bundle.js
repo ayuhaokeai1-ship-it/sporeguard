@@ -176,8 +176,8 @@ const CONFIG = {
     ARMORED_SLOW_FACTOR: 0.50,    // 甲壳虫减速效果减半
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
-    MAX_ACTIVE_WAVE_ENEMIES: 36,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
-    WAVE_HP_GROWTH_PER_WAVE: 0.10,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
+    MAX_ACTIVE_WAVE_ENEMIES: 48,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
+    WAVE_HP_GROWTH_PER_WAVE: 0.18,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
       map2: 1.1,
@@ -880,9 +880,9 @@ const ENEMIES = {
     nameKey: 'enemy_beetle_name',
     typeKey: 'enemy_type_basic',
     tipKey: 'enemy_beetle_tip',
-    baseHp: 95,          // 基础血量从 40 提升至 95，需狙击菇 3 发击杀，形成有压迫感的步兵行进线
-    speed: 1.2,          // 格/秒
-    armor: 2,            // 基础轻甲免伤 2 点
+    baseHp: 145,          // 基础血量从 40 提升至 95，需狙击菇 3 发击杀，形成有压迫感的步兵行进线
+    speed: 1.35,          // 格/秒
+    armor: 3,            // 基础轻甲免伤 2 点
     threat: 1,
     reward: 4,
     isFlying: false,
@@ -901,9 +901,9 @@ const ENEMIES = {
     nameKey: 'enemy_swift_name',
     typeKey: 'enemy_type_fast',
     tipKey: 'enemy_swift_tip',
-    baseHp: 60,          // 从 22 提升至 60，不再被 1 枪秒杀，检验减速与多目标拦截
-    speed: 2.25,         // 格/秒（极速冲锋）
-    armor: 0,
+    baseHp: 95,          // 从 22 提升至 60，不再被 1 枪秒杀，检验减速与多目标拦截
+    speed: 2.6,         // 格/秒（极速冲锋）
+    armor: 1,
     threat: 1,
     reward: 3,
     isFlying: false,
@@ -919,9 +919,9 @@ const ENEMIES = {
     nameKey: 'enemy_armored_name',
     typeKey: 'enemy_type_armored',
     tipKey: 'enemy_armored_tip',
-    baseHp: 380,         // 从 220 提升至 380，真正的前排坚盾重装坦克
-    speed: 0.75,         // 格/秒，沉稳推进
-    armor: 12,           // 12 点扎实护甲，大幅抵挡单体针刺，逼出毒雾腐蚀或火炮破甲！
+    baseHp: 650,         // 从 220 提升至 380，真正的前排坚盾重装坦克
+    speed: 0.8,         // 格/秒，沉稳推进
+    armor: 16,           // 12 点扎实护甲，大幅抵挡单体针刺，逼出毒雾腐蚀或火炮破甲！
     threat: 2,
     reward: 12,
     isFlying: false,
@@ -937,9 +937,9 @@ const ENEMIES = {
     nameKey: 'enemy_moth_name',
     typeKey: 'enemy_type_flying',
     tipKey: 'enemy_moth_tip',
-    baseHp: 125,         // 从 55 提升至 125，需防空塔多轮专注射击
-    speed: 1.6,          // 格/秒，沿空中航线直穿树冠
-    armor: 0,
+    baseHp: 210,         // 从 55 提升至 125，需防空塔多轮专注射击
+    speed: 1.9,          // 格/秒，沿空中航线直穿树冠
+    armor: 1,
     threat: 1,
     reward: 5,
     isFlying: true,
@@ -956,9 +956,9 @@ const ENEMIES = {
     nameKey: 'enemy_splitter_name',
     typeKey: 'enemy_type_splitter',
     tipKey: 'enemy_splitter_tip',
-    baseHp: 210,         // 从 90 提升至 210
-    speed: 1.0,          // 格/秒
-    armor: 2,
+    baseHp: 360,         // 从 90 提升至 210
+    speed: 1.15,          // 格/秒
+    armor: 3,
     threat: 2,
     reward: 8,
     isFlying: false,
@@ -977,8 +977,8 @@ const ENEMIES = {
     nameKey: 'enemy_larva_name',
     typeKey: 'enemy_type_larva',
     tipKey: 'enemy_larva_tip',
-    baseHp: 45,          // 从 24 提升至 45
-    speed: 1.9,          // 格/秒，高速分散奔逃
+    baseHp: 75,          // 从 24 提升至 45
+    speed: 2.2,          // 格/秒，高速分散奔逃
     armor: 0,
     threat: 1,
     reward: 2,
@@ -996,9 +996,9 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m1_name', // 腐化蛀王
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
-    baseHp: 4200,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
-    speed: 0.65,         // 格/秒
-    armor: 14,
+    baseHp: 7500,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
+    speed: 0.75,         // 格/秒
+    armor: 18,
     threat: 5,
     reward: 120,
     isFlying: false,
@@ -1029,9 +1029,9 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 5200,        // 从 3200 提升至 5200
-    speed: 0.85,         // 格/秒（空中航线）
-    armor: 6,
+    baseHp: 9200,        // 从 3200 提升至 5200
+    speed: 0.95,         // 格/秒（空中航线）
+    armor: 10,
     threat: 5,
     reward: 140,
     isFlying: true,
@@ -1062,9 +1062,9 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m3_name', // 腐化异变母体
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m3_tip',
-    baseHp: 6500,        // 从 4000 提升至 6500
-    speed: 0.6,          // 格/秒
-    armor: 10,
+    baseHp: 12000,        // 从 4000 提升至 6500
+    speed: 0.72,          // 格/秒
+    armor: 15,
     threat: 5,
     reward: 160,
     isFlying: false,
@@ -1098,9 +1098,9 @@ const ENEMIES = {
     nameKey: 'enemy_burrower_name',
     typeKey: 'enemy_burrower_type',
     tipKey: 'enemy_burrower_tip',
-    baseHp: 320,
-    speed: 1.35,
-    armor: 4,
+    baseHp: 520,
+    speed: 1.5,
+    armor: 6,
     threat: 2,
     reward: 12,
     isFlying: false,
@@ -1116,8 +1116,8 @@ const ENEMIES = {
     nameKey: 'enemy_volatile_pod_name',
     typeKey: 'enemy_volatile_pod_type',
     tipKey: 'enemy_volatile_pod_tip',
-    baseHp: 160,
-    speed: 2.15,
+    baseHp: 280,
+    speed: 2.4,
     armor: 0,
     threat: 2,
     reward: 9,
@@ -1136,9 +1136,9 @@ const ENEMIES = {
     nameKey: 'enemy_shaman_name',
     typeKey: 'enemy_shaman_type',
     tipKey: 'enemy_shaman_tip',
-    baseHp: 420,
-    speed: 0.85,
-    armor: 2,
+    baseHp: 720,
+    speed: 0.95,
+    armor: 4,
     threat: 3,
     reward: 18,
     isFlying: false,
@@ -1158,9 +1158,9 @@ const ENEMIES = {
     nameKey: 'enemy_skeletal_name',
     typeKey: 'enemy_skeletal_type',
     tipKey: 'enemy_skeletal_tip',
-    baseHp: 120,
-    speed: 1.1,
-    armor: 1,
+    baseHp: 180,
+    speed: 1.25,
+    armor: 2,
     threat: 1,
     reward: 3,
     isFlying: false,
@@ -1175,14 +1175,14 @@ const ENEMIES = {
     nameKey: 'enemy_weaver_name',
     typeKey: 'enemy_weaver_type',
     tipKey: 'enemy_weaver_tip',
-    baseHp: 190,
-    speed: 1.15,
-    armor: 1,
+    baseHp: 340,
+    speed: 1.3,
+    armor: 2,
     threat: 2,
     reward: 8,
     isFlying: false,
     slowFactor: 1.0,
-    webCooldown: 7.5,
+    webCooldown: 6.5,
     webRangeTiles: 4.2,
     webMaxHp: 3,
     artSize: { width: 14, height: 14 },
@@ -1196,9 +1196,9 @@ const ENEMIES = {
     nameKey: 'enemy_leaper_name',
     typeKey: 'enemy_leaper_type',
     tipKey: 'enemy_leaper_tip',
-    baseHp: 180,
-    speed: 2.35,
-    armor: 1,
+    baseHp: 310,
+    speed: 2.65,
+    armor: 2,
     threat: 2,
     reward: 9,
     isFlying: false,
@@ -1215,9 +1215,9 @@ const ENEMIES = {
     nameKey: 'enemy_siege_beetle_name',
     typeKey: 'enemy_siege_beetle_type',
     tipKey: 'enemy_siege_beetle_tip',
-    baseHp: 560,
-    speed: 0.85,
-    armor: 8,
+    baseHp: 960,
+    speed: 0.9,
+    armor: 18,
     threat: 3,
     reward: 18,
     isFlying: false,
@@ -1473,9 +1473,9 @@ const WAVES = {
     {
       wave: 1,
       groups: [
-        { type: 'beetle', count: 4, interval: 1.1, start: 0 },
-        { type: 'beetle', count: 5, interval: 1.0, start: 7 },
-        { type: 'beetle', count: 5, interval: 0.9, start: 15 }
+        { type: 'beetle', count: 6, interval: 0.9, start: 0 },
+        { type: 'beetle', count: 7, interval: 0.85, start: 6 },
+        { type: 'beetle', count: 8, interval: 0.75, start: 13 }
       ]
     },
     // Wave 2: 极速突袭，迅捷飞蠓蜂拥而至
@@ -1483,9 +1483,9 @@ const WAVES = {
       wave: 2,
       groups: [
         { type: 'beetle', count: 5, interval: 1.0, start: 0 },
-        { type: 'swift', count: 6, interval: 0.8, start: 6 },
+        { type: 'swift', count: 9, interval: 0.65, start: 5 },
         { type: 'beetle', count: 5, interval: 0.9, start: 14 },
-        { type: 'swift', count: 4, interval: 0.7, start: 20 }
+        { type: 'swift', count: 8, interval: 0.60, start: 18 }
       ]
     },
     // Wave 3: 树冠空袭，林光飞蛾掠空
@@ -1493,9 +1493,9 @@ const WAVES = {
       wave: 3,
       groups: [
         { type: 'beetle', count: 6, interval: 1.0, start: 0 },
-        { type: 'moth', count: 4, interval: 1.4, start: 5 },
-        { type: 'swift', count: 6, interval: 0.8, start: 12 },
-        { type: 'moth', count: 4, interval: 1.3, start: 18 },
+        { type: 'moth', count: 7, interval: 1.0, start: 4 },
+        { type: 'swift', count: 10, interval: 0.65, start: 10 },
+        { type: 'moth', count: 7, interval: 0.95, start: 16 },
         { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
       ]
     },
@@ -1530,7 +1530,7 @@ const WAVES = {
       groups: [
         { type: 'siege_beetle', count: 1, interval: 1.0, start: 0 },
         { type: 'leaper', count: 2, interval: 1.5, start: 2 },
-        { type: 'splitter', count: 2, interval: 2.5, start: 5 },
+        { type: 'splitter', count: 3, interval: 2.0, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
         { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
@@ -1544,7 +1544,7 @@ const WAVES = {
       groups: [
         { type: 'armored', count: 2, interval: 2.5, start: 0 },
         { type: 'splitter', count: 3, interval: 2.0, start: 6 },
-        { type: 'moth', count: 6, interval: 1.2, start: 14 },
+        { type: 'moth', count: 10, interval: 0.95, start: 12 },
         { type: 'swift', count: 8, interval: 0.65, start: 22 },
         { type: 'burrower', count: 3, interval: 2.0, start: 25 }
       ]
@@ -1553,9 +1553,9 @@ const WAVES = {
     {
       wave: 8,
       groups: [
-        { type: 'swift', count: 10, interval: 0.65, start: 0 },
-        { type: 'moth', count: 8, interval: 1.1, start: 8 },
-        { type: 'leaper', count: 4, interval: 1.1, start: 12, routeIndex: 1 },
+        { type: 'swift', count: 16, interval: 0.55, start: 0 },
+        { type: 'moth', count: 12, interval: 0.85, start: 8 },
+        { type: 'leaper', count: 6, interval: 0.95, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -1567,8 +1567,8 @@ const WAVES = {
         { type: 'siege_beetle', count: 2, interval: 3.0, start: 0 },
         { type: 'leaper', count: 4, interval: 1.0, start: 5 },
         { type: 'splitter', count: 4, interval: 1.8, start: 7 },
-        { type: 'swift', count: 12, interval: 0.6, start: 15 },
-        { type: 'moth', count: 8, interval: 1.0, start: 22 }
+        { type: 'swift', count: 18, interval: 0.50, start: 14 },
+        { type: 'moth', count: 12, interval: 0.80, start: 20 }
       ]
     },
     // Wave 10: 最终决战 腐化蛀王登场
@@ -1576,12 +1576,12 @@ const WAVES = {
       wave: 10,
       groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
-        { type: 'armored', count: 2, interval: 2.5, start: 5 },
-        { type: 'moth', count: 6, interval: 1.2, start: 14 },
-        { type: 'leaper', count: 4, interval: 1.2, start: 18, routeIndex: 1 },
-        { type: 'splitter', count: 3, interval: 2.0, start: 24 },
-        { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
-        { type: 'swift', count: 8, interval: 0.7, start: 32 }
+        { type: 'armored', count: 3, interval: 2.0, start: 5 },
+        { type: 'moth', count: 10, interval: 0.95, start: 12 },
+        { type: 'leaper', count: 6, interval: 1.0, start: 16, routeIndex: 1 },
+        { type: 'splitter', count: 5, interval: 1.6, start: 22 },
+        { type: 'burrower', count: 5, interval: 1.3, start: 26, routeIndex: 1 },
+        { type: 'swift', count: 14, interval: 0.55, start: 30 }
       ]
     }
   ],
@@ -6828,7 +6828,7 @@ class EnemyManager {
     // 更新空中飞行的蛛丝飞弹（弹道移动、碰撞判定、命中上状态、回收）
     for (let i = this.flyingWebs.length - 1; i >= 0; i--) {
       const w = this.flyingWebs[i];
-      w.timer += dt;
+      w.timer = (w.timer || 0) + dt;
       const duration = w.duration || 0.38;
       const progress = Math.min(1.0, w.timer / duration);
       // 抛物线轨迹
@@ -6836,7 +6836,7 @@ class EnemyManager {
       w.curX = w.startX + (w.targetX - w.startX) * progress;
       w.curY = w.startY + (w.targetY - w.startY) * progress - arcHeight;
 
-      if (progress >= 1.0) {
+      if (progress >= 1.0 || w.timer >= 1.2) {
         if (w.targetTower && towerManager && towerManager.towers && towerManager.towers.includes(w.targetTower)) {
           if (!w.targetTower.isWebbed && typeof towerManager.applyWeb === 'function') {
             towerManager.applyWeb(w.targetTower, 3, fx);
@@ -8576,7 +8576,7 @@ class SporeDropManager {
     });
   }
 
-  update(dt, map, economy, fx) {
+  update(dt, map, economy, fx, scene) {
     this.animTimeSec += dt;
 
     // 自然掉落晨露金孢 (PvZ 阳光飘落机制)
@@ -8588,6 +8588,9 @@ class SporeDropManager {
       const ry = 50 + Math.random() * 340;
       this.spawnDrop(rx, ry, 15, true, 40);
     }
+
+    // 英雄战地磁吸范围真空吸附
+    const hero = scene && scene.hero && scene.hero.state !== 'dead' ? scene.hero : null;
 
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
@@ -8602,8 +8605,32 @@ class SporeDropManager {
         d.scale = Math.min(1.0, d.scale + dt * 4.5);
       }
 
-      // 到期自然淡出
+      // 英雄磁吸微距吸附
+      if (hero) {
+        const hDist = Math.hypot(d.x - hero.x, d.y - hero.y);
+        if (hDist < 85) {
+          d.x += (hero.x - d.x) * dt * 5.5;
+          d.y += (hero.y - d.y) * dt * 5.5;
+          d.targetY = d.y;
+          if (hDist < 26) {
+            if (economy) economy.addSpores(d.spores);
+            if (fx) {
+              fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 磁吸孢子!`, '#FFE58F', 1.25);
+              fx.spawnParticles(d.x, d.y, 14, ['#FFE58F', '#FAAD14', '#52C41A'], 25, 65, 0.2, 0.4, 3);
+            }
+            platform.playSfx('sfx_coin');
+            this.drops.splice(i, 1);
+            continue;
+          }
+        }
+      }
+
+      // 到期自动吸纳保底（绝不丢失战场资源）
       if (d.life <= 0) {
+        if (economy) economy.addSpores(d.spores);
+        if (fx) {
+          fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 自然归巢`, '#FFE58F', 1.1);
+        }
         this.drops.splice(i, 1);
       }
     }
@@ -8615,16 +8642,50 @@ class SporeDropManager {
    * @param {number} my 屏幕逻辑坐标 Y
    * @returns {boolean} 是否成功点击收集
    */
-  handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 60; // 手机端超大触控判定圈 (60px)
+  /**
+   * 生成散落迸发金孢（反应、击杀精英或 Boss 阶段转换）
+   */
+  spawnSporeBurst(x, y, count = 1, isGold = true) {
+    const burstCount = Math.min(6, Math.max(1, count));
+    for (let i = 0; i < burstCount; i++) {
+      const angle = (i / burstCount) * Math.PI * 2 + Math.random() * 0.4;
+      const dist = 20 + Math.random() * 32;
+      const targetX = Math.max(32, Math.min(608, x + Math.cos(angle) * dist));
+      const targetY = Math.max(32, Math.min(416, y + Math.sin(angle) * dist));
+      this.spawnDrop(targetX, targetY, Math.round(15 / burstCount) || 5, isGold, 32);
+    }
+  }
+
+  /**
+   * 点击/触控检测（PvZ 点击拾取阳光机制，支持双坐标系与手机 72px 超大判定圈）
+   * @param {number} inputX 传入的点击 X 坐标（屏幕逻辑坐标或地图坐标）
+   * @param {number} inputY 传入的点击 Y 坐标（屏幕逻辑坐标或地图坐标）
+   * @returns {boolean} 是否成功点击收集
+   */
+  handlePointerDown(inputX, inputY, economy, fx) {
+    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极速拾取零失误
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
+
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
       const dy = d.y + bob;
-      const distMap = Math.hypot(mx - d.x, my - dy);
-      const distScreen = Math.hypot((mx - 160) - d.x, (my - 30) - dy);
 
-      if (distMap <= hitRadius || distScreen <= hitRadius) {
+      // 1. 地图坐标系距离 (若传入的是地图坐标)
+      const distMap = Math.hypot(inputX - d.x, inputY - dy);
+
+      // 2. 屏幕坐标系距离 (若传入的是屏幕坐标)
+      const screenDx = mv.OFFSET_X + d.x * scale;
+      const screenDy = mv.OFFSET_Y + dy * scale;
+      const distScreen = Math.hypot(inputX - screenDx, inputY - screenDy);
+
+      // 3. 屏幕转地图坐标距离
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - d.x, convertedMy - dy);
+
+      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
         // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);
@@ -8783,13 +8844,28 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 60; // 手机端超大触控判定圈 (60px，近2个完整格子)，极度灵敏
+    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极度灵敏
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
+
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
+
+      // 1. 地图坐标系距离
       const distMap = Math.hypot(clickX - r.x, clickY - ry);
-      const distScreen = Math.hypot((clickX - 160) - r.x, (clickY - 30) - ry);
-      if (distMap <= hitRadius || distScreen <= hitRadius) {
+
+      // 2. 屏幕坐标系距离
+      const screenRx = mv.OFFSET_X + r.x * scale;
+      const screenRy = mv.OFFSET_Y + ry * scale;
+      const distScreen = Math.hypot(clickX - screenRx, clickY - screenRy);
+
+      // 3. 屏幕转地图坐标距离
+      const convertedMx = (clickX - mv.OFFSET_X) / scale;
+      const convertedMy = (clickY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - r.x, convertedMy - ry);
+
+      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;
@@ -13821,20 +13897,32 @@ class ForestContraptions {
     }
   }
 
-  handlePointerDown(x, y, scene) {
+  handlePointerDown(inputX, inputY, scene) {
     if (!scene || scene.state !== 'BATTLE') return false;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
 
-    // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋
+    // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
       const dew = this.dewDrops[i];
-      const dist = Math.hypot(dew.x - x, dew.y - y);
-      if (dist <= 22) {
-        if (scene.economy) scene.economy.addSpores(5);
+      const distMap = Math.hypot(inputX - dew.x, inputY - dew.y);
+      const screenX = mv.OFFSET_X + dew.x * scale;
+      const screenY = mv.OFFSET_Y + dew.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - dew.x, convertedMy - dew.y);
+
+      if (distMap <= 60 || distScreen <= 60 || distConverted <= 60) {
+        if (scene.economy) scene.economy.addSpores(10);
         if (scene.fx) {
-          scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+5 晨露孢子', '#69C0FF', 1.15);
-          scene.fx.spawnParticles(dew.x, dew.y, 14, ['#BAE7FF', '#91D5FF', '#FFFFFF'], 20, 50, 0.2, 0.4, 3);
+          scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+10 晶莹晨露', '#69C0FF', 1.25);
+          scene.fx.spawnParticles(dew.x, dew.y, 16, ['#BAE7FF', '#91D5FF', '#FFFFFF', '#52C41A'], 25, 60, 0.25, 0.5, 4);
         }
-        platform.playSfx('sfx_click');
+        platform.playSfx('sfx_coin');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(12); } catch (e) {}
+        }
         this.dewDrops.splice(i, 1);
         return true;
       }
@@ -13843,8 +13931,15 @@ class ForestContraptions {
     // 2. 点击食虫巨猪笼草
     if (this.pitcher) {
       const p = this.pitcher;
-      const dist = Math.hypot(p.x - x, p.y - y);
-      if (dist <= 28) {
+      const distMap = Math.hypot(inputX - p.x, inputY - p.y);
+      const screenX = mv.OFFSET_X + p.x * scale;
+      const screenY = mv.OFFSET_Y + p.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - p.x, convertedMy - p.y);
+
+      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
         if (p.cd > 0) {
           scene.ui.showToast(`猪笼草生长中 (冷却 ${Math.ceil(p.cd)}s)`);
           return true;
@@ -13857,7 +13952,6 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${p.cost})`);
           return true;
         }
-        // 寻找附近的地面敌人进行吞噬
         const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
         let target = null;
         let minDist = 75;
@@ -13889,8 +13983,15 @@ class ForestContraptions {
     // 3. 点击雷击古木
     if (this.thunderTree) {
       const t = this.thunderTree;
-      const dist = Math.hypot(t.x - x, t.y - y);
-      if (dist <= 28) {
+      const distMap = Math.hypot(inputX - t.x, inputY - t.y);
+      const screenX = mv.OFFSET_X + t.x * scale;
+      const screenY = mv.OFFSET_Y + t.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - t.x, convertedMy - t.y);
+
+      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
         if (t.cd > 0) {
           scene.ui.showToast(`雷击古木充能中 (冷却 ${Math.ceil(t.cd)}s)`);
           return true;
@@ -13899,22 +14000,38 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${t.cost})`);
           return true;
         }
-        scene.economy.spendSpores(t.cost);
-        t.cd = t.maxCd;
-        t.arcTimer = 1.2;
-
-        // 全场雷电连锁暴击
         const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
         let hitCount = 0;
+        const maxHits = 4;
+        const zapRadius = 140;
+
         for (let i = 0; i < enemies.length; i++) {
           const e = enemies[i];
           if (!e.__active || e.state === 'death') continue;
-          scene.enemyManager.applyDirectDamage(e, 85, 0.25, true, false, 0, scene.map, scene.economy, scene.fx);
-          hitCount++;
+          if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
+            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx);
+            scene.enemyManager.applyStun(e, 2.2);
+            hitCount += 1;
+            if (scene.fx) {
+              scene.fx.spawnShockwave(e.x, e.y, 28, '#40A9FF');
+              scene.fx.spawnParticles(e.x, e.y, 14, ['#40A9FF', '#91D5FF', '#FFFFFF'], 30, 70, 0.2, 0.4, 3);
+            }
+            if (hitCount >= maxHits) break;
+          }
         }
-        scene.fx.showBanner('雷霆过载！', '#69C0FF', `引动古木天雷 轰击 ${hitCount} 只害虫`, 1.8);
-        scene.fx.spawnParticles(t.x, t.y, 35, ['#40A9FF', '#69C0FF', '#BAE7FF', '#FFFFFF'], 60, 160);
-        platform.playSfx('sfx_boom');
+
+        if (hitCount > 0) {
+          scene.economy.spendSpores(t.cost);
+          t.cd = t.maxCd;
+          t.arcTimer = 0.65;
+          platform.playSfx('sfx_laser');
+          if (scene.fx) {
+            scene.fx.spawnFloatingText(t.x, t.y - 24, `天雷震击 ×${hitCount}!`, '#40A9FF', 1.35);
+            scene.fx.triggerScreenShake(3.0, 0.25);
+          }
+        } else {
+          scene.ui.showToast('附近暂无害虫');
+        }
         return true;
       }
     }
@@ -16282,10 +16399,17 @@ class UiManager {
     this.dragCurrentY = -1;
     this.isDragging = false;
     this.pressedSlotButton = null;
+
+    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
+    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
+    this.dockTargetExpansion = 1.0;  // 目标展开度
   }
 
   update(realDt) {
     this.uiAnimTime += realDt;
+    // 底部一体化控制舱与轻语言药丸平滑弹性插值
+    const lerpSpeed = 14.0;
+    this.dockExpansion += (this.dockTargetExpansion - this.dockExpansion) * Math.min(1.0, realDt * lerpSpeed);
     if (this.toastTimer > 0) {
       this.toastTimer = Math.max(0, this.toastTimer - realDt);
     }
@@ -16340,6 +16464,12 @@ class UiManager {
 
     // 手机移动端滑动扫线拾取能量 (Swipe-to-collect)
     if (scene && scene.state === 'BATTLE') {
+      // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
+      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
+        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+          this.dockTargetExpansion = 0.0;
+        }
+      }
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
       const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
       const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
@@ -16348,6 +16478,9 @@ class UiManager {
       }
       if (scene.relicManager) {
         scene.relicManager.checkClick(mx, my, scene);
+      }
+      if (scene.contraptions) {
+        scene.contraptions.handlePointerDown(mx, my, scene);
       }
     }
   }
@@ -16389,6 +16522,12 @@ class UiManager {
     }
 
     if (scene && scene.state === 'BATTLE') {
+      // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
+      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
+        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+          this.dockTargetExpansion = 0.0;
+        }
+      }
       // (0) 实时战斗统计面板开关与点击 (屏幕空间)
       if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
         return true;
@@ -16409,6 +16548,11 @@ class UiManager {
 
       // (A2) 精英怪/Boss掉落战利品道具拾取 (Relic Coin/Clover/Shield/Lightning)
       if (scene.relicManager && scene.relicManager.checkClick(mx, my, scene)) {
+        return true;
+      }
+
+      // (A3) 奇幻森林环境晨露与生灵机关互动拾取
+      if (scene.contraptions && scene.contraptions.handlePointerDown(mx, my, scene)) {
         return true;
       }
 
@@ -16580,6 +16724,10 @@ class UiManager {
     this.draggingTowerId = null;
     this.isDragging = false;
     this.pressedSlotButton = null;
+
+    // 轻度UI与自动褪去/轻语言交互系统 (Lightweight Adaptive Command Deck)
+    this.dockExpansion = 1.0;        // 0.0: 完全收缩为轻语言药丸, 1.0: 完整展开
+    this.dockTargetExpansion = 1.0;  // 目标展开度
   }
 
   isPointHovered(x, y, w, h) {
@@ -17541,14 +17689,98 @@ class UiManager {
     const deckH = 90;
     const hero = scene.hero;
 
-    // 1. 远古灵木精工雕刻卡牌底座托盘 (Ancient Carved Bark Command Deck)
+    // (A) 若处于收缩/沉浸轻度状态，绘制悬浮“轻语言UI”微光胶囊 (Whisper Command Capsule)
+    if (this.dockExpansion < 0.88) {
+      const pillW = 360;
+      const pillH = 32;
+      const pillX = Math.round((960 - pillW) * 0.5);
+      const pillY = 502;
+      const pillAlpha = Math.min(1.0, (0.88 - this.dockExpansion) / 0.65);
+
+      ctx.save();
+      ctx.globalAlpha = pillAlpha;
+
+      // 翡翠黑曜石透光玻璃胶囊
+      const pGrad = ctx.createLinearGradient(pillX, pillY, pillX, pillY + pillH);
+      pGrad.addColorStop(0, 'rgba(12, 28, 20, 0.94)');
+      pGrad.addColorStop(1, 'rgba(8, 18, 13, 0.96)');
+      roundRectPath(ctx, pillX, pillY, pillW, pillH, 16);
+      ctx.fillStyle = pGrad;
+      ctx.fill();
+
+      // 呼吸微光律动金边
+      const pulse = 1.0 + Math.sin(this.uiAnimTime * 3.8) * 0.25;
+      ctx.strokeStyle = `rgba(211, 242, 97, ${0.45 + pulse * 0.25})`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      drawArtText(ctx, '🍃 战备指令', pillX + 46, pillY + pillH * 0.5, {
+        style: 'emerald',
+        size: 11.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      drawArtText(ctx, '▲ 轻触展开 (5塔 / 4术 / 英雄)', pillX + pillW * 0.5 + 10, pillY + pillH * 0.5, {
+        style: 'gold',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      drawArtText(ctx, `🪙 ${scene.economy.spores}`, pillX + pillW - 38, pillY + pillH * 0.5, {
+        style: 'parchment',
+        size: 11.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      ctx.restore();
+
+      this.registerButton('dock_whisper_pill', pillX, pillY, pillW, pillH, () => {
+        this.dockTargetExpansion = 1.0;
+        platform.playSfx('sfx_click');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(10); } catch (e) {}
+        }
+      });
+    }
+
+    // (B) 若未完全隐藏，绘制平滑下滑与淡入淡出的一体化控制舱
+    if (this.dockExpansion <= 0.05) return;
+
+    const slideY = Math.round((1.0 - this.dockExpansion) * 105);
+    const deckAlpha = Math.max(0, Math.min(1.0, (this.dockExpansion - 0.15) / 0.85));
+
     ctx.save();
+    ctx.translate(0, slideY);
+    ctx.globalAlpha = deckAlpha;
+
+    // 1. 远古灵木精工雕刻卡牌底座托盘 (Ancient Carved Bark Command Deck)
     roundRectPath(ctx, 10, baseY, 940, deckH, 12);
     ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(198, 143, 69, 0.70)';
     ctx.lineWidth = 1.6;
     ctx.stroke();
+
+    // 右上角折叠/沉浸战场小按钮
+    roundRectPath(ctx, 894, baseY + 3, 52, 16, 4);
+    ctx.fillStyle = 'rgba(40, 28, 16, 0.75)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, '⌵ 沉浸', 920, baseY + 11, {
+      style: 'parchment',
+      size: 9,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.6
+    });
 
     // 区域垂直分割金线 (不绘制贯穿文字的水平横线，确保全部文字清晰利落)
     ctx.strokeStyle = 'rgba(198, 143, 69, 0.40)';
@@ -18040,6 +18272,15 @@ class UiManager {
         scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
       }
     });
+
+    if (this.dockExpansion >= 0.65) {
+      this.registerButton('dock_fold_btn', 894, baseY + 3, 52, 16, () => {
+        this.dockTargetExpansion = 0.0;
+        platform.playSfx('sfx_click');
+      });
+    }
+
+    ctx.restore();
   }
   renderTowerInspectorPopup(ctx, scene) {
     const col = scene.selectedTile.col;
@@ -20167,11 +20408,14 @@ class SceneController {
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
 
-          // 双重保险：战场能量与战利品拾取
+          // 战场晨露金孢、精英战利品与森林自然机关拾取
           if (this.sporeDropManager && this.sporeDropManager.handlePointerDown(mx, my, this.economy, this.fx)) {
             continue;
           }
           if (this.relicManager && this.relicManager.checkClick(mx, my, this)) {
+            continue;
+          }
+          if (this.contraptions && this.contraptions.handlePointerDown(mx, my, this)) {
             continue;
           }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
@@ -20410,6 +20654,24 @@ class SceneController {
 
     // 1.5 战利品与菇精卫小队更新
     this.relicManager.update(dt, this);
+    // 最后一波胜利彻底杜绝卡顿结算保底防护
+    if (this.state === 'BATTLE' && this.waveManager) {
+      if (this.waveManager.currentWaveIndex >= this.waveManager.totalWaves && this.waveManager.phase !== 'prep') {
+        const alive = this.enemyManager.getAliveEnemies();
+        const activeCount = this.enemyManager.getActiveWaveEnemyCount();
+        let allGroupsDone = true;
+        for (let i = 0; i < this.waveManager.activeGroups.length; i++) {
+          const g = this.waveManager.activeGroups[i];
+          if (g.type && typeof g.count === 'number' && g.spawned < g.count) {
+            allGroupsDone = false;
+            break;
+          }
+        }
+        if (allGroupsDone && alive.length === 0 && activeCount === 0) {
+          this.onVictory();
+        }
+      }
+    }
     this.contraptions.update(dt, this);
     if (this.weather) {
       this.weather.update(dt, this);
@@ -20498,7 +20760,7 @@ class SceneController {
 
     // 2. 炮塔索敌与开火
     this.towerManager.update(dt, this.map, this.enemyManager, this.bulletManager, this.economy, this.fx, this.sporelingPatrol);
-    this.sporeDropManager.update(dt, this.map, this.economy, this.fx);
+    this.sporeDropManager.update(dt, this.map, this.economy, this.fx, this);
     if (this.flankAlertTimer > 0) {
       this.flankAlertTimer = Math.max(0, this.flankAlertTimer - dt);
     }

@@ -162,20 +162,32 @@ class ForestContraptions {
     }
   }
 
-  handlePointerDown(x, y, scene) {
+  handlePointerDown(inputX, inputY, scene) {
     if (!scene || scene.state !== 'BATTLE') return false;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
 
-    // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋
+    // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
       const dew = this.dewDrops[i];
-      const dist = Math.hypot(dew.x - x, dew.y - y);
-      if (dist <= 22) {
-        if (scene.economy) scene.economy.addSpores(5);
+      const distMap = Math.hypot(inputX - dew.x, inputY - dew.y);
+      const screenX = mv.OFFSET_X + dew.x * scale;
+      const screenY = mv.OFFSET_Y + dew.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - dew.x, convertedMy - dew.y);
+
+      if (distMap <= 60 || distScreen <= 60 || distConverted <= 60) {
+        if (scene.economy) scene.economy.addSpores(10);
         if (scene.fx) {
-          scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+5 晨露孢子', '#69C0FF', 1.15);
-          scene.fx.spawnParticles(dew.x, dew.y, 14, ['#BAE7FF', '#91D5FF', '#FFFFFF'], 20, 50, 0.2, 0.4, 3);
+          scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+10 晶莹晨露', '#69C0FF', 1.25);
+          scene.fx.spawnParticles(dew.x, dew.y, 16, ['#BAE7FF', '#91D5FF', '#FFFFFF', '#52C41A'], 25, 60, 0.25, 0.5, 4);
         }
-        platform.playSfx('sfx_click');
+        platform.playSfx('sfx_coin');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(12); } catch (e) {}
+        }
         this.dewDrops.splice(i, 1);
         return true;
       }
@@ -184,8 +196,15 @@ class ForestContraptions {
     // 2. 点击食虫巨猪笼草
     if (this.pitcher) {
       const p = this.pitcher;
-      const dist = Math.hypot(p.x - x, p.y - y);
-      if (dist <= 28) {
+      const distMap = Math.hypot(inputX - p.x, inputY - p.y);
+      const screenX = mv.OFFSET_X + p.x * scale;
+      const screenY = mv.OFFSET_Y + p.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - p.x, convertedMy - p.y);
+
+      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
         if (p.cd > 0) {
           scene.ui.showToast(`猪笼草生长中 (冷却 ${Math.ceil(p.cd)}s)`);
           return true;
@@ -198,7 +217,6 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${p.cost})`);
           return true;
         }
-        // 寻找附近的地面敌人进行吞噬
         const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
         let target = null;
         let minDist = 75;
@@ -230,8 +248,15 @@ class ForestContraptions {
     // 3. 点击雷击古木
     if (this.thunderTree) {
       const t = this.thunderTree;
-      const dist = Math.hypot(t.x - x, t.y - y);
-      if (dist <= 28) {
+      const distMap = Math.hypot(inputX - t.x, inputY - t.y);
+      const screenX = mv.OFFSET_X + t.x * scale;
+      const screenY = mv.OFFSET_Y + t.y * scale;
+      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - t.x, convertedMy - t.y);
+
+      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
         if (t.cd > 0) {
           scene.ui.showToast(`雷击古木充能中 (冷却 ${Math.ceil(t.cd)}s)`);
           return true;
@@ -240,22 +265,38 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${t.cost})`);
           return true;
         }
-        scene.economy.spendSpores(t.cost);
-        t.cd = t.maxCd;
-        t.arcTimer = 1.2;
-
-        // 全场雷电连锁暴击
         const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
         let hitCount = 0;
+        const maxHits = 4;
+        const zapRadius = 140;
+
         for (let i = 0; i < enemies.length; i++) {
           const e = enemies[i];
           if (!e.__active || e.state === 'death') continue;
-          scene.enemyManager.applyDirectDamage(e, 85, 0.25, true, false, 0, scene.map, scene.economy, scene.fx);
-          hitCount++;
+          if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
+            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx);
+            scene.enemyManager.applyStun(e, 2.2);
+            hitCount += 1;
+            if (scene.fx) {
+              scene.fx.spawnShockwave(e.x, e.y, 28, '#40A9FF');
+              scene.fx.spawnParticles(e.x, e.y, 14, ['#40A9FF', '#91D5FF', '#FFFFFF'], 30, 70, 0.2, 0.4, 3);
+            }
+            if (hitCount >= maxHits) break;
+          }
         }
-        scene.fx.showBanner('雷霆过载！', '#69C0FF', `引动古木天雷 轰击 ${hitCount} 只害虫`, 1.8);
-        scene.fx.spawnParticles(t.x, t.y, 35, ['#40A9FF', '#69C0FF', '#BAE7FF', '#FFFFFF'], 60, 160);
-        platform.playSfx('sfx_boom');
+
+        if (hitCount > 0) {
+          scene.economy.spendSpores(t.cost);
+          t.cd = t.maxCd;
+          t.arcTimer = 0.65;
+          platform.playSfx('sfx_laser');
+          if (scene.fx) {
+            scene.fx.spawnFloatingText(t.x, t.y - 24, `天雷震击 ×${hitCount}!`, '#40A9FF', 1.35);
+            scene.fx.triggerScreenShake(3.0, 0.25);
+          }
+        } else {
+          scene.ui.showToast('附近暂无害虫');
+        }
         return true;
       }
     }

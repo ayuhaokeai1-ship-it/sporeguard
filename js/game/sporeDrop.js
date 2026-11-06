@@ -41,7 +41,7 @@ class SporeDropManager {
     });
   }
 
-  update(dt, map, economy, fx) {
+  update(dt, map, economy, fx, scene) {
     this.animTimeSec += dt;
 
     // 自然掉落晨露金孢 (PvZ 阳光飘落机制)
@@ -53,6 +53,9 @@ class SporeDropManager {
       const ry = 50 + Math.random() * 340;
       this.spawnDrop(rx, ry, 15, true, 40);
     }
+
+    // 英雄战地磁吸范围真空吸附
+    const hero = scene && scene.hero && scene.hero.state !== 'dead' ? scene.hero : null;
 
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
@@ -67,8 +70,32 @@ class SporeDropManager {
         d.scale = Math.min(1.0, d.scale + dt * 4.5);
       }
 
-      // 到期自然淡出
+      // 英雄磁吸微距吸附
+      if (hero) {
+        const hDist = Math.hypot(d.x - hero.x, d.y - hero.y);
+        if (hDist < 85) {
+          d.x += (hero.x - d.x) * dt * 5.5;
+          d.y += (hero.y - d.y) * dt * 5.5;
+          d.targetY = d.y;
+          if (hDist < 26) {
+            if (economy) economy.addSpores(d.spores);
+            if (fx) {
+              fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 磁吸孢子!`, '#FFE58F', 1.25);
+              fx.spawnParticles(d.x, d.y, 14, ['#FFE58F', '#FAAD14', '#52C41A'], 25, 65, 0.2, 0.4, 3);
+            }
+            platform.playSfx('sfx_coin');
+            this.drops.splice(i, 1);
+            continue;
+          }
+        }
+      }
+
+      // 到期自动吸纳保底（绝不丢失战场资源）
       if (d.life <= 0) {
+        if (economy) economy.addSpores(d.spores);
+        if (fx) {
+          fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 自然归巢`, '#FFE58F', 1.1);
+        }
         this.drops.splice(i, 1);
       }
     }
@@ -80,16 +107,50 @@ class SporeDropManager {
    * @param {number} my 屏幕逻辑坐标 Y
    * @returns {boolean} 是否成功点击收集
    */
-  handlePointerDown(mx, my, economy, fx) {
-    const hitRadius = 60; // 手机端超大触控判定圈 (60px)
+  /**
+   * 生成散落迸发金孢（反应、击杀精英或 Boss 阶段转换）
+   */
+  spawnSporeBurst(x, y, count = 1, isGold = true) {
+    const burstCount = Math.min(6, Math.max(1, count));
+    for (let i = 0; i < burstCount; i++) {
+      const angle = (i / burstCount) * Math.PI * 2 + Math.random() * 0.4;
+      const dist = 20 + Math.random() * 32;
+      const targetX = Math.max(32, Math.min(608, x + Math.cos(angle) * dist));
+      const targetY = Math.max(32, Math.min(416, y + Math.sin(angle) * dist));
+      this.spawnDrop(targetX, targetY, Math.round(15 / burstCount) || 5, isGold, 32);
+    }
+  }
+
+  /**
+   * 点击/触控检测（PvZ 点击拾取阳光机制，支持双坐标系与手机 72px 超大判定圈）
+   * @param {number} inputX 传入的点击 X 坐标（屏幕逻辑坐标或地图坐标）
+   * @param {number} inputY 传入的点击 Y 坐标（屏幕逻辑坐标或地图坐标）
+   * @returns {boolean} 是否成功点击收集
+   */
+  handlePointerDown(inputX, inputY, economy, fx) {
+    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极速拾取零失误
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 208, OFFSET_Y: 24, SCALE: 0.85 };
+    const scale = mv.SCALE || 0.85;
+
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
       const dy = d.y + bob;
-      const distMap = Math.hypot(mx - d.x, my - dy);
-      const distScreen = Math.hypot((mx - 160) - d.x, (my - 30) - dy);
 
-      if (distMap <= hitRadius || distScreen <= hitRadius) {
+      // 1. 地图坐标系距离 (若传入的是地图坐标)
+      const distMap = Math.hypot(inputX - d.x, inputY - dy);
+
+      // 2. 屏幕坐标系距离 (若传入的是屏幕坐标)
+      const screenDx = mv.OFFSET_X + d.x * scale;
+      const screenDy = mv.OFFSET_Y + dy * scale;
+      const distScreen = Math.hypot(inputX - screenDx, inputY - screenDy);
+
+      // 3. 屏幕转地图坐标距离
+      const convertedMx = (inputX - mv.OFFSET_X) / scale;
+      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+      const distConverted = Math.hypot(convertedMx - d.x, convertedMy - dy);
+
+      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
         // 成功拾取！
         if (economy) {
           economy.addSpores(d.spores);

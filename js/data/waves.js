@@ -13,9 +13,9 @@ const WAVES = {
     {
       wave: 1,
       groups: [
-        { type: 'beetle', count: 4, interval: 1.1, start: 0 },
-        { type: 'beetle', count: 5, interval: 1.0, start: 7 },
-        { type: 'beetle', count: 5, interval: 0.9, start: 15 }
+        { type: 'beetle', count: 6, interval: 0.9, start: 0 },
+        { type: 'beetle', count: 7, interval: 0.85, start: 6 },
+        { type: 'beetle', count: 8, interval: 0.75, start: 13 }
       ]
     },
     // Wave 2: 极速突袭，迅捷飞蠓蜂拥而至
@@ -23,9 +23,9 @@ const WAVES = {
       wave: 2,
       groups: [
         { type: 'beetle', count: 5, interval: 1.0, start: 0 },
-        { type: 'swift', count: 6, interval: 0.8, start: 6 },
+        { type: 'swift', count: 9, interval: 0.65, start: 5 },
         { type: 'beetle', count: 5, interval: 0.9, start: 14 },
-        { type: 'swift', count: 4, interval: 0.7, start: 20 }
+        { type: 'swift', count: 8, interval: 0.60, start: 18 }
       ]
     },
     // Wave 3: 树冠空袭，林光飞蛾掠空
@@ -33,9 +33,9 @@ const WAVES = {
       wave: 3,
       groups: [
         { type: 'beetle', count: 6, interval: 1.0, start: 0 },
-        { type: 'moth', count: 4, interval: 1.4, start: 5 },
-        { type: 'swift', count: 6, interval: 0.8, start: 12 },
-        { type: 'moth', count: 4, interval: 1.3, start: 18 },
+        { type: 'moth', count: 7, interval: 1.0, start: 4 },
+        { type: 'swift', count: 10, interval: 0.65, start: 10 },
+        { type: 'moth', count: 7, interval: 0.95, start: 16 },
         { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
       ]
     },
@@ -70,7 +70,7 @@ const WAVES = {
       groups: [
         { type: 'siege_beetle', count: 1, interval: 1.0, start: 0 },
         { type: 'leaper', count: 2, interval: 1.5, start: 2 },
-        { type: 'splitter', count: 2, interval: 2.5, start: 5 },
+        { type: 'splitter', count: 3, interval: 2.0, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
         { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
@@ -84,7 +84,7 @@ const WAVES = {
       groups: [
         { type: 'armored', count: 2, interval: 2.5, start: 0 },
         { type: 'splitter', count: 3, interval: 2.0, start: 6 },
-        { type: 'moth', count: 6, interval: 1.2, start: 14 },
+        { type: 'moth', count: 10, interval: 0.95, start: 12 },
         { type: 'swift', count: 8, interval: 0.65, start: 22 },
         { type: 'burrower', count: 3, interval: 2.0, start: 25 }
       ]
@@ -93,9 +93,9 @@ const WAVES = {
     {
       wave: 8,
       groups: [
-        { type: 'swift', count: 10, interval: 0.65, start: 0 },
-        { type: 'moth', count: 8, interval: 1.1, start: 8 },
-        { type: 'leaper', count: 4, interval: 1.1, start: 12, routeIndex: 1 },
+        { type: 'swift', count: 16, interval: 0.55, start: 0 },
+        { type: 'moth', count: 12, interval: 0.85, start: 8 },
+        { type: 'leaper', count: 6, interval: 0.95, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -107,8 +107,8 @@ const WAVES = {
         { type: 'siege_beetle', count: 2, interval: 3.0, start: 0 },
         { type: 'leaper', count: 4, interval: 1.0, start: 5 },
         { type: 'splitter', count: 4, interval: 1.8, start: 7 },
-        { type: 'swift', count: 12, interval: 0.6, start: 15 },
-        { type: 'moth', count: 8, interval: 1.0, start: 22 }
+        { type: 'swift', count: 18, interval: 0.50, start: 14 },
+        { type: 'moth', count: 12, interval: 0.80, start: 20 }
       ]
     },
     // Wave 10: 最终决战 腐化蛀王登场
@@ -116,12 +116,12 @@ const WAVES = {
       wave: 10,
       groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
-        { type: 'armored', count: 2, interval: 2.5, start: 5 },
-        { type: 'moth', count: 6, interval: 1.2, start: 14 },
-        { type: 'leaper', count: 4, interval: 1.2, start: 18, routeIndex: 1 },
-        { type: 'splitter', count: 3, interval: 2.0, start: 24 },
-        { type: 'burrower', count: 3, interval: 1.5, start: 28, routeIndex: 1 },
-        { type: 'swift', count: 8, interval: 0.7, start: 32 }
+        { type: 'armored', count: 3, interval: 2.0, start: 5 },
+        { type: 'moth', count: 10, interval: 0.95, start: 12 },
+        { type: 'leaper', count: 6, interval: 1.0, start: 16, routeIndex: 1 },
+        { type: 'splitter', count: 5, interval: 1.6, start: 22 },
+        { type: 'burrower', count: 5, interval: 1.3, start: 26, routeIndex: 1 },
+        { type: 'swift', count: 14, interval: 0.55, start: 30 }
       ]
     }
   ],

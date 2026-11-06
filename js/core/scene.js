@@ -604,11 +604,14 @@ class SceneController {
           const mx = (act.x - mv.OFFSET_X) / mv.SCALE;
           const my = (act.y - mv.OFFSET_Y) / mv.SCALE;
 
-          // 双重保险：战场能量与战利品拾取
+          // 战场晨露金孢、精英战利品与森林自然机关拾取
           if (this.sporeDropManager && this.sporeDropManager.handlePointerDown(mx, my, this.economy, this.fx)) {
             continue;
           }
           if (this.relicManager && this.relicManager.checkClick(mx, my, this)) {
+            continue;
+          }
+          if (this.contraptions && this.contraptions.handlePointerDown(mx, my, this)) {
             continue;
           }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
@@ -847,6 +850,24 @@ class SceneController {
 
     // 1.5 战利品与菇精卫小队更新
     this.relicManager.update(dt, this);
+    // 最后一波胜利彻底杜绝卡顿结算保底防护
+    if (this.state === 'BATTLE' && this.waveManager) {
+      if (this.waveManager.currentWaveIndex >= this.waveManager.totalWaves && this.waveManager.phase !== 'prep') {
+        const alive = this.enemyManager.getAliveEnemies();
+        const activeCount = this.enemyManager.getActiveWaveEnemyCount();
+        let allGroupsDone = true;
+        for (let i = 0; i < this.waveManager.activeGroups.length; i++) {
+          const g = this.waveManager.activeGroups[i];
+          if (g.type && typeof g.count === 'number' && g.spawned < g.count) {
+            allGroupsDone = false;
+            break;
+          }
+        }
+        if (allGroupsDone && alive.length === 0 && activeCount === 0) {
+          this.onVictory();
+        }
+      }
+    }
     this.contraptions.update(dt, this);
     if (this.weather) {
       this.weather.update(dt, this);
@@ -935,7 +956,7 @@ class SceneController {
 
     // 2. 炮塔索敌与开火
     this.towerManager.update(dt, this.map, this.enemyManager, this.bulletManager, this.economy, this.fx, this.sporelingPatrol);
-    this.sporeDropManager.update(dt, this.map, this.economy, this.fx);
+    this.sporeDropManager.update(dt, this.map, this.economy, this.fx, this);
     if (this.flankAlertTimer > 0) {
       this.flankAlertTimer = Math.max(0, this.flankAlertTimer - dt);
     }

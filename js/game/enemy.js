@@ -842,7 +842,7 @@ class EnemyManager {
     // 更新空中飞行的蛛丝飞弹（弹道移动、碰撞判定、命中上状态、回收）
     for (let i = this.flyingWebs.length - 1; i >= 0; i--) {
       const w = this.flyingWebs[i];
-      w.timer += dt;
+      w.timer = (w.timer || 0) + dt;
       const duration = w.duration || 0.38;
       const progress = Math.min(1.0, w.timer / duration);
       // 抛物线轨迹
@@ -850,7 +850,7 @@ class EnemyManager {
       w.curX = w.startX + (w.targetX - w.startX) * progress;
       w.curY = w.startY + (w.targetY - w.startY) * progress - arcHeight;
 
-      if (progress >= 1.0) {
+      if (progress >= 1.0 || w.timer >= 1.2) {
         if (w.targetTower && towerManager && towerManager.towers && towerManager.towers.includes(w.targetTower)) {
           if (!w.targetTower.isWebbed && typeof towerManager.applyWeb === 'function') {
             towerManager.applyWeb(w.targetTower, 3, fx);
