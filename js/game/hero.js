@@ -800,19 +800,35 @@ class ForestHero {
       return;
     }
 
-    // 1. 集结目的地旗帜指示光圈
-    if (this.rallyMarkerTimer > 0) {
+    // 1. 集结目的地战旗 (100% 纯 AI 手绘古典林地战旗，绝无简陋几何圆圈)
+    const distToTarget = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+    const showRally = (this.state === 'walk' && distToTarget > 6) || this.rallyMarkerTimer > 0;
+    if (showRally) {
       ctx.save();
-      const alpha = Math.min(1.0, this.rallyMarkerTimer);
-      ctx.strokeStyle = `rgba(255, 229, 143, ${alpha})`;
-      ctx.lineWidth = 2;
+      const alpha = Math.min(1.0, Math.max(0.4, this.rallyMarkerTimer || (distToTarget > 6 ? 0.95 : 0)));
+      ctx.globalAlpha = alpha;
+
+      // 旗帜底部柔和地面阴影
+      ctx.fillStyle = 'rgba(10, 15, 12, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(this.targetX, this.targetY, 18, 8, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = `rgba(82, 196, 26, ${alpha * 0.8})`;
-      ctx.beginPath();
-      ctx.arc(this.targetX, this.targetY, 3, 0, Math.PI * 2);
+      ctx.ellipse(this.targetX + 2, this.targetY + 4, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // 手绘战旗立绘 (prop_rally_flag.png)
+      const flagImg = platform.getImage('assets/vfx/prop_rally_flag.png');
+      if (flagImg && flagImg.width) {
+        const flW = 28;
+        const flH = 34;
+        const flutter = Math.sin(this.animTimer * 6) * 1.5;
+        ctx.drawImage(flagImg, this.targetX - flW * 0.45, this.targetY - flH + 6 + flutter, flW, flH);
+      } else {
+        ctx.strokeStyle = '#D4B106';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(this.targetX, this.targetY + 2);
+        ctx.lineTo(this.targetX, this.targetY - 22);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 

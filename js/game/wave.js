@@ -277,11 +277,15 @@ class WaveManager {
             }
           }
         } else {
+          platform.playSfx(rewardInfo.flawlessBonus > 0 ? 'sfx_win' : 'sfx_multikill', 0.85);
           if (fx) {
             const sub = rewardInfo.flawlessBonus > 0
               ? ('+' + rewardInfo.waveReward + ' / ' + i18n.t('banner_flawless'))
               : ('+' + rewardInfo.waveReward + ' ' + i18n.t('spores_label'));
             fx.showBanner(i18n.t('banner_wave_clear'), PALETTE.UI_SPORE, sub, 1.4);
+            if (typeof fx.spawnWaveClearCelebration === 'function') {
+              fx.spawnWaveClearCelebration(480, 160, rewardInfo.waveReward);
+            }
           }
           this.currentWaveIndex += 1;
           this.phase = 'prep';

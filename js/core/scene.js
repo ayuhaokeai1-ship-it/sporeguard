@@ -1083,8 +1083,8 @@ class SceneController {
         this.fx.showBanner('⚠️ 绝境破釜！圣树受袭，速出技能！', '#FF4D4F', '全场时光缓流 1.5s', 2.0);
         this.fx.fxSlowMoTimerSec = 1.5;
         this.fx.fxTimeScale = 0.38;
-        if (this.gameSpeed > 1) {
-          this.gameSpeed = 1;
+        if (this.speedMultiplier > 1) {
+          this.speedMultiplier = 1;
         }
         platform.playSfx('sfx_bomb');
       }

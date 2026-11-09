@@ -91,6 +91,7 @@ class TowerManager {
       squashScaleX: 1.35,  // 落地瞬间压扁拉伸弹性动画 (Squash & Stretch)
       squashScaleY: 0.65,
       squashTimer: 0.30,
+        recoilTimer: 0,
       isWebbed: false,     // 是否被腐化蛛丝封印瘫痪
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
@@ -573,6 +574,15 @@ class TowerManager {
           t.squashScaleX = 1.0;
           t.squashScaleY = 1.0;
         }
+      } else if (t.recoilTimer > 0) {
+        t.recoilTimer -= dt;
+        const p = Math.max(0, t.recoilTimer) / 0.16;
+        t.squashScaleX = 1.0 + Math.sin(p * Math.PI) * 0.12;
+        t.squashScaleY = 1.0 - Math.sin(p * Math.PI) * 0.12;
+        if (t.recoilTimer <= 0) {
+          t.squashScaleX = 1.0;
+          t.squashScaleY = 1.0;
+        }
       }
 
       // 超频爆发大招倒计时
@@ -781,6 +791,7 @@ class TowerManager {
   }
 
   fireTower(tower, target, map, enemyManager, bulletManager) {
+    tower.recoilTimer = 0.16;
     const node = tower.node;
     const baseDmg = tower.def.baseDamage;
 
@@ -894,7 +905,7 @@ class TowerManager {
       }
 
       // 落地 Squash & Stretch 弹性变形绘制
-      const isSquashing = t.squashTimer > 0;
+      const isSquashing = t.squashTimer > 0 || t.recoilTimer > 0;
       if (isSquashing) {
         ctx.save();
         ctx.translate(t.x, tileY + 24);

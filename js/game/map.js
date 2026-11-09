@@ -486,21 +486,39 @@ class GameMap {
           ctx.fillRect(bx, by, bw * ratio, bh);
         }
 
-        // 🎯 玩家集火锁定光标
+        // 🎯 玩家集火锁定光标 (100% 战术准星与精致集火徽标)
         if (obs.isTargeted) {
-          const bob = Math.sin(animTimeSec * 6) * 4;
-          ctx.strokeStyle = '#FF4D4F';
-          ctx.lineWidth = 1.8;
-          ctx.beginPath();
-          ctx.arc(ox, oy, 18, 0, Math.PI * 2);
-          ctx.stroke();
+          const bob = Math.sin(animTimeSec * 6) * 3;
+          const reticleImg = platform.getImage('assets/vfx/range_commander_reticle.png');
+          if (reticleImg && reticleImg.width) {
+            ctx.save();
+            ctx.translate(ox, oy);
+            ctx.rotate(animTimeSec * 1.5);
+            ctx.globalAlpha = 0.85;
+            const rw = 40;
+            const rh = 40;
+            ctx.drawImage(reticleImg, -rw * 0.5, -rh * 0.5, rw, rh);
+            ctx.restore();
+          } else {
+            // 战术瞄准四角括号
+            ctx.strokeStyle = '#FF4D4F';
+            ctx.lineWidth = 2.0;
+            const cr = 16;
+            const cl = 6;
+            ctx.beginPath();
+            ctx.moveTo(ox - cr, oy - cr + cl); ctx.lineTo(ox - cr, oy - cr); ctx.lineTo(ox - cr + cl, oy - cr);
+            ctx.moveTo(ox + cr - cl, oy - cr); ctx.lineTo(ox + cr, oy - cr); ctx.lineTo(ox + cr, oy - cr + cl);
+            ctx.moveTo(ox + cr, oy + cr - cl); ctx.lineTo(ox + cr, oy + cr); ctx.lineTo(ox + cr - cl, oy + cr);
+            ctx.moveTo(ox - cr + cl, oy + cr); ctx.lineTo(ox - cr, oy + cr); ctx.lineTo(ox - cr, oy + cr - cl);
+            ctx.stroke();
+          }
 
-          // 悬浮集火箭头与文字
+          // 悬浮集火文字徽标
           ctx.fillStyle = '#FF4D4F';
           ctx.font = 'bold 12px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('🎯 集火', ox, oy - 30 + bob);
+          ctx.fillText('🎯 优先集火', ox, oy - 28 + bob);
         }
         ctx.restore();
       }

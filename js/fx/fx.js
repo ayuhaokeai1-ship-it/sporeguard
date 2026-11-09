@@ -245,6 +245,13 @@ class FxSystem {
   /**
    * 显示横幅（如“连锁！/Chain!”、“超载！/Overload!”、首领登场等）
    */
+  spawnWaveClearCelebration(x = 480, y = 160, rewardSpores = 0) {
+    this.triggerShake(1.5, 0.15);
+    this.spawnParticles(x, y, 28, ['#FFE58F', '#FFD700', '#52C41A', '#BAE7FF', '#FAAD14'], 65, 180, 0.45, 0.95, 4);
+    const motes = Math.min(6, Math.max(3, Math.round((rewardSpores || 20) / 8)));
+    this.spawnHomingMotes(x, y, motes, '#FFD700');
+  }
+
   showBanner(text, color = PALETTE.UI_SPORE, subText = '', duration = 1.35) {
     this.banner.active = true;
     this.banner.text = text;

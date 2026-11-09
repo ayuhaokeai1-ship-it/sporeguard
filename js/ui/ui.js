@@ -2781,7 +2781,7 @@ class UiManager {
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 360;
-    const mh = 316;
+    const mh = 324;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -2792,14 +2792,14 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 54);
+    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 58);
 
     // 优雅内敛的羊皮纸装饰分割线
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 60, my + 70);
-    ctx.lineTo(mx + mw - 60, my + 70);
+    ctx.moveTo(mx + 60, my + 74);
+    ctx.lineTo(mx + mw - 60, my + 74);
     ctx.stroke();
     ctx.restore();
 
@@ -2807,7 +2807,7 @@ class UiManager {
     const bw = mw - 100;
     const btnH = 38;
 
-    this.drawPixelButton(ctx, 'pause_resume', bx, my + 84, bw, btnH, i18n.t('btn_resume'), {
+    this.drawPixelButton(ctx, 'pause_resume', bx, my + 88, bw, btnH, i18n.t('btn_resume'), {
       skin: 'btn_green',
       iconKey: 'play'
     }, () => {
@@ -2815,14 +2815,14 @@ class UiManager {
       scene.resumeGame();
     });
 
-    this.drawPixelButton(ctx, 'pause_restart', bx, my + 130, bw, btnH, i18n.t('btn_restart'), {
+    this.drawPixelButton(ctx, 'pause_restart', bx, my + 134, bw, btnH, i18n.t('btn_restart'), {
       skin: 'btn_wood'
     }, () => {
       platform.playSfx('sfx_click');
       scene.restartLevel();
     });
 
-    this.drawPixelButton(ctx, 'pause_settings', bx, my + 176, bw, btnH, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'pause_settings', bx, my + 180, bw, btnH, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings'
     }, () => {
@@ -2830,7 +2830,7 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
-    this.drawPixelButton(ctx, 'pause_exit', bx, my + 222, bw, btnH, i18n.t('btn_exit_title'), {
+    this.drawPixelButton(ctx, 'pause_exit', bx, my + 226, bw, btnH, i18n.t('btn_exit_title'), {
       skin: 'btn_red'
     }, () => {
       platform.playSfx('sfx_click');
@@ -2988,13 +2988,13 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 52);
+    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 56);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 50, my + 66);
-    ctx.lineTo(mx + mw - 50, my + 66);
+    ctx.moveTo(mx + 50, my + 70);
+    ctx.lineTo(mx + mw - 50, my + 70);
     ctx.stroke();
     ctx.restore();
 
@@ -3003,7 +3003,7 @@ class UiManager {
     const bw = mw - 80;
     const btnH = 34;
     const gap = 8;
-    let curY = my + 78;
+    let curY = my + 82;
 
     // 1. 音效开关
     this.drawPixelButton(

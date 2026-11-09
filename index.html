@@ -1326,6 +1326,21 @@
         return;
       }
 
+      if (location.hash === '#test_hero_rally') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            ensureGuideSeen();
+            S.startLevel('map1');
+            S.hero.moveTo(350, 180, S.fx);
+            document.title = 'RALLY_OK';
+          } catch (e) {
+            document.title = 'RALLY_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
       if (location.hash === '#test_codex_tree_shot') {
         onGameReady(function() {
           try {

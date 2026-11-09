@@ -2718,6 +2718,7 @@ const AUDIO_PATHS = {
   sfx_lose: 'audio/sfx_lose.wav',
   sfx_coin: 'audio/sfx_coin.wav',
   sfx_horn: 'audio/sfx_horn.wav',
+  sfx_wave_horn: 'audio/sfx_horn.wav',
   sfx_thunder: 'audio/sfx_thunder.wav',
   sfx_hit: 'audio/sfx_hit.wav',
   sfx_bomb: 'audio/sfx_bomb.wav',
@@ -2741,6 +2742,7 @@ const SFX_VOLUMES = {
   sfx_lose: 0.80,
   sfx_coin: 0.65,
   sfx_horn: 0.80,
+  sfx_wave_horn: 0.85,
   sfx_thunder: 0.85,
   sfx_hit: 0.60,
   sfx_bomb: 0.75,
@@ -4700,6 +4702,13 @@ class FxSystem {
   /**
    * 显示横幅（如“连锁！/Chain!”、“超载！/Overload!”、首领登场等）
    */
+  spawnWaveClearCelebration(x = 480, y = 160, rewardSpores = 0) {
+    this.triggerShake(1.5, 0.15);
+    this.spawnParticles(x, y, 28, ['#FFE58F', '#FFD700', '#52C41A', '#BAE7FF', '#FAAD14'], 65, 180, 0.45, 0.95, 4);
+    const motes = Math.min(6, Math.max(3, Math.round((rewardSpores || 20) / 8)));
+    this.spawnHomingMotes(x, y, motes, '#FFD700');
+  }
+
   showBanner(text, color = PALETTE.UI_SPORE, subText = '', duration = 1.35) {
     this.banner.active = true;
     this.banner.text = text;
@@ -5994,21 +6003,39 @@ class GameMap {
           ctx.fillRect(bx, by, bw * ratio, bh);
         }
 
-        // 🎯 玩家集火锁定光标
+        // 🎯 玩家集火锁定光标 (100% 战术准星与精致集火徽标)
         if (obs.isTargeted) {
-          const bob = Math.sin(animTimeSec * 6) * 4;
-          ctx.strokeStyle = '#FF4D4F';
-          ctx.lineWidth = 1.8;
-          ctx.beginPath();
-          ctx.arc(ox, oy, 18, 0, Math.PI * 2);
-          ctx.stroke();
+          const bob = Math.sin(animTimeSec * 6) * 3;
+          const reticleImg = platform.getImage('assets/vfx/range_commander_reticle.png');
+          if (reticleImg && reticleImg.width) {
+            ctx.save();
+            ctx.translate(ox, oy);
+            ctx.rotate(animTimeSec * 1.5);
+            ctx.globalAlpha = 0.85;
+            const rw = 40;
+            const rh = 40;
+            ctx.drawImage(reticleImg, -rw * 0.5, -rh * 0.5, rw, rh);
+            ctx.restore();
+          } else {
+            // 战术瞄准四角括号
+            ctx.strokeStyle = '#FF4D4F';
+            ctx.lineWidth = 2.0;
+            const cr = 16;
+            const cl = 6;
+            ctx.beginPath();
+            ctx.moveTo(ox - cr, oy - cr + cl); ctx.lineTo(ox - cr, oy - cr); ctx.lineTo(ox - cr + cl, oy - cr);
+            ctx.moveTo(ox + cr - cl, oy - cr); ctx.lineTo(ox + cr, oy - cr); ctx.lineTo(ox + cr, oy - cr + cl);
+            ctx.moveTo(ox + cr, oy + cr - cl); ctx.lineTo(ox + cr, oy + cr); ctx.lineTo(ox + cr - cl, oy + cr);
+            ctx.moveTo(ox - cr + cl, oy + cr); ctx.lineTo(ox - cr, oy + cr); ctx.lineTo(ox - cr, oy + cr - cl);
+            ctx.stroke();
+          }
 
-          // 悬浮集火箭头与文字
+          // 悬浮集火文字徽标
           ctx.fillStyle = '#FF4D4F';
           ctx.font = 'bold 12px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('🎯 集火', ox, oy - 30 + bob);
+          ctx.fillText('🎯 优先集火', ox, oy - 28 + bob);
         }
         ctx.restore();
       }
@@ -8367,19 +8394,35 @@ class ForestHero {
       return;
     }
 
-    // 1. 集结目的地旗帜指示光圈
-    if (this.rallyMarkerTimer > 0) {
+    // 1. 集结目的地战旗 (100% 纯 AI 手绘古典林地战旗，绝无简陋几何圆圈)
+    const distToTarget = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+    const showRally = (this.state === 'walk' && distToTarget > 6) || this.rallyMarkerTimer > 0;
+    if (showRally) {
       ctx.save();
-      const alpha = Math.min(1.0, this.rallyMarkerTimer);
-      ctx.strokeStyle = `rgba(255, 229, 143, ${alpha})`;
-      ctx.lineWidth = 2;
+      const alpha = Math.min(1.0, Math.max(0.4, this.rallyMarkerTimer || (distToTarget > 6 ? 0.95 : 0)));
+      ctx.globalAlpha = alpha;
+
+      // 旗帜底部柔和地面阴影
+      ctx.fillStyle = 'rgba(10, 15, 12, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(this.targetX, this.targetY, 18, 8, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = `rgba(82, 196, 26, ${alpha * 0.8})`;
-      ctx.beginPath();
-      ctx.arc(this.targetX, this.targetY, 3, 0, Math.PI * 2);
+      ctx.ellipse(this.targetX + 2, this.targetY + 4, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // 手绘战旗立绘 (prop_rally_flag.png)
+      const flagImg = platform.getImage('assets/vfx/prop_rally_flag.png');
+      if (flagImg && flagImg.width) {
+        const flW = 28;
+        const flH = 34;
+        const flutter = Math.sin(this.animTimer * 6) * 1.5;
+        ctx.drawImage(flagImg, this.targetX - flW * 0.45, this.targetY - flH + 6 + flutter, flW, flH);
+      } else {
+        ctx.strokeStyle = '#D4B106';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(this.targetX, this.targetY + 2);
+        ctx.lineTo(this.targetX, this.targetY - 22);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -15504,6 +15547,7 @@ class TowerManager {
       squashScaleX: 1.35,  // 落地瞬间压扁拉伸弹性动画 (Squash & Stretch)
       squashScaleY: 0.65,
       squashTimer: 0.30,
+        recoilTimer: 0,
       isWebbed: false,     // 是否被腐化蛛丝封印瘫痪
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
@@ -15986,6 +16030,15 @@ class TowerManager {
           t.squashScaleX = 1.0;
           t.squashScaleY = 1.0;
         }
+      } else if (t.recoilTimer > 0) {
+        t.recoilTimer -= dt;
+        const p = Math.max(0, t.recoilTimer) / 0.16;
+        t.squashScaleX = 1.0 + Math.sin(p * Math.PI) * 0.12;
+        t.squashScaleY = 1.0 - Math.sin(p * Math.PI) * 0.12;
+        if (t.recoilTimer <= 0) {
+          t.squashScaleX = 1.0;
+          t.squashScaleY = 1.0;
+        }
       }
 
       // 超频爆发大招倒计时
@@ -16194,6 +16247,7 @@ class TowerManager {
   }
 
   fireTower(tower, target, map, enemyManager, bulletManager) {
+    tower.recoilTimer = 0.16;
     const node = tower.node;
     const baseDmg = tower.def.baseDamage;
 
@@ -16307,7 +16361,7 @@ class TowerManager {
       }
 
       // 落地 Squash & Stretch 弹性变形绘制
-      const isSquashing = t.squashTimer > 0;
+      const isSquashing = t.squashTimer > 0 || t.recoilTimer > 0;
       if (isSquashing) {
         ctx.save();
         ctx.translate(t.x, tileY + 24);
@@ -16994,11 +17048,15 @@ class WaveManager {
             }
           }
         } else {
+          platform.playSfx(rewardInfo.flawlessBonus > 0 ? 'sfx_win' : 'sfx_multikill', 0.85);
           if (fx) {
             const sub = rewardInfo.flawlessBonus > 0
               ? ('+' + rewardInfo.waveReward + ' / ' + i18n.t('banner_flawless'))
               : ('+' + rewardInfo.waveReward + ' ' + i18n.t('spores_label'));
             fx.showBanner(i18n.t('banner_wave_clear'), PALETTE.UI_SPORE, sub, 1.4);
+            if (typeof fx.spawnWaveClearCelebration === 'function') {
+              fx.spawnWaveClearCelebration(480, 160, rewardInfo.waveReward);
+            }
           }
           this.currentWaveIndex += 1;
           this.phase = 'prep';
@@ -19798,7 +19856,7 @@ class UiManager {
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 360;
-    const mh = 316;
+    const mh = 324;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -19809,14 +19867,14 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 54);
+    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 58);
 
     // 优雅内敛的羊皮纸装饰分割线
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 60, my + 70);
-    ctx.lineTo(mx + mw - 60, my + 70);
+    ctx.moveTo(mx + 60, my + 74);
+    ctx.lineTo(mx + mw - 60, my + 74);
     ctx.stroke();
     ctx.restore();
 
@@ -19824,7 +19882,7 @@ class UiManager {
     const bw = mw - 100;
     const btnH = 38;
 
-    this.drawPixelButton(ctx, 'pause_resume', bx, my + 84, bw, btnH, i18n.t('btn_resume'), {
+    this.drawPixelButton(ctx, 'pause_resume', bx, my + 88, bw, btnH, i18n.t('btn_resume'), {
       skin: 'btn_green',
       iconKey: 'play'
     }, () => {
@@ -19832,14 +19890,14 @@ class UiManager {
       scene.resumeGame();
     });
 
-    this.drawPixelButton(ctx, 'pause_restart', bx, my + 130, bw, btnH, i18n.t('btn_restart'), {
+    this.drawPixelButton(ctx, 'pause_restart', bx, my + 134, bw, btnH, i18n.t('btn_restart'), {
       skin: 'btn_wood'
     }, () => {
       platform.playSfx('sfx_click');
       scene.restartLevel();
     });
 
-    this.drawPixelButton(ctx, 'pause_settings', bx, my + 176, bw, btnH, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'pause_settings', bx, my + 180, bw, btnH, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings'
     }, () => {
@@ -19847,7 +19905,7 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
-    this.drawPixelButton(ctx, 'pause_exit', bx, my + 222, bw, btnH, i18n.t('btn_exit_title'), {
+    this.drawPixelButton(ctx, 'pause_exit', bx, my + 226, bw, btnH, i18n.t('btn_exit_title'), {
       skin: 'btn_red'
     }, () => {
       platform.playSfx('sfx_click');
@@ -20005,13 +20063,13 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 52);
+    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 56);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 50, my + 66);
-    ctx.lineTo(mx + mw - 50, my + 66);
+    ctx.moveTo(mx + 50, my + 70);
+    ctx.lineTo(mx + mw - 50, my + 70);
     ctx.stroke();
     ctx.restore();
 
@@ -20020,7 +20078,7 @@ class UiManager {
     const bw = mw - 80;
     const btnH = 34;
     const gap = 8;
-    let curY = my + 78;
+    let curY = my + 82;
 
     // 1. 音效开关
     this.drawPixelButton(
@@ -22434,8 +22492,8 @@ class SceneController {
         this.fx.showBanner('⚠️ 绝境破釜！圣树受袭，速出技能！', '#FF4D4F', '全场时光缓流 1.5s', 2.0);
         this.fx.fxSlowMoTimerSec = 1.5;
         this.fx.fxTimeScale = 0.38;
-        if (this.gameSpeed > 1) {
-          this.gameSpeed = 1;
+        if (this.speedMultiplier > 1) {
+          this.speedMultiplier = 1;
         }
         platform.playSfx('sfx_bomb');
       }
