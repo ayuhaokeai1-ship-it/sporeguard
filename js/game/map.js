@@ -398,22 +398,7 @@ class GameMap {
     ctx.restore();
 
     this.renderRouteGuides(ctx, animTimeSec);
-    if (this.mapData.dynamicNightLight) {
-      const waveProgress = Math.min(1, (currentWaveIndex - 1) / Math.max(1, this.mapData.totalWaves - 1));
-      ctx.save();
-      ctx.globalAlpha = 0.08 + waveProgress * 0.24;
-      ctx.fillStyle = PALETTE.BRANCH_A;
-      ctx.beginPath();
-      const mossList = this.mapData.mossTiles || [];
-      for (let i = 0; i < mossList.length; i++) {
-        const c = tileCenter(mossList[i][0], mossList[i][1]);
-        ctx.moveTo(c.x + 18 + waveProgress * 14, c.y);
-        ctx.arc(c.x, c.y, 18 + waveProgress * 14, 0, Math.PI * 2);
-      }
-      ctx.fill();
-      ctx.restore();
-      platform.recordDrawCall(1);
-    }
+    // 动态环境光：由天气和微风系统统一柔和过渡渲染，无需额外程序化几何圈
 
     // 幽夜微光专属：终点蘑菇小屋温馨壁炉与窗棂烛光 (Cottage Window Candle Glow)
     const isNight = (this.mapData && this.mapData.theme === 'night_fungi') ||
@@ -444,7 +429,6 @@ class GameMap {
 
     // 渲染可清除地图障碍物 (Clearable Obstacles & Interactive Health Bars)
     if (this.obstacles && this.obstacles.length > 0) {
-      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
       for (let i = 0; i < this.obstacles.length; i++) {
         const obs = this.obstacles[i];
         if (obs.cleared) continue;
@@ -463,15 +447,28 @@ class GameMap {
         ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 障碍物主体 (树桩/巨石/魔晶)
-        if (stumpImg && stumpImg.width) {
-          ctx.drawImage(stumpImg, ox - 18, oy - 18, 36, 32);
+        // 100% 纯正精致 AI 原生场景障碍物（绝无任何水印英文字与几何占位色块）
+        const variant = obs.variant % 4;
+        let obsImg = null;
+        let dw = 36;
+        let dh = 34;
+        let dyOffset = -18;
+        if (variant === 0) {
+          obsImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
+          dw = 38; dh = 35; dyOffset = -19;
+        } else if (variant === 1) {
+          obsImg = platform.getImage('assets/vfx/relic_amber.png');
+          dw = 32; dh = 36; dyOffset = -20;
+        } else if (variant === 2) {
+          obsImg = platform.getImage('assets/vfx/relic_clover.png');
+          dw = 34; dh = 32; dyOffset = -17;
         } else {
-          const atlasPath = this.mapData.atlasPath;
-          if (!drawMapTile(ctx, atlasPath, 'obs_' + (obs.variant % 4), ox - 16, oy - 16, TILE_SIZE, TILE_SIZE)) {
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(ox - 14, oy - 14, 28, 28);
-          }
+          obsImg = platform.getImage('assets/vfx/prop_debris.png') || platform.getImage('assets/vfx/prop_thunder_stump.png');
+          dw = 38; dh = 24; dyOffset = -12;
+        }
+
+        if (obsImg && obsImg.width) {
+          ctx.drawImage(obsImg, ox - dw * 0.5, oy + dyOffset, dw, dh);
         }
 
         // 血条 (受创或被集火时显示)
@@ -537,9 +534,7 @@ class GameMap {
             ctx.fillStyle = PALETTE.GROUND[tile.variant % 4];
             ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE);
           }
-          if (tile.type === 'moss') {
-            drawMapTile(ctx, atlasPath, 'moss_' + (tile.variant % 2), dx, dy, TILE_SIZE, TILE_SIZE);
-          } else if (tile.type === 'path' || tile.type === 'spawn' || tile.type === 'warehouse') {
+          if (tile.type === 'path' || tile.type === 'spawn' || tile.type === 'warehouse') {
             drawMapTile(ctx, atlasPath, 'path_' + (tile.pathKind || 'h'), dx, dy, TILE_SIZE, TILE_SIZE);
           } else if (tile.type === 'obstacle') {
             drawMapTile(ctx, atlasPath, 'obs_' + (tile.variant % 4), dx, dy, TILE_SIZE, TILE_SIZE);

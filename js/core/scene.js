@@ -251,7 +251,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
+      this.fx.showBanner('欢迎来到孢子前线', '#BAE7FF', '轻触底部卡牌种植，右下角「菜单」查看图鉴秘典', 3.8);
     }
 
     if (this.weather && this.weather.currentWeather === 'night') {

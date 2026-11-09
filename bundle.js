@@ -1309,10 +1309,7 @@ const MAPS = {
     ],
     // 障碍物格（树桩、林石、浓雾灌木，不可建造）
     obstacles: [
-      [2, 0], [3, 0], [9, 1], [10, 1], [15, 1],
-      [1, 5], [2, 5], [1, 9], [2, 10], [3, 13], [4, 13],
-      [9, 5], [9, 13], [14, 11], [14, 12], [18, 1], [19, 1],
-      [0, 14], [1, 14], [18, 14]
+      [2, 5], [9, 5], [14, 11], [10, 1]
     ],
     parallaxColors: ['#14213D', '#1F3B2C', '#2E5E3E'],
     mistAlpha: 0.16,
@@ -1381,11 +1378,7 @@ const MAPS = {
     ],
     // 溪谷水面与溪石（不可建造）
     obstacles: [
-      [1, 2], [2, 2], [1, 3], [2, 6], [2, 7],
-      [6, 4], [7, 4], [6, 9], [7, 9],
-      [11, 2], [12, 2], [11, 9], [12, 9],
-      [16, 10], [16, 11], [17, 11],
-      [0, 14], [1, 14], [6, 13], [7, 13], [18, 13], [19, 13]
+      [2, 6], [6, 7], [11, 6], [16, 7]
     ],
     parallaxColors: ['#14213D', '#1F3A5F', '#2E5E3E'],
     mistAlpha: 0.12,
@@ -1437,12 +1430,7 @@ const MAPS = {
     ],
     // 夜光巨蕈与暗影岩（不可建造）
     obstacles: [
-      [2, 0], [6, 0], [10, 0], [14, 0], [18, 0],
-      [0, 5], [0, 8], [0, 12], [1, 13],
-      [5, 4], [9, 4], [13, 4],
-      [5, 8], [8, 8], [12, 8],
-      [18, 4], [19, 4], [18, 8], [19, 8],
-      [4, 13], [8, 13], [11, 13]
+      [3, 4], [8, 5], [13, 4], [16, 10]
     ],
     parallaxColors: ['#14213D', '#1F3A5F', '#1F3B2C'],
     mistAlpha: 0.20,
@@ -5064,30 +5052,30 @@ class FxSystem {
     // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
     if (this.banner.active) {
       const b = this.banner;
-      const bx = 300;
-      const by = 74;
-      const bw = 360;
-      const bh = b.subText ? 42 : 30;
+      const bw = 460;
+      const bh = b.subText ? 52 : 36;
+      const bx = (960 - bw) * 0.5;
+      const by = 80;
 
       ctx.save();
-      ctx.fillStyle = 'rgba(28, 18, 10, 0.86)';
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 10) : ctx.rect(bx, by, bw, bh);
       ctx.fill();
       ctx.strokeStyle = b.color;
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 2.0;
       ctx.stroke();
 
       ctx.fillStyle = b.color;
-      ctx.font = 'bold 14px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 14 : 15));
+      ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
 
       if (b.subText) {
-        ctx.fillStyle = PALETTE.UI_TEXT;
-        ctx.font = '11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-        ctx.fillText(b.subText, bx + bw * 0.5, by + 30);
+        ctx.fillStyle = PALETTE.UI_TEXT || '#F0F0F0';
+        ctx.font = '12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.fillText(b.subText, bx + bw * 0.5, by + 36);
       }
       ctx.restore();
       platform.recordDrawCall(2);
@@ -5921,22 +5909,7 @@ class GameMap {
     ctx.restore();
 
     this.renderRouteGuides(ctx, animTimeSec);
-    if (this.mapData.dynamicNightLight) {
-      const waveProgress = Math.min(1, (currentWaveIndex - 1) / Math.max(1, this.mapData.totalWaves - 1));
-      ctx.save();
-      ctx.globalAlpha = 0.08 + waveProgress * 0.24;
-      ctx.fillStyle = PALETTE.BRANCH_A;
-      ctx.beginPath();
-      const mossList = this.mapData.mossTiles || [];
-      for (let i = 0; i < mossList.length; i++) {
-        const c = tileCenter(mossList[i][0], mossList[i][1]);
-        ctx.moveTo(c.x + 18 + waveProgress * 14, c.y);
-        ctx.arc(c.x, c.y, 18 + waveProgress * 14, 0, Math.PI * 2);
-      }
-      ctx.fill();
-      ctx.restore();
-      platform.recordDrawCall(1);
-    }
+    // 动态环境光：由天气和微风系统统一柔和过渡渲染，无需额外程序化几何圈
 
     // 幽夜微光专属：终点蘑菇小屋温馨壁炉与窗棂烛光 (Cottage Window Candle Glow)
     const isNight = (this.mapData && this.mapData.theme === 'night_fungi') ||
@@ -5967,7 +5940,6 @@ class GameMap {
 
     // 渲染可清除地图障碍物 (Clearable Obstacles & Interactive Health Bars)
     if (this.obstacles && this.obstacles.length > 0) {
-      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
       for (let i = 0; i < this.obstacles.length; i++) {
         const obs = this.obstacles[i];
         if (obs.cleared) continue;
@@ -5986,15 +5958,28 @@ class GameMap {
         ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 障碍物主体 (树桩/巨石/魔晶)
-        if (stumpImg && stumpImg.width) {
-          ctx.drawImage(stumpImg, ox - 18, oy - 18, 36, 32);
+        // 100% 纯正精致 AI 原生场景障碍物（绝无任何水印英文字与几何占位色块）
+        const variant = obs.variant % 4;
+        let obsImg = null;
+        let dw = 36;
+        let dh = 34;
+        let dyOffset = -18;
+        if (variant === 0) {
+          obsImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
+          dw = 38; dh = 35; dyOffset = -19;
+        } else if (variant === 1) {
+          obsImg = platform.getImage('assets/vfx/relic_amber.png');
+          dw = 32; dh = 36; dyOffset = -20;
+        } else if (variant === 2) {
+          obsImg = platform.getImage('assets/vfx/relic_clover.png');
+          dw = 34; dh = 32; dyOffset = -17;
         } else {
-          const atlasPath = this.mapData.atlasPath;
-          if (!drawMapTile(ctx, atlasPath, 'obs_' + (obs.variant % 4), ox - 16, oy - 16, TILE_SIZE, TILE_SIZE)) {
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(ox - 14, oy - 14, 28, 28);
-          }
+          obsImg = platform.getImage('assets/vfx/prop_debris.png') || platform.getImage('assets/vfx/prop_thunder_stump.png');
+          dw = 38; dh = 24; dyOffset = -12;
+        }
+
+        if (obsImg && obsImg.width) {
+          ctx.drawImage(obsImg, ox - dw * 0.5, oy + dyOffset, dw, dh);
         }
 
         // 血条 (受创或被集火时显示)
@@ -6060,9 +6045,7 @@ class GameMap {
             ctx.fillStyle = PALETTE.GROUND[tile.variant % 4];
             ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE);
           }
-          if (tile.type === 'moss') {
-            drawMapTile(ctx, atlasPath, 'moss_' + (tile.variant % 2), dx, dy, TILE_SIZE, TILE_SIZE);
-          } else if (tile.type === 'path' || tile.type === 'spawn' || tile.type === 'warehouse') {
+          if (tile.type === 'path' || tile.type === 'spawn' || tile.type === 'warehouse') {
             drawMapTile(ctx, atlasPath, 'path_' + (tile.pathKind || 'h'), dx, dy, TILE_SIZE, TILE_SIZE);
           } else if (tile.type === 'obstacle') {
             drawMapTile(ctx, atlasPath, 'obs_' + (tile.variant % 4), dx, dy, TILE_SIZE, TILE_SIZE);
@@ -8334,7 +8317,7 @@ class ForestHero {
       ctx.fill();
 
       // 100% AI 手绘远古古桩立绘
-      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
+      const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
       if (stumpImg && stumpImg.width) {
         ctx.save();
         ctx.globalAlpha = 0.88;
@@ -14217,18 +14200,12 @@ class ForestContraptions {
     this.dewDrops = [];
     this.dewSpawnTimer = 3.0;
     this.lightningArcs = [];
-    this.critters = [];
   }
 
   initForMap(mapId) {
     this.dewDrops.length = 0;
     this.lightningArcs.length = 0;
     this.dewSpawnTimer = 3.0;
-    this.critters = [
-      { id: 'squirrel', name: '灵动小松鼠', x: 34, y: 390, cd: 0, hopTimer: 0, animTimer: 0 },
-      { id: 'butterfly', name: '七彩灵蝶', x: 585, y: 75, cd: 0, hopTimer: 0, animTimer: 0 },
-      { id: 'wild_fungus', name: '野生荧光伞', x: 615, y: 335, cd: 0, hopTimer: 0, animTimer: 0 }
-    ];
 
     // 根据不同地图布局设置环境武器的天然战略点位
     if (mapId === 'map1') {
@@ -14366,14 +14343,6 @@ class ForestContraptions {
     }
 
     // 森林闲趣小生灵状态更新
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        c.animTimer += dt;
-        if (c.cd > 0) c.cd = Math.max(0, c.cd - dt);
-        if (c.hopTimer > 0) c.hopTimer = Math.max(0, c.hopTimer - dt);
-      }
-    }
   }
 
   handlePointerDown(inputX, inputY, scene) {
@@ -14381,50 +14350,7 @@ class ForestContraptions {
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const scale = mv.SCALE || 0.85;
 
-    // 0. 点击森林闲趣生灵微彩蛋（松鼠、灵蝶、野生伞菌，提供解压微操与趣味回赠）
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        const distMap = Math.hypot(inputX - c.x, inputY - c.y);
-        const screenX = mv.OFFSET_X + c.x * scale;
-        const screenY = mv.OFFSET_Y + c.y * scale;
-        const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
-        const convertedMx = (inputX - mv.OFFSET_X) / scale;
-        const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-        const distConverted = Math.hypot(convertedMx - c.x, convertedMy - c.y);
 
-        if (distMap <= 42 || distScreen <= 42 || distConverted <= 42) {
-          if (c.cd <= 0) {
-            c.cd = 15.0;
-            c.hopTimer = 0.55;
-            const reward = 6;
-            if (scene.economy) scene.economy.addSpores(reward);
-            if (scene.fx) {
-              scene.fx.spawnFloatingText(c.x, c.y - 18, `✨ ${c.name}开心赠送 +${reward}!`, '#73D13D', 1.3);
-              scene.fx.spawnParticles(c.x, c.y, 14, ['#73D13D', '#B7EB8F', '#FFE58F', '#FFFFFF'], 25, 65, 0.2, 0.45, 3.5);
-              if (typeof scene.fx.spawnShockwave === 'function') {
-                scene.fx.spawnShockwave(c.x, c.y, 24, '#73D13D');
-              }
-            }
-            if (typeof platform.playMusicalScale === 'function') {
-              platform.playMusicalScale(4);
-            } else {
-              platform.playSfx('sfx_coin');
-            }
-            if (typeof wx !== 'undefined' && wx.vibrateShort) {
-              try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
-            }
-          } else {
-            c.hopTimer = 0.35;
-            if (scene.fx) {
-              scene.fx.spawnFloatingText(c.x, c.y - 14, '🐾 嬉戏欢跳中~', '#FFE58F', 1.0);
-            }
-            platform.playSfx('sfx_click');
-          }
-          return true;
-        }
-      }
-    }
 
     // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
@@ -14629,85 +14555,7 @@ class ForestContraptions {
       ctx.restore();
     }
 
-    // 0. 绘制奇幻森林闲趣小生灵 (Critters: Squirrel, Butterfly, Wild Fungus)
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        ctx.save();
-        let cx = c.x;
-        let cy = c.y;
 
-        // 跃动跳跃动画
-        if (c.hopTimer > 0) {
-          const hopProg = c.hopTimer / 0.55;
-          cy -= Math.sin(hopProg * Math.PI) * 12;
-          cx += Math.cos(hopProg * Math.PI * 2) * 2;
-        }
-
-        if (c.id === 'squirrel') {
-          // 松鼠阴影与身形
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-          ctx.beginPath();
-          ctx.ellipse(cx, cy + 8, 12, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 暖棕色毛茸身体与大尾巴
-          const tailWag = Math.sin(time * 6) * 0.2;
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.rotate(tailWag);
-          ctx.fillStyle = '#A0522D';
-          ctx.beginPath();
-          ctx.ellipse(-6, -6, 7, 12, -0.4, 0, Math.PI * 2); // 蓬松毛绒尾巴
-          ctx.fill();
-          ctx.restore();
-
-          ctx.fillStyle = '#D2691E';
-          ctx.beginPath();
-          ctx.arc(cx + 3, cy, 7, 0, Math.PI * 2); // 身体
-          ctx.arc(cx + 6, cy - 6, 5, 0, Math.PI * 2); // 头
-          ctx.fill();
-          // 黑亮小眼睛
-          ctx.fillStyle = '#222';
-          ctx.beginPath();
-          ctx.arc(cx + 8, cy - 7, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (c.id === 'butterfly') {
-          // 七彩灵蝶 (上下慢速飘飞与扇翅)
-          const flutter = Math.sin(time * 12);
-          const floatY = Math.sin(time * 3) * 4;
-          cy += floatY;
-
-          // 半透明梦幻翅膀
-          ctx.fillStyle = 'rgba(186, 231, 255, 0.75)';
-          ctx.beginPath();
-          ctx.ellipse(cx - 5, cy, Math.abs(flutter) * 6 + 2, 8, -0.3, 0, Math.PI * 2);
-          ctx.ellipse(cx + 5, cy, Math.abs(flutter) * 6 + 2, 8, 0.3, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = '#D48806';
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, 1.5, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (c.id === 'wild_fungus') {
-          // 野生荧光伞 (地面呼吸微光与小菌伞)
-          const glow = Math.sin(time * 4) * 0.15 + 0.3;
-          ctx.fillStyle = `rgba(82, 196, 26, ${glow})`;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = '#FAAD14';
-          ctx.beginPath();
-          ctx.arc(cx, cy - 3, 7, Math.PI, 0); // 伞盖
-          ctx.fill();
-          ctx.fillStyle = '#E8E8E8';
-          ctx.fillRect(cx - 1.5, cy - 3, 3, 6); // 菌柄
-        }
-
-        ctx.restore();
-      }
-    }
 
     // 3. 绘制草丛晨露珠 (100% 纯 AI 手绘晶莹剔透四叶草晨露珠)
     for (let i = 0; i < this.dewDrops.length; i++) {
@@ -21663,7 +21511,7 @@ class SceneController {
     const save = storage.getSave();
     if (!save.guideSeen) {
       storage.markGuideSeen();
-      this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
+      this.fx.showBanner('欢迎来到孢子前线', '#BAE7FF', '轻触底部卡牌种植，右下角「菜单」查看图鉴秘典', 3.8);
     }
 
     if (this.weather && this.weather.currentWeather === 'night') {

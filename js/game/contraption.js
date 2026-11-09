@@ -19,18 +19,12 @@ class ForestContraptions {
     this.dewDrops = [];
     this.dewSpawnTimer = 3.0;
     this.lightningArcs = [];
-    this.critters = [];
   }
 
   initForMap(mapId) {
     this.dewDrops.length = 0;
     this.lightningArcs.length = 0;
     this.dewSpawnTimer = 3.0;
-    this.critters = [
-      { id: 'squirrel', name: '灵动小松鼠', x: 34, y: 390, cd: 0, hopTimer: 0, animTimer: 0 },
-      { id: 'butterfly', name: '七彩灵蝶', x: 585, y: 75, cd: 0, hopTimer: 0, animTimer: 0 },
-      { id: 'wild_fungus', name: '野生荧光伞', x: 615, y: 335, cd: 0, hopTimer: 0, animTimer: 0 }
-    ];
 
     // 根据不同地图布局设置环境武器的天然战略点位
     if (mapId === 'map1') {
@@ -168,14 +162,6 @@ class ForestContraptions {
     }
 
     // 森林闲趣小生灵状态更新
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        c.animTimer += dt;
-        if (c.cd > 0) c.cd = Math.max(0, c.cd - dt);
-        if (c.hopTimer > 0) c.hopTimer = Math.max(0, c.hopTimer - dt);
-      }
-    }
   }
 
   handlePointerDown(inputX, inputY, scene) {
@@ -183,50 +169,7 @@ class ForestContraptions {
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const scale = mv.SCALE || 0.85;
 
-    // 0. 点击森林闲趣生灵微彩蛋（松鼠、灵蝶、野生伞菌，提供解压微操与趣味回赠）
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        const distMap = Math.hypot(inputX - c.x, inputY - c.y);
-        const screenX = mv.OFFSET_X + c.x * scale;
-        const screenY = mv.OFFSET_Y + c.y * scale;
-        const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
-        const convertedMx = (inputX - mv.OFFSET_X) / scale;
-        const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-        const distConverted = Math.hypot(convertedMx - c.x, convertedMy - c.y);
 
-        if (distMap <= 42 || distScreen <= 42 || distConverted <= 42) {
-          if (c.cd <= 0) {
-            c.cd = 15.0;
-            c.hopTimer = 0.55;
-            const reward = 6;
-            if (scene.economy) scene.economy.addSpores(reward);
-            if (scene.fx) {
-              scene.fx.spawnFloatingText(c.x, c.y - 18, `✨ ${c.name}开心赠送 +${reward}!`, '#73D13D', 1.3);
-              scene.fx.spawnParticles(c.x, c.y, 14, ['#73D13D', '#B7EB8F', '#FFE58F', '#FFFFFF'], 25, 65, 0.2, 0.45, 3.5);
-              if (typeof scene.fx.spawnShockwave === 'function') {
-                scene.fx.spawnShockwave(c.x, c.y, 24, '#73D13D');
-              }
-            }
-            if (typeof platform.playMusicalScale === 'function') {
-              platform.playMusicalScale(4);
-            } else {
-              platform.playSfx('sfx_coin');
-            }
-            if (typeof wx !== 'undefined' && wx.vibrateShort) {
-              try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
-            }
-          } else {
-            c.hopTimer = 0.35;
-            if (scene.fx) {
-              scene.fx.spawnFloatingText(c.x, c.y - 14, '🐾 嬉戏欢跳中~', '#FFE58F', 1.0);
-            }
-            platform.playSfx('sfx_click');
-          }
-          return true;
-        }
-      }
-    }
 
     // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
@@ -431,85 +374,7 @@ class ForestContraptions {
       ctx.restore();
     }
 
-    // 0. 绘制奇幻森林闲趣小生灵 (Critters: Squirrel, Butterfly, Wild Fungus)
-    if (this.critters) {
-      for (let i = 0; i < this.critters.length; i++) {
-        const c = this.critters[i];
-        ctx.save();
-        let cx = c.x;
-        let cy = c.y;
 
-        // 跃动跳跃动画
-        if (c.hopTimer > 0) {
-          const hopProg = c.hopTimer / 0.55;
-          cy -= Math.sin(hopProg * Math.PI) * 12;
-          cx += Math.cos(hopProg * Math.PI * 2) * 2;
-        }
-
-        if (c.id === 'squirrel') {
-          // 松鼠阴影与身形
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-          ctx.beginPath();
-          ctx.ellipse(cx, cy + 8, 12, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 暖棕色毛茸身体与大尾巴
-          const tailWag = Math.sin(time * 6) * 0.2;
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.rotate(tailWag);
-          ctx.fillStyle = '#A0522D';
-          ctx.beginPath();
-          ctx.ellipse(-6, -6, 7, 12, -0.4, 0, Math.PI * 2); // 蓬松毛绒尾巴
-          ctx.fill();
-          ctx.restore();
-
-          ctx.fillStyle = '#D2691E';
-          ctx.beginPath();
-          ctx.arc(cx + 3, cy, 7, 0, Math.PI * 2); // 身体
-          ctx.arc(cx + 6, cy - 6, 5, 0, Math.PI * 2); // 头
-          ctx.fill();
-          // 黑亮小眼睛
-          ctx.fillStyle = '#222';
-          ctx.beginPath();
-          ctx.arc(cx + 8, cy - 7, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (c.id === 'butterfly') {
-          // 七彩灵蝶 (上下慢速飘飞与扇翅)
-          const flutter = Math.sin(time * 12);
-          const floatY = Math.sin(time * 3) * 4;
-          cy += floatY;
-
-          // 半透明梦幻翅膀
-          ctx.fillStyle = 'rgba(186, 231, 255, 0.75)';
-          ctx.beginPath();
-          ctx.ellipse(cx - 5, cy, Math.abs(flutter) * 6 + 2, 8, -0.3, 0, Math.PI * 2);
-          ctx.ellipse(cx + 5, cy, Math.abs(flutter) * 6 + 2, 8, 0.3, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = '#D48806';
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, 1.5, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (c.id === 'wild_fungus') {
-          // 野生荧光伞 (地面呼吸微光与小菌伞)
-          const glow = Math.sin(time * 4) * 0.15 + 0.3;
-          ctx.fillStyle = `rgba(82, 196, 26, ${glow})`;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = '#FAAD14';
-          ctx.beginPath();
-          ctx.arc(cx, cy - 3, 7, Math.PI, 0); // 伞盖
-          ctx.fill();
-          ctx.fillStyle = '#E8E8E8';
-          ctx.fillRect(cx - 1.5, cy - 3, 3, 6); // 菌柄
-        }
-
-        ctx.restore();
-      }
-    }
 
     // 3. 绘制草丛晨露珠 (100% 纯 AI 手绘晶莹剔透四叶草晨露珠)
     for (let i = 0; i < this.dewDrops.length; i++) {

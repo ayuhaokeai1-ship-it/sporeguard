@@ -594,30 +594,30 @@ class FxSystem {
     // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
     if (this.banner.active) {
       const b = this.banner;
-      const bx = 300;
-      const by = 74;
-      const bw = 360;
-      const bh = b.subText ? 42 : 30;
+      const bw = 460;
+      const bh = b.subText ? 52 : 36;
+      const bx = (960 - bw) * 0.5;
+      const by = 80;
 
       ctx.save();
-      ctx.fillStyle = 'rgba(28, 18, 10, 0.86)';
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 10) : ctx.rect(bx, by, bw, bh);
       ctx.fill();
       ctx.strokeStyle = b.color;
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 2.0;
       ctx.stroke();
 
       ctx.fillStyle = b.color;
-      ctx.font = 'bold 14px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 14 : 15));
+      ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
 
       if (b.subText) {
-        ctx.fillStyle = PALETTE.UI_TEXT;
-        ctx.font = '11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-        ctx.fillText(b.subText, bx + bw * 0.5, by + 30);
+        ctx.fillStyle = PALETTE.UI_TEXT || '#F0F0F0';
+        ctx.font = '12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.fillText(b.subText, bx + bw * 0.5, by + 36);
       }
       ctx.restore();
       platform.recordDrawCall(2);

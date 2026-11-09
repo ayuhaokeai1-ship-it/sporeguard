@@ -749,7 +749,7 @@ class ForestHero {
       ctx.fill();
 
       // 100% AI 手绘远古古桩立绘
-      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
+      const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
       if (stumpImg && stumpImg.width) {
         ctx.save();
         ctx.globalAlpha = 0.88;
