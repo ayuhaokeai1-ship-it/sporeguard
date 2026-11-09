@@ -127,7 +127,7 @@ class SceneController {
     this.spells = {
       rain: { id: 'rain', name: '自然甘霖', cost: 45, cd: 25, timer: 0, key: 'Q', radius: 120 },
       shock: { id: 'shock', name: '雷霆震爆', cost: 75, cd: 35, timer: 0, key: 'W', radius: 90 },
-      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 120 }
+      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 }
     };
     this.activeSpellCasting = null;
   }
@@ -523,7 +523,7 @@ class SceneController {
     if (spellId === 'harvest') {
       sp.timer = sp.cd;
       this.economy.spores += sp.gain;
-      this.fx.showBanner('大地丰收！+120 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
+      this.fx.showBanner('大地丰收！+' + sp.gain + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
       this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
@@ -560,13 +560,14 @@ class SceneController {
       for (let i = 0; i < this.towerManager.towers.length; i++) {
         const t = this.towerManager.towers[i];
         if (Math.hypot(t.x - mx, t.y - my) <= sp.radius) {
+          t.isWebbed = false;
           this.towerManager.healTower(t, 999, true, this.fx);
           affected++;
         }
       }
       this.fx.spawnRing(mx, my, sp.radius, '#52C41A', 0.55, true);
       this.fx.spawnParticles(mx, my, 28, ['#52C41A', '#B7EB8F', '#95DE64'], 40, 140, 0.35, 0.7, 4);
-      this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', `滋养 ${affected} 座防御塔，攻速翻倍6秒`, 1.5);
+      this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', '滋养并净化 ' + affected + ' 座防御塔，攻速翻倍6秒', 1.5);
       platform.playSfx('sfx_upgrade');
     } else if (spellId === 'shock') {
       let enemiesHit = 0;
@@ -574,19 +575,21 @@ class SceneController {
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
         if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
-          e.hp -= 180;
-          e.residualSlowTimer = 3.0;
+          const shockBase = 350;
+          const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
+          e.hp -= finalShockDmg;
+          e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
           enemiesHit++;
           if (e.hp <= 0) {
-            this.enemyManager.handleEnemyDeath(e, 180, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
+            this.enemyManager.handleEnemyDeath(e, finalShockDmg, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
           }
         }
       }
       this.fx.triggerShake(8, 350);
       this.fx.spawnRing(mx, my, sp.radius, '#FFE58F', 0.45, false);
       this.fx.spawnParticles(mx, my, 32, ['#FFE58F', '#73D13D', '#FFFFFF', '#40A9FF'], 60, 200, 0.3, 0.65, 5);
-      this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', `轰击 ${enemiesHit} 名敌人，定身3秒`, 1.5);
+      this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', '轰击 ' + enemiesHit + ' 名敌人（对空特攻），定身3.5秒', 1.5);
       platform.playSfx('sfx_boom');
     }
 

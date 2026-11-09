@@ -337,6 +337,7 @@ class TowerManager {
       tower.hp = tower.maxHp;
       tower.dormantTimer = 0;
       tower.poisonTimer = 0;
+      tower.isWebbed = false; // 净化蛛丝封印
       tower.buffTimer = 6.0; // 甘霖狂暴 6 秒
     } else {
       tower.hp = Math.min(tower.maxHp, tower.hp + amount);

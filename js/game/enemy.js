@@ -257,19 +257,24 @@ class EnemyManager {
    * 原始伤害 = 基础伤害 × (1 + 增伤合计) × 暴击倍率 × 标记倍率
    * 实际伤害 = max(原始伤害 − 护甲, 原始伤害 × 20%)
    */
-  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx, damageType = 'watch') {
+  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx, damageType = 'watch', options = null) {
     if (!enemy || enemy.state === 'death') return { dealt: 0, killed: false };
+
+    const opts = options || {};
+    const armorPierceRatio = opts.armorPierceRatio || 0;
+    const flatArmorPierce = opts.flatArmorPierce || 0;
+    const isHolySmite = Boolean(opts.holySmite);
 
     // Burrower underground evasion vs unearthing
     if (enemy.isUnderground) {
-      // Check if hit by explosion / earthquake shockwave / stun
-      const isExplosionOrStun = (bonusSum && bonusSum > 0.8) || appliesMark;
+      // Check if hit by explosion / earthquake shockwave / stun / holy smite
+      const isExplosionOrStun = (bonusSum && bonusSum > 0.8) || appliesMark || isHolySmite || damageType === 'burst';
       if (isExplosionOrStun) {
         enemy.isUnderground = false;
-        enemy.unearthTimer = 1.2;
+        enemy.unearthTimer = 1.5;
         if (fx) {
-          fx.spawnFloatingText(enemy.x, enemy.y - 20, '震裂出土!', '#FAAD14', 1.2);
-          fx.spawnParticles(enemy.x, enemy.y, 16, ['#8C6842', '#D48806', '#595959'], 25, 45);
+          fx.spawnFloatingText(enemy.x, enemy.y - 20, isHolySmite ? '圣光破土!' : '震裂出土!', '#FAAD14', 1.2);
+          fx.spawnParticles(enemy.x, enemy.y, 16, ['#8C6842', '#D48806', '#FFFDF5'], 25, 45);
         }
       } else {
         // Dodged underground
@@ -282,24 +287,34 @@ class EnemyManager {
     }
 
     const critMul = isCrit ? CONFIG.COMBAT.CRIT_MULTIPLIER : 1.0;
-    const markMul = enemy.markTimer > 0 ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
+    const markMul = (enemy.markTimer > 0 || isHolySmite) ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
     const rawDamage = baseDamage * (1 + (bonusSum || 0)) * critMul * markMul;
     let frontShieldMul = 1.0;
     if (enemy.hasFrontShield && !isCrit) {
-      frontShieldMul = 0.25; // 75% damage reduction from front
-      if (fx) {
-        fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -75%!', '#D9D9D9', 0.95);
-        fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
+      // 穿透前盾机制：圣光魔法、迫击轰炸、烈焰灼烧绕过正面盾牌抗性
+      const isBypass = damageType === 'lumina' || damageType === 'burst' || damageType === 'fire' || damageType === 'magic';
+      if (isBypass) {
+        frontShieldMul = 0.85; // 绕过盾牌削减
+        if (fx) {
+          fx.spawnFloatingText(enemy.x, enemy.y - 14, '穿盾克敌!', '#FAAD14', 1.0);
+        }
+      } else {
+        frontShieldMul = 0.40; // 优化为 60% 减伤（原 75% 减伤过高导致打不动铁甲巨虫）
+        if (fx) {
+          fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -60%!', '#D9D9D9', 0.95);
+          fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
+        }
       }
     }
-    const effArmor = this.getEffectiveArmor(enemy);
+    const baseEffArmor = this.getEffectiveArmor(enemy);
+    const effArmor = Math.max(0, (baseEffArmor * (1 - armorPierceRatio)) - flatArmorPierce);
     const actualDamage = Math.max(
       rawDamage - effArmor,
       rawDamage * CONFIG.COMBAT.MIN_ARMOR_DAMAGE_RATIO
     ) * frontShieldMul;
 
-    // 瞭望菇 A3 命中后刷新 3 秒标记
-    if (appliesMark) {
+    // 瞭望菇 A3 / 圣光神罚 命中后刷新 3 秒标记
+    if (appliesMark || isHolySmite) {
       enemy.markTimer = CONFIG.COMBAT.MARK_DURATION;
     }
 

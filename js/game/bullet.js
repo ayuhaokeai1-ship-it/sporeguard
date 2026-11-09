@@ -51,6 +51,9 @@ class BulletManager {
         branchColor: PALETTE.MUSHROOM_GILL,
         hasToxicBurst: false,
         hasPoisonThorn: false,
+        armorPierceRatio: 0,
+        flatArmorPierce: 0,
+        holySmite: false,
         life: 0,
         maxLife: 2.0
       }),
@@ -64,6 +67,9 @@ class BulletManager {
         b.pierceCountSoFar = 0;
         b.hasToxicBurst = false;
         b.hasPoisonThorn = false;
+        b.armorPierceRatio = 0;
+        b.flatArmorPierce = 0;
+        b.holySmite = false;
       },
       CONFIG.POOL_CAPS.BULLETS
     );
@@ -118,6 +124,8 @@ class BulletManager {
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = node.critRate > 0 && Math.random() < node.critRate;
     b.appliesMark = Boolean(node.appliesMark);
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -144,6 +152,8 @@ class BulletManager {
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = false;
     b.appliesMark = false;
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.pierceRemaining = node.pierce || 2;
     b.pierceCountSoFar = 0;
         b.hasToxicBurst = false;
@@ -200,6 +210,7 @@ class BulletManager {
     b.targetUid = targetEnemy.uid;
     b.speed = 720;
     b.baseDamage = baseDamage || 22;
+    b.holySmite = Boolean(node.holySmite);
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = Math.random() < (node.critChance || 0.15);
     b.life = 0;
@@ -336,7 +347,8 @@ class BulletManager {
             map,
             economy,
             fx,
-            'lumina'
+            'lumina',
+            { holySmite: b.holySmite }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
@@ -391,7 +403,8 @@ class BulletManager {
             map,
             economy,
             fx,
-            'watch'
+            'watch',
+            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
@@ -463,7 +476,9 @@ class BulletManager {
               combatTimeSec,
               map,
               economy,
-              fx
+              fx,
+              'thorn',
+              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
             );
             if (fx) {
               fx.onSingleHit(e.x, e.y, b.branchColor);

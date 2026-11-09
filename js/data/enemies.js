@@ -66,8 +66,8 @@ const ENEMIES = {
     nameKey: 'enemy_moth_name',
     typeKey: 'enemy_type_flying',
     tipKey: 'enemy_moth_tip',
-    baseHp: 295,         // 从 55 提升至 125，需防空塔多轮专注射击
-    speed: 2.15,          // 格/秒，沿空中航线直穿树冠
+    baseHp: 260,         // 从 55 提升至 125，需防空塔多轮专注射击
+    speed: 2.05,          // 格/秒，沿空中航线直穿树冠
     armor: 1,
     threat: 1,
     reward: 5,

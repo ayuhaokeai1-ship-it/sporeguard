@@ -143,7 +143,7 @@ const CONFIG = {
   ECONOMY: {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
-      map1: 220,               // 初始 220 孢子，支持稳健建造 2 座防御塔开局，杜绝无脑堆满塔
+      map1: 240,               // 初始 240 孢子，支持稳健建造 2 座防御塔开局，杜绝无脑堆满塔
       map2: 240,
       map3: 260
     },
@@ -177,7 +177,7 @@ const CONFIG = {
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
     MAX_ACTIVE_WAVE_ENEMIES: 48,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
-    WAVE_HP_GROWTH_PER_WAVE: 0.25,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
+    WAVE_HP_GROWTH_PER_WAVE: 0.20,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
       map2: 1.15,
@@ -290,16 +290,16 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 40,
+    baseDamage: 42,
     maxTotalCost: 480,
     nodes: {
       base: {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'watch_base_desc',
-        cost: 120,
-        range: 6.0,
-        damage: 40,
+        cost: 115,
+        range: 6.2,
+        damage: 42,
         damageBonus: 0,
         interval: 1.25,
         bulletSpeed: 640,
@@ -315,8 +315,8 @@ const TOWERS = {
         nameKey: 'watch_lv1_name',
         descKey: 'watch_lv1_desc',
         cost: 70,
-        range: 6.5,
-        damage: 48,
+        range: 6.6,
+        damage: 52,
         damageBonus: 0.20, // 伤害 +20%，射程 +0.5
         interval: 1.25,
         bulletSpeed: 640,
@@ -332,9 +332,9 @@ const TOWERS = {
         branch: 'A',
         nameKey: 'watch_a2_name',
         descKey: 'watch_a2_desc',
-        cost: 110,
+        cost: 105,
         range: 8.0,        // 射程 +1.5
-        damage: 48,
+        damage: 56,
         damageBonus: 0.20,
         interval: 1.125,   // 攻击间隔 -10%
         bulletSpeed: 800,  // 弹速 +25% (640 * 1.25 = 800)
@@ -350,9 +350,9 @@ const TOWERS = {
         branch: 'A',
         nameKey: 'watch_a3_name',
         descKey: 'watch_a3_desc',
-        cost: 180,
+        cost: 175,
         range: 9.0,        // 射程 +1.0
-        damage: 48,
+        damage: 70,
         damageBonus: 0.20,
         interval: 1.125,
         bulletSpeed: 800,
@@ -360,7 +360,8 @@ const TOWERS = {
         critMultiplier: 1.0,
         appliesMark: true, // 命中后标记目标 3 秒，直接伤害 +15%
         markDuration: 3.0,
-        markBonus: 0.15,
+        markBonus: 0.20,
+        armorPierce: 0.35,
         next: []
       },
       b2: {
@@ -368,9 +369,9 @@ const TOWERS = {
         branch: 'B',
         nameKey: 'watch_b2_name',
         descKey: 'watch_b2_desc',
-        cost: 110,
+        cost: 105,
         range: 6.5,
-        damage: 62,        // 40 * (1 + 0.20 + 0.35) = 62
+        damage: 72,        // 40 * (1 + 0.20 + 0.35) = 62
         damageBonus: 0.55,
         interval: 1.25,
         bulletSpeed: 640,
@@ -386,14 +387,14 @@ const TOWERS = {
         branch: 'B',
         nameKey: 'watch_b3_name',
         descKey: 'watch_b3_desc',
-        cost: 180,
+        cost: 175,
         range: 6.5,
-        damage: 62,
+        damage: 86,
         damageBonus: 0.55,
         interval: 1.25,
         bulletSpeed: 640,
-        critRate: 0.15,    // 暴击率 15%，暴击伤害 2 倍
-        critMultiplier: 2.0,
+        critRate: 0.22,    // 暴击率 15%，暴击伤害 2 倍
+        critMultiplier: 2.2,
         appliesMark: false,
         markDuration: 0,
         markBonus: 0,
@@ -426,7 +427,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.0,
         slow: 0.30,
-        dps: 4,
+        dps: 5,
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -442,7 +443,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5, // 持续时间 +0.5 秒
         slow: 0.35,         // 减速 +5%
-        dps: 4,
+        dps: 5,
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -459,7 +460,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5,
         slow: 0.45,         // 减速 +10%
-        dps: 4,
+        dps: 6,
         residualSlowDuration: 1.0, // 离开雾团后减速残留 1.0 秒
         armorReduction: 0,
         isBurningMist: false,
@@ -477,8 +478,8 @@ const TOWERS = {
         cloudDuration: 3.5,
         slow: 0.55,         // 减速 +10%
         dps: 4,
-        residualSlowDuration: 1.0,
-        armorReduction: 2,  // 雾团内敌人护甲 -2（最低 0）
+        residualSlowDuration: 1.5,
+        armorReduction: 4,  // 雾团内敌人护甲 -2（最低 0）
         isBurningMist: false,
         next: []
       },
@@ -493,7 +494,7 @@ const TOWERS = {
         cloudRadius: 2.0,   // 雾团半径 +0.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 6,             // 持续伤害 +2
+        dps: 8,             // 持续伤害 +2
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -510,7 +511,7 @@ const TOWERS = {
         cloudRadius: 2.5,   // 雾团半径 2.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 10,            // 雾团燃烧，持续伤害 +4（累计 10）
+        dps: 14,            // 雾团燃烧，持续伤害 +4（累计 10）
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: true,
@@ -530,7 +531,7 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 9,
+    baseDamage: 10,
     maxTotalCost: 375,
     nodes: {
       base: {
@@ -539,7 +540,7 @@ const TOWERS = {
         descKey: 'thorn_base_desc',
         cost: 80,
         range: 4.5,
-        damage: 9,
+        damage: 10,
         damageBonus: 0,
         interval: 0.45,
         pierce: 2,
@@ -557,7 +558,7 @@ const TOWERS = {
         descKey: 'thorn_lv1_desc',
         cost: 55,
         range: 5.0,        // 射程 +0.5
-        damage: 10.8,      // 伤害 +20%
+        damage: 12,      // 伤害 +20%
         damageBonus: 0.20,
         interval: 0.45,
         pierce: 2,
@@ -576,7 +577,7 @@ const TOWERS = {
         descKey: 'thorn_a2_desc',
         cost: 90,
         range: 5.0,
-        damage: 10.8,
+        damage: 12,
         damageBonus: 0.20,
         interval: 0.45,
         pierce: 4,         // 穿透数 +2
@@ -595,7 +596,7 @@ const TOWERS = {
         descKey: 'thorn_a3_desc',
         cost: 150,
         range: 5.0,
-        damage: 10.8,
+        damage: 13,
         damageBonus: 0.20,
         interval: 0.45,
         pierce: 7,         // 穿透数 7
@@ -614,7 +615,7 @@ const TOWERS = {
         descKey: 'thorn_b2_desc',
         cost: 90,
         range: 5.0,
-        damage: 13.5,      // 9 * (1 + 0.20 + 0.30) = 13.5
+        damage: 15,      // 9 * (1 + 0.20 + 0.30) = 13.5
         damageBonus: 0.50,
         interval: 0.45,
         pierce: 2,
@@ -633,15 +634,16 @@ const TOWERS = {
         descKey: 'thorn_b3_desc',
         cost: 150,
         range: 5.0,
-        damage: 13.5,
+        damage: 16,
         damageBonus: 0.50,
         interval: 0.41,    // 攻击间隔 -10% (0.45 * 0.9 = 0.405 -> 0.41)
-        pierce: 2,
+        pierce: 3,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
         sideDamageRatio: 0,
-        pierceDamageBonusPerHit: 0.20, // 每穿透 1 个目标，后续伤害 +20%（最多 +100%）
+        pierceDamageBonusPerHit: 0.25,
+        armorPierce: 6, // 每穿透 1 个目标，后续伤害 +20%（最多 +100%）
         pierceDamageBonusMax: 1.00,
         next: []
       }
@@ -659,7 +661,7 @@ const TOWERS = {
     priorities: ['densest'], // 爆裂菇固定“最密集”
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 30,
+    baseDamage: 32,
     maxTotalCost: 465,
     nodes: {
       base: {
@@ -668,9 +670,9 @@ const TOWERS = {
         descKey: 'burst_base_desc',
         cost: 110,
         range: 4.0,        // 射程 4.0 格（全部节点保持不变）
-        damage: 30,
+        damage: 32,
         damageBonus: 0,
-        interval: 1.6,     // 攻击间隔 1.6 秒（全部节点保持不变）
+        interval: 1.55,     // 攻击间隔 1.6 秒（全部节点保持不变）
         splashRadius: 1.25,
         flightTime: 0.38,  // 抛物线炮弹飞行时间（秒）
         burnZone: null,
@@ -682,9 +684,9 @@ const TOWERS = {
         descKey: 'burst_lv1_desc',
         cost: 65,
         range: 4.0,
-        damage: 36,        // 伤害 +20%
+        damage: 38,        // 伤害 +20%
         damageBonus: 0.20,
-        interval: 1.6,
+        interval: 1.55,
         splashRadius: 1.25,
         flightTime: 0.38,
         burnZone: null,
@@ -695,11 +697,11 @@ const TOWERS = {
         branch: 'A',
         nameKey: 'burst_a2_name',
         descKey: 'burst_a2_desc',
-        cost: 110,
+        cost: 105,
         range: 4.0,
-        damage: 36,
+        damage: 40,
         damageBonus: 0.20,
-        interval: 1.6,
+        interval: 1.55,
         splashRadius: 1.75,// 溅射半径 +0.5
         flightTime: 0.38,
         burnZone: null,
@@ -710,11 +712,11 @@ const TOWERS = {
         branch: 'A',
         nameKey: 'burst_a3_name',
         descKey: 'burst_a3_desc',
-        cost: 180,
+        cost: 175,
         range: 4.0,
-        damage: 40.5,      // 30 * (1 + 0.20 + 0.15) = 40.5
+        damage: 46,      // 30 * (1 + 0.20 + 0.15) = 40.5
         damageBonus: 0.35,
-        interval: 1.6,
+        interval: 1.55,
         splashRadius: 2.25,// 溅射半径 +0.5
         flightTime: 0.38,
         burnZone: null,
@@ -725,11 +727,11 @@ const TOWERS = {
         branch: 'B',
         nameKey: 'burst_b2_name',
         descKey: 'burst_b2_desc',
-        cost: 110,
+        cost: 105,
         range: 4.0,
-        damage: 45,        // 30 * (1 + 0.20 + 0.30) = 45
+        damage: 48,        // 30 * (1 + 0.20 + 0.30) = 45
         damageBonus: 0.50,
-        interval: 1.6,
+        interval: 1.55,
         splashRadius: 1.25,
         flightTime: 0.38,
         burnZone: null,
@@ -740,17 +742,17 @@ const TOWERS = {
         branch: 'B',
         nameKey: 'burst_b3_name',
         descKey: 'burst_b3_desc',
-        cost: 180,
+        cost: 175,
         range: 4.0,
-        damage: 45,
+        damage: 52,
         damageBonus: 0.50,
-        interval: 1.6,
+        interval: 1.55,
         splashRadius: 1.25,
         flightTime: 0.38,
         burnZone: {        // 爆心留下灼烧区：半径 1.0 格，持续 3 秒，每秒 8 点伤害
           radius: 1.0,
-          duration: 3.0,
-          dps: 8
+          duration: 3.5,
+          dps: 12
         },
         next: []
       }
@@ -777,7 +779,7 @@ const TOWERS = {
         descKey: 'lumina_base_desc',
         cost: 95,
         range: 4.0,
-        damage: 6,
+        damage: 8,
         interval: 2.0,
         sporeGen: 12,
         sporeInterval: 10.0,
@@ -790,7 +792,7 @@ const TOWERS = {
         descKey: 'lumina_lv1_desc',
         cost: 75,
         range: 4.5,
-        damage: 10,
+        damage: 12,
         interval: 1.8,
         sporeGen: 16,
         sporeInterval: 9.0,
@@ -804,7 +806,7 @@ const TOWERS = {
         descKey: 'lumina_a2_desc',
         cost: 100,
         range: 5.0,
-        damage: 20,
+        damage: 22,
         interval: 1.5,
         auraAspdBonus: 0.20,
         auraHeal: 25,
@@ -818,8 +820,9 @@ const TOWERS = {
         descKey: 'lumina_a3_desc',
         cost: 160,
         range: 5.5,
-        damage: 32,
-        interval: 1.2,
+        damage: 42,
+        interval: 1.1,
+        holySmite: true,
         auraAspdBonus: 0.30,
         auraHeal: 40,
         healInterval: 4.0,
@@ -835,8 +838,8 @@ const TOWERS = {
         range: 4.2,
         damage: 10,
         interval: 2.0,
-        sporeGen: 36,
-        sporeInterval: 6.0,
+        sporeGen: 24,
+        sporeInterval: 7.0,
         next: ['b3']
       },
       b3: {
@@ -848,8 +851,8 @@ const TOWERS = {
         range: 4.5,
         damage: 14,
         interval: 2.0,
-        sporeGen: 60,
-        sporeInterval: 5.0,
+        sporeGen: 36,
+        sporeInterval: 6.0,
         relicDropBonus: true,
         next: []
       }
@@ -937,8 +940,8 @@ const ENEMIES = {
     nameKey: 'enemy_moth_name',
     typeKey: 'enemy_type_flying',
     tipKey: 'enemy_moth_tip',
-    baseHp: 295,         // 从 55 提升至 125，需防空塔多轮专注射击
-    speed: 2.15,          // 格/秒，沿空中航线直穿树冠
+    baseHp: 260,         // 从 55 提升至 125，需防空塔多轮专注射击
+    speed: 2.05,          // 格/秒，沿空中航线直穿树冠
     armor: 1,
     threat: 1,
     reward: 5,
@@ -1488,15 +1491,15 @@ const WAVES = {
         { type: 'swift', count: 8, interval: 0.60, start: 18 }
       ]
     },
-    // Wave 3: 树冠空袭，林光飞蛾掠空
+    // Wave 3: 树冠空袭，林光飞蛾掠空（教学性空袭：6 只飞蛾平滑进阶，杜绝猝死）
     {
       wave: 3,
       groups: [
         { type: 'beetle', count: 6, interval: 1.0, start: 0 },
-        { type: 'moth', count: 7, interval: 1.0, start: 4 },
-        { type: 'swift', count: 10, interval: 0.65, start: 10 },
-        { type: 'moth', count: 7, interval: 0.95, start: 16 },
-        { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
+        { type: 'moth', count: 3, interval: 1.2, start: 4 },
+        { type: 'swift', count: 8, interval: 0.70, start: 9 },
+        { type: 'moth', count: 3, interval: 1.2, start: 15 },
+        { type: 'volatile_pod', count: 2, interval: 1.4, start: 20, routeIndex: 1 }
       ]
     },
     // Wave 4: 坚甲逼近，暗影潜行者侧翼回旋绕袭
@@ -6369,19 +6372,24 @@ class EnemyManager {
    * 原始伤害 = 基础伤害 × (1 + 增伤合计) × 暴击倍率 × 标记倍率
    * 实际伤害 = max(原始伤害 − 护甲, 原始伤害 × 20%)
    */
-  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx, damageType = 'watch') {
+  applyDirectDamage(enemy, baseDamage, bonusSum, isCrit, appliesMark, combatTimeSec, map, economy, fx, damageType = 'watch', options = null) {
     if (!enemy || enemy.state === 'death') return { dealt: 0, killed: false };
+
+    const opts = options || {};
+    const armorPierceRatio = opts.armorPierceRatio || 0;
+    const flatArmorPierce = opts.flatArmorPierce || 0;
+    const isHolySmite = Boolean(opts.holySmite);
 
     // Burrower underground evasion vs unearthing
     if (enemy.isUnderground) {
-      // Check if hit by explosion / earthquake shockwave / stun
-      const isExplosionOrStun = (bonusSum && bonusSum > 0.8) || appliesMark;
+      // Check if hit by explosion / earthquake shockwave / stun / holy smite
+      const isExplosionOrStun = (bonusSum && bonusSum > 0.8) || appliesMark || isHolySmite || damageType === 'burst';
       if (isExplosionOrStun) {
         enemy.isUnderground = false;
-        enemy.unearthTimer = 1.2;
+        enemy.unearthTimer = 1.5;
         if (fx) {
-          fx.spawnFloatingText(enemy.x, enemy.y - 20, '震裂出土!', '#FAAD14', 1.2);
-          fx.spawnParticles(enemy.x, enemy.y, 16, ['#8C6842', '#D48806', '#595959'], 25, 45);
+          fx.spawnFloatingText(enemy.x, enemy.y - 20, isHolySmite ? '圣光破土!' : '震裂出土!', '#FAAD14', 1.2);
+          fx.spawnParticles(enemy.x, enemy.y, 16, ['#8C6842', '#D48806', '#FFFDF5'], 25, 45);
         }
       } else {
         // Dodged underground
@@ -6394,24 +6402,34 @@ class EnemyManager {
     }
 
     const critMul = isCrit ? CONFIG.COMBAT.CRIT_MULTIPLIER : 1.0;
-    const markMul = enemy.markTimer > 0 ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
+    const markMul = (enemy.markTimer > 0 || isHolySmite) ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
     const rawDamage = baseDamage * (1 + (bonusSum || 0)) * critMul * markMul;
     let frontShieldMul = 1.0;
     if (enemy.hasFrontShield && !isCrit) {
-      frontShieldMul = 0.25; // 75% damage reduction from front
-      if (fx) {
-        fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -75%!', '#D9D9D9', 0.95);
-        fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
+      // 穿透前盾机制：圣光魔法、迫击轰炸、烈焰灼烧绕过正面盾牌抗性
+      const isBypass = damageType === 'lumina' || damageType === 'burst' || damageType === 'fire' || damageType === 'magic';
+      if (isBypass) {
+        frontShieldMul = 0.85; // 绕过盾牌削减
+        if (fx) {
+          fx.spawnFloatingText(enemy.x, enemy.y - 14, '穿盾克敌!', '#FAAD14', 1.0);
+        }
+      } else {
+        frontShieldMul = 0.40; // 优化为 60% 减伤（原 75% 减伤过高导致打不动铁甲巨虫）
+        if (fx) {
+          fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -60%!', '#D9D9D9', 0.95);
+          fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
+        }
       }
     }
-    const effArmor = this.getEffectiveArmor(enemy);
+    const baseEffArmor = this.getEffectiveArmor(enemy);
+    const effArmor = Math.max(0, (baseEffArmor * (1 - armorPierceRatio)) - flatArmorPierce);
     const actualDamage = Math.max(
       rawDamage - effArmor,
       rawDamage * CONFIG.COMBAT.MIN_ARMOR_DAMAGE_RATIO
     ) * frontShieldMul;
 
-    // 瞭望菇 A3 命中后刷新 3 秒标记
-    if (appliesMark) {
+    // 瞭望菇 A3 / 圣光神罚 命中后刷新 3 秒标记
+    if (appliesMark || isHolySmite) {
       enemy.markTimer = CONFIG.COMBAT.MARK_DURATION;
     }
 
@@ -7334,10 +7352,10 @@ class ForestHero {
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    this.baseMaxHp = 520;
+    this.baseMaxHp = 560;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 42;
+    this.baseAtk = 46;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;
@@ -7487,10 +7505,10 @@ class ForestHero {
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
     // 属性飞跃成长
-    this.baseMaxHp = 520 + (this.level - 1) * 95;
+    this.baseMaxHp = 560 + (this.level - 1) * 110;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.baseAtk = 42 + (this.level - 1) * 16;
+    this.baseAtk = 46 + (this.level - 1) * 18;
     this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
 
@@ -7873,13 +7891,25 @@ class ForestHero {
         const alive = enemyManager.getAliveEnemies();
         let closest = null;
         let minDist = 180;
+        // 优先锁定并拦截空中飞行敌人（飞蛾、蜂群）
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
-          if (e.state === 'death' || e.isUnderground) continue;
+          if (e.state === 'death' || e.isUnderground || !e.isFlying) continue;
           const d = Math.hypot(e.x - this.x, e.y - this.y);
           if (d <= minDist) {
             closest = e;
             minDist = d;
+          }
+        }
+        if (!closest) {
+          for (let i = 0; i < alive.length; i++) {
+            const e = alive[i];
+            if (e.state === 'death' || e.isUnderground) continue;
+            const d = Math.hypot(e.x - this.x, e.y - this.y);
+            if (d <= minDist) {
+              closest = e;
+              minDist = d;
+            }
           }
         }
 
@@ -14316,6 +14346,9 @@ class BulletManager {
         branchColor: PALETTE.MUSHROOM_GILL,
         hasToxicBurst: false,
         hasPoisonThorn: false,
+        armorPierceRatio: 0,
+        flatArmorPierce: 0,
+        holySmite: false,
         life: 0,
         maxLife: 2.0
       }),
@@ -14329,6 +14362,9 @@ class BulletManager {
         b.pierceCountSoFar = 0;
         b.hasToxicBurst = false;
         b.hasPoisonThorn = false;
+        b.armorPierceRatio = 0;
+        b.flatArmorPierce = 0;
+        b.holySmite = false;
       },
       CONFIG.POOL_CAPS.BULLETS
     );
@@ -14383,6 +14419,8 @@ class BulletManager {
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = node.critRate > 0 && Math.random() < node.critRate;
     b.appliesMark = Boolean(node.appliesMark);
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -14409,6 +14447,8 @@ class BulletManager {
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = false;
     b.appliesMark = false;
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.pierceRemaining = node.pierce || 2;
     b.pierceCountSoFar = 0;
         b.hasToxicBurst = false;
@@ -14465,6 +14505,7 @@ class BulletManager {
     b.targetUid = targetEnemy.uid;
     b.speed = 720;
     b.baseDamage = baseDamage || 22;
+    b.holySmite = Boolean(node.holySmite);
     b.damageBonus = node.damageBonus || 0;
     b.isCrit = Math.random() < (node.critChance || 0.15);
     b.life = 0;
@@ -14601,7 +14642,8 @@ class BulletManager {
             map,
             economy,
             fx,
-            'lumina'
+            'lumina',
+            { holySmite: b.holySmite }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
@@ -14656,7 +14698,8 @@ class BulletManager {
             map,
             economy,
             fx,
-            'watch'
+            'watch',
+            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
@@ -14728,7 +14771,9 @@ class BulletManager {
               combatTimeSec,
               map,
               economy,
-              fx
+              fx,
+              'thorn',
+              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
             );
             if (fx) {
               fx.onSingleHit(e.x, e.y, b.branchColor);
@@ -15322,6 +15367,7 @@ class TowerManager {
       tower.hp = tower.maxHp;
       tower.dormantTimer = 0;
       tower.poisonTimer = 0;
+      tower.isWebbed = false; // 净化蛛丝封印
       tower.buffTimer = 6.0; // 甘霖狂暴 6 秒
     } else {
       tower.hp = Math.min(tower.maxHp, tower.hp + amount);
@@ -20782,7 +20828,7 @@ class SceneController {
     this.spells = {
       rain: { id: 'rain', name: '自然甘霖', cost: 45, cd: 25, timer: 0, key: 'Q', radius: 120 },
       shock: { id: 'shock', name: '雷霆震爆', cost: 75, cd: 35, timer: 0, key: 'W', radius: 90 },
-      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 120 }
+      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 }
     };
     this.activeSpellCasting = null;
   }
@@ -21178,7 +21224,7 @@ class SceneController {
     if (spellId === 'harvest') {
       sp.timer = sp.cd;
       this.economy.spores += sp.gain;
-      this.fx.showBanner('大地丰收！+120 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
+      this.fx.showBanner('大地丰收！+' + sp.gain + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
       this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
@@ -21215,13 +21261,14 @@ class SceneController {
       for (let i = 0; i < this.towerManager.towers.length; i++) {
         const t = this.towerManager.towers[i];
         if (Math.hypot(t.x - mx, t.y - my) <= sp.radius) {
+          t.isWebbed = false;
           this.towerManager.healTower(t, 999, true, this.fx);
           affected++;
         }
       }
       this.fx.spawnRing(mx, my, sp.radius, '#52C41A', 0.55, true);
       this.fx.spawnParticles(mx, my, 28, ['#52C41A', '#B7EB8F', '#95DE64'], 40, 140, 0.35, 0.7, 4);
-      this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', `滋养 ${affected} 座防御塔，攻速翻倍6秒`, 1.5);
+      this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', '滋养并净化 ' + affected + ' 座防御塔，攻速翻倍6秒', 1.5);
       platform.playSfx('sfx_upgrade');
     } else if (spellId === 'shock') {
       let enemiesHit = 0;
@@ -21229,19 +21276,21 @@ class SceneController {
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
         if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
-          e.hp -= 180;
-          e.residualSlowTimer = 3.0;
+          const shockBase = 350;
+          const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
+          e.hp -= finalShockDmg;
+          e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
           enemiesHit++;
           if (e.hp <= 0) {
-            this.enemyManager.handleEnemyDeath(e, 180, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
+            this.enemyManager.handleEnemyDeath(e, finalShockDmg, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
           }
         }
       }
       this.fx.triggerShake(8, 350);
       this.fx.spawnRing(mx, my, sp.radius, '#FFE58F', 0.45, false);
       this.fx.spawnParticles(mx, my, 32, ['#FFE58F', '#73D13D', '#FFFFFF', '#40A9FF'], 60, 200, 0.3, 0.65, 5);
-      this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', `轰击 ${enemiesHit} 名敌人，定身3秒`, 1.5);
+      this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', '轰击 ' + enemiesHit + ' 名敌人（对空特攻），定身3.5秒', 1.5);
       platform.playSfx('sfx_boom');
     }
 

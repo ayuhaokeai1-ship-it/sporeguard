@@ -28,15 +28,15 @@ const WAVES = {
         { type: 'swift', count: 8, interval: 0.60, start: 18 }
       ]
     },
-    // Wave 3: 树冠空袭，林光飞蛾掠空
+    // Wave 3: 树冠空袭，林光飞蛾掠空（教学性空袭：6 只飞蛾平滑进阶，杜绝猝死）
     {
       wave: 3,
       groups: [
         { type: 'beetle', count: 6, interval: 1.0, start: 0 },
-        { type: 'moth', count: 7, interval: 1.0, start: 4 },
-        { type: 'swift', count: 10, interval: 0.65, start: 10 },
-        { type: 'moth', count: 7, interval: 0.95, start: 16 },
-        { type: 'volatile_pod', count: 3, interval: 1.2, start: 22, routeIndex: 1 }
+        { type: 'moth', count: 3, interval: 1.2, start: 4 },
+        { type: 'swift', count: 8, interval: 0.70, start: 9 },
+        { type: 'moth', count: 3, interval: 1.2, start: 15 },
+        { type: 'volatile_pod', count: 2, interval: 1.4, start: 20, routeIndex: 1 }
       ]
     },
     // Wave 4: 坚甲逼近，暗影潜行者侧翼回旋绕袭

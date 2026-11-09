@@ -38,10 +38,10 @@ class ForestHero {
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    this.baseMaxHp = 520;
+    this.baseMaxHp = 560;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 42;
+    this.baseAtk = 46;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;
@@ -191,10 +191,10 @@ class ForestHero {
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
     // 属性飞跃成长
-    this.baseMaxHp = 520 + (this.level - 1) * 95;
+    this.baseMaxHp = 560 + (this.level - 1) * 110;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.baseAtk = 42 + (this.level - 1) * 16;
+    this.baseAtk = 46 + (this.level - 1) * 18;
     this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
 
@@ -577,13 +577,25 @@ class ForestHero {
         const alive = enemyManager.getAliveEnemies();
         let closest = null;
         let minDist = 180;
+        // 优先锁定并拦截空中飞行敌人（飞蛾、蜂群）
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
-          if (e.state === 'death' || e.isUnderground) continue;
+          if (e.state === 'death' || e.isUnderground || !e.isFlying) continue;
           const d = Math.hypot(e.x - this.x, e.y - this.y);
           if (d <= minDist) {
             closest = e;
             minDist = d;
+          }
+        }
+        if (!closest) {
+          for (let i = 0; i < alive.length; i++) {
+            const e = alive[i];
+            if (e.state === 'death' || e.isUnderground) continue;
+            const d = Math.hypot(e.x - this.x, e.y - this.y);
+            if (d <= minDist) {
+              closest = e;
+              minDist = d;
+            }
           }
         }
 
