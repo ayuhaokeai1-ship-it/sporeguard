@@ -3085,126 +3085,119 @@ function unlockAudio() {
   }, 100);
 }
 
-function playSynthesizedSound(sfxKey, volumeMod = 1.0) {
+/**
+ * 多泛音原声乐器物理合成引擎 2.0 (Kalimba / Rosewood Marimba / Harp / Acoustic Pluck)
+ * 彻底告别粗糙方波电子音，提供温润、清脆、有质感的森林原声打击乐体验
+ */
+function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756], decayRatio = 0.35) {
+  if (!webAudioCtx) return;
+  for (let i = 0; i < harmonics.length; i++) {
+    const h = harmonics[i];
+    const osc = webAudioCtx.createOscillator();
+    const gain = webAudioCtx.createGain();
+    osc.type = i === 0 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(freq * h, startTime);
+    const hVol = vol * (i === 0 ? 1.0 : Math.pow(decayRatio, i));
+    const hDur = i === 0 ? duration : duration * 0.45;
+    gain.gain.setValueAtTime(0.001, startTime);
+    gain.gain.linearRampToValueAtTime(hVol, startTime + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0008, startTime + hDur);
+    osc.connect(gain);
+    gain.connect(webAudioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + hDur + 0.01);
+  }
+}
+
+function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
   if (!webAudioCtx) return false;
   try {
     if (webAudioCtx.state === 'suspended') {
       webAudioCtx.resume().catch(() => {});
     }
     const t0 = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
+    const p = Math.max(0.5, Math.min(3.0, pitchMod || 1.0));
 
     if (sfxKey === 'sfx_click') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, t0);
-      osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.035);
-      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
-      osc.start(t0);
-      osc.stop(t0 + 0.035);
+      // 温润紫檀木琴轻叩 (Rosewood Marimba Tap)
+      playAcousticNote(520 * p, t0, 0.045, 0.16 * volumeMod, [1, 2.0, 3.8], 0.25);
       return true;
-    } else if (sfxKey === 'sfx_build') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, t0);
-      osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.08);
-      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
-      osc.start(t0);
-      osc.stop(t0 + 0.09);
+    } else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_place') {
+      // 破土春芽双音马林巴 (Sprouting Dual Marimba)
+      playAcousticNote(392.0 * p, t0, 0.09, 0.20 * volumeMod, [1, 2.0, 4.0], 0.3);
+      playAcousticNote(587.33 * p, t0 + 0.045, 0.14, 0.22 * volumeMod, [1, 2.756], 0.28);
       return true;
-    } else if (sfxKey === 'sfx_upgrade') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, t0);
-      osc.frequency.setValueAtTime(659.25, t0 + 0.05);
-      osc.frequency.setValueAtTime(783.99, t0 + 0.10);
-      gain.gain.setValueAtTime(0.25 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
-      osc.start(t0);
-      osc.stop(t0 + 0.22);
+    } else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_win') {
+      // 竖琴五声音阶治愈琶音 (Pentatonic Harp Arpeggio: C5 - E5 - G5 - C6)
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      for (let i = 0; i < notes.length; i++) {
+        playAcousticNote(notes[i] * p, t0 + i * 0.055, 0.28, 0.18 * volumeMod, [1, 2.0, 2.756], 0.28);
+      }
       return true;
     } else if (sfxKey === 'sfx_coin' || sfxKey === 'sfx_sell') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, t0);
-      osc.frequency.setValueAtTime(1600, t0 + 0.04);
-      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
-      osc.start(t0);
-      osc.stop(t0 + 0.12);
+      // 水晶拇指琴清脆双音 (Crystal Kalimba Chime)
+      playAcousticNote(659.25 * p, t0, 0.18, 0.18 * volumeMod, [1, 2.756, 5.404], 0.24);
+      playAcousticNote(987.77 * p, t0 + 0.042, 0.24, 0.20 * volumeMod, [1, 2.756], 0.22);
       return true;
-    } else if (sfxKey === 'sfx_hurt') {
+    } else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_lose') {
+      // 低沉木鼓预警 (Low Wood Drum Thud)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(160, t0);
-      osc.frequency.exponentialRampToValueAtTime(50, t0 + 0.08);
-      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+      osc.frequency.setValueAtTime(145 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(48, t0 + 0.14);
+      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.08);
+      osc.stop(t0 + 0.16);
       return true;
-    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(140, t0);
-      osc.frequency.exponentialRampToValueAtTime(35, t0 + 0.22);
-      gain.gain.setValueAtTime(0.30 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom' || sfxKey === 'sfx_thunder' || sfxKey === 'sfx_shock') {
+      // 森林大太鼓浑厚共鸣 (Warm Forest Taiko Resonance)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(125 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(34, t0 + 0.26);
+      gain.gain.setValueAtTime(0.28 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.27);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.22);
+      osc.stop(t0 + 0.28);
+      playAcousticNote(220 * p, t0, 0.12, 0.12 * volumeMod, [1, 1.5], 0.4);
       return true;
     } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(450, t0);
-      osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.05);
-      gain.gain.setValueAtTime(0.16 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
-      osc.start(t0);
-      osc.stop(t0 + 0.05);
-      return true;
-    } else if (sfxKey === 'sfx_thorn') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(580, t0);
-      osc.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+      // 轻盈原声弦拨 (Acoustic String Pluck)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(210 * p, t0 + 0.055);
       gain.gain.setValueAtTime(0.14 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.06);
+      osc.stop(t0 + 0.065);
       return true;
-    } else if (sfxKey === 'sfx_mist') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(300, t0);
-      osc.frequency.exponentialRampToValueAtTime(600, t0 + 0.08);
-      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
-      osc.start(t0);
-      osc.stop(t0 + 0.12);
+    } else if (sfxKey === 'sfx_thorn' || sfxKey === 'sfx_hit') {
+      // 翠竹木琴脆击 (Crisp Bamboo Percussive Hit)
+      playAcousticNote(480 * p, t0, 0.065, 0.14 * volumeMod, [1, 2.4], 0.3);
       return true;
-    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(392, t0);
-      osc.frequency.setValueAtTime(523.25, t0 + 0.08);
-      osc.frequency.setValueAtTime(659.25, t0 + 0.16);
-      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
-      osc.start(t0);
-      osc.stop(t0 + 0.35);
+    } else if (sfxKey === 'sfx_mist' || sfxKey === 'sfx_laser') {
+      // 空灵风铃泛音 (Ethereal Wind Chime)
+      playAcousticNote(587.33 * p, t0, 0.16, 0.11 * volumeMod, [1, 2.0, 3.0], 0.25);
       return true;
-    } else if (sfxKey === 'sfx_shovel') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(240, t0);
-      osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.05);
-      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
-      osc.start(t0);
-      osc.stop(t0 + 0.05);
+    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn' || sfxKey === 'sfx_horn') {
+      // 森林圆号五度和弦 (Warm Forest Horn Fifth Chord)
+      playAcousticNote(293.66 * p, t0, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
+      playAcousticNote(440.00 * p, t0 + 0.06, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
+      playAcousticNote(587.33 * p, t0 + 0.12, 0.42, 0.20 * volumeMod, [1, 2.0, 3.0], 0.35);
       return true;
     } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, t0);
-      gain.gain.setValueAtTime(0.10 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.04);
-      osc.start(t0);
-      osc.stop(t0 + 0.04);
+      playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
     }
   } catch (e) {}
@@ -3301,10 +3294,10 @@ function stopBgm() {
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
 const sfxThrottle = {};
-function playSfx(sfxKey, volumeMod = 1.0) {
+function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false) {
   if (!audioUnlocked || !sfxEnabled) return;
   const now = nowMs();
-  if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
+  if (!bypassThrottle && sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
     return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
   }
   sfxThrottle[sfxKey] = now;
@@ -3327,13 +3320,14 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     } catch (e) {}
   }
 
-  // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
+  // 1. WebAudio 优先：多发无损并发 + 细腻自然随机音高抖动与五声音阶升调支持
   if (webAudioCtx) {
+    const pRate = (pitchMod || 1.0) * (pitchMod && pitchMod !== 1.0 ? 1.0 : (0.96 + Math.random() * 0.08));
     if (audioBuffers[sfxKey]) {
       try {
         const srcNode = webAudioCtx.createBufferSource();
         srcNode.buffer = audioBuffers[sfxKey];
-        srcNode.playbackRate.value = 0.97 + Math.random() * 0.06;
+        srcNode.playbackRate.value = Math.max(0.5, Math.min(3.0, pRate));
         const gainNode = webAudioCtx.createGain();
         const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
         gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
@@ -3343,9 +3337,6 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
-      if (playSynthesizedSound(sfxKey, volumeMod)) {
-        return;
-      }
       // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
       const isFileScheme = typeof location !== 'undefined' && location.protocol === 'file:';
@@ -3361,6 +3352,9 @@ function playSfx(sfxKey, volumeMod = 1.0) {
           .catch(() => {
             loadingAudioBuffers[sfxKey] = false;
           });
+      }
+      if (playSynthesizedSound(sfxKey, volumeMod, pRate)) {
+        return;
       }
     }
   }
@@ -3394,11 +3388,14 @@ function playSfx(sfxKey, volumeMod = 1.0) {
   }
 }
 
-const SCALE_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 659.25, 783.99];
+// 大调五声音阶升调比率 (宫 Do -> 商 Re -> 角 Mi -> 徵 Sol -> 羽 La -> 高音宫 Do' -> 高音商 Re' -> 高音角 Mi')
+const PENTATONIC_RATIOS = [1.0, 1.12246, 1.25992, 1.49831, 1.68179, 2.0, 2.24492, 2.51984];
 
 function playMusicalScale(noteIdx = 0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  playSfx('sfx_coin');
+  const idx = Math.max(0, Math.min(PENTATONIC_RATIOS.length - 1, Math.floor(noteIdx || 0)));
+  const ratio = PENTATONIC_RATIOS[idx];
+  playSfx('sfx_coin', 0.92, ratio, true);
 }
 
 function playSynthTone() {
@@ -5671,13 +5668,33 @@ class GameMap {
       }
     }
 
-    // 2. 标记障碍物格
+    // 2. 标记与初始化可清除地图障碍物 (Carrot Fantasy 经典机制)
+    this.obstacles = [];
     const obsList = this.mapData.obstacles || [];
+    const obsNames = ['枯萎巨桩', '古遗石堆', '幽森魔晶', '荆棘腐木'];
     for (let i = 0; i < obsList.length; i++) {
       const [oc, or] = obsList[i];
       if (this.inBounds(oc, or)) {
+        const variant = (oc * 3 + or * 5) % 4;
+        const maxHp = 320 + variant * 70;
+        const obs = {
+          col: oc,
+          row: or,
+          x: (oc + 0.5) * TILE_SIZE,
+          y: (or + 0.5) * TILE_SIZE,
+          hp: maxHp,
+          maxHp: maxHp,
+          variant,
+          name: obsNames[variant % obsNames.length],
+          isTargeted: false,
+          hitWobble: 0,
+          cleared: false,
+          isObstacle: true
+        };
         this.grid[or][oc].type = 'obstacle';
-        this.grid[or][oc].variant = (oc * 3 + or * 5) % 4;
+        this.grid[or][oc].variant = variant;
+        this.grid[or][oc].obstacle = obs;
+        this.obstacles.push(obs);
       }
     }
 
@@ -5726,6 +5743,63 @@ class GameMap {
     const [wc, wr] = this.mapData.warehouseTile;
     if (this.inBounds(wc, wr)) {
       this.grid[wr][wc].type = 'warehouse';
+    }
+  }
+
+  getObstacleAt(col, row) {
+    if (!this.inBounds(col, row)) return null;
+    const tile = this.grid[row][col];
+    return tile && tile.obstacle && !tile.obstacle.cleared ? tile.obstacle : null;
+  }
+
+  damageObstacle(obs, dmg, fx, economy, scene) {
+    if (!obs || obs.cleared) return;
+    obs.hp -= dmg;
+    obs.hitWobble = 0.22;
+    if (fx) {
+      fx.spawnDamageText(Math.round(obs.x), Math.round(obs.y - 14), Math.round(dmg), '#FF7875', false);
+      fx.spawnParticles(obs.x, obs.y, 6, ['#8C6842', '#D48806', '#5C4028'], 15, 35, 0.2, 0.35, 2);
+    }
+    platform.playSfx('sfx_hit', 0.85);
+
+    if (obs.hp <= 0) {
+      obs.cleared = true;
+      obs.hp = 0;
+      obs.isTargeted = false;
+      const tile = this.grid[obs.row][obs.col];
+      tile.type = 'grass';
+      tile.obstacle = null;
+      if (scene && scene.targetedObstacle === obs) {
+        scene.targetedObstacle = null;
+      }
+
+      // 奖励爆发：大量黄金孢子 + 25%几率掉落远古觉醒种子
+      const rewardSpores = 65 + (obs.variant || 0) * 15;
+      if (economy) {
+        economy.addSpores(rewardSpores);
+      }
+      let dropAwakening = false;
+      if (scene && Math.random() < 0.25) {
+        scene.awakeningSeeds = (scene.awakeningSeeds || 0) + 1;
+        dropAwakening = true;
+      }
+
+      if (fx) {
+        fx.triggerScreenShake(3.5, 0.25);
+        fx.spawnFloatingText(obs.x, obs.y - 24, '🌱 清除障碍！开辟全新领地 + 孢子!', '#FFE58F', 1.6);
+        if (dropAwakening) {
+          fx.spawnFloatingText(obs.x, obs.y - 44, '✨ 发现远古觉醒种子!', '#B37FEB', 1.8);
+        }
+        fx.spawnParticles(obs.x, obs.y, 28, ['#52C41A', '#FFE58F', '#8C6842', '#D48806', '#FFFFFF'], 40, 120, 0.3, 0.6, 4);
+        if (typeof fx.spawnShockwave === 'function') {
+          fx.spawnShockwave(obs.x, obs.y, 40, '#52C41A');
+        }
+      }
+      platform.playSfx('sfx_bomb');
+      platform.playSfx('sfx_win', 0.8);
+      if (typeof wx !== 'undefined' && wx.vibrateShort) {
+        try { wx.vibrateShort({ type: 'heavy' }); } catch (e) {}
+      }
     }
   }
 
@@ -5888,6 +5962,72 @@ class GameMap {
       ctx.arc(wdx + 16, wdy + 20, 3.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+      platform.recordDrawCall(1);
+    }
+
+    // 渲染可清除地图障碍物 (Clearable Obstacles & Interactive Health Bars)
+    if (this.obstacles && this.obstacles.length > 0) {
+      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
+      for (let i = 0; i < this.obstacles.length; i++) {
+        const obs = this.obstacles[i];
+        if (obs.cleared) continue;
+
+        let ox = obs.x;
+        let oy = obs.y;
+        if (obs.hitWobble > 0) {
+          obs.hitWobble = Math.max(0, obs.hitWobble - (1 / 60));
+          ox += Math.sin(obs.hitWobble * 45) * 2.8;
+        }
+
+        ctx.save();
+        // 地面柔和接触阴影
+        ctx.fillStyle = 'rgba(10, 15, 12, 0.40)';
+        ctx.beginPath();
+        ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 障碍物主体 (树桩/巨石/魔晶)
+        if (stumpImg && stumpImg.width) {
+          ctx.drawImage(stumpImg, ox - 18, oy - 18, 36, 32);
+        } else {
+          const atlasPath = this.mapData.atlasPath;
+          if (!drawMapTile(ctx, atlasPath, 'obs_' + (obs.variant % 4), ox - 16, oy - 16, TILE_SIZE, TILE_SIZE)) {
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(ox - 14, oy - 14, 28, 28);
+          }
+        }
+
+        // 血条 (受创或被集火时显示)
+        if (obs.isTargeted || obs.hp < obs.maxHp) {
+          const bw = 28;
+          const bh = 4;
+          const bx = ox - bw * 0.5;
+          const by = oy - 22;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+          ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+          const ratio = Math.max(0, Math.min(1.0, obs.hp / obs.maxHp));
+          ctx.fillStyle = ratio > 0.5 ? '#52C41A' : (ratio > 0.25 ? '#FAAD14' : '#FF4D4F');
+          ctx.fillRect(bx, by, bw * ratio, bh);
+        }
+
+        // 🎯 玩家集火锁定光标
+        if (obs.isTargeted) {
+          const bob = Math.sin(animTimeSec * 6) * 4;
+          ctx.strokeStyle = '#FF4D4F';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 18, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 悬浮集火箭头与文字
+          ctx.fillStyle = '#FF4D4F';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🎯 集火', ox, oy - 30 + bob);
+        }
+        ctx.restore();
+      }
       platform.recordDrawCall(1);
     }
   }
@@ -8840,11 +8980,15 @@ class SporeDropManager {
     this.drops = [];
     this.naturalSpawnTimer = 5.0;
     this.animTimeSec = 0;
+    this.sporeCombo = 0;
+    this.lastCollectTime = 0;
   }
 
   reset() {
     this.drops.length = 0;
     this.naturalSpawnTimer = 4.5;
+    this.sporeCombo = 0;
+    this.lastCollectTime = 0;
   }
 
   spawnDrop(x, y, spores = 15, isGold = true, floatDist = 28) {
@@ -8973,12 +9117,38 @@ class SporeDropManager {
       const distConverted = Math.hypot(convertedMx - d.x, convertedMy - dy);
 
       if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
-        // 成功拾取！
-        if (economy) {
-          economy.addSpores(d.spores);
+        // 成功拾取！计算连击与升调音律
+        const now = Date.now();
+        if (now - this.lastCollectTime < 1600) {
+          this.sporeCombo = Math.min(8, this.sporeCombo + 1);
+        } else {
+          this.sporeCombo = 1;
         }
+        this.lastCollectTime = now;
+
+        let bonusSpores = 0;
+        if (this.sporeCombo >= 3) {
+          bonusSpores = Math.min(15, (this.sporeCombo - 2) * 3);
+        }
+        const totalEarned = d.spores + bonusSpores;
+
+        if (economy) {
+          economy.addSpores(totalEarned);
+        }
+
+        // 播放清脆递增的五声音阶水灵音律 (Do -> Re -> Mi -> Sol -> La -> Do' -> Re' -> Mi')
+        if (typeof platform.playMusicalScale === 'function') {
+          platform.playMusicalScale(this.sporeCombo - 1);
+        } else {
+          platform.playSfx('sfx_coin');
+        }
+
         if (fx) {
-          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 晨露孢子!`, '#FFE58F', 1.4);
+          const comboText = this.sporeCombo >= 3
+            ? `♫ ${this.sporeCombo}连音律动! +${totalEarned}`
+            : `+${d.spores} 晨露孢子!`;
+          const textColor = this.sporeCombo >= 5 ? '#FFD700' : (this.sporeCombo >= 3 ? '#52C41A' : '#FFE58F');
+          fx.spawnFloatingText(d.x, dy - 18, comboText, textColor, 1.45);
           fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
           if (typeof fx.spawnShockwave === 'function') {
             fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
@@ -8987,7 +9157,6 @@ class SporeDropManager {
             fx.spawnHomingMotes(screenDx, screenDy, 3, '#FFD700');
           }
         }
-        platform.playSfx('sfx_coin');
         // 手机端原生轻微触感振动反馈
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(12); } catch (e) {}
@@ -14048,12 +14217,18 @@ class ForestContraptions {
     this.dewDrops = [];
     this.dewSpawnTimer = 3.0;
     this.lightningArcs = [];
+    this.critters = [];
   }
 
   initForMap(mapId) {
     this.dewDrops.length = 0;
     this.lightningArcs.length = 0;
     this.dewSpawnTimer = 3.0;
+    this.critters = [
+      { id: 'squirrel', name: '灵动小松鼠', x: 34, y: 390, cd: 0, hopTimer: 0, animTimer: 0 },
+      { id: 'butterfly', name: '七彩灵蝶', x: 585, y: 75, cd: 0, hopTimer: 0, animTimer: 0 },
+      { id: 'wild_fungus', name: '野生荧光伞', x: 615, y: 335, cd: 0, hopTimer: 0, animTimer: 0 }
+    ];
 
     // 根据不同地图布局设置环境武器的天然战略点位
     if (mapId === 'map1') {
@@ -14189,12 +14364,67 @@ class ForestContraptions {
         this.dewDrops.splice(i, 1);
       }
     }
+
+    // 森林闲趣小生灵状态更新
+    if (this.critters) {
+      for (let i = 0; i < this.critters.length; i++) {
+        const c = this.critters[i];
+        c.animTimer += dt;
+        if (c.cd > 0) c.cd = Math.max(0, c.cd - dt);
+        if (c.hopTimer > 0) c.hopTimer = Math.max(0, c.hopTimer - dt);
+      }
+    }
   }
 
   handlePointerDown(inputX, inputY, scene) {
     if (!scene || scene.state !== 'BATTLE') return false;
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const scale = mv.SCALE || 0.85;
+
+    // 0. 点击森林闲趣生灵微彩蛋（松鼠、灵蝶、野生伞菌，提供解压微操与趣味回赠）
+    if (this.critters) {
+      for (let i = 0; i < this.critters.length; i++) {
+        const c = this.critters[i];
+        const distMap = Math.hypot(inputX - c.x, inputY - c.y);
+        const screenX = mv.OFFSET_X + c.x * scale;
+        const screenY = mv.OFFSET_Y + c.y * scale;
+        const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
+        const convertedMx = (inputX - mv.OFFSET_X) / scale;
+        const convertedMy = (inputY - mv.OFFSET_Y) / scale;
+        const distConverted = Math.hypot(convertedMx - c.x, convertedMy - c.y);
+
+        if (distMap <= 42 || distScreen <= 42 || distConverted <= 42) {
+          if (c.cd <= 0) {
+            c.cd = 15.0;
+            c.hopTimer = 0.55;
+            const reward = 6;
+            if (scene.economy) scene.economy.addSpores(reward);
+            if (scene.fx) {
+              scene.fx.spawnFloatingText(c.x, c.y - 18, `✨ ${c.name}开心赠送 +${reward}!`, '#73D13D', 1.3);
+              scene.fx.spawnParticles(c.x, c.y, 14, ['#73D13D', '#B7EB8F', '#FFE58F', '#FFFFFF'], 25, 65, 0.2, 0.45, 3.5);
+              if (typeof scene.fx.spawnShockwave === 'function') {
+                scene.fx.spawnShockwave(c.x, c.y, 24, '#73D13D');
+              }
+            }
+            if (typeof platform.playMusicalScale === 'function') {
+              platform.playMusicalScale(4);
+            } else {
+              platform.playSfx('sfx_coin');
+            }
+            if (typeof wx !== 'undefined' && wx.vibrateShort) {
+              try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
+            }
+          } else {
+            c.hopTimer = 0.35;
+            if (scene.fx) {
+              scene.fx.spawnFloatingText(c.x, c.y - 14, '🐾 嬉戏欢跳中~', '#FFE58F', 1.0);
+            }
+            platform.playSfx('sfx_click');
+          }
+          return true;
+        }
+      }
+    }
 
     // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
@@ -14399,6 +14629,86 @@ class ForestContraptions {
       ctx.restore();
     }
 
+    // 0. 绘制奇幻森林闲趣小生灵 (Critters: Squirrel, Butterfly, Wild Fungus)
+    if (this.critters) {
+      for (let i = 0; i < this.critters.length; i++) {
+        const c = this.critters[i];
+        ctx.save();
+        let cx = c.x;
+        let cy = c.y;
+
+        // 跃动跳跃动画
+        if (c.hopTimer > 0) {
+          const hopProg = c.hopTimer / 0.55;
+          cy -= Math.sin(hopProg * Math.PI) * 12;
+          cx += Math.cos(hopProg * Math.PI * 2) * 2;
+        }
+
+        if (c.id === 'squirrel') {
+          // 松鼠阴影与身形
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy + 8, 12, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 暖棕色毛茸身体与大尾巴
+          const tailWag = Math.sin(time * 6) * 0.2;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(tailWag);
+          ctx.fillStyle = '#A0522D';
+          ctx.beginPath();
+          ctx.ellipse(-6, -6, 7, 12, -0.4, 0, Math.PI * 2); // 蓬松毛绒尾巴
+          ctx.fill();
+          ctx.restore();
+
+          ctx.fillStyle = '#D2691E';
+          ctx.beginPath();
+          ctx.arc(cx + 3, cy, 7, 0, Math.PI * 2); // 身体
+          ctx.arc(cx + 6, cy - 6, 5, 0, Math.PI * 2); // 头
+          ctx.fill();
+          // 黑亮小眼睛
+          ctx.fillStyle = '#222';
+          ctx.beginPath();
+          ctx.arc(cx + 8, cy - 7, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (c.id === 'butterfly') {
+          // 七彩灵蝶 (上下慢速飘飞与扇翅)
+          const flutter = Math.sin(time * 12);
+          const floatY = Math.sin(time * 3) * 4;
+          cy += floatY;
+
+          // 半透明梦幻翅膀
+          ctx.fillStyle = 'rgba(186, 231, 255, 0.75)';
+          ctx.beginPath();
+          ctx.ellipse(cx - 5, cy, Math.abs(flutter) * 6 + 2, 8, -0.3, 0, Math.PI * 2);
+          ctx.ellipse(cx + 5, cy, Math.abs(flutter) * 6 + 2, 8, 0.3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#D48806';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, 1.5, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (c.id === 'wild_fungus') {
+          // 野生荧光伞 (地面呼吸微光与小菌伞)
+          const glow = Math.sin(time * 4) * 0.15 + 0.3;
+          ctx.fillStyle = `rgba(82, 196, 26, ${glow})`;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#FAAD14';
+          ctx.beginPath();
+          ctx.arc(cx, cy - 3, 7, Math.PI, 0); // 伞盖
+          ctx.fill();
+          ctx.fillStyle = '#E8E8E8';
+          ctx.fillRect(cx - 1.5, cy - 3, 3, 6); // 菌柄
+        }
+
+        ctx.restore();
+      }
+    }
+
     // 3. 绘制草丛晨露珠 (100% 纯 AI 手绘晶莹剔透四叶草晨露珠)
     for (let i = 0; i < this.dewDrops.length; i++) {
       const dew = this.dewDrops[i];
@@ -14465,6 +14775,7 @@ class BulletManager {
         appliesMark: false,
         targetEnemy: null,
         targetUid: 0,
+        targetObstacle: null,
         pierceRemaining: 1,
         pierceCountSoFar: 0,
         pierceBonusPerHit: 0,
@@ -14487,6 +14798,7 @@ class BulletManager {
         b.hitUids.length = 0;
         b.targetEnemy = null;
         b.targetUid = 0;
+        b.targetObstacle = null;
         b.burnZoneCfg = null;
         b.life = 0;
         b.flightTimer = 0;
@@ -14530,7 +14842,7 @@ class BulletManager {
   /**
    * 发射瞭望菇单体预判子弹
    */
-  spawnWatchBullet(x, y, targetEnemy, predX, predY, node, baseDamage) {
+  spawnWatchBullet(x, y, targetEnemy, predX, predY, node, baseDamage, targetObstacle = null) {
     const b = this.bulletPool.acquire(false);
     if (!b) return null;
 
@@ -14554,6 +14866,7 @@ class BulletManager {
     b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
+    b.targetObstacle = targetObstacle;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
     b.maxLife = 2.5;
     return b;
@@ -14624,7 +14937,7 @@ class BulletManager {
   /**
    * 生成雾菇孢子雾团
    */
-  spawnLuminaRay(x, y, targetEnemy, node, baseDamage) {
+  spawnLuminaRay(x, y, targetEnemy, node, baseDamage, targetObstacle = null) {
     const b = this.bulletPool.acquire(true);
     if (!b) return null;
 
@@ -14633,7 +14946,8 @@ class BulletManager {
     b.x = x;
     b.y = y;
     b.targetEnemy = targetEnemy;
-    b.targetUid = targetEnemy.uid;
+    b.targetUid = targetEnemy ? targetEnemy.uid : 0;
+    b.targetObstacle = targetObstacle;
     b.speed = 720;
     b.baseDamage = baseDamage || 22;
     b.holySmite = Boolean(node.holySmite);
@@ -14751,6 +15065,31 @@ class BulletManager {
       }
 
       if (b.kind === 'lumina') {
+        if (b.targetObstacle) {
+          if (b.targetObstacle.cleared) {
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          const dx = b.targetObstacle.x - b.x;
+          const dy = b.targetObstacle.y - b.y;
+          const dist = Math.hypot(dx, dy);
+          const stepMove = b.speed * dt;
+          if (dist <= stepMove + 12) {
+            const dmg = b.baseDamage + (b.damageBonus || 0);
+            if (map && map.damageObstacle) {
+              map.damageObstacle(b.targetObstacle, dmg, fx, economy, this.scene);
+            }
+            if (fx) {
+              fx.spawnParticles(b.x, b.y, 8, ['#FFE58F', '#FAAD14'], 16, 35, 0.2, 0.4, 3);
+            }
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          b.x += (dx / dist) * stepMove;
+          b.y += (dy / dist) * stepMove;
+          b.angle = Math.atan2(dy, dx);
+          continue;
+        }
         const tgt = b.targetEnemy;
         if (!tgt || !tgt.__active || tgt.state === 'death' || tgt.uid !== b.targetUid) {
           this.bulletPool.releaseAt(i);
@@ -14795,6 +15134,34 @@ class BulletManager {
         b.y += (dy / dist) * stepMove;
         b.angle = Math.atan2(dy, dx);
       } else if (b.kind === 'watch') {
+        if (b.targetObstacle) {
+          if (b.targetObstacle.cleared) {
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          const dx = b.targetObstacle.x - b.x;
+          const dy = b.targetObstacle.y - b.y;
+          const dist = Math.hypot(dx, dy);
+          const stepMove = b.speed * dt;
+          if (dist <= stepMove + 12) {
+            const finalCrit = b.isCrit;
+            const dmg = (b.baseDamage + (b.damageBonus || 0)) * (finalCrit ? 1.5 : 1.0);
+            if (map && map.damageObstacle) {
+              map.damageObstacle(b.targetObstacle, dmg, fx, economy, this.scene);
+            }
+            if (fx) {
+              fx.onSingleHit(b.targetObstacle.x, b.targetObstacle.y, b.branchColor);
+            }
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          b.vx = (dx / dist) * b.speed;
+          b.vy = (dy / dist) * b.speed;
+          b.angle = Math.atan2(dy, dx);
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          continue;
+        }
         // 5.6 瞭望菇：目标在飞行途中死亡则子弹消失
         const tgt = b.targetEnemy;
         if (!tgt || !tgt.__active || tgt.state === 'death' || tgt.uid !== b.targetUid) {
@@ -14878,6 +15245,30 @@ class BulletManager {
           continue;
         }
 
+        // 尖刺穿透伤害地图障碍物
+        if (map && map.obstacles && map.damageObstacle) {
+          for (let oI = 0; oI < map.obstacles.length; oI++) {
+            const obs = map.obstacles[oI];
+            if (obs.cleared) continue;
+            if (b.hitUids.indexOf(obs) !== -1) continue;
+            const odx = obs.x - b.x;
+            const ody = obs.y - b.y;
+            if (odx * odx + ody * ody <= 24 * 24) {
+              b.hitUids.push(obs);
+              const rampBonus = Math.min(b.pierceBonusMax, b.pierceCountSoFar * b.pierceBonusPerHit);
+              const totalBonus = b.damageBonus + rampBonus;
+              const obsDmg = b.baseDamage * (1 + totalBonus);
+              map.damageObstacle(obs, obsDmg, fx, economy, this.scene);
+              b.pierceRemaining -= 1;
+              if (b.pierceRemaining <= 0) {
+                this.bulletPool.releaseAt(i);
+                break;
+              }
+            }
+          }
+          if (b.pierceRemaining <= 0) continue;
+        }
+
         for (let j = 0; j < aliveEnemies.length; j++) {
           const e = aliveEnemies[j];
           if (e.isFlying || e.state === 'death') continue;
@@ -14938,6 +15329,20 @@ class BulletManager {
           const r2 = effRadius * effRadius;
           if (economy) {
             economy.beginExplosionBatch();
+          }
+
+          // 爆裂菇抛物线炮火轰炸范围内的障碍物
+          if (map && map.obstacles && map.damageObstacle) {
+            for (let oI = 0; oI < map.obstacles.length; oI++) {
+              const obs = map.obstacles[oI];
+              if (obs.cleared) continue;
+              const odx = obs.x - b.targetX;
+              const ody = obs.y - b.targetY;
+              if (odx * odx + ody * ody <= r2) {
+                const obsDmg = b.baseDamage * (1 + b.damageBonus) * 0.9;
+                map.damageObstacle(obs, obsDmg, fx, economy, this.scene);
+              }
+            }
           }
 
           // 元素反应：迫击炮弹落点碰撞毒雾，引发【真菌化学毒爆】
@@ -15466,6 +15871,41 @@ class TowerManager {
     return firstEnemy;
   }
 
+  /**
+   * 选择射程内可攻击的障碍物（集火优先，否则选最近）
+   */
+  selectObstacleTarget(tower, map, scene) {
+    if (!map || !map.obstacles) return null;
+    const rangePx = tower.node.range * TILE_SIZE;
+    const r2 = rangePx * rangePx;
+
+    // 1. 若玩家手动集火锁定了某个障碍物，优先判定该障碍物是否在射程内
+    if (scene && scene.targetedObstacle && !scene.targetedObstacle.cleared) {
+      const obs = scene.targetedObstacle;
+      const dx = obs.x - tower.x;
+      const dy = obs.y - tower.y;
+      if (dx * dx + dy * dy <= r2) {
+        return obs;
+      }
+    }
+
+    // 2. 若玩家未指定，返回射程内最近的一个未清除障碍物
+    let nearestObs = null;
+    let minDist2 = Infinity;
+    for (let i = 0; i < map.obstacles.length; i++) {
+      const obs = map.obstacles[i];
+      if (obs.cleared) continue;
+      const dx = obs.x - tower.x;
+      const dy = obs.y - tower.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= r2 && d2 < minDist2) {
+        minDist2 = d2;
+        nearestObs = obs;
+      }
+    }
+    return nearestObs;
+  }
+
   damageTower(tower, dmg, attacker, fx) {
     if (!tower || tower.dormantTimer > 0) return;
     tower.hp -= dmg;
@@ -15767,11 +16207,57 @@ class TowerManager {
         }
       }
 
-      // 冷却就绪时尝试索敌并开火
-      if (t.cooldown <= 0 && aliveEnemies.length > 0) {
-        const target = this.selectTarget(t, aliveEnemies, map);
+      // 冷却就绪时尝试索敌并开火 (优先保卫萝卜/PVZ 智能优先级)
+      if (t.cooldown <= 0) {
+        let target = null;
+        let isAttackingObs = false;
+
+        // 判定是否有手动集火锁定的障碍物在射程内
+        const targetedObs = (this.scene && this.scene.targetedObstacle && !this.scene.targetedObstacle.cleared)
+          ? this.scene.targetedObstacle
+          : null;
+        const targetedObsInRange = targetedObs && (Math.hypot(targetedObs.x - t.x, targetedObs.y - t.y) <= t.node.range * TILE_SIZE);
+
+        if (targetedObsInRange) {
+          // 检查是否有怪物极度逼近老家（距离仓库终点 < 110px 紧急泄漏危险）
+          let urgentThreat = false;
+          if (aliveEnemies.length > 0) {
+            for (let eI = 0; eI < aliveEnemies.length; eI++) {
+              const enemy = aliveEnemies[eI];
+              if (enemy.state === 'death') continue;
+              const routeLen = enemy.isFlying ? map.airRoute.totalLengthPx : map.groundRoute.totalLengthPx;
+              if (routeLen - enemy.distPx <= 110) {
+                urgentThreat = true;
+                break;
+              }
+            }
+          }
+          if (!urgentThreat) {
+            target = targetedObs;
+            isAttackingObs = true;
+          }
+        }
+
+        // 若没有集火障碍物，则正常索敌场上敌人
+        if (!target && aliveEnemies.length > 0) {
+          target = this.selectTarget(t, aliveEnemies, map);
+        }
+
+        // 若当前射程内无敌人（或波次间歇、场上无怪），且有可清除障碍物，自动开荒攻击障碍物
+        if (!target) {
+          const autoObs = this.selectObstacleTarget(t, map, this.scene);
+          if (autoObs) {
+            target = autoObs;
+            isAttackingObs = true;
+          }
+        }
+
         if (target) {
-          this.fireTower(t, target, map, enemyManager, bulletManager);
+          if (isAttackingObs) {
+            this.fireTowerAtObstacle(t, target, bulletManager);
+          } else {
+            this.fireTower(t, target, map, enemyManager, bulletManager);
+          }
           t.cooldown = t.node.interval;
           if (t.upgradeAnimTimer <= 0) {
             t.attackAnimTimer = 0.21;
@@ -15780,6 +16266,34 @@ class TowerManager {
           }
         }
       }
+    }
+  }
+
+  fireTowerAtObstacle(tower, obs, bulletManager) {
+    const node = tower.node;
+    const baseDmg = tower.def.baseDamage;
+    if (tower.typeId === 'watch') {
+      const watchNode = Object.assign({}, node);
+      if (tower.synergies && tower.synergies.hasTwinWatch) {
+        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+      }
+      bulletManager.spawnWatchBullet(tower.x, tower.y - 10, null, obs.x, obs.y, watchNode, baseDmg, obs);
+      platform.playSfx('sfx_shoot');
+    } else if (tower.typeId === 'mist') {
+      bulletManager.spawnMistCloud(obs.x, obs.y, node);
+      platform.playSfx('sfx_mist');
+    } else if (tower.typeId === 'thorn') {
+      const baseAngle = Math.atan2(obs.y - tower.y, obs.x - tower.x);
+      const thornOpts = { hasPoisonThorn: tower.synergies && tower.synergies.hasPoisonThorn };
+      bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      platform.playSfx('sfx_thorn');
+    } else if (tower.typeId === 'burst') {
+      const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
+      bulletManager.spawnBurstShell(tower.x, tower.y - 12, obs.x, obs.y, node, baseDmg, burstOpts);
+      platform.playSfx('sfx_shoot');
+    } else if (tower.typeId === 'lumina') {
+      bulletManager.spawnLuminaRay(tower.x, tower.y - 10, null, node, baseDmg, obs);
+      platform.playSfx('sfx_laser');
     }
   }
 
@@ -16355,7 +16869,7 @@ class WaveManager {
   /**
    * 手动提前召唤下一波（仅在备战阶段有效）
    */
-  callNextWaveEarly(economy, fx) {
+  callNextWaveEarly(economy, fx, scene = null) {
     if (this.waveList && this.currentWaveIndex < this.waveList.length && !this.isPrepPhase()) {
       // 战斗中强制双重召怪：触发【贪婪激怒狂潮】
       this.isEnraged = true;
@@ -16375,7 +16889,7 @@ class WaveManager {
       fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
       fx.triggerScreenShake(2.5, 0.15);
     }
-    this.startCurrentWave(economy, fx);
+    this.startCurrentWave(economy, fx, scene);
     platform.playSfx('sfx_upgrade');
     return bonus;
   }
@@ -16383,7 +16897,7 @@ class WaveManager {
   /**
    * 正式开始当前波次
    */
-  startCurrentWave(economy, fx) {
+  startCurrentWave(economy, fx, scene = null) {
     let waveDef = this.waveList[this.currentWaveIndex - 1];
     if (!waveDef) {
       // 动态生成无尽深渊波次
@@ -16421,10 +16935,14 @@ class WaveManager {
       groupLateralBase: ((idx % 3) - 1) * 3
     }));
 
-    // 检查是否包含首领，若包含则切换首领战 BGM 并弹出首领警告横幅
+    // 检查是否包含首领或大波次（PVZ经典：一大波僵尸正在逼近 / 最终波次决战号角）
     const hasBoss = this.activeGroups.some((g) => ENEMIES[g.type] && ENEMIES[g.type].isBoss);
+    const isNight = (scene && scene.weather && scene.weather.currentWeather === 'night') || (this.mapId === 'map3');
+    const isMidWave = (this.currentWaveIndex === 5);
+    const isFinalWave = (this.currentWaveIndex === this.totalWaves);
+
     if (hasBoss) {
-      platform.playBgm('boss_' + this.mapId);
+      if (!isNight) platform.playBgm('boss_' + this.mapId);
       if (fx) {
         fx.showBanner(
           i18n.t('banner_boss_incoming'),
@@ -16432,9 +16950,39 @@ class WaveManager {
           i18n.t('wave_label') + ' ' + this.currentWaveIndex + '/' + this.totalWaves,
           1.8
         );
+        fx.triggerScreenShake(4.5, 0.35);
       }
+      platform.playSfx('sfx_wave_horn');
+    } else if (isFinalWave) {
+      if (!isNight) platform.playBgm('bgm_battle');
+      if (fx) {
+        fx.showBanner(
+          '🔥 虫潮总攻 · 终极决战！',
+          '#FF4D4F',
+          '全线守卫就位！击退所有侵略者守护森林家园！',
+          2.2
+        );
+        fx.triggerScreenShake(5.0, 0.45);
+      }
+      platform.playSfx('sfx_wave_horn');
+    } else if (isMidWave) {
+      if (!isNight) platform.playBgm('bgm_battle');
+      if (fx) {
+        fx.showBanner(
+          '⚠️ 一大波暗黑虫潮正在逼近！',
+          '#FAAD14',
+          '中坚攻势来袭，警惕多路突袭！',
+          1.8
+        );
+        fx.triggerScreenShake(3.5, 0.3);
+      }
+      platform.playSfx('sfx_wave_horn');
     } else {
-      platform.playBgm('bgm_battle');
+      if (isNight) {
+        platform.playBgm('bgm_night');
+      } else {
+        platform.playBgm('bgm_battle');
+      }
     }
   }
 
@@ -16448,7 +16996,7 @@ class WaveManager {
       this.prepTimerSec -= dt;
       if (this.prepTimerSec <= 0) {
         this.prepTimerSec = 0;
-        this.startCurrentWave(economy, fx);
+        this.startCurrentWave(economy, fx, scene);
       }
       return;
     }
@@ -21185,7 +21733,7 @@ class SceneController {
 
   callWaveEarly() {
     if (this.state !== 'BATTLE') return;
-    this.waveManager.callNextWaveEarly(this.economy, this.fx);
+    this.waveManager.callNextWaveEarly(this.economy, this.fx, this);
   }
 
   tryBuildOnSelectedTile() {
@@ -21614,12 +22162,44 @@ class SceneController {
                   this.ui.showTowerDetailBoard = false;
                 }
               } else {
-                // 点击道路、障碍物或空白无效区域：收起范围展示与面板，战场自然褪去
-                this.ui.inspectorOpen = false;
-                this.ui.showTowerDetailBoard = false;
-                this.selectedTile.col = -1;
-                this.selectedTile.row = -1;
-                this.selectedBuildTowerId = null;
+                const clickedObs = this.map.getObstacleAt(targetCol, targetRow);
+                if (clickedObs) {
+                  // 点击障碍物：切换集火锁定标记 (Carrot Fantasy 经典集火模式)
+                  if (this.targetedObstacle === clickedObs) {
+                    this.targetedObstacle.isTargeted = false;
+                    this.targetedObstacle = null;
+                    this.ui.showToast('已取消集火锁定');
+                    platform.playSfx('sfx_click');
+                  } else {
+                    if (this.targetedObstacle) {
+                      this.targetedObstacle.isTargeted = false;
+                    }
+                    this.targetedObstacle = clickedObs;
+                    clickedObs.isTargeted = true;
+                    this.ui.showToast('🎯 已锁定【' + clickedObs.name + '】！防线守卫将优先清除障碍！');
+                    if (this.fx) {
+                      this.fx.spawnFloatingText(clickedObs.x, clickedObs.y - 24, '🎯 锁定集火!', '#FF4D4F', 1.25);
+                      if (typeof this.fx.spawnRing === 'function') {
+                        this.fx.spawnRing(clickedObs.x, clickedObs.y, 28, '#FF4D4F', 0.45, false);
+                      }
+                    }
+                    platform.playSfx('sfx_upgrade');
+                    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+                      try { wx.vibrateShort({ type: 'medium' }); } catch (e) {}
+                    }
+                  }
+                  this.ui.inspectorOpen = false;
+                  this.selectedTile.col = -1;
+                  this.selectedTile.row = -1;
+                  this.selectedBuildTowerId = null;
+                } else {
+                  // 点击道路或空白无效区域：收起范围展示与面板，战场自然褪去
+                  this.ui.inspectorOpen = false;
+                  this.ui.showTowerDetailBoard = false;
+                  this.selectedTile.col = -1;
+                  this.selectedTile.row = -1;
+                  this.selectedBuildTowerId = null;
+                }
               }
             }
           } else {

@@ -305,6 +305,41 @@ class TowerManager {
     return firstEnemy;
   }
 
+  /**
+   * 选择射程内可攻击的障碍物（集火优先，否则选最近）
+   */
+  selectObstacleTarget(tower, map, scene) {
+    if (!map || !map.obstacles) return null;
+    const rangePx = tower.node.range * TILE_SIZE;
+    const r2 = rangePx * rangePx;
+
+    // 1. 若玩家手动集火锁定了某个障碍物，优先判定该障碍物是否在射程内
+    if (scene && scene.targetedObstacle && !scene.targetedObstacle.cleared) {
+      const obs = scene.targetedObstacle;
+      const dx = obs.x - tower.x;
+      const dy = obs.y - tower.y;
+      if (dx * dx + dy * dy <= r2) {
+        return obs;
+      }
+    }
+
+    // 2. 若玩家未指定，返回射程内最近的一个未清除障碍物
+    let nearestObs = null;
+    let minDist2 = Infinity;
+    for (let i = 0; i < map.obstacles.length; i++) {
+      const obs = map.obstacles[i];
+      if (obs.cleared) continue;
+      const dx = obs.x - tower.x;
+      const dy = obs.y - tower.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= r2 && d2 < minDist2) {
+        minDist2 = d2;
+        nearestObs = obs;
+      }
+    }
+    return nearestObs;
+  }
+
   damageTower(tower, dmg, attacker, fx) {
     if (!tower || tower.dormantTimer > 0) return;
     tower.hp -= dmg;
@@ -606,11 +641,57 @@ class TowerManager {
         }
       }
 
-      // 冷却就绪时尝试索敌并开火
-      if (t.cooldown <= 0 && aliveEnemies.length > 0) {
-        const target = this.selectTarget(t, aliveEnemies, map);
+      // 冷却就绪时尝试索敌并开火 (优先保卫萝卜/PVZ 智能优先级)
+      if (t.cooldown <= 0) {
+        let target = null;
+        let isAttackingObs = false;
+
+        // 判定是否有手动集火锁定的障碍物在射程内
+        const targetedObs = (this.scene && this.scene.targetedObstacle && !this.scene.targetedObstacle.cleared)
+          ? this.scene.targetedObstacle
+          : null;
+        const targetedObsInRange = targetedObs && (Math.hypot(targetedObs.x - t.x, targetedObs.y - t.y) <= t.node.range * TILE_SIZE);
+
+        if (targetedObsInRange) {
+          // 检查是否有怪物极度逼近老家（距离仓库终点 < 110px 紧急泄漏危险）
+          let urgentThreat = false;
+          if (aliveEnemies.length > 0) {
+            for (let eI = 0; eI < aliveEnemies.length; eI++) {
+              const enemy = aliveEnemies[eI];
+              if (enemy.state === 'death') continue;
+              const routeLen = enemy.isFlying ? map.airRoute.totalLengthPx : map.groundRoute.totalLengthPx;
+              if (routeLen - enemy.distPx <= 110) {
+                urgentThreat = true;
+                break;
+              }
+            }
+          }
+          if (!urgentThreat) {
+            target = targetedObs;
+            isAttackingObs = true;
+          }
+        }
+
+        // 若没有集火障碍物，则正常索敌场上敌人
+        if (!target && aliveEnemies.length > 0) {
+          target = this.selectTarget(t, aliveEnemies, map);
+        }
+
+        // 若当前射程内无敌人（或波次间歇、场上无怪），且有可清除障碍物，自动开荒攻击障碍物
+        if (!target) {
+          const autoObs = this.selectObstacleTarget(t, map, this.scene);
+          if (autoObs) {
+            target = autoObs;
+            isAttackingObs = true;
+          }
+        }
+
         if (target) {
-          this.fireTower(t, target, map, enemyManager, bulletManager);
+          if (isAttackingObs) {
+            this.fireTowerAtObstacle(t, target, bulletManager);
+          } else {
+            this.fireTower(t, target, map, enemyManager, bulletManager);
+          }
           t.cooldown = t.node.interval;
           if (t.upgradeAnimTimer <= 0) {
             t.attackAnimTimer = 0.21;
@@ -619,6 +700,34 @@ class TowerManager {
           }
         }
       }
+    }
+  }
+
+  fireTowerAtObstacle(tower, obs, bulletManager) {
+    const node = tower.node;
+    const baseDmg = tower.def.baseDamage;
+    if (tower.typeId === 'watch') {
+      const watchNode = Object.assign({}, node);
+      if (tower.synergies && tower.synergies.hasTwinWatch) {
+        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+      }
+      bulletManager.spawnWatchBullet(tower.x, tower.y - 10, null, obs.x, obs.y, watchNode, baseDmg, obs);
+      platform.playSfx('sfx_shoot');
+    } else if (tower.typeId === 'mist') {
+      bulletManager.spawnMistCloud(obs.x, obs.y, node);
+      platform.playSfx('sfx_mist');
+    } else if (tower.typeId === 'thorn') {
+      const baseAngle = Math.atan2(obs.y - tower.y, obs.x - tower.x);
+      const thornOpts = { hasPoisonThorn: tower.synergies && tower.synergies.hasPoisonThorn };
+      bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      platform.playSfx('sfx_thorn');
+    } else if (tower.typeId === 'burst') {
+      const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
+      bulletManager.spawnBurstShell(tower.x, tower.y - 12, obs.x, obs.y, node, baseDmg, burstOpts);
+      platform.playSfx('sfx_shoot');
+    } else if (tower.typeId === 'lumina') {
+      bulletManager.spawnLuminaRay(tower.x, tower.y - 10, null, node, baseDmg, obs);
+      platform.playSfx('sfx_laser');
     }
   }
 

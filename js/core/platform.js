@@ -415,126 +415,119 @@ function unlockAudio() {
   }, 100);
 }
 
-function playSynthesizedSound(sfxKey, volumeMod = 1.0) {
+/**
+ * 多泛音原声乐器物理合成引擎 2.0 (Kalimba / Rosewood Marimba / Harp / Acoustic Pluck)
+ * 彻底告别粗糙方波电子音，提供温润、清脆、有质感的森林原声打击乐体验
+ */
+function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756], decayRatio = 0.35) {
+  if (!webAudioCtx) return;
+  for (let i = 0; i < harmonics.length; i++) {
+    const h = harmonics[i];
+    const osc = webAudioCtx.createOscillator();
+    const gain = webAudioCtx.createGain();
+    osc.type = i === 0 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(freq * h, startTime);
+    const hVol = vol * (i === 0 ? 1.0 : Math.pow(decayRatio, i));
+    const hDur = i === 0 ? duration : duration * 0.45;
+    gain.gain.setValueAtTime(0.001, startTime);
+    gain.gain.linearRampToValueAtTime(hVol, startTime + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0008, startTime + hDur);
+    osc.connect(gain);
+    gain.connect(webAudioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + hDur + 0.01);
+  }
+}
+
+function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
   if (!webAudioCtx) return false;
   try {
     if (webAudioCtx.state === 'suspended') {
       webAudioCtx.resume().catch(() => {});
     }
     const t0 = webAudioCtx.currentTime;
-    const osc = webAudioCtx.createOscillator();
-    const gain = webAudioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
+    const p = Math.max(0.5, Math.min(3.0, pitchMod || 1.0));
 
     if (sfxKey === 'sfx_click') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, t0);
-      osc.frequency.exponentialRampToValueAtTime(320, t0 + 0.035);
-      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
-      osc.start(t0);
-      osc.stop(t0 + 0.035);
+      // 温润紫檀木琴轻叩 (Rosewood Marimba Tap)
+      playAcousticNote(520 * p, t0, 0.045, 0.16 * volumeMod, [1, 2.0, 3.8], 0.25);
       return true;
-    } else if (sfxKey === 'sfx_build') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, t0);
-      osc.frequency.exponentialRampToValueAtTime(640, t0 + 0.08);
-      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
-      osc.start(t0);
-      osc.stop(t0 + 0.09);
+    } else if (sfxKey === 'sfx_build' || sfxKey === 'sfx_place') {
+      // 破土春芽双音马林巴 (Sprouting Dual Marimba)
+      playAcousticNote(392.0 * p, t0, 0.09, 0.20 * volumeMod, [1, 2.0, 4.0], 0.3);
+      playAcousticNote(587.33 * p, t0 + 0.045, 0.14, 0.22 * volumeMod, [1, 2.756], 0.28);
       return true;
-    } else if (sfxKey === 'sfx_upgrade') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, t0);
-      osc.frequency.setValueAtTime(659.25, t0 + 0.05);
-      osc.frequency.setValueAtTime(783.99, t0 + 0.10);
-      gain.gain.setValueAtTime(0.25 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
-      osc.start(t0);
-      osc.stop(t0 + 0.22);
+    } else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_win') {
+      // 竖琴五声音阶治愈琶音 (Pentatonic Harp Arpeggio: C5 - E5 - G5 - C6)
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      for (let i = 0; i < notes.length; i++) {
+        playAcousticNote(notes[i] * p, t0 + i * 0.055, 0.28, 0.18 * volumeMod, [1, 2.0, 2.756], 0.28);
+      }
       return true;
     } else if (sfxKey === 'sfx_coin' || sfxKey === 'sfx_sell') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, t0);
-      osc.frequency.setValueAtTime(1600, t0 + 0.04);
-      gain.gain.setValueAtTime(0.18 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
-      osc.start(t0);
-      osc.stop(t0 + 0.12);
+      // 水晶拇指琴清脆双音 (Crystal Kalimba Chime)
+      playAcousticNote(659.25 * p, t0, 0.18, 0.18 * volumeMod, [1, 2.756, 5.404], 0.24);
+      playAcousticNote(987.77 * p, t0 + 0.042, 0.24, 0.20 * volumeMod, [1, 2.756], 0.22);
       return true;
-    } else if (sfxKey === 'sfx_hurt') {
+    } else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_lose') {
+      // 低沉木鼓预警 (Low Wood Drum Thud)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(160, t0);
-      osc.frequency.exponentialRampToValueAtTime(50, t0 + 0.08);
-      gain.gain.setValueAtTime(0.22 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+      osc.frequency.setValueAtTime(145 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(48, t0 + 0.14);
+      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.08);
+      osc.stop(t0 + 0.16);
       return true;
-    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(140, t0);
-      osc.frequency.exponentialRampToValueAtTime(35, t0 + 0.22);
-      gain.gain.setValueAtTime(0.30 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom' || sfxKey === 'sfx_thunder' || sfxKey === 'sfx_shock') {
+      // 森林大太鼓浑厚共鸣 (Warm Forest Taiko Resonance)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(125 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(34, t0 + 0.26);
+      gain.gain.setValueAtTime(0.28 * volumeMod, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.27);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.22);
+      osc.stop(t0 + 0.28);
+      playAcousticNote(220 * p, t0, 0.12, 0.12 * volumeMod, [1, 1.5], 0.4);
       return true;
     } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(450, t0);
-      osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.05);
-      gain.gain.setValueAtTime(0.16 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
-      osc.start(t0);
-      osc.stop(t0 + 0.05);
-      return true;
-    } else if (sfxKey === 'sfx_thorn') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(580, t0);
-      osc.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+      // 轻盈原声弦拨 (Acoustic String Pluck)
+      const osc = webAudioCtx.createOscillator();
+      const gain = webAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420 * p, t0);
+      osc.frequency.exponentialRampToValueAtTime(210 * p, t0 + 0.055);
       gain.gain.setValueAtTime(0.14 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
+      osc.connect(gain);
+      gain.connect(webAudioCtx.destination);
       osc.start(t0);
-      osc.stop(t0 + 0.06);
+      osc.stop(t0 + 0.065);
       return true;
-    } else if (sfxKey === 'sfx_mist') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(300, t0);
-      osc.frequency.exponentialRampToValueAtTime(600, t0 + 0.08);
-      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
-      osc.start(t0);
-      osc.stop(t0 + 0.12);
+    } else if (sfxKey === 'sfx_thorn' || sfxKey === 'sfx_hit') {
+      // 翠竹木琴脆击 (Crisp Bamboo Percussive Hit)
+      playAcousticNote(480 * p, t0, 0.065, 0.14 * volumeMod, [1, 2.4], 0.3);
       return true;
-    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(392, t0);
-      osc.frequency.setValueAtTime(523.25, t0 + 0.08);
-      osc.frequency.setValueAtTime(659.25, t0 + 0.16);
-      gain.gain.setValueAtTime(0.24 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
-      osc.start(t0);
-      osc.stop(t0 + 0.35);
+    } else if (sfxKey === 'sfx_mist' || sfxKey === 'sfx_laser') {
+      // 空灵风铃泛音 (Ethereal Wind Chime)
+      playAcousticNote(587.33 * p, t0, 0.16, 0.11 * volumeMod, [1, 2.0, 3.0], 0.25);
       return true;
-    } else if (sfxKey === 'sfx_shovel') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(240, t0);
-      osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.05);
-      gain.gain.setValueAtTime(0.12 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
-      osc.start(t0);
-      osc.stop(t0 + 0.05);
+    } else if (sfxKey === 'sfx_multikill' || sfxKey === 'sfx_wave_horn' || sfxKey === 'sfx_horn') {
+      // 森林圆号五度和弦 (Warm Forest Horn Fifth Chord)
+      playAcousticNote(293.66 * p, t0, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
+      playAcousticNote(440.00 * p, t0 + 0.06, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
+      playAcousticNote(587.33 * p, t0 + 0.12, 0.42, 0.20 * volumeMod, [1, 2.0, 3.0], 0.35);
       return true;
     } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, t0);
-      gain.gain.setValueAtTime(0.10 * volumeMod, t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.04);
-      osc.start(t0);
-      osc.stop(t0 + 0.04);
+      playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
     }
   } catch (e) {}
@@ -631,10 +624,10 @@ function stopBgm() {
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
 const sfxThrottle = {};
-function playSfx(sfxKey, volumeMod = 1.0) {
+function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false) {
   if (!audioUnlocked || !sfxEnabled) return;
   const now = nowMs();
-  if (sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
+  if (!bypassThrottle && sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
     return; // 同一音效 45ms 防抖节流，杜绝同帧十几个怪物受创并发调用音频引擎卡死浏览器
   }
   sfxThrottle[sfxKey] = now;
@@ -657,13 +650,14 @@ function playSfx(sfxKey, volumeMod = 1.0) {
     } catch (e) {}
   }
 
-  // 1. WebAudio 优先：多发无损并发 + 0.97~1.03 细腻自然随机音高抖动（消除机械感，还原真实战斗打击打击感）
+  // 1. WebAudio 优先：多发无损并发 + 细腻自然随机音高抖动与五声音阶升调支持
   if (webAudioCtx) {
+    const pRate = (pitchMod || 1.0) * (pitchMod && pitchMod !== 1.0 ? 1.0 : (0.96 + Math.random() * 0.08));
     if (audioBuffers[sfxKey]) {
       try {
         const srcNode = webAudioCtx.createBufferSource();
         srcNode.buffer = audioBuffers[sfxKey];
-        srcNode.playbackRate.value = 0.97 + Math.random() * 0.06;
+        srcNode.playbackRate.value = Math.max(0.5, Math.min(3.0, pRate));
         const gainNode = webAudioCtx.createGain();
         const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
         gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
@@ -673,9 +667,6 @@ function playSfx(sfxKey, volumeMod = 1.0) {
         return;
       } catch (e) {}
     } else {
-      if (playSynthesizedSound(sfxKey, volumeMod)) {
-        return;
-      }
       // 触发延迟预热加载 (带去重防抖，杜绝并发暴击卡顿)
       const src = AUDIO_PATHS[sfxKey];
       const isFileScheme = typeof location !== 'undefined' && location.protocol === 'file:';
@@ -691,6 +682,9 @@ function playSfx(sfxKey, volumeMod = 1.0) {
           .catch(() => {
             loadingAudioBuffers[sfxKey] = false;
           });
+      }
+      if (playSynthesizedSound(sfxKey, volumeMod, pRate)) {
+        return;
       }
     }
   }
@@ -724,11 +718,14 @@ function playSfx(sfxKey, volumeMod = 1.0) {
   }
 }
 
-const SCALE_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 659.25, 783.99];
+// 大调五声音阶升调比率 (宫 Do -> 商 Re -> 角 Mi -> 徵 Sol -> 羽 La -> 高音宫 Do' -> 高音商 Re' -> 高音角 Mi')
+const PENTATONIC_RATIOS = [1.0, 1.12246, 1.25992, 1.49831, 1.68179, 2.0, 2.24492, 2.51984];
 
 function playMusicalScale(noteIdx = 0) {
   if (!audioUnlocked || !sfxEnabled) return;
-  playSfx('sfx_coin');
+  const idx = Math.max(0, Math.min(PENTATONIC_RATIOS.length - 1, Math.floor(noteIdx || 0)));
+  const ratio = PENTATONIC_RATIOS[idx];
+  playSfx('sfx_coin', 0.92, ratio, true);
 }
 
 function playSynthTone() {

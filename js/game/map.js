@@ -145,13 +145,33 @@ class GameMap {
       }
     }
 
-    // 2. 标记障碍物格
+    // 2. 标记与初始化可清除地图障碍物 (Carrot Fantasy 经典机制)
+    this.obstacles = [];
     const obsList = this.mapData.obstacles || [];
+    const obsNames = ['枯萎巨桩', '古遗石堆', '幽森魔晶', '荆棘腐木'];
     for (let i = 0; i < obsList.length; i++) {
       const [oc, or] = obsList[i];
       if (this.inBounds(oc, or)) {
+        const variant = (oc * 3 + or * 5) % 4;
+        const maxHp = 320 + variant * 70;
+        const obs = {
+          col: oc,
+          row: or,
+          x: (oc + 0.5) * TILE_SIZE,
+          y: (or + 0.5) * TILE_SIZE,
+          hp: maxHp,
+          maxHp: maxHp,
+          variant,
+          name: obsNames[variant % obsNames.length],
+          isTargeted: false,
+          hitWobble: 0,
+          cleared: false,
+          isObstacle: true
+        };
         this.grid[or][oc].type = 'obstacle';
-        this.grid[or][oc].variant = (oc * 3 + or * 5) % 4;
+        this.grid[or][oc].variant = variant;
+        this.grid[or][oc].obstacle = obs;
+        this.obstacles.push(obs);
       }
     }
 
@@ -200,6 +220,63 @@ class GameMap {
     const [wc, wr] = this.mapData.warehouseTile;
     if (this.inBounds(wc, wr)) {
       this.grid[wr][wc].type = 'warehouse';
+    }
+  }
+
+  getObstacleAt(col, row) {
+    if (!this.inBounds(col, row)) return null;
+    const tile = this.grid[row][col];
+    return tile && tile.obstacle && !tile.obstacle.cleared ? tile.obstacle : null;
+  }
+
+  damageObstacle(obs, dmg, fx, economy, scene) {
+    if (!obs || obs.cleared) return;
+    obs.hp -= dmg;
+    obs.hitWobble = 0.22;
+    if (fx) {
+      fx.spawnDamageText(Math.round(obs.x), Math.round(obs.y - 14), Math.round(dmg), '#FF7875', false);
+      fx.spawnParticles(obs.x, obs.y, 6, ['#8C6842', '#D48806', '#5C4028'], 15, 35, 0.2, 0.35, 2);
+    }
+    platform.playSfx('sfx_hit', 0.85);
+
+    if (obs.hp <= 0) {
+      obs.cleared = true;
+      obs.hp = 0;
+      obs.isTargeted = false;
+      const tile = this.grid[obs.row][obs.col];
+      tile.type = 'grass';
+      tile.obstacle = null;
+      if (scene && scene.targetedObstacle === obs) {
+        scene.targetedObstacle = null;
+      }
+
+      // 奖励爆发：大量黄金孢子 + 25%几率掉落远古觉醒种子
+      const rewardSpores = 65 + (obs.variant || 0) * 15;
+      if (economy) {
+        economy.addSpores(rewardSpores);
+      }
+      let dropAwakening = false;
+      if (scene && Math.random() < 0.25) {
+        scene.awakeningSeeds = (scene.awakeningSeeds || 0) + 1;
+        dropAwakening = true;
+      }
+
+      if (fx) {
+        fx.triggerScreenShake(3.5, 0.25);
+        fx.spawnFloatingText(obs.x, obs.y - 24, '🌱 清除障碍！开辟全新领地 + 孢子!', '#FFE58F', 1.6);
+        if (dropAwakening) {
+          fx.spawnFloatingText(obs.x, obs.y - 44, '✨ 发现远古觉醒种子!', '#B37FEB', 1.8);
+        }
+        fx.spawnParticles(obs.x, obs.y, 28, ['#52C41A', '#FFE58F', '#8C6842', '#D48806', '#FFFFFF'], 40, 120, 0.3, 0.6, 4);
+        if (typeof fx.spawnShockwave === 'function') {
+          fx.spawnShockwave(obs.x, obs.y, 40, '#52C41A');
+        }
+      }
+      platform.playSfx('sfx_bomb');
+      platform.playSfx('sfx_win', 0.8);
+      if (typeof wx !== 'undefined' && wx.vibrateShort) {
+        try { wx.vibrateShort({ type: 'heavy' }); } catch (e) {}
+      }
     }
   }
 
@@ -362,6 +439,72 @@ class GameMap {
       ctx.arc(wdx + 16, wdy + 20, 3.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+      platform.recordDrawCall(1);
+    }
+
+    // 渲染可清除地图障碍物 (Clearable Obstacles & Interactive Health Bars)
+    if (this.obstacles && this.obstacles.length > 0) {
+      const stumpImg = platform.getImage('assets/vfx/prop_stump.png');
+      for (let i = 0; i < this.obstacles.length; i++) {
+        const obs = this.obstacles[i];
+        if (obs.cleared) continue;
+
+        let ox = obs.x;
+        let oy = obs.y;
+        if (obs.hitWobble > 0) {
+          obs.hitWobble = Math.max(0, obs.hitWobble - (1 / 60));
+          ox += Math.sin(obs.hitWobble * 45) * 2.8;
+        }
+
+        ctx.save();
+        // 地面柔和接触阴影
+        ctx.fillStyle = 'rgba(10, 15, 12, 0.40)';
+        ctx.beginPath();
+        ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 障碍物主体 (树桩/巨石/魔晶)
+        if (stumpImg && stumpImg.width) {
+          ctx.drawImage(stumpImg, ox - 18, oy - 18, 36, 32);
+        } else {
+          const atlasPath = this.mapData.atlasPath;
+          if (!drawMapTile(ctx, atlasPath, 'obs_' + (obs.variant % 4), ox - 16, oy - 16, TILE_SIZE, TILE_SIZE)) {
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(ox - 14, oy - 14, 28, 28);
+          }
+        }
+
+        // 血条 (受创或被集火时显示)
+        if (obs.isTargeted || obs.hp < obs.maxHp) {
+          const bw = 28;
+          const bh = 4;
+          const bx = ox - bw * 0.5;
+          const by = oy - 22;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+          ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+          const ratio = Math.max(0, Math.min(1.0, obs.hp / obs.maxHp));
+          ctx.fillStyle = ratio > 0.5 ? '#52C41A' : (ratio > 0.25 ? '#FAAD14' : '#FF4D4F');
+          ctx.fillRect(bx, by, bw * ratio, bh);
+        }
+
+        // 🎯 玩家集火锁定光标
+        if (obs.isTargeted) {
+          const bob = Math.sin(animTimeSec * 6) * 4;
+          ctx.strokeStyle = '#FF4D4F';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 18, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 悬浮集火箭头与文字
+          ctx.fillStyle = '#FF4D4F';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🎯 集火', ox, oy - 30 + bob);
+        }
+        ctx.restore();
+      }
       platform.recordDrawCall(1);
     }
   }

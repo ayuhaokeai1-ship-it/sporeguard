@@ -39,6 +39,7 @@ class BulletManager {
         appliesMark: false,
         targetEnemy: null,
         targetUid: 0,
+        targetObstacle: null,
         pierceRemaining: 1,
         pierceCountSoFar: 0,
         pierceBonusPerHit: 0,
@@ -61,6 +62,7 @@ class BulletManager {
         b.hitUids.length = 0;
         b.targetEnemy = null;
         b.targetUid = 0;
+        b.targetObstacle = null;
         b.burnZoneCfg = null;
         b.life = 0;
         b.flightTimer = 0;
@@ -104,7 +106,7 @@ class BulletManager {
   /**
    * 发射瞭望菇单体预判子弹
    */
-  spawnWatchBullet(x, y, targetEnemy, predX, predY, node, baseDamage) {
+  spawnWatchBullet(x, y, targetEnemy, predX, predY, node, baseDamage, targetObstacle = null) {
     const b = this.bulletPool.acquire(false);
     if (!b) return null;
 
@@ -128,6 +130,7 @@ class BulletManager {
     b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
+    b.targetObstacle = targetObstacle;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
     b.maxLife = 2.5;
     return b;
@@ -198,7 +201,7 @@ class BulletManager {
   /**
    * 生成雾菇孢子雾团
    */
-  spawnLuminaRay(x, y, targetEnemy, node, baseDamage) {
+  spawnLuminaRay(x, y, targetEnemy, node, baseDamage, targetObstacle = null) {
     const b = this.bulletPool.acquire(true);
     if (!b) return null;
 
@@ -207,7 +210,8 @@ class BulletManager {
     b.x = x;
     b.y = y;
     b.targetEnemy = targetEnemy;
-    b.targetUid = targetEnemy.uid;
+    b.targetUid = targetEnemy ? targetEnemy.uid : 0;
+    b.targetObstacle = targetObstacle;
     b.speed = 720;
     b.baseDamage = baseDamage || 22;
     b.holySmite = Boolean(node.holySmite);
@@ -325,6 +329,31 @@ class BulletManager {
       }
 
       if (b.kind === 'lumina') {
+        if (b.targetObstacle) {
+          if (b.targetObstacle.cleared) {
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          const dx = b.targetObstacle.x - b.x;
+          const dy = b.targetObstacle.y - b.y;
+          const dist = Math.hypot(dx, dy);
+          const stepMove = b.speed * dt;
+          if (dist <= stepMove + 12) {
+            const dmg = b.baseDamage + (b.damageBonus || 0);
+            if (map && map.damageObstacle) {
+              map.damageObstacle(b.targetObstacle, dmg, fx, economy, this.scene);
+            }
+            if (fx) {
+              fx.spawnParticles(b.x, b.y, 8, ['#FFE58F', '#FAAD14'], 16, 35, 0.2, 0.4, 3);
+            }
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          b.x += (dx / dist) * stepMove;
+          b.y += (dy / dist) * stepMove;
+          b.angle = Math.atan2(dy, dx);
+          continue;
+        }
         const tgt = b.targetEnemy;
         if (!tgt || !tgt.__active || tgt.state === 'death' || tgt.uid !== b.targetUid) {
           this.bulletPool.releaseAt(i);
@@ -369,6 +398,34 @@ class BulletManager {
         b.y += (dy / dist) * stepMove;
         b.angle = Math.atan2(dy, dx);
       } else if (b.kind === 'watch') {
+        if (b.targetObstacle) {
+          if (b.targetObstacle.cleared) {
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          const dx = b.targetObstacle.x - b.x;
+          const dy = b.targetObstacle.y - b.y;
+          const dist = Math.hypot(dx, dy);
+          const stepMove = b.speed * dt;
+          if (dist <= stepMove + 12) {
+            const finalCrit = b.isCrit;
+            const dmg = (b.baseDamage + (b.damageBonus || 0)) * (finalCrit ? 1.5 : 1.0);
+            if (map && map.damageObstacle) {
+              map.damageObstacle(b.targetObstacle, dmg, fx, economy, this.scene);
+            }
+            if (fx) {
+              fx.onSingleHit(b.targetObstacle.x, b.targetObstacle.y, b.branchColor);
+            }
+            this.bulletPool.releaseAt(i);
+            continue;
+          }
+          b.vx = (dx / dist) * b.speed;
+          b.vy = (dy / dist) * b.speed;
+          b.angle = Math.atan2(dy, dx);
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          continue;
+        }
         // 5.6 瞭望菇：目标在飞行途中死亡则子弹消失
         const tgt = b.targetEnemy;
         if (!tgt || !tgt.__active || tgt.state === 'death' || tgt.uid !== b.targetUid) {
@@ -452,6 +509,30 @@ class BulletManager {
           continue;
         }
 
+        // 尖刺穿透伤害地图障碍物
+        if (map && map.obstacles && map.damageObstacle) {
+          for (let oI = 0; oI < map.obstacles.length; oI++) {
+            const obs = map.obstacles[oI];
+            if (obs.cleared) continue;
+            if (b.hitUids.indexOf(obs) !== -1) continue;
+            const odx = obs.x - b.x;
+            const ody = obs.y - b.y;
+            if (odx * odx + ody * ody <= 24 * 24) {
+              b.hitUids.push(obs);
+              const rampBonus = Math.min(b.pierceBonusMax, b.pierceCountSoFar * b.pierceBonusPerHit);
+              const totalBonus = b.damageBonus + rampBonus;
+              const obsDmg = b.baseDamage * (1 + totalBonus);
+              map.damageObstacle(obs, obsDmg, fx, economy, this.scene);
+              b.pierceRemaining -= 1;
+              if (b.pierceRemaining <= 0) {
+                this.bulletPool.releaseAt(i);
+                break;
+              }
+            }
+          }
+          if (b.pierceRemaining <= 0) continue;
+        }
+
         for (let j = 0; j < aliveEnemies.length; j++) {
           const e = aliveEnemies[j];
           if (e.isFlying || e.state === 'death') continue;
@@ -512,6 +593,20 @@ class BulletManager {
           const r2 = effRadius * effRadius;
           if (economy) {
             economy.beginExplosionBatch();
+          }
+
+          // 爆裂菇抛物线炮火轰炸范围内的障碍物
+          if (map && map.obstacles && map.damageObstacle) {
+            for (let oI = 0; oI < map.obstacles.length; oI++) {
+              const obs = map.obstacles[oI];
+              if (obs.cleared) continue;
+              const odx = obs.x - b.targetX;
+              const ody = obs.y - b.targetY;
+              if (odx * odx + ody * ody <= r2) {
+                const obsDmg = b.baseDamage * (1 + b.damageBonus) * 0.9;
+                map.damageObstacle(obs, obsDmg, fx, economy, this.scene);
+              }
+            }
           }
 
           // 元素反应：迫击炮弹落点碰撞毒雾，引发【真菌化学毒爆】

@@ -76,7 +76,7 @@ class WaveManager {
   /**
    * 手动提前召唤下一波（仅在备战阶段有效）
    */
-  callNextWaveEarly(economy, fx) {
+  callNextWaveEarly(economy, fx, scene = null) {
     if (this.waveList && this.currentWaveIndex < this.waveList.length && !this.isPrepPhase()) {
       // 战斗中强制双重召怪：触发【贪婪激怒狂潮】
       this.isEnraged = true;
@@ -96,7 +96,7 @@ class WaveManager {
       fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
       fx.triggerScreenShake(2.5, 0.15);
     }
-    this.startCurrentWave(economy, fx);
+    this.startCurrentWave(economy, fx, scene);
     platform.playSfx('sfx_upgrade');
     return bonus;
   }
@@ -104,7 +104,7 @@ class WaveManager {
   /**
    * 正式开始当前波次
    */
-  startCurrentWave(economy, fx) {
+  startCurrentWave(economy, fx, scene = null) {
     let waveDef = this.waveList[this.currentWaveIndex - 1];
     if (!waveDef) {
       // 动态生成无尽深渊波次
@@ -142,10 +142,14 @@ class WaveManager {
       groupLateralBase: ((idx % 3) - 1) * 3
     }));
 
-    // 检查是否包含首领，若包含则切换首领战 BGM 并弹出首领警告横幅
+    // 检查是否包含首领或大波次（PVZ经典：一大波僵尸正在逼近 / 最终波次决战号角）
     const hasBoss = this.activeGroups.some((g) => ENEMIES[g.type] && ENEMIES[g.type].isBoss);
+    const isNight = (scene && scene.weather && scene.weather.currentWeather === 'night') || (this.mapId === 'map3');
+    const isMidWave = (this.currentWaveIndex === 5);
+    const isFinalWave = (this.currentWaveIndex === this.totalWaves);
+
     if (hasBoss) {
-      platform.playBgm('boss_' + this.mapId);
+      if (!isNight) platform.playBgm('boss_' + this.mapId);
       if (fx) {
         fx.showBanner(
           i18n.t('banner_boss_incoming'),
@@ -153,9 +157,39 @@ class WaveManager {
           i18n.t('wave_label') + ' ' + this.currentWaveIndex + '/' + this.totalWaves,
           1.8
         );
+        fx.triggerScreenShake(4.5, 0.35);
       }
+      platform.playSfx('sfx_wave_horn');
+    } else if (isFinalWave) {
+      if (!isNight) platform.playBgm('bgm_battle');
+      if (fx) {
+        fx.showBanner(
+          '🔥 虫潮总攻 · 终极决战！',
+          '#FF4D4F',
+          '全线守卫就位！击退所有侵略者守护森林家园！',
+          2.2
+        );
+        fx.triggerScreenShake(5.0, 0.45);
+      }
+      platform.playSfx('sfx_wave_horn');
+    } else if (isMidWave) {
+      if (!isNight) platform.playBgm('bgm_battle');
+      if (fx) {
+        fx.showBanner(
+          '⚠️ 一大波暗黑虫潮正在逼近！',
+          '#FAAD14',
+          '中坚攻势来袭，警惕多路突袭！',
+          1.8
+        );
+        fx.triggerScreenShake(3.5, 0.3);
+      }
+      platform.playSfx('sfx_wave_horn');
     } else {
-      platform.playBgm('bgm_battle');
+      if (isNight) {
+        platform.playBgm('bgm_night');
+      } else {
+        platform.playBgm('bgm_battle');
+      }
     }
   }
 
@@ -169,7 +203,7 @@ class WaveManager {
       this.prepTimerSec -= dt;
       if (this.prepTimerSec <= 0) {
         this.prepTimerSec = 0;
-        this.startCurrentWave(economy, fx);
+        this.startCurrentWave(economy, fx, scene);
       }
       return;
     }

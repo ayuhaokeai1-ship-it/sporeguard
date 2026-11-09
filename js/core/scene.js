@@ -321,7 +321,7 @@ class SceneController {
 
   callWaveEarly() {
     if (this.state !== 'BATTLE') return;
-    this.waveManager.callNextWaveEarly(this.economy, this.fx);
+    this.waveManager.callNextWaveEarly(this.economy, this.fx, this);
   }
 
   tryBuildOnSelectedTile() {
@@ -750,12 +750,44 @@ class SceneController {
                   this.ui.showTowerDetailBoard = false;
                 }
               } else {
-                // 点击道路、障碍物或空白无效区域：收起范围展示与面板，战场自然褪去
-                this.ui.inspectorOpen = false;
-                this.ui.showTowerDetailBoard = false;
-                this.selectedTile.col = -1;
-                this.selectedTile.row = -1;
-                this.selectedBuildTowerId = null;
+                const clickedObs = this.map.getObstacleAt(targetCol, targetRow);
+                if (clickedObs) {
+                  // 点击障碍物：切换集火锁定标记 (Carrot Fantasy 经典集火模式)
+                  if (this.targetedObstacle === clickedObs) {
+                    this.targetedObstacle.isTargeted = false;
+                    this.targetedObstacle = null;
+                    this.ui.showToast('已取消集火锁定');
+                    platform.playSfx('sfx_click');
+                  } else {
+                    if (this.targetedObstacle) {
+                      this.targetedObstacle.isTargeted = false;
+                    }
+                    this.targetedObstacle = clickedObs;
+                    clickedObs.isTargeted = true;
+                    this.ui.showToast('🎯 已锁定【' + clickedObs.name + '】！防线守卫将优先清除障碍！');
+                    if (this.fx) {
+                      this.fx.spawnFloatingText(clickedObs.x, clickedObs.y - 24, '🎯 锁定集火!', '#FF4D4F', 1.25);
+                      if (typeof this.fx.spawnRing === 'function') {
+                        this.fx.spawnRing(clickedObs.x, clickedObs.y, 28, '#FF4D4F', 0.45, false);
+                      }
+                    }
+                    platform.playSfx('sfx_upgrade');
+                    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+                      try { wx.vibrateShort({ type: 'medium' }); } catch (e) {}
+                    }
+                  }
+                  this.ui.inspectorOpen = false;
+                  this.selectedTile.col = -1;
+                  this.selectedTile.row = -1;
+                  this.selectedBuildTowerId = null;
+                } else {
+                  // 点击道路或空白无效区域：收起范围展示与面板，战场自然褪去
+                  this.ui.inspectorOpen = false;
+                  this.ui.showTowerDetailBoard = false;
+                  this.selectedTile.col = -1;
+                  this.selectedTile.row = -1;
+                  this.selectedBuildTowerId = null;
+                }
               }
             }
           } else {

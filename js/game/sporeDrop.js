@@ -18,11 +18,15 @@ class SporeDropManager {
     this.drops = [];
     this.naturalSpawnTimer = 5.0;
     this.animTimeSec = 0;
+    this.sporeCombo = 0;
+    this.lastCollectTime = 0;
   }
 
   reset() {
     this.drops.length = 0;
     this.naturalSpawnTimer = 4.5;
+    this.sporeCombo = 0;
+    this.lastCollectTime = 0;
   }
 
   spawnDrop(x, y, spores = 15, isGold = true, floatDist = 28) {
@@ -151,12 +155,38 @@ class SporeDropManager {
       const distConverted = Math.hypot(convertedMx - d.x, convertedMy - dy);
 
       if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
-        // 成功拾取！
-        if (economy) {
-          economy.addSpores(d.spores);
+        // 成功拾取！计算连击与升调音律
+        const now = Date.now();
+        if (now - this.lastCollectTime < 1600) {
+          this.sporeCombo = Math.min(8, this.sporeCombo + 1);
+        } else {
+          this.sporeCombo = 1;
         }
+        this.lastCollectTime = now;
+
+        let bonusSpores = 0;
+        if (this.sporeCombo >= 3) {
+          bonusSpores = Math.min(15, (this.sporeCombo - 2) * 3);
+        }
+        const totalEarned = d.spores + bonusSpores;
+
+        if (economy) {
+          economy.addSpores(totalEarned);
+        }
+
+        // 播放清脆递增的五声音阶水灵音律 (Do -> Re -> Mi -> Sol -> La -> Do' -> Re' -> Mi')
+        if (typeof platform.playMusicalScale === 'function') {
+          platform.playMusicalScale(this.sporeCombo - 1);
+        } else {
+          platform.playSfx('sfx_coin');
+        }
+
         if (fx) {
-          fx.spawnFloatingText(d.x, dy - 18, `+${d.spores} 晨露孢子!`, '#FFE58F', 1.4);
+          const comboText = this.sporeCombo >= 3
+            ? `♫ ${this.sporeCombo}连音律动! +${totalEarned}`
+            : `+${d.spores} 晨露孢子!`;
+          const textColor = this.sporeCombo >= 5 ? '#FFD700' : (this.sporeCombo >= 3 ? '#52C41A' : '#FFE58F');
+          fx.spawnFloatingText(d.x, dy - 18, comboText, textColor, 1.45);
           fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
           if (typeof fx.spawnShockwave === 'function') {
             fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
@@ -165,7 +195,6 @@ class SporeDropManager {
             fx.spawnHomingMotes(screenDx, screenDy, 3, '#FFD700');
           }
         }
-        platform.playSfx('sfx_coin');
         // 手机端原生轻微触感振动反馈
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(12); } catch (e) {}
