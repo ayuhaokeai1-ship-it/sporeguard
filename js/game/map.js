@@ -244,7 +244,7 @@ class GameMap {
       obs.hp = 0;
       obs.isTargeted = false;
       const tile = this.grid[obs.row][obs.col];
-      tile.type = 'grass';
+      tile.type = 'moss'; // 障碍物破除后，化为肥沃战术灵土坑位，开辟全新种植位！
       tile.obstacle = null;
       if (scene && scene.targetedObstacle === obs) {
         scene.targetedObstacle = null;
@@ -303,7 +303,9 @@ class GameMap {
     const tile = this.getTile(col, row);
     if (!tile) return false;
     if (tile.tower) return false;
-    return tile.type === 'grass' || tile.type === 'moss';
+    // 严格锁定固定战术坑位（战术灵土）：场地不再是无限草坪随意插塔
+    // 坑位总数稀缺固定（12~16个），考验战术取舍；更换阵容或残血急救时必须使用铲子！
+    return tile.type === 'moss';
   }
 
   /**

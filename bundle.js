@@ -1303,8 +1303,8 @@ const MAPS = {
     spawnTile: [0, 2],
     // 黄金战术苔地格（提示玩家最佳放置点，可建造）
     mossTiles: [
-      [5, 3], [7, 6], [7, 10], [11, 10], [11, 7],
-      [11, 4], [13, 4], [16, 4], [16, 8], [16, 11],
+      [4, 3], [7, 6], [7, 10], [11, 10], [11, 7],
+      [11, 3], [13, 3], [16, 4], [16, 8], [16, 11],
       [9, 8], [14, 7]
     ],
     // 障碍物格（树桩、林石、浓雾灌木，不可建造）
@@ -1423,10 +1423,10 @@ const MAPS = {
     warehouseTile: [19, 13],
     spawnTile: [0, 2],
     mossTiles: [
-      [4, 3], [8, 3], [12, 3], [16, 4],
-      [3, 5], [7, 5], [11, 5], [15, 5],
-      [3, 8], [6, 8], [10, 8], [13, 8],
-      [5, 11], [9, 11], [13, 11], [16, 12]
+      [4, 2], [8, 2], [12, 1], [16, 3],
+      [3, 5], [7, 5], [12, 5], [16, 5],
+      [3, 8], [7, 8], [11, 8], [14, 8],
+      [6, 11], [9, 11], [13, 11], [16, 12]
     ],
     // 夜光巨蕈与暗影岩（不可建造）
     obstacles: [
@@ -2209,7 +2209,7 @@ module.exports = {
   next_wave_preview: '下波虫群预告',
   cover_tiles_label: '射程覆盖路程：{0} 格',
   place_hint_valid: '点击再次确认建造（覆盖 {0} 格路线）',
-  place_hint_invalid: '仅可在草地或苔地格建造炮塔',
+  place_hint_invalid: '只能在战术灵土坑位建造，或清除障碍开辟新地块！',
   no_spores_hint: '孢子不足！',
   max_level_label: '已达最高形态',
   branch_locked_label: '另一分支已锁定',
@@ -5755,7 +5755,7 @@ class GameMap {
       obs.hp = 0;
       obs.isTargeted = false;
       const tile = this.grid[obs.row][obs.col];
-      tile.type = 'grass';
+      tile.type = 'moss'; // 障碍物破除后，化为肥沃战术灵土坑位，开辟全新种植位！
       tile.obstacle = null;
       if (scene && scene.targetedObstacle === obs) {
         scene.targetedObstacle = null;
@@ -5814,7 +5814,9 @@ class GameMap {
     const tile = this.getTile(col, row);
     if (!tile) return false;
     if (tile.tower) return false;
-    return tile.type === 'grass' || tile.type === 'moss';
+    // 严格锁定固定战术坑位（战术灵土）：场地不再是无限草坪随意插塔
+    // 坑位总数稀缺固定（12~16个），考验战术取舍；更换阵容或残血急救时必须使用铲子！
+    return tile.type === 'moss';
   }
 
   /**
@@ -15754,6 +15756,44 @@ class TowerManager {
     return nearestObs;
   }
 
+  destroyTower(tower, fx = null) {
+    if (!tower) return;
+    const scene = this.scene;
+    const map = scene ? scene.map : null;
+
+    // 1. 清空地图地块上的塔占用（使该战术坑位重新变为空闲灵土，必须重新花费孢子种植）
+    if (map) {
+      const tile = map.getTile(tower.col, tower.row);
+      if (tile && tile.tower === tower) {
+        tile.tower = null;
+      }
+    }
+
+    // 2. 从防御塔管理列表中彻底移除（植物死了就是死了，真实阵亡不复生）
+    const idx = this.towers.indexOf(tower);
+    if (idx !== -1) {
+      this.towers.splice(idx, 1);
+    }
+    this.towersDirty = true;
+
+    // 3. 关闭选中和详情面板
+    if (scene && scene.selectedTile && scene.selectedTile.col === tower.col && scene.selectedTile.row === tower.row) {
+      scene.selectedTile = { col: -1, row: -1 };
+      if (scene.ui) scene.ui.inspectorOpen = false;
+    }
+
+    // 4. 触发植物枯萎破碎粒子、阵亡音效与战局警报（阵亡 0 孢子返还）
+    const effFx = fx || (scene ? scene.fx : null);
+    if (effFx) {
+      effFx.spawnParticles(tower.x, tower.y, 24, ['#8C6842', '#52C41A', '#389E0D', '#FF7875', '#5C381E'], 35, 90, 0.3, 0.65, 5);
+      effFx.spawnFloatingText(tower.x, tower.y - 20, '🥀 植物阵亡！', '#FF4D4F', 1.6);
+      const name = (tower.def && tower.def.nameKey) ? i18n.t(tower.def.nameKey) : '蘑菇卫士';
+      effFx.showBanner('🥀 防线失守！', '#FF4D4F', `${name} 被虫潮击溃阵亡，战术坑位已空出！`, 2.0);
+      effFx.triggerScreenShake(4.0, 0.3);
+    }
+    platform.playSfx('sfx_bomb');
+  }
+
   damageTower(tower, dmg, attacker, fx) {
     if (!tower || tower.dormantTimer > 0) return;
     tower.hp -= dmg;
@@ -15773,10 +15813,7 @@ class TowerManager {
     }
     if (tower.hp <= 0) {
       tower.hp = 0;
-      tower.dormantTimer = 8.0; // 陷入休眠 8 秒
-      if (fx) {
-        fx.showBanner('防御塔枯萎休眠！', '#FF7875', `${i18n.t(tower.def.nameKey)} 暂时失去战斗力`, 1.3);
-      }
+      this.destroyTower(tower, fx);
     }
   }
 
@@ -17746,7 +17783,7 @@ class UiManager {
     // 顶部木质横幅
     this.drawAiFrame(ctx, 'top_bar', 270, 10, 420, 56, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = `bold 22px ${CN_FONT}`;
+    ctx.font = 'bold 22px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(i18n.t('btn_level_select'), 480, 38);
@@ -17940,19 +17977,11 @@ class UiManager {
     // 铲子模式轻量指示
     if (scene.shovelActive) {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 77, 79, 0.12)';
+      ctx.fillStyle = 'rgba(255, 77, 79, 0.08)';
       ctx.fillRect(0, 0, 960, 540);
-      drawArtText(ctx, '【铲子模式】轻触场上任意蘑菇即可铲除回收 70% 孢子，轻触空白处退出', 480, 78, {
-        style: 'gold',
-        size: 12.5,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.2
-      });
       ctx.restore();
     }
 
-    // 战术成就达成即时滑入横幅
     if (scene.achievements) {
       scene.achievements.renderToast(ctx);
     }
@@ -19725,26 +19754,38 @@ class UiManager {
   // 4. 暂停、结算、设置与新手引导木质羊皮纸弹窗
   // =========================================================================
   renderPauseOverlay(ctx, scene) {
-    this.clearButtons(); // 清理主战场按钮，杜绝穿透
-    ctx.fillStyle = 'rgba(6, 12, 8, 0.96)';
+    this.clearButtons(); // 清空按钮防穿透
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.80)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 350;
-    const mh = 300;
+    const mw = 360;
+    const mh = 316;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
+    ctx.save();
     ctx.fillStyle = THEME.INK_DARK;
-    ctx.font = `bold 22px ${CN_FONT}`;
+    ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
-    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 44);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 54);
 
-    const bx = mx + 55;
-    const bw = mw - 110;
+    // 优雅内敛的羊皮纸装饰分割线
+    ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx + 60, my + 70);
+    ctx.lineTo(mx + mw - 60, my + 70);
+    ctx.stroke();
+    ctx.restore();
 
-    this.drawPixelButton(ctx, 'pause_resume', bx, my + 76, bw, 42, i18n.t('btn_resume'), {
+    const bx = mx + 50;
+    const bw = mw - 100;
+    const btnH = 38;
+
+    this.drawPixelButton(ctx, 'pause_resume', bx, my + 84, bw, btnH, i18n.t('btn_resume'), {
       skin: 'btn_green',
       iconKey: 'play'
     }, () => {
@@ -19752,14 +19793,14 @@ class UiManager {
       scene.resumeGame();
     });
 
-    this.drawPixelButton(ctx, 'pause_restart', bx, my + 128, bw, 42, i18n.t('btn_restart'), {
+    this.drawPixelButton(ctx, 'pause_restart', bx, my + 130, bw, btnH, i18n.t('btn_restart'), {
       skin: 'btn_wood'
     }, () => {
       platform.playSfx('sfx_click');
       scene.restartLevel();
     });
 
-    this.drawPixelButton(ctx, 'pause_settings', bx, my + 180, bw, 42, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'pause_settings', bx, my + 176, bw, btnH, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings'
     }, () => {
@@ -19767,7 +19808,7 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
-    this.drawPixelButton(ctx, 'pause_exit', bx, my + 232, bw, 42, i18n.t('btn_exit_title'), {
+    this.drawPixelButton(ctx, 'pause_exit', bx, my + 222, bw, btnH, i18n.t('btn_exit_title'), {
       skin: 'btn_red'
     }, () => {
       platform.playSfx('sfx_click');
@@ -19795,7 +19836,7 @@ class UiManager {
     ctx.save();
     ctx.textAlign = 'center';
     if (isEndless) {
-      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 38, {
+      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
         style: 'crimson',
         size: 24,
         align: 'center',
@@ -19844,12 +19885,13 @@ class UiManager {
       });
     } else {
       ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
-      ctx.font = `bold 26px ${CN_FONT}`;
-      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 44);
+    ctx.font = 'bold 20px ' + CN_FONT;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 54);
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 72, 36);
+        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 80, 36);
       }
 
       ctx.fillStyle = THEME.INK_DARK;
@@ -19919,17 +19961,27 @@ class UiManager {
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
+    ctx.save();
     ctx.fillStyle = THEME.INK_DARK;
-    ctx.font = `bold 20px ${CN_FONT}`;
+    ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
-    ctx.fillText('🌲 森林哨所指挥菜单 🌲', mx + mw * 0.5, my + 38);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 52);
+
+    ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx + 50, my + 66);
+    ctx.lineTo(mx + mw - 50, my + 66);
+    ctx.stroke();
+    ctx.restore();
 
     const audioCfg = platform.getAudioConfig();
     const bx = mx + 40;
     const bw = mw - 80;
     const btnH = 34;
     const gap = 8;
-    let curY = my + 54;
+    let curY = my + 78;
 
     // 1. 音效开关
     this.drawPixelButton(
@@ -21640,10 +21692,10 @@ class SceneController {
   toggleShovel() {
     this.shovelActive = !this.shovelActive;
     if (this.shovelActive) {
-      this.ui.showToast('铲子模式已激活：点击任意蘑菇即可移植回收！');
+      this.ui.showToast('⛏️ 铲子模式已激活：轻触任意蘑菇回收 85% 孢子！');
       platform.playSfx('sfx_click');
     } else {
-      this.ui.showToast('已取消铲子模式');
+      this.ui.showToast('已退出铲子模式');
     }
   }
 
@@ -21663,7 +21715,7 @@ class SceneController {
     this.selectedTile = { col: -1, row: -1 };
     this.shovelActive = false;
 
-    this.fx.spawnFloatingText(tower.x, tower.y - 20, 移植回收 + 孢子, '#FFE58F', 1.3);
+    this.fx.spawnFloatingText(tower.x, tower.y - 20, '+' + refund + ' 孢子回收 ⛏️', '#FFE58F', 1.3);
     this.fx.spawnParticles(tower.x, tower.y, 18, ['#8C6842', '#D48806', '#52C41A', '#FFFDF5'], 25, 45);
     platform.playSfx('sfx_sell');
   }

@@ -380,10 +380,10 @@ class SceneController {
   toggleShovel() {
     this.shovelActive = !this.shovelActive;
     if (this.shovelActive) {
-      this.ui.showToast('铲子模式已激活：点击任意蘑菇即可移植回收！');
+      this.ui.showToast('⛏️ 铲子模式已激活：轻触任意蘑菇回收 85% 孢子！');
       platform.playSfx('sfx_click');
     } else {
-      this.ui.showToast('已取消铲子模式');
+      this.ui.showToast('已退出铲子模式');
     }
   }
 
@@ -403,7 +403,7 @@ class SceneController {
     this.selectedTile = { col: -1, row: -1 };
     this.shovelActive = false;
 
-    this.fx.spawnFloatingText(tower.x, tower.y - 20, 移植回收 + 孢子, '#FFE58F', 1.3);
+    this.fx.spawnFloatingText(tower.x, tower.y - 20, '+' + refund + ' 孢子回收 ⛏️', '#FFE58F', 1.3);
     this.fx.spawnParticles(tower.x, tower.y, 18, ['#8C6842', '#D48806', '#52C41A', '#FFFDF5'], 25, 45);
     platform.playSfx('sfx_sell');
   }

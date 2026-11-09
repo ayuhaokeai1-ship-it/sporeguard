@@ -805,7 +805,7 @@ class UiManager {
     // 顶部木质横幅
     this.drawAiFrame(ctx, 'top_bar', 270, 10, 420, 56, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = `bold 22px ${CN_FONT}`;
+    ctx.font = 'bold 22px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(i18n.t('btn_level_select'), 480, 38);
@@ -999,19 +999,11 @@ class UiManager {
     // 铲子模式轻量指示
     if (scene.shovelActive) {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 77, 79, 0.12)';
+      ctx.fillStyle = 'rgba(255, 77, 79, 0.08)';
       ctx.fillRect(0, 0, 960, 540);
-      drawArtText(ctx, '【铲子模式】轻触场上任意蘑菇即可铲除回收 70% 孢子，轻触空白处退出', 480, 78, {
-        style: 'gold',
-        size: 12.5,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.2
-      });
       ctx.restore();
     }
 
-    // 战术成就达成即时滑入横幅
     if (scene.achievements) {
       scene.achievements.renderToast(ctx);
     }
@@ -2784,26 +2776,38 @@ class UiManager {
   // 4. 暂停、结算、设置与新手引导木质羊皮纸弹窗
   // =========================================================================
   renderPauseOverlay(ctx, scene) {
-    this.clearButtons(); // 清理主战场按钮，杜绝穿透
-    ctx.fillStyle = 'rgba(6, 12, 8, 0.96)';
+    this.clearButtons(); // 清空按钮防穿透
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.80)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 350;
-    const mh = 300;
+    const mw = 360;
+    const mh = 316;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
+    ctx.save();
     ctx.fillStyle = THEME.INK_DARK;
-    ctx.font = `bold 22px ${CN_FONT}`;
+    ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
-    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 44);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i18n.t('state_paused'), mx + mw * 0.5, my + 54);
 
-    const bx = mx + 55;
-    const bw = mw - 110;
+    // 优雅内敛的羊皮纸装饰分割线
+    ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx + 60, my + 70);
+    ctx.lineTo(mx + mw - 60, my + 70);
+    ctx.stroke();
+    ctx.restore();
 
-    this.drawPixelButton(ctx, 'pause_resume', bx, my + 76, bw, 42, i18n.t('btn_resume'), {
+    const bx = mx + 50;
+    const bw = mw - 100;
+    const btnH = 38;
+
+    this.drawPixelButton(ctx, 'pause_resume', bx, my + 84, bw, btnH, i18n.t('btn_resume'), {
       skin: 'btn_green',
       iconKey: 'play'
     }, () => {
@@ -2811,14 +2815,14 @@ class UiManager {
       scene.resumeGame();
     });
 
-    this.drawPixelButton(ctx, 'pause_restart', bx, my + 128, bw, 42, i18n.t('btn_restart'), {
+    this.drawPixelButton(ctx, 'pause_restart', bx, my + 130, bw, btnH, i18n.t('btn_restart'), {
       skin: 'btn_wood'
     }, () => {
       platform.playSfx('sfx_click');
       scene.restartLevel();
     });
 
-    this.drawPixelButton(ctx, 'pause_settings', bx, my + 180, bw, 42, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'pause_settings', bx, my + 176, bw, btnH, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings'
     }, () => {
@@ -2826,7 +2830,7 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
-    this.drawPixelButton(ctx, 'pause_exit', bx, my + 232, bw, 42, i18n.t('btn_exit_title'), {
+    this.drawPixelButton(ctx, 'pause_exit', bx, my + 222, bw, btnH, i18n.t('btn_exit_title'), {
       skin: 'btn_red'
     }, () => {
       platform.playSfx('sfx_click');
@@ -2854,7 +2858,7 @@ class UiManager {
     ctx.save();
     ctx.textAlign = 'center';
     if (isEndless) {
-      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 38, {
+      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
         style: 'crimson',
         size: 24,
         align: 'center',
@@ -2903,12 +2907,13 @@ class UiManager {
       });
     } else {
       ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
-      ctx.font = `bold 26px ${CN_FONT}`;
-      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 44);
+    ctx.font = 'bold 20px ' + CN_FONT;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 54);
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 72, 36);
+        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 80, 36);
       }
 
       ctx.fillStyle = THEME.INK_DARK;
@@ -2978,17 +2983,27 @@ class UiManager {
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
+    ctx.save();
     ctx.fillStyle = THEME.INK_DARK;
-    ctx.font = `bold 20px ${CN_FONT}`;
+    ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
-    ctx.fillText('🌲 森林哨所指挥菜单 🌲', mx + mw * 0.5, my + 38);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 52);
+
+    ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx + 50, my + 66);
+    ctx.lineTo(mx + mw - 50, my + 66);
+    ctx.stroke();
+    ctx.restore();
 
     const audioCfg = platform.getAudioConfig();
     const bx = mx + 40;
     const bw = mw - 80;
     const btnH = 34;
     const gap = 8;
-    let curY = my + 54;
+    let curY = my + 78;
 
     // 1. 音效开关
     this.drawPixelButton(

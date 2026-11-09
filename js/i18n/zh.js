@@ -88,7 +88,7 @@ module.exports = {
   next_wave_preview: '下波虫群预告',
   cover_tiles_label: '射程覆盖路程：{0} 格',
   place_hint_valid: '点击再次确认建造（覆盖 {0} 格路线）',
-  place_hint_invalid: '仅可在草地或苔地格建造炮塔',
+  place_hint_invalid: '只能在战术灵土坑位建造，或清除障碍开辟新地块！',
   no_spores_hint: '孢子不足！',
   max_level_label: '已达最高形态',
   branch_locked_label: '另一分支已锁定',

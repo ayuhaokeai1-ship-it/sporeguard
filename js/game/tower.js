@@ -340,6 +340,44 @@ class TowerManager {
     return nearestObs;
   }
 
+  destroyTower(tower, fx = null) {
+    if (!tower) return;
+    const scene = this.scene;
+    const map = scene ? scene.map : null;
+
+    // 1. 清空地图地块上的塔占用（使该战术坑位重新变为空闲灵土，必须重新花费孢子种植）
+    if (map) {
+      const tile = map.getTile(tower.col, tower.row);
+      if (tile && tile.tower === tower) {
+        tile.tower = null;
+      }
+    }
+
+    // 2. 从防御塔管理列表中彻底移除（植物死了就是死了，真实阵亡不复生）
+    const idx = this.towers.indexOf(tower);
+    if (idx !== -1) {
+      this.towers.splice(idx, 1);
+    }
+    this.towersDirty = true;
+
+    // 3. 关闭选中和详情面板
+    if (scene && scene.selectedTile && scene.selectedTile.col === tower.col && scene.selectedTile.row === tower.row) {
+      scene.selectedTile = { col: -1, row: -1 };
+      if (scene.ui) scene.ui.inspectorOpen = false;
+    }
+
+    // 4. 触发植物枯萎破碎粒子、阵亡音效与战局警报（阵亡 0 孢子返还）
+    const effFx = fx || (scene ? scene.fx : null);
+    if (effFx) {
+      effFx.spawnParticles(tower.x, tower.y, 24, ['#8C6842', '#52C41A', '#389E0D', '#FF7875', '#5C381E'], 35, 90, 0.3, 0.65, 5);
+      effFx.spawnFloatingText(tower.x, tower.y - 20, '🥀 植物阵亡！', '#FF4D4F', 1.6);
+      const name = (tower.def && tower.def.nameKey) ? i18n.t(tower.def.nameKey) : '蘑菇卫士';
+      effFx.showBanner('🥀 防线失守！', '#FF4D4F', `${name} 被虫潮击溃阵亡，战术坑位已空出！`, 2.0);
+      effFx.triggerScreenShake(4.0, 0.3);
+    }
+    platform.playSfx('sfx_bomb');
+  }
+
   damageTower(tower, dmg, attacker, fx) {
     if (!tower || tower.dormantTimer > 0) return;
     tower.hp -= dmg;
@@ -359,10 +397,7 @@ class TowerManager {
     }
     if (tower.hp <= 0) {
       tower.hp = 0;
-      tower.dormantTimer = 8.0; // 陷入休眠 8 秒
-      if (fx) {
-        fx.showBanner('防御塔枯萎休眠！', '#FF7875', `${i18n.t(tower.def.nameKey)} 暂时失去战斗力`, 1.3);
-      }
+      this.destroyTower(tower, fx);
     }
   }
 
