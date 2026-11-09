@@ -2715,6 +2715,7 @@ let audioBuffers = {};
 const AUDIO_PATHS = {
   bgm_title: 'audio/bgm_title.wav',
   bgm_battle: 'audio/bgm_battle.wav',
+  bgm_night: 'audio/bgm_night.wav',
   boss_map1: 'subpackages/map1/boss.wav',
   boss_map2: 'subpackages/map2/boss.wav',
   boss_map3: 'subpackages/map3/boss.wav',
@@ -5152,6 +5153,22 @@ class WeatherManager {
         alpha: 0.08 + Math.random() * 0.12
       });
     }
+
+    // 初始化萤火虫微光粒子池 (幽夜微光专属)
+    this.fireflies = [];
+    for (let i = 0; i < 14; i++) {
+      this.fireflies.push({
+        x: Math.random() * 960,
+        y: Math.random() * 540,
+        vx: (Math.random() - 0.5) * 18,
+        vy: (Math.random() - 0.5) * 14,
+        baseAlpha: 0.35 + Math.random() * 0.45,
+        phase: Math.random() * Math.PI * 2,
+        speed: 1.8 + Math.random() * 1.5,
+        size: 2.2 + Math.random() * 2.0,
+        color: Math.random() < 0.65 ? '#BAE7FF' : '#FFE58F'
+      });
+    }
   }
 
   initForMap(mapId) {
@@ -5160,27 +5177,30 @@ class WeatherManager {
     } else if (mapId === 'map2') {
       this.currentWeather = 'mist';
     } else {
-      this.currentWeather = 'rain';
+      this.currentWeather = 'night';
     }
     this.weatherTimer = 0;
     this.lightningTimer = 4.0;
     this.weatherNoticeTimer = 0;
   }
 
-  setWeather(type, fx = null) {
+  setWeather(type, fx = null, scene = null) {
     if (this.currentWeather === type) return;
+    const prev = this.currentWeather;
     this.currentWeather = type;
     this.weatherTimer = 0;
     this.weatherNoticeTimer = 3.5;
 
     const names = {
       sunny: '☀️ 晨曦初晴 · 丰收晨露',
+      night: '🌙 幽夜微光 · 月华静谧',
       rain: '🌧️ 林地雷暴 · 雷霆轰顶',
       mist: '🌫️ 幽林浓雾 · 迷雾隐踪',
       blood_moon: '🩸 狂暴血月 · 极夜狂澜'
     };
     const subs = {
       sunny: '全场孢子产出 +25%，神圣大橡树自愈速度 +50%',
+      night: '幽静月华微照，真菌生物荧光共鸣，全防线攻速与充能 +15%！',
       rain: '雷霆每隔 6 秒自动天罚轰顶重型虫首，水洼导电连锁',
       mist: '瞭望菇射程 +15%，轻甲虫潮获得 15% 飘忽闪避',
       blood_moon: '虫潮移速狂增 +20%，击败敌军掉落双倍黄金孢子！'
@@ -5188,10 +5208,26 @@ class WeatherManager {
 
     this.weatherNoticeText = names[type] || '';
     if (fx && typeof fx.showBanner === 'function') {
-      const bannerColor = type === 'blood_moon' ? '#FF4D4F' : (type === 'rain' ? '#69C0FF' : '#52C41A');
+      const bannerColor = type === 'blood_moon' ? '#FF4D4F' : (type === 'night' ? '#69C0FF' : (type === 'rain' ? '#40A9FF' : '#52C41A'));
       fx.showBanner(names[type], bannerColor, subs[type], 1.8);
       platform.playSfx(type === 'rain' ? 'sfx_thunder' : (type === 'blood_moon' ? 'sfx_horn' : 'sfx_upgrade'));
     }
+
+    if (scene && scene.state === 'BATTLE') {
+      if (type === 'night') {
+        platform.playBgm('bgm_night');
+      } else if (prev === 'night') {
+        platform.playBgm('bgm_battle');
+      }
+    }
+  }
+
+  cycleWeather(scene = null) {
+    const cycle = ['sunny', 'night', 'mist', 'rain', 'blood_moon'];
+    const nextIdx = (cycle.indexOf(this.currentWeather) + 1) % cycle.length;
+    const next = cycle[nextIdx];
+    this.setWeather(next, scene ? scene.fx : null, scene);
+    return next;
   }
 
   update(dt, enemyManager = null, towerManager = null, hero = null, fx = null) {
@@ -5210,9 +5246,23 @@ class WeatherManager {
     // 每到一定波次或时间自动循环天候
     if (this.weatherTimer >= this.weatherDuration) {
       this.weatherTimer = 0;
-      const cycle = ['sunny', 'mist', 'rain', 'blood_moon'];
+      const cycle = ['sunny', 'night', 'mist', 'rain', 'blood_moon'];
       const nextIdx = (cycle.indexOf(this.currentWeather) + 1) % cycle.length;
-      this.setWeather(cycle[nextIdx], fx);
+      this.setWeather(cycle[nextIdx], fx, enemyManager ? enemyManager.scene : null);
+    }
+
+    // 幽夜与迷雾环境：发光萤火虫飘逸舞动
+    if (this.currentWeather === 'night' || this.currentWeather === 'mist') {
+      for (let i = 0; i < this.fireflies.length; i++) {
+        const ff = this.fireflies[i];
+        ff.phase += dt * ff.speed;
+        ff.x += ff.vx * dt + Math.sin(ff.phase) * 0.5;
+        ff.y += ff.vy * dt + Math.cos(ff.phase * 0.7) * 0.4;
+        if (ff.x < 0) ff.x = 960;
+        if (ff.x > 960) ff.x = 0;
+        if (ff.y < 0) ff.y = 540;
+        if (ff.y > 540) ff.y = 0;
+      }
     }
 
     // 1. 雷暴天候：自动天罚轰顶劈击场上最强精英怪
@@ -5316,6 +5366,59 @@ class WeatherManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
+    // 幽夜微光环境天候与夜景系统 (Night Atmosphere)
+    if (this.currentWeather === 'night') {
+      // 1. 幽静冷月夜幕滤镜 (柔和蓝灰冷调，保留战场高辨识度与通透感)
+      ctx.fillStyle = 'rgba(8, 22, 44, 0.28)';
+      ctx.fillRect(0, 0, 960, 540);
+
+      // 2. 宁静暗角 (Vignette)
+      if (!this._cachedNightVig) {
+        this._cachedNightVig = ctx.createRadialGradient(480, 270, 260, 480, 270, 540);
+        this._cachedNightVig.addColorStop(0, 'rgba(6, 16, 32, 0)');
+        this._cachedNightVig.addColorStop(1, 'rgba(4, 12, 28, 0.42)');
+      }
+      ctx.fillStyle = this._cachedNightVig;
+      ctx.fillRect(0, 0, 960, 540);
+
+      // 3. 柔和丁达尔月华倾泻 (Moonlight Beams)
+      ctx.save();
+      ctx.fillStyle = 'rgba(186, 231, 255, 0.04)';
+      ctx.beginPath();
+      ctx.moveTo(120, 0);
+      ctx.lineTo(340, 0);
+      ctx.lineTo(620, 540);
+      ctx.lineTo(380, 540);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(480, 0);
+      ctx.lineTo(680, 0);
+      ctx.lineTo(920, 540);
+      ctx.lineTo(720, 540);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 4. 发光萤火虫群 (Dancing Fireflies)
+      for (let i = 0; i < this.fireflies.length; i++) {
+        const ff = this.fireflies[i];
+        const glowAlpha = Math.max(0.05, ff.baseAlpha * (0.6 + Math.sin(ff.phase) * 0.4));
+        ctx.save();
+        ctx.fillStyle = ff.color;
+        ctx.globalAlpha = glowAlpha * 0.35;
+        ctx.beginPath();
+        ctx.arc(ff.x, ff.y, ff.size * 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = glowAlpha;
+        ctx.beginPath();
+        ctx.arc(ff.x, ff.y, ff.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     // 2. 浓雾飘浮渲染
     if (this.currentWeather === 'mist') {
       ctx.fillStyle = 'rgba(210, 230, 240, 0.08)';
@@ -5378,6 +5481,7 @@ class WeatherManager {
     ctx.save();
     const badges = {
       sunny: { icon: '☀️', text: '初晴+25%', color: '#52C41A', border: 'rgba(115, 209, 61, 0.7)' },
+      night: { icon: '🌙', text: '幽夜+15%', color: '#69C0FF', border: 'rgba(105, 192, 255, 0.75)' },
       rain: { icon: '🌧️', text: '暴雨轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.7)' },
       mist: { icon: '🌫️', text: '浓雾+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.7)' },
       blood_moon: { icon: '🩸', text: '血月双倍', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
@@ -5755,6 +5859,33 @@ class GameMap {
         ctx.moveTo(c.x + 18 + waveProgress * 14, c.y);
         ctx.arc(c.x, c.y, 18 + waveProgress * 14, 0, Math.PI * 2);
       }
+      ctx.fill();
+      ctx.restore();
+      platform.recordDrawCall(1);
+    }
+
+    // 幽夜微光专属：终点蘑菇小屋温馨壁炉与窗棂烛光 (Cottage Window Candle Glow)
+    const isNight = (this.mapData && this.mapData.theme === 'night_fungi') ||
+                    (this.scene && this.scene.weather && this.scene.weather.currentWeather === 'night');
+    if (isNight && this.mapData.warehouseTile) {
+      const [wc, wr] = this.mapData.warehouseTile;
+      const wdx = wc * TILE_SIZE;
+      const wdy = wr * TILE_SIZE;
+      ctx.save();
+      const candlePulse = 0.82 + Math.sin(animTimeSec * 5.2) * 0.12 + Math.cos(animTimeSec * 11.5) * 0.06;
+      const grad = ctx.createRadialGradient(wdx + 16, wdy + 20, 2, wdx + 16, wdy + 20, 26 * candlePulse);
+      grad.addColorStop(0, 'rgba(255, 225, 120, 0.72)');
+      grad.addColorStop(0.35, 'rgba(255, 175, 50, 0.38)');
+      grad.addColorStop(1, 'rgba(255, 130, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(wdx + 16, wdy + 20, 26 * candlePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 小屋窗棂内透暖光微点
+      ctx.fillStyle = 'rgba(255, 248, 200, 0.95)';
+      ctx.beginPath();
+      ctx.arc(wdx + 16, wdy + 20, 3.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       platform.recordDrawCall(1);
@@ -15723,6 +15854,29 @@ class TowerManager {
         tileX += Math.round(Math.sin(t.hitWobbleTimer * 30) * 2.5);
       }
 
+      // 幽夜微光专属：真菌生物发光荧光光环 (Bioluminescent Tower Aura)
+      const isNightMode = (this.scene && this.scene.weather && this.scene.weather.currentWeather === 'night') ||
+                          (this.scene && this.scene.map && this.scene.map.mapData && this.scene.map.mapData.theme === 'night_fungi');
+      if (isNightMode) {
+        ctx.save();
+        const auraPulse = 0.6 + Math.sin((t.animTimer || 0) * 3.2 + i) * 0.25;
+        let auraR = 105, auraG = 192, auraB = 255;
+        if (t.typeId === 'lumina') { auraR = 255; auraG = 225; auraB = 100; }
+        else if (t.typeId === 'burst') { auraR = 255; auraG = 110; auraB = 50; }
+        else if (t.typeId === 'mist') { auraR = 190; auraG = 130; auraB = 255; }
+        else if (t.typeId === 'thorn') { auraR = 95; auraG = 230; auraB = 135; }
+
+        const auraGrad = ctx.createRadialGradient(t.x, tileY + 22, 3, t.x, tileY + 22, 28);
+        auraGrad.addColorStop(0, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',' + (0.45 * auraPulse) + ')');
+        auraGrad.addColorStop(0.65, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',' + (0.15 * auraPulse) + ')');
+        auraGrad.addColorStop(1, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',0)');
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.ellipse(t.x, tileY + 22, 28, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       // 甘霖狂暴脚底翠绿魔法光环
       if (t.buffTimer > 0) {
         ctx.save();
@@ -17364,6 +17518,15 @@ class UiManager {
     if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
       return;
+    }
+
+    // 0. 顶部极简天候微章 (可随时轻触自由切换晨曦晴空、幽夜微光、林地迷雾等沉浸天候)
+    if (scene.weather) {
+      scene.weather.renderWeatherHudBadge(ctx, 16, 14);
+      this.registerButton('pvz_weather_badge', 16, 14, 100, 26, () => {
+        platform.playSfx('sfx_click');
+        scene.weather.cycleWeather(scene);
+      });
     }
 
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 铲子 + 觉醒豆)
@@ -20776,6 +20939,7 @@ class SceneController {
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
+    this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
     this.elementalReactions = new ElementalReactionSystem();
     this.heroSkills = new HeroSkillSystem(this.hero);
@@ -20876,6 +21040,7 @@ class SceneController {
     platform.loadMapSubpackage(mData.subpackage, mData.atlasPath);
 
     this.map = new GameMap(this.currentMapId);
+    this.map.scene = this;
     this.economy.reset(this.currentMapId);
     this.enemyManager.clear();
     this.bulletManager.clear();
@@ -20899,6 +21064,7 @@ class SceneController {
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
+    this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
     this.elementalReactions = new ElementalReactionSystem();
     this.heroSkills = new HeroSkillSystem(this.hero);
@@ -20952,7 +21118,11 @@ class SceneController {
       this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
     }
 
-    platform.playBgm('bgm_battle');
+    if (this.weather && this.weather.currentWeather === 'night') {
+      platform.playBgm('bgm_night');
+    } else {
+      platform.playBgm('bgm_battle');
+    }
   }
 
   /**

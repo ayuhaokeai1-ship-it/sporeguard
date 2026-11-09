@@ -75,6 +75,7 @@ class SceneController {
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
+    this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
     this.elementalReactions = new ElementalReactionSystem();
     this.heroSkills = new HeroSkillSystem(this.hero);
@@ -175,6 +176,7 @@ class SceneController {
     platform.loadMapSubpackage(mData.subpackage, mData.atlasPath);
 
     this.map = new GameMap(this.currentMapId);
+    this.map.scene = this;
     this.economy.reset(this.currentMapId);
     this.enemyManager.clear();
     this.bulletManager.clear();
@@ -198,6 +200,7 @@ class SceneController {
     this.hero = new ForestHero(this.map);
     this.awakeningSeeds = 2;
     this.weather = new WeatherManager();
+    this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
     this.elementalReactions = new ElementalReactionSystem();
     this.heroSkills = new HeroSkillSystem(this.hero);
@@ -251,7 +254,11 @@ class SceneController {
       this.fx.showBanner('欢迎来到守林前线', '#BAE7FF', '轻触顶部木槽卡牌，再点击草地即可种植防御塔；右上角「菜单」随时查看图鉴秘典。', 3.8);
     }
 
-    platform.playBgm('bgm_battle');
+    if (this.weather && this.weather.currentWeather === 'night') {
+      platform.playBgm('bgm_night');
+    } else {
+      platform.playBgm('bgm_battle');
+    }
   }
 
   /**

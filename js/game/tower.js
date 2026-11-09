@@ -693,6 +693,29 @@ class TowerManager {
         tileX += Math.round(Math.sin(t.hitWobbleTimer * 30) * 2.5);
       }
 
+      // 幽夜微光专属：真菌生物发光荧光光环 (Bioluminescent Tower Aura)
+      const isNightMode = (this.scene && this.scene.weather && this.scene.weather.currentWeather === 'night') ||
+                          (this.scene && this.scene.map && this.scene.map.mapData && this.scene.map.mapData.theme === 'night_fungi');
+      if (isNightMode) {
+        ctx.save();
+        const auraPulse = 0.6 + Math.sin((t.animTimer || 0) * 3.2 + i) * 0.25;
+        let auraR = 105, auraG = 192, auraB = 255;
+        if (t.typeId === 'lumina') { auraR = 255; auraG = 225; auraB = 100; }
+        else if (t.typeId === 'burst') { auraR = 255; auraG = 110; auraB = 50; }
+        else if (t.typeId === 'mist') { auraR = 190; auraG = 130; auraB = 255; }
+        else if (t.typeId === 'thorn') { auraR = 95; auraG = 230; auraB = 135; }
+
+        const auraGrad = ctx.createRadialGradient(t.x, tileY + 22, 3, t.x, tileY + 22, 28);
+        auraGrad.addColorStop(0, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',' + (0.45 * auraPulse) + ')');
+        auraGrad.addColorStop(0.65, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',' + (0.15 * auraPulse) + ')');
+        auraGrad.addColorStop(1, 'rgba(' + auraR + ',' + auraG + ',' + auraB + ',0)');
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.ellipse(t.x, tileY + 22, 28, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       // 甘霖狂暴脚底翠绿魔法光环
       if (t.buffTimer > 0) {
         ctx.save();

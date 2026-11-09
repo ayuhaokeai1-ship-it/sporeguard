@@ -975,6 +975,15 @@ class UiManager {
       return;
     }
 
+    // 0. 顶部极简天候微章 (可随时轻触自由切换晨曦晴空、幽夜微光、林地迷雾等沉浸天候)
+    if (scene.weather) {
+      scene.weather.renderWeatherHudBadge(ctx, 16, 14);
+      this.registerButton('pvz_weather_badge', 16, 14, 100, 26, () => {
+        platform.playSfx('sfx_click');
+        scene.weather.cycleWeather(scene);
+      });
+    }
+
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 铲子 + 觉醒豆)
     this.renderPvZTopSeedBank(ctx, scene);
 

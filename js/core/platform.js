@@ -45,6 +45,7 @@ let audioBuffers = {};
 const AUDIO_PATHS = {
   bgm_title: 'audio/bgm_title.wav',
   bgm_battle: 'audio/bgm_battle.wav',
+  bgm_night: 'audio/bgm_night.wav',
   boss_map1: 'subpackages/map1/boss.wav',
   boss_map2: 'subpackages/map2/boss.wav',
   boss_map3: 'subpackages/map3/boss.wav',

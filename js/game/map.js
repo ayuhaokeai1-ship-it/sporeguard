@@ -337,6 +337,33 @@ class GameMap {
       ctx.restore();
       platform.recordDrawCall(1);
     }
+
+    // 幽夜微光专属：终点蘑菇小屋温馨壁炉与窗棂烛光 (Cottage Window Candle Glow)
+    const isNight = (this.mapData && this.mapData.theme === 'night_fungi') ||
+                    (this.scene && this.scene.weather && this.scene.weather.currentWeather === 'night');
+    if (isNight && this.mapData.warehouseTile) {
+      const [wc, wr] = this.mapData.warehouseTile;
+      const wdx = wc * TILE_SIZE;
+      const wdy = wr * TILE_SIZE;
+      ctx.save();
+      const candlePulse = 0.82 + Math.sin(animTimeSec * 5.2) * 0.12 + Math.cos(animTimeSec * 11.5) * 0.06;
+      const grad = ctx.createRadialGradient(wdx + 16, wdy + 20, 2, wdx + 16, wdy + 20, 26 * candlePulse);
+      grad.addColorStop(0, 'rgba(255, 225, 120, 0.72)');
+      grad.addColorStop(0.35, 'rgba(255, 175, 50, 0.38)');
+      grad.addColorStop(1, 'rgba(255, 130, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(wdx + 16, wdy + 20, 26 * candlePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 小屋窗棂内透暖光微点
+      ctx.fillStyle = 'rgba(255, 248, 200, 0.95)';
+      ctx.beginPath();
+      ctx.arc(wdx + 16, wdy + 20, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      platform.recordDrawCall(1);
+    }
   }
 
   renderStatic(ctx, animTimeSec, currentWaveIndex = 1) {
