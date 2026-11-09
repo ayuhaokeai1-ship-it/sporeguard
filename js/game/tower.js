@@ -379,22 +379,35 @@ class TowerManager {
   }
 
   damageTower(tower, dmg, attacker, fx) {
-    if (!tower || tower.dormantTimer > 0) return;
+    if (!tower) return;
+    const prevHp = tower.hp;
     tower.hp -= dmg;
     tower.hitWobbleTimer = 0.22;
     if (fx) {
       fx.spawnParticles(tower.x, tower.y - 8, 4, [PALETTE.MUSHROOM_CAP, PALETTE.UI_SPORE], 20, 60, 0.15, 0.25, 3);
       fx.spawnFloatingText(tower.x, tower.y - 14, `-${Math.round(dmg)}`, '#FF7875', 0.95);
     }
-    // 荆棘菇被动反伤
+    // 反击荆棘
     if (tower.typeId === 'thorn' && attacker && attacker.state !== 'death') {
       const reflect = Math.round(dmg * 1.5);
       attacker.hp -= reflect;
       if (fx) {
-        fx.spawnFloatingText(attacker.x, attacker.y - 12, `反伤 -${reflect}`, PALETTE.BRANCH_B, 1.0);
+        fx.spawnFloatingText(attacker.x, attacker.y - 12, `⚡ -${reflect}`, PALETTE.BRANCH_B, 1.0);
         fx.spawnParticles(attacker.x, attacker.y, 6, [PALETTE.BRANCH_B, '#FFE58F'], 30, 80, 0.2, 0.35, 4);
       }
     }
+
+    // 濒死急救告警 (HP 降至 35% 以下时首次触发急救提醒，引导玩家使用铲子挽救 85% 孢子)
+    if (tower.hp > 0 && tower.hp / tower.maxHp <= 0.35 && (prevHp / tower.maxHp > 0.35 || !tower.dangerWarned)) {
+      tower.dangerWarned = true;
+      if (fx) {
+        fx.spawnFloatingText(tower.x, tower.y - 24, '⚠️ 濒死！建议铲除抢救', '#FFA39E', 1.3);
+      }
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate([20, 40, 20]); } catch (e) {}
+      }
+    }
+
     if (tower.hp <= 0) {
       tower.hp = 0;
       this.destroyTower(tower, fx);
@@ -411,6 +424,7 @@ class TowerManager {
       tower.buffTimer = 6.0; // 甘霖狂暴 6 秒
     } else {
       tower.hp = Math.min(tower.maxHp, tower.hp + amount);
+      if (tower.hp > tower.maxHp * 0.35) tower.dangerWarned = false;
       if (tower.hp > 0) tower.dormantTimer = 0;
     }
     if (fx) {
@@ -873,9 +887,10 @@ class TowerManager {
       }
 
       // 休眠状态时透明度降低并微偏暗
-      if (t.dormantTimer > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.55;
+            // 濒死受损颤抖 (HP <= 35%)
+      const isCritical = t.hp > 0 && (t.hp / t.maxHp <= 0.35);
+      if (isCritical) {
+        tileX += Math.sin((t.animTimer || 0) * 22) * 1.5;
       }
 
       // 落地 Squash & Stretch 弹性变形绘制
@@ -1012,18 +1027,45 @@ class TowerManager {
         ctx.restore();
       }
 
-      if (t.dormantTimer > 0) {
-        ctx.restore();
-        // 头顶休眠昏睡标记
+            // 濒死预警与铲除抢救视觉指示 (HP <= 35%)
+      if (isCritical) {
         ctx.save();
-        ctx.fillStyle = '#FF7875';
-        ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('休眠 zZ', t.x, tileY - 14);
+        const curScene = this.scene || (typeof window !== 'undefined' && window.__SPOREGUARD__ && window.__SPOREGUARD__.scene);
+        const isShovelMode = curScene && curScene.shovelActive;
+        const pulse = 0.8 + Math.sin((t.animTimer || 0) * 10) * 0.2;
+
+        if (isShovelMode) {
+          // 铲子模式下：高亮显示可抢救回收的孢子数，强烈吸引玩家点击回收
+          const refundAmount = Math.floor((t.totalInvested || 75) * 0.85);
+          ctx.fillStyle = 'rgba(10, 30, 16, 0.88)';
+          const rw = 80;
+          const rh = 17;
+          const rx = t.x - rw * 0.5;
+          const ry = tileY - 26;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(rx, ry, rw, rh, 4);
+          else ctx.rect(rx, ry, rw, rh);
+          ctx.fill();
+          ctx.strokeStyle = '#52C41A';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#95DE64';
+          ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`⛏️ 抢救 +${refundAmount}`, t.x, ry + rh * 0.5);
+        } else {
+          // 常规战斗中：闪烁警示浮标，提醒玩家植物即将永久阵亡
+          ctx.fillStyle = `rgba(255, 77, 79, ${0.85 * pulse})`;
+          ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('⚠️ 濒死急救!', t.x, tileY - 18);
+        }
         ctx.restore();
       }
 
-      // 受创未满血时显示微型木纹小血条
       if (t.hp < t.maxHp && t.hp > 0) {
         ctx.save();
         const barW = 26;
