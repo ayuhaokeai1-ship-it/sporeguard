@@ -30,9 +30,9 @@ class ForestContraptions {
     if (mapId === 'map1') {
       this.pitcher = {
         col: 8,
-        row: 5,
+        row: 9,
         x: (8 + 0.5) * TILE_SIZE,
-        y: (5 + 0.5) * TILE_SIZE,
+        y: (9 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 18.0,
         cost: 35,
@@ -40,10 +40,10 @@ class ForestContraptions {
         animTimer: 0
       };
       this.thunderTree = {
-        col: 11,
-        row: 7,
-        x: (11 + 0.5) * TILE_SIZE,
-        y: (7 + 0.5) * TILE_SIZE,
+        col: 10,
+        row: 5,
+        x: (10 + 0.5) * TILE_SIZE,
+        y: (5 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 24.0,
         cost: 45,
@@ -355,12 +355,12 @@ class ForestContraptions {
       ctx.ellipse(t.x, t.y + 12, 18, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 纯 AI 手绘雷击古木树桩
+      // 纯 AI 手绘雷暴古木（远古中空雷击树桩，无任何英文字母或残次切边）
       const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png') || platform.getImage('assets/vfx/prop_stump.png');
       if (stumpImg && stumpImg.width) {
-        const sw = 50;
-        const sh = 46;
-        ctx.drawImage(stumpImg, t.x - sw * 0.5, t.y - sh + 12, sw, sh);
+        const sw = 52;
+        const sh = 50;
+        ctx.drawImage(stumpImg, t.x - sw * 0.5, t.y - sh + 14, sw, sh);
       }
 
       // 内部雷电灵力光晕

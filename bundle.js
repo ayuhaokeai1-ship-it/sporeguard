@@ -143,9 +143,9 @@ const CONFIG = {
   ECONOMY: {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
-      map1: 240,               // 初始 240 孢子，支持稳健建造 2 座防御塔开局，杜绝无脑堆满塔
-      map2: 240,
-      map3: 260
+      map1: 175,               // PvZ 经典战术开局：175 孢子支持 1 攻击塔 + 1 经济/防御塔，极具策略取舍
+      map2: 200,
+      map3: 220
     },
     TARGET_TOTAL_BUDGET: {
       map1: 1800,
@@ -162,8 +162,8 @@ const CONFIG = {
     MULTIKILL_PER_KILL: 2,     // 群杀奖励：击杀数 * 2
     MULTIKILL_MAX_BONUS: 40,   // 群杀奖励上限 40
     SELL_REFUND_RATE: 0.60,    // 出售返还 60%
-    PREP_TIME_FIRST_WAVE: 35,  // 第一波前倒计时 35 秒
-    PREP_TIME_NEXT_WAVE: 18    // 之后每波前倒计时 18 秒
+    PREP_TIME_FIRST_WAVE: 25,  // 第一波前倒计时 35 秒
+    PREP_TIME_NEXT_WAVE: 15    // 之后每波前倒计时 18 秒
   },
 
   // 5.4 & 5.5 伤害计算与状态叠加规则
@@ -1306,9 +1306,9 @@ const MAPS = {
       [5, 3], [7, 6], [7, 10], [9, 8], [11, 4], [11, 7],
       [11, 10], [13, 4], [14, 7], [16, 4], [16, 8], [16, 11]
     ],
-    // 障碍物
+    // 障碍物 (4处纯净自然林地险隘，绝无重叠重合与被压资产)
     obstacles: [
-      [2, 5], [9, 5], [14, 11], [10, 1]
+      [3, 7], [8, 3], [13, 9], [15, 2]
     ],
     parallaxColors: ['#14213D', '#1F3B2C', '#2E5E3E'],
     mistAlpha: 0.16,
@@ -5959,35 +5959,32 @@ class GameMap {
           ox += Math.sin(obs.hitWobble * 45) * 2.8;
         }
 
+        // 100% 商业级高精手绘原生森林障碍物（古苔木桩、灵苔巨石、璀璨魔晶蕈、荧光朽木，严禁任何文字、水印或残次切边）
+        const variant = obs.variant % 4;
+        const obsImages = [
+          'assets/vfx/obs_moss_stump.png',
+          'assets/vfx/obs_moss_rock.png',
+          'assets/vfx/obs_crystal_mush.png',
+          'assets/vfx/obs_ancient_stump.png'
+        ];
+        const obsImg = platform.getImage(obsImages[variant]);
+        
+        let dw = 40;
+        let dh = 36;
+        if (variant === 0) { dw = 42; dh = 34; }
+        else if (variant === 1) { dw = 40; dh = 36; }
+        else if (variant === 2) { dw = 42; dh = 40; }
+        else if (variant === 3) { dw = 48; dh = 38; }
+
         ctx.save();
         // 地面柔和接触阴影
-        ctx.fillStyle = 'rgba(10, 15, 12, 0.40)';
+        ctx.fillStyle = 'rgba(10, 15, 12, 0.42)';
         ctx.beginPath();
-        ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(ox, oy + 8, dw * 0.42, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 100% 纯正精致 AI 原生场景障碍物（绝无任何水印英文字与几何占位色块）
-        const variant = obs.variant % 4;
-        let obsImg = null;
-        let dw = 36;
-        let dh = 34;
-        let dyOffset = -18;
-        if (variant === 0) {
-          obsImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
-          dw = 38; dh = 35; dyOffset = -19;
-        } else if (variant === 1) {
-          obsImg = platform.getImage('assets/vfx/relic_amber.png');
-          dw = 32; dh = 36; dyOffset = -20;
-        } else if (variant === 2) {
-          obsImg = platform.getImage('assets/vfx/relic_clover.png');
-          dw = 34; dh = 32; dyOffset = -17;
-        } else {
-          obsImg = platform.getImage('assets/vfx/prop_debris.png') || platform.getImage('assets/vfx/prop_thunder_stump.png');
-          dw = 38; dh = 24; dyOffset = -12;
-        }
-
         if (obsImg && obsImg.width) {
-          ctx.drawImage(obsImg, ox - dw * 0.5, oy + dyOffset, dw, dh);
+          ctx.drawImage(obsImg, ox - dw * 0.5, oy - dh + 10, dw, dh);
         }
 
         // 血条 (受创或被集火时显示)
@@ -7105,9 +7102,14 @@ class EnemyManager {
       let attackingTower = null;
       if (towerManager && towerManager.towers && towerManager.towers.length > 0) {
         const isMoth = e.type === 'moth';
-        const atkRange = isMoth ? 130 : 42; // 飞蛾远程 130px，地面甲虫近战 42px
-        const atkInterval = isMoth ? 1.8 : 1.2;
-        const atkDamage = isMoth ? 14 : (e.type === 'armored' ? 24 : 14);
+        const atkRange = isMoth ? 130 : 44; // 飞蛾远程 130px，地面甲虫近战 44px
+        const atkInterval = isMoth ? 1.5 : 0.8; // PvZ 经典 0.8s 逼真啃食节奏
+        const atkDamage = isMoth ? 18 : (
+          e.type === 'armored' ? 48 :
+          e.type === 'siege_beetle' ? 75 :
+          e.isBoss ? 95 :
+          (e.type === 'swift' ? 18 : 28)
+        );
 
         let bestTower = null;
         let bestScore = 999999;
@@ -7621,21 +7623,21 @@ const platform = require('../core/platform');
 class ForestHero {
   constructor(map = null) {
     this.map = map;
-    // 初始位置设定在核心防线要冲
-    this.x = 280;
-    this.y = 230;
+    // 初始位置设定在核心防线要冲 (道路弯道指挥台，完全避开机关与障碍物)
+    this.x = 200;
+    this.y = 200;
     this.targetX = this.x;
     this.targetY = this.y;
     
-    // 基础属性与成长
+    // 基础属性与成长 (PvZ 战术指挥官标准，有挑战有配合)
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    this.baseMaxHp = 560;
+    this.baseMaxHp = 420;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 46;
+    this.baseAtk = 38;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;
@@ -14253,9 +14255,9 @@ class ForestContraptions {
     if (mapId === 'map1') {
       this.pitcher = {
         col: 8,
-        row: 5,
+        row: 9,
         x: (8 + 0.5) * TILE_SIZE,
-        y: (5 + 0.5) * TILE_SIZE,
+        y: (9 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 18.0,
         cost: 35,
@@ -14263,10 +14265,10 @@ class ForestContraptions {
         animTimer: 0
       };
       this.thunderTree = {
-        col: 11,
-        row: 7,
-        x: (11 + 0.5) * TILE_SIZE,
-        y: (7 + 0.5) * TILE_SIZE,
+        col: 10,
+        row: 5,
+        x: (10 + 0.5) * TILE_SIZE,
+        y: (5 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 24.0,
         cost: 45,
@@ -14578,12 +14580,12 @@ class ForestContraptions {
       ctx.ellipse(t.x, t.y + 12, 18, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 纯 AI 手绘雷击古木树桩
+      // 纯 AI 手绘雷暴古木（远古中空雷击树桩，无任何英文字母或残次切边）
       const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png') || platform.getImage('assets/vfx/prop_stump.png');
       if (stumpImg && stumpImg.width) {
-        const sw = 50;
-        const sh = 46;
-        ctx.drawImage(stumpImg, t.x - sw * 0.5, t.y - sh + 12, sw, sh);
+        const sw = 52;
+        const sh = 50;
+        ctx.drawImage(stumpImg, t.x - sw * 0.5, t.y - sh + 14, sw, sh);
       }
 
       // 内部雷电灵力光晕
@@ -15518,7 +15520,7 @@ class TowerManager {
     }
 
     const center = tileCenter(col, row);
-    const maxHp = typeId === 'thorn' ? 220 : (typeId === 'mist' ? 180 : (typeId === 'burst' ? 160 : 140));
+    const maxHp = typeId === 'thorn' ? 360 : (typeId === 'burst' ? 120 : (typeId === 'mist' ? 100 : (typeId === 'lumina' ? 80 : 90)));
     const tower = {
       id: this.nextId++,
       typeId,
@@ -17265,7 +17267,8 @@ class UiManager {
     this.lastSpores = null;
     this.seedPopTimer = 0;
     this.sporePopTimer = 0;
-    this.cardCooldowns = { watch: 0, mist: 0, thorn: 0, burst: 0 };
+    this.cardCooldowns = { watch: 0, mist: 0, thorn: 0, burst: 0, lumina: 0 };
+    this.cardMaxCooldowns = { watch: 4.5, thorn: 16.0, lumina: 7.0, mist: 8.0, burst: 20.0 };
 
     this.toastText = '';
     this.toastTimer = 0;
@@ -17306,7 +17309,7 @@ class UiManager {
 
   notifyTowerBuilt(towerId) {
     if (towerId && this.cardCooldowns[towerId] !== undefined) {
-      this.cardCooldowns[towerId] = 0.45;
+      this.cardCooldowns[towerId] = (this.cardMaxCooldowns && this.cardMaxCooldowns[towerId]) || 5.0;
     }
   }
 
@@ -19011,6 +19014,27 @@ class UiManager {
         drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
+      // PvZ 经典垂直扫光冷却遮罩 (Card Recharge Sweep)
+      const curCd = this.cardCooldowns[tId] || 0;
+      const maxCd = (this.cardMaxCooldowns && this.cardMaxCooldowns[tId]) || 5.0;
+      if (curCd > 0) {
+        const cdRatio = Math.min(1.0, curCd / maxCd);
+        const maskH = Math.round(cardH * cdRatio);
+        ctx.save();
+        roundRectPath(ctx, cx, cy, cardW, cardH, 8);
+        ctx.clip();
+        ctx.fillStyle = 'rgba(12, 10, 8, 0.68)';
+        ctx.fillRect(cx, cy, cardW, maskH);
+        // 金色扫光刻度线
+        ctx.strokeStyle = 'rgba(255, 229, 143, 0.75)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + maskH);
+        ctx.lineTo(cx + cardW, cy + maskH);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // 底部孢子消耗胶囊
       roundRectPath(ctx, cx + 8, cy + cardH - 18, cardW - 16, 15, 6);
       ctx.fillStyle = 'rgba(15, 10, 6, 0.85)';
@@ -19025,10 +19049,15 @@ class UiManager {
       });
       ctx.restore();
 
+      const isCardInCooldown = (this.cardCooldowns[tId] || 0) > 0;
       this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
+        if ((this.cardCooldowns[tId] || 0) > 0) {
+          platform.playSfx('sfx_click', 0.5, 0.7);
+          return;
+        }
         scene.selectBuildTowerType(tId);
         platform.playSfx('sfx_click');
-      }, { towerId: tId });
+      }, { towerId: tId, disabled: isCardInCooldown });
     }
 
     // =========================================================================

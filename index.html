@@ -1326,6 +1326,23 @@
         return;
       }
 
+      if (location.hash === '#test_map1_battle') {
+        onGameReady(function() {
+          try {
+            const S = window.__SPOREGUARD__.scene;
+            ensureGuideSeen();
+            S.startLevel('map1');
+            // Build a watch tower to test card cooldown
+            S.towerManager.buildTower('watch', 5, 3, S.map, S.economy, S.fx);
+            S.ui.triggerCardCooldown('watch');
+            document.title = 'BATTLE_OK';
+          } catch (e) {
+            document.title = 'BATTLE_ERR: ' + e.message;
+          }
+        });
+        return;
+      }
+
       if (location.hash === '#test_hero_rally') {
         onGameReady(function() {
           try {

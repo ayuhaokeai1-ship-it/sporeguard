@@ -190,7 +190,8 @@ class UiManager {
     this.lastSpores = null;
     this.seedPopTimer = 0;
     this.sporePopTimer = 0;
-    this.cardCooldowns = { watch: 0, mist: 0, thorn: 0, burst: 0 };
+    this.cardCooldowns = { watch: 0, mist: 0, thorn: 0, burst: 0, lumina: 0 };
+    this.cardMaxCooldowns = { watch: 4.5, thorn: 16.0, lumina: 7.0, mist: 8.0, burst: 20.0 };
 
     this.toastText = '';
     this.toastTimer = 0;
@@ -231,7 +232,7 @@ class UiManager {
 
   notifyTowerBuilt(towerId) {
     if (towerId && this.cardCooldowns[towerId] !== undefined) {
-      this.cardCooldowns[towerId] = 0.45;
+      this.cardCooldowns[towerId] = (this.cardMaxCooldowns && this.cardMaxCooldowns[towerId]) || 5.0;
     }
   }
 
@@ -1936,6 +1937,27 @@ class UiManager {
         drawTowerSprite(ctx, tId, "base", "idle", 0, cx + (cardW - 32) * 0.5, cy + 32);
       }
 
+      // PvZ 经典垂直扫光冷却遮罩 (Card Recharge Sweep)
+      const curCd = this.cardCooldowns[tId] || 0;
+      const maxCd = (this.cardMaxCooldowns && this.cardMaxCooldowns[tId]) || 5.0;
+      if (curCd > 0) {
+        const cdRatio = Math.min(1.0, curCd / maxCd);
+        const maskH = Math.round(cardH * cdRatio);
+        ctx.save();
+        roundRectPath(ctx, cx, cy, cardW, cardH, 8);
+        ctx.clip();
+        ctx.fillStyle = 'rgba(12, 10, 8, 0.68)';
+        ctx.fillRect(cx, cy, cardW, maskH);
+        // 金色扫光刻度线
+        ctx.strokeStyle = 'rgba(255, 229, 143, 0.75)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + maskH);
+        ctx.lineTo(cx + cardW, cy + maskH);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // 底部孢子消耗胶囊
       roundRectPath(ctx, cx + 8, cy + cardH - 18, cardW - 16, 15, 6);
       ctx.fillStyle = 'rgba(15, 10, 6, 0.85)';
@@ -1950,10 +1972,15 @@ class UiManager {
       });
       ctx.restore();
 
+      const isCardInCooldown = (this.cardCooldowns[tId] || 0) > 0;
       this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
+        if ((this.cardCooldowns[tId] || 0) > 0) {
+          platform.playSfx('sfx_click', 0.5, 0.7);
+          return;
+        }
         scene.selectBuildTowerType(tId);
         platform.playSfx('sfx_click');
-      }, { towerId: tId });
+      }, { towerId: tId, disabled: isCardInCooldown });
     }
 
     // =========================================================================

@@ -442,35 +442,32 @@ class GameMap {
           ox += Math.sin(obs.hitWobble * 45) * 2.8;
         }
 
+        // 100% 商业级高精手绘原生森林障碍物（古苔木桩、灵苔巨石、璀璨魔晶蕈、荧光朽木，严禁任何文字、水印或残次切边）
+        const variant = obs.variant % 4;
+        const obsImages = [
+          'assets/vfx/obs_moss_stump.png',
+          'assets/vfx/obs_moss_rock.png',
+          'assets/vfx/obs_crystal_mush.png',
+          'assets/vfx/obs_ancient_stump.png'
+        ];
+        const obsImg = platform.getImage(obsImages[variant]);
+        
+        let dw = 40;
+        let dh = 36;
+        if (variant === 0) { dw = 42; dh = 34; }
+        else if (variant === 1) { dw = 40; dh = 36; }
+        else if (variant === 2) { dw = 42; dh = 40; }
+        else if (variant === 3) { dw = 48; dh = 38; }
+
         ctx.save();
         // 地面柔和接触阴影
-        ctx.fillStyle = 'rgba(10, 15, 12, 0.40)';
+        ctx.fillStyle = 'rgba(10, 15, 12, 0.42)';
         ctx.beginPath();
-        ctx.ellipse(ox, oy + 10, 16, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(ox, oy + 8, dw * 0.42, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 100% 纯正精致 AI 原生场景障碍物（绝无任何水印英文字与几何占位色块）
-        const variant = obs.variant % 4;
-        let obsImg = null;
-        let dw = 36;
-        let dh = 34;
-        let dyOffset = -18;
-        if (variant === 0) {
-          obsImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
-          dw = 38; dh = 35; dyOffset = -19;
-        } else if (variant === 1) {
-          obsImg = platform.getImage('assets/vfx/relic_amber.png');
-          dw = 32; dh = 36; dyOffset = -20;
-        } else if (variant === 2) {
-          obsImg = platform.getImage('assets/vfx/relic_clover.png');
-          dw = 34; dh = 32; dyOffset = -17;
-        } else {
-          obsImg = platform.getImage('assets/vfx/prop_debris.png') || platform.getImage('assets/vfx/prop_thunder_stump.png');
-          dw = 38; dh = 24; dyOffset = -12;
-        }
-
         if (obsImg && obsImg.width) {
-          ctx.drawImage(obsImg, ox - dw * 0.5, oy + dyOffset, dw, dh);
+          ctx.drawImage(obsImg, ox - dw * 0.5, oy - dh + 10, dw, dh);
         }
 
         // 血条 (受创或被集火时显示)

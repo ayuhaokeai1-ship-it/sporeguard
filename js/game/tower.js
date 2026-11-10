@@ -62,7 +62,7 @@ class TowerManager {
     }
 
     const center = tileCenter(col, row);
-    const maxHp = typeId === 'thorn' ? 220 : (typeId === 'mist' ? 180 : (typeId === 'burst' ? 160 : 140));
+    const maxHp = typeId === 'thorn' ? 360 : (typeId === 'burst' ? 120 : (typeId === 'mist' ? 100 : (typeId === 'lumina' ? 80 : 90)));
     const tower = {
       id: this.nextId++,
       typeId,

@@ -48,9 +48,9 @@ const CONFIG = {
   ECONOMY: {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
-      map1: 240,               // 初始 240 孢子，支持稳健建造 2 座防御塔开局，杜绝无脑堆满塔
-      map2: 240,
-      map3: 260
+      map1: 175,               // PvZ 经典战术开局：175 孢子支持 1 攻击塔 + 1 经济/防御塔，极具策略取舍
+      map2: 200,
+      map3: 220
     },
     TARGET_TOTAL_BUDGET: {
       map1: 1800,
@@ -67,8 +67,8 @@ const CONFIG = {
     MULTIKILL_PER_KILL: 2,     // 群杀奖励：击杀数 * 2
     MULTIKILL_MAX_BONUS: 40,   // 群杀奖励上限 40
     SELL_REFUND_RATE: 0.60,    // 出售返还 60%
-    PREP_TIME_FIRST_WAVE: 35,  // 第一波前倒计时 35 秒
-    PREP_TIME_NEXT_WAVE: 18    // 之后每波前倒计时 18 秒
+    PREP_TIME_FIRST_WAVE: 25,  // 第一波前倒计时 35 秒
+    PREP_TIME_NEXT_WAVE: 15    // 之后每波前倒计时 18 秒
   },
 
   // 5.4 & 5.5 伤害计算与状态叠加规则

@@ -27,21 +27,21 @@ const platform = require('../core/platform');
 class ForestHero {
   constructor(map = null) {
     this.map = map;
-    // 初始位置设定在核心防线要冲
-    this.x = 280;
-    this.y = 230;
+    // 初始位置设定在核心防线要冲 (道路弯道指挥台，完全避开机关与障碍物)
+    this.x = 200;
+    this.y = 200;
     this.targetX = this.x;
     this.targetY = this.y;
     
-    // 基础属性与成长
+    // 基础属性与成长 (PvZ 战术指挥官标准，有挑战有配合)
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
     this.xpToNext = 100;
-    this.baseMaxHp = 560;
+    this.baseMaxHp = 420;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 46;
+    this.baseAtk = 38;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;

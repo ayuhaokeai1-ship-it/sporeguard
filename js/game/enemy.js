@@ -710,9 +710,14 @@ class EnemyManager {
       let attackingTower = null;
       if (towerManager && towerManager.towers && towerManager.towers.length > 0) {
         const isMoth = e.type === 'moth';
-        const atkRange = isMoth ? 130 : 42; // 飞蛾远程 130px，地面甲虫近战 42px
-        const atkInterval = isMoth ? 1.8 : 1.2;
-        const atkDamage = isMoth ? 14 : (e.type === 'armored' ? 24 : 14);
+        const atkRange = isMoth ? 130 : 44; // 飞蛾远程 130px，地面甲虫近战 44px
+        const atkInterval = isMoth ? 1.5 : 0.8; // PvZ 经典 0.8s 逼真啃食节奏
+        const atkDamage = isMoth ? 18 : (
+          e.type === 'armored' ? 48 :
+          e.type === 'siege_beetle' ? 75 :
+          e.isBoss ? 95 :
+          (e.type === 'swift' ? 18 : 28)
+        );
 
         let bestTower = null;
         let bestScore = 999999;
