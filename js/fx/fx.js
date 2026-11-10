@@ -161,19 +161,28 @@ class FxSystem {
   spawnFloatingText(x, y, text, color = PALETTE.UI_TEXT, scale = 1.0) {
     const str = String(text);
     const active = this.textPool.getActiveList();
-    let baseX = x + (Math.random() - 0.5) * 6;
-    let baseY = y - 8;
+    const isShortNumber = /^[+\-💥]?\d+/.test(str);
+    // 密集波次降噪：同屏飘字过多时仅保留关键反应与高额伤害，彻底杜绝文字墙
+    if (active.length >= 22 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
+      return;
+    }
+    let baseX = x + (Math.random() - 0.5) * 14;
+    let baseY = y - 10;
 
-    // 防止同名提示文字（如 潜地回避! / 圣光涤罪!）在同一点高频叠字糊成一片
+    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与高频词在局部区域重叠堆砌
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
-      if (Math.abs(ex.x - baseX) <= 34 && Math.abs(ex.y - (baseY - yShift)) <= 15) {
-        if (ex.text === str && ex.life < 0.28 && str.length > 4) {
+      const dx = Math.abs(ex.x - baseX);
+      const dy = Math.abs(ex.y - (baseY - yShift));
+      if (!isShortNumber && dx <= 64 && dy <= 42 && ex.life < 0.52) {
+        if (ex.text === str || str.length <= 6) {
           return;
         }
+      }
+      if (dx <= 40 && dy <= 16) {
         yShift += 14;
-        if (yShift >= 42) break;
+        if (yShift >= 28) break;
       }
     }
 
@@ -185,7 +194,7 @@ class FxSystem {
     item.text = str;
     item.color = color;
     item.life = 0;
-    item.maxLife = 0.65;
+    item.maxLife = isShortNumber ? 0.56 : 0.72;
     item.scale = scale;
   }
 
@@ -532,21 +541,24 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 3. 绘制浮动伤害与奖励数字
+    // 3. 绘制浮动伤害与奖励数字（高对比黑描边 + 字号分级，清晰不糊成一团）
     const tList = this.textPool.getActiveList();
     if (tList.length > 0) {
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold 12px monospace, sans-serif';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(10, 14, 10, 0.90)';
       for (let i = 0; i < tList.length; i++) {
         const t = tList[i];
         const alpha = t.life > t.maxLife * 0.7 ? (1 - (t.life - t.maxLife * 0.7) / (t.maxLife * 0.3)) : 1.0;
         ctx.globalAlpha = Math.max(0, alpha);
+        const fSize = Math.max(10, Math.min(15, Math.round(11 * (t.scale || 1))));
+        ctx.font = `bold ${fSize}px "Microsoft YaHei", sans-serif`;
         const rx = Math.round(t.x);
         const ry = Math.round(t.y);
-        ctx.fillStyle = PALETTE.UI_PANEL_SOLID;
-        ctx.fillText(t.text, rx + 1, ry + 1);
+        ctx.strokeText(t.text, rx, ry);
         ctx.fillStyle = t.color;
         ctx.fillText(t.text, rx, ry);
       }

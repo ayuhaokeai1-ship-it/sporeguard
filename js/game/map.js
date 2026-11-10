@@ -152,7 +152,7 @@ class GameMap {
     for (let i = 0; i < obsList.length; i++) {
       const [oc, or] = obsList[i];
       if (this.inBounds(oc, or)) {
-        const variant = (oc * 3 + or * 5) % 4;
+        const variant = (i + (this.mapData.index || 1)) % 4;
         const maxHp = 320 + variant * 70;
         const obs = {
           col: oc,

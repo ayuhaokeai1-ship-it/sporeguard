@@ -165,7 +165,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 24, '腐殖剧毒·护甲融毁!', '#52C41A', 1.3);
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '腐殖剧毒!', '#52C41A', 1.15);
       fx.spawnParticles(enemy.x, enemy.y, 28, ['#52C41A', '#73D13D', '#13C2C2', '#389E0D'], 35, 120, 0.3, 0.7, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.28);
@@ -207,7 +207,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 28, '蒸气爆鸣·气压冲击!', '#FF7A45', 1.3);
+      fx.spawnFloatingText(cx, cy - 28, '蒸气爆鸣!', '#FF7A45', 1.15);
       fx.spawnParticles(cx, cy, 32, ['#FFF1B8', '#FF7A45', '#1890FF', '#FFFFFF'], 40, 140, 0.3, 0.75, 5);
     }
     if (combatJuice) combatJuice.addTrauma(0.40);
@@ -232,7 +232,7 @@ class ElementalComboEngine {
     });
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 24, '炽热荆棘·焦土焚烧!', '#FA541C', 1.25);
+      fx.spawnFloatingText(cx, cy - 24, '炽热荆棘!', '#FA541C', 1.15);
       fx.spawnParticles(cx, cy, 26, ['#FA541C', '#FFD666', '#52C41A', '#8C6842'], 30, 95, 0.25, 0.6, 4);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -250,7 +250,7 @@ class ElementalComboEngine {
     enemy.residualSlowValue = 0.95;
 
     if (fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 24, '霜冻凋零·冰封坚固!', '#13C2C2', 1.25);
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '霜冻冰封!', '#13C2C2', 1.15);
       fx.spawnParticles(enemy.x, enemy.y, 24, ['#E6F7FF', '#BAE7FF', '#69C0FF', '#FFFFFF'], 25, 80, 0.25, 0.55, 3.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.20);
@@ -282,7 +282,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +4孢子', '#FFD700', 1.2);
+      fx.spawnFloatingText(cx, cy - 30, '圣光 +4孢', '#FFD700', 1.1);
       fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -311,7 +311,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 28, '自然大共鸣! 155AoE', '#52C41A', 1.3);
+      fx.spawnFloatingText(cx, cy - 28, '自然共鸣!', '#52C41A', 1.2);
       fx.spawnParticles(cx, cy, 42, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 60, 220, 0.4, 0.9, 5.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.45);

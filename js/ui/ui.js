@@ -3562,13 +3562,30 @@ class UiManager {
       ctx.lineWidth = isSel ? 2.0 : 1.0;
       ctx.stroke();
 
-      drawArtText(ctx, e.name, ex + 6, ey + 19, {
+      drawArtText(ctx, e.name, ex + 30, ey + 19, {
         style: isSel ? 'gold' : 'parchment',
-        size: 11,
+        size: 10.5,
         align: 'left',
         baseline: 'middle',
         strokeWidth: 0.6
       });
+      // 小型怪物头像微章（匹配守卫图鉴视觉密度与手绘辨识度）
+      const thumbImg = platform.getImage(`assets/vfx/enemy_${e.id}.png`) ||
+        platform.getImage(`assets/enemies/enemy_${e.id}.png`) ||
+        platform.getImage(`assets/enemies/boss_${e.id}.png`);
+      if (thumbImg && thumbImg.width) {
+        const tsc = Math.min(22 / thumbImg.width, 22 / thumbImg.height);
+        const tdw = thumbImg.width * tsc;
+        const tdh = thumbImg.height * tsc;
+        ctx.drawImage(thumbImg, ex + 16 - tdw * 0.5, ey + 18.5 - tdh * 0.5, tdw, tdh);
+      } else {
+        ctx.save();
+        ctx.translate(ex + 16, ey + 18.5);
+        const tsc = e.id.startsWith('boss_') ? 0.36 : 0.72;
+        ctx.scale(tsc, tsc);
+        drawEnemySprite(ctx, e.id, 'walk', 0, 0, 0);
+        ctx.restore();
+      }
       ctx.restore();
 
       this.registerButton(`codex_e_${e.id}`, ex, ey, colW, 38, () => {
@@ -4030,11 +4047,12 @@ class UiManager {
         strokeWidth: 0.7
       });
 
-      // 选中卡牌流金脉冲外框
+      // 选中卡牌圆角流金脉冲外框（与圆角卡底完全贴合，无尖角突出）
       if (isSelected) {
+        roundRectPath(ctx, cx + 1, cy + 1, cardW - 2, cardH - 2, 7);
         ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 2.2;
-        ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
       }
 
       ctx.restore();
@@ -4217,12 +4235,25 @@ class UiManager {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 1. 左侧边缘英雄统御竖栏（处于 X:10..150 左侧林地边栏内，绝不压盖主战场列 0..19）
+    // 统一质感底托：精致暗木黄铜英雄与神术统筹盘（X: 8..190, Y: 384..464），告别松散悬空图标
+    ctx.save();
+    roundRectPath(ctx, 8, 384, 178, 82, 10);
+    const panelGrad = ctx.createLinearGradient(8, 384, 8, 466);
+    panelGrad.addColorStop(0, 'rgba(28, 21, 14, 0.90)');
+    panelGrad.addColorStop(1, 'rgba(16, 12, 8, 0.94)');
+    ctx.fillStyle = panelGrad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.65)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
+
+    // 1. 左侧边缘英雄统御竖栏（紧凑整合于统筹盘内）
     const hx = 34;
     const hy = 434;
-    const hr = 20;
+    const hr = 19;
 
-    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=396)
+    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=390)
     const stanceMeta = {
       guardian: { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
       aggressive: { label: '⚔️ 狂暴', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
@@ -4343,7 +4374,7 @@ class UiManager {
       { id: 'rally', name: '集结', key: 'R', cost: 0, icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
-    const orbR = 14;
+    const orbR = 13;
     const orbStartX = hx + hr + 16;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
@@ -4352,7 +4383,7 @@ class UiManager {
       const spCd = (sp && sp.timer) || 0;
       const spMaxCd = (sp && sp.cd) || 15;
       const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 5);
+      const ox = orbStartX + sIdx * (orbR * 2 + 4);
       const oy = hy;
 
       ctx.save();

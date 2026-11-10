@@ -388,7 +388,7 @@ class BulletManager {
 
           if (fx) {
             fx.spawnParticles(b.x, b.y, 10, ['#FFE58F', '#FAAD14', '#FFFDF5'], 18, 38, 0.2, 0.45, 3);
-            fx.spawnFloatingText(tgt.x, tgt.y - 14, '圣光灼照!', '#FFE58F', 0.95);
+            fx.spawnFloatingText(tgt.x, tgt.y - 14, '圣光!', '#FFE58F', 0.9);
           }
           this.bulletPool.releaseAt(i);
           continue;
@@ -448,7 +448,7 @@ class BulletManager {
             this.combatJuice.triggerCrit(tgt.x, tgt.y, b.baseDamage * 1.8, fx);
           }
           if (isVulnerable && fx) {
-            fx.spawnFloatingText(tgt.x, tgt.y - 18, '弱点贯穿!', '#6FE8FF', 1.15);
+            fx.spawnFloatingText(tgt.x, tgt.y - 18, '破甲!', '#6FE8FF', 1.05);
           }
           enemyManager.applyDirectDamage(
             tgt,
@@ -491,7 +491,7 @@ class BulletManager {
                 b.baseDamage *= 1.35;
                 if (fx) {
                   fx.spawnParticles(b.x, b.y, 4, ['#73D13D', '#B7EB8F'], 15, 35, 0.15, 0.25, 2);
-                  fx.spawnFloatingText(b.x, b.y - 12, '酸液淬火!', '#73D13D', 0.75);
+                  fx.spawnFloatingText(b.x, b.y - 12, '酸蚀!', '#73D13D', 0.85);
                 }
                 break;
               }
@@ -619,7 +619,7 @@ class BulletManager {
                 hz.dps += 6;
                 if (fx) {
                   fx.spawnParticles(b.targetX, b.targetY, 20, ['#52C41A', '#B7EB8F', '#FFD700', '#FFA940'], 45, 130, 0.25, 0.55, 4);
-                  fx.spawnFloatingText(b.targetX, b.targetY - 26, '真菌化学毒爆!', '#52C41A', 1.3);
+                  fx.spawnFloatingText(b.targetX, b.targetY - 26, '毒爆!', '#52C41A', 1.2);
                   fx.triggerScreenShake(3.0, 0.2);
                 }
                 platform.playSfx('sfx_bomb');
@@ -639,13 +639,9 @@ class BulletManager {
               let bonusDmg = b.damageBonus;
               if (isPoisoned) {
                 bonusDmg += b.hasToxicBurst ? 0.90 : 0.50;
-                if (b.hasToxicBurst && fx) {
-                  fx.spawnFloatingText(e.x, e.y - 24, '共振·剧毒爆轰!', '#52C41A', 1.3);
-                  fx.spawnParticles(e.x, e.y, 16, ['#52C41A', '#73D13D', '#FFD700'], 40, 110, 0.25, 0.5, 3.5);
-                } // +50% 范围毒爆额外增伤！
                 if (fx) {
-                  fx.spawnFloatingText(e.x, e.y - 20, 'COMBO 毒爆!', '#52C41A', 1.25);
-                  fx.spawnParticles(e.x, e.y, 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.45, 3.5);
+                  fx.spawnFloatingText(e.x, e.y - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
+                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 16 : 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
                 }
               }
               enemyManager.applyDirectDamage(

@@ -1351,7 +1351,7 @@ const MAPS = {
     ],
     // 障碍物
     obstacles: [
-      [2, 6], [7, 7], [12, 3], [17, 1]
+      [2, 6], [11, 10], [12, 3], [17, 1]
     ],
     parallaxColors: ['#14213D', '#1F3A5F', '#2E5E3E'],
     mistAlpha: 0.12,
@@ -4629,19 +4629,28 @@ class FxSystem {
   spawnFloatingText(x, y, text, color = PALETTE.UI_TEXT, scale = 1.0) {
     const str = String(text);
     const active = this.textPool.getActiveList();
-    let baseX = x + (Math.random() - 0.5) * 6;
-    let baseY = y - 8;
+    const isShortNumber = /^[+\-💥]?\d+/.test(str);
+    // 密集波次降噪：同屏飘字过多时仅保留关键反应与高额伤害，彻底杜绝文字墙
+    if (active.length >= 22 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
+      return;
+    }
+    let baseX = x + (Math.random() - 0.5) * 14;
+    let baseY = y - 10;
 
-    // 防止同名提示文字（如 潜地回避! / 圣光涤罪!）在同一点高频叠字糊成一片
+    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与高频词在局部区域重叠堆砌
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
-      if (Math.abs(ex.x - baseX) <= 34 && Math.abs(ex.y - (baseY - yShift)) <= 15) {
-        if (ex.text === str && ex.life < 0.28 && str.length > 4) {
+      const dx = Math.abs(ex.x - baseX);
+      const dy = Math.abs(ex.y - (baseY - yShift));
+      if (!isShortNumber && dx <= 64 && dy <= 42 && ex.life < 0.52) {
+        if (ex.text === str || str.length <= 6) {
           return;
         }
+      }
+      if (dx <= 40 && dy <= 16) {
         yShift += 14;
-        if (yShift >= 42) break;
+        if (yShift >= 28) break;
       }
     }
 
@@ -4653,7 +4662,7 @@ class FxSystem {
     item.text = str;
     item.color = color;
     item.life = 0;
-    item.maxLife = 0.65;
+    item.maxLife = isShortNumber ? 0.56 : 0.72;
     item.scale = scale;
   }
 
@@ -5000,21 +5009,24 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 3. 绘制浮动伤害与奖励数字
+    // 3. 绘制浮动伤害与奖励数字（高对比黑描边 + 字号分级，清晰不糊成一团）
     const tList = this.textPool.getActiveList();
     if (tList.length > 0) {
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold 12px monospace, sans-serif';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(10, 14, 10, 0.90)';
       for (let i = 0; i < tList.length; i++) {
         const t = tList[i];
         const alpha = t.life > t.maxLife * 0.7 ? (1 - (t.life - t.maxLife * 0.7) / (t.maxLife * 0.3)) : 1.0;
         ctx.globalAlpha = Math.max(0, alpha);
+        const fSize = Math.max(10, Math.min(15, Math.round(11 * (t.scale || 1))));
+        ctx.font = `bold ${fSize}px "Microsoft YaHei", sans-serif`;
         const rx = Math.round(t.x);
         const ry = Math.round(t.y);
-        ctx.fillStyle = PALETTE.UI_PANEL_SOLID;
-        ctx.fillText(t.text, rx + 1, ry + 1);
+        ctx.strokeText(t.text, rx, ry);
         ctx.fillStyle = t.color;
         ctx.fillText(t.text, rx, ry);
       }
@@ -5701,7 +5713,7 @@ class GameMap {
     for (let i = 0; i < obsList.length; i++) {
       const [oc, or] = obsList[i];
       if (this.inBounds(oc, or)) {
-        const variant = (oc * 3 + or * 5) % 4;
+        const variant = (i + (this.mapData.index || 1)) % 4;
         const maxHp = 320 + variant * 70;
         const obs = {
           col: oc,
@@ -6772,7 +6784,7 @@ class EnemyManager {
     }
 
     if (isCrit && fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 12, 'CRIT ' + Math.round(actualDamage), PALETTE.BRANCH_B, 1.15);
+      fx.spawnFloatingText(enemy.x, enemy.y - 14, '💥' + Math.round(actualDamage), '#FFD700', 1.12);
     }
 
     enemy.hp -= actualDamage;
@@ -11170,9 +11182,7 @@ class CombatJuiceEngine {
       }
     }
 
-    if (fx) {
-      fx.spawnFloatingText(x, y - 18, `CRIT ${Math.round(damage)}!`, '#FFD700', 1.1);
-    }
+    // 金色星芒火花由本系统负责，真实折算后暴击数值由 enemy.applyDirectDamage 统一飘字，避免同次命中双倍叠字
   }
 
   /**
@@ -12109,7 +12119,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 24, '腐殖剧毒·护甲融毁!', '#52C41A', 1.3);
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '腐殖剧毒!', '#52C41A', 1.15);
       fx.spawnParticles(enemy.x, enemy.y, 28, ['#52C41A', '#73D13D', '#13C2C2', '#389E0D'], 35, 120, 0.3, 0.7, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.28);
@@ -12151,7 +12161,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 28, '蒸气爆鸣·气压冲击!', '#FF7A45', 1.3);
+      fx.spawnFloatingText(cx, cy - 28, '蒸气爆鸣!', '#FF7A45', 1.15);
       fx.spawnParticles(cx, cy, 32, ['#FFF1B8', '#FF7A45', '#1890FF', '#FFFFFF'], 40, 140, 0.3, 0.75, 5);
     }
     if (combatJuice) combatJuice.addTrauma(0.40);
@@ -12176,7 +12186,7 @@ class ElementalComboEngine {
     });
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 24, '炽热荆棘·焦土焚烧!', '#FA541C', 1.25);
+      fx.spawnFloatingText(cx, cy - 24, '炽热荆棘!', '#FA541C', 1.15);
       fx.spawnParticles(cx, cy, 26, ['#FA541C', '#FFD666', '#52C41A', '#8C6842'], 30, 95, 0.25, 0.6, 4);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -12194,7 +12204,7 @@ class ElementalComboEngine {
     enemy.residualSlowValue = 0.95;
 
     if (fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 24, '霜冻凋零·冰封坚固!', '#13C2C2', 1.25);
+      fx.spawnFloatingText(enemy.x, enemy.y - 24, '霜冻冰封!', '#13C2C2', 1.15);
       fx.spawnParticles(enemy.x, enemy.y, 24, ['#E6F7FF', '#BAE7FF', '#69C0FF', '#FFFFFF'], 25, 80, 0.25, 0.55, 3.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.20);
@@ -12226,7 +12236,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +4孢子', '#FFD700', 1.2);
+      fx.spawnFloatingText(cx, cy - 30, '圣光 +4孢', '#FFD700', 1.1);
       fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -12255,7 +12265,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 28, '自然大共鸣! 155AoE', '#52C41A', 1.3);
+      fx.spawnFloatingText(cx, cy - 28, '自然共鸣!', '#52C41A', 1.2);
       fx.spawnParticles(cx, cy, 42, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 60, 220, 0.4, 0.9, 5.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.45);
@@ -15203,7 +15213,7 @@ class BulletManager {
 
           if (fx) {
             fx.spawnParticles(b.x, b.y, 10, ['#FFE58F', '#FAAD14', '#FFFDF5'], 18, 38, 0.2, 0.45, 3);
-            fx.spawnFloatingText(tgt.x, tgt.y - 14, '圣光灼照!', '#FFE58F', 0.95);
+            fx.spawnFloatingText(tgt.x, tgt.y - 14, '圣光!', '#FFE58F', 0.9);
           }
           this.bulletPool.releaseAt(i);
           continue;
@@ -15263,7 +15273,7 @@ class BulletManager {
             this.combatJuice.triggerCrit(tgt.x, tgt.y, b.baseDamage * 1.8, fx);
           }
           if (isVulnerable && fx) {
-            fx.spawnFloatingText(tgt.x, tgt.y - 18, '弱点贯穿!', '#6FE8FF', 1.15);
+            fx.spawnFloatingText(tgt.x, tgt.y - 18, '破甲!', '#6FE8FF', 1.05);
           }
           enemyManager.applyDirectDamage(
             tgt,
@@ -15306,7 +15316,7 @@ class BulletManager {
                 b.baseDamage *= 1.35;
                 if (fx) {
                   fx.spawnParticles(b.x, b.y, 4, ['#73D13D', '#B7EB8F'], 15, 35, 0.15, 0.25, 2);
-                  fx.spawnFloatingText(b.x, b.y - 12, '酸液淬火!', '#73D13D', 0.75);
+                  fx.spawnFloatingText(b.x, b.y - 12, '酸蚀!', '#73D13D', 0.85);
                 }
                 break;
               }
@@ -15434,7 +15444,7 @@ class BulletManager {
                 hz.dps += 6;
                 if (fx) {
                   fx.spawnParticles(b.targetX, b.targetY, 20, ['#52C41A', '#B7EB8F', '#FFD700', '#FFA940'], 45, 130, 0.25, 0.55, 4);
-                  fx.spawnFloatingText(b.targetX, b.targetY - 26, '真菌化学毒爆!', '#52C41A', 1.3);
+                  fx.spawnFloatingText(b.targetX, b.targetY - 26, '毒爆!', '#52C41A', 1.2);
                   fx.triggerScreenShake(3.0, 0.2);
                 }
                 platform.playSfx('sfx_bomb');
@@ -15454,13 +15464,9 @@ class BulletManager {
               let bonusDmg = b.damageBonus;
               if (isPoisoned) {
                 bonusDmg += b.hasToxicBurst ? 0.90 : 0.50;
-                if (b.hasToxicBurst && fx) {
-                  fx.spawnFloatingText(e.x, e.y - 24, '共振·剧毒爆轰!', '#52C41A', 1.3);
-                  fx.spawnParticles(e.x, e.y, 16, ['#52C41A', '#73D13D', '#FFD700'], 40, 110, 0.25, 0.5, 3.5);
-                } // +50% 范围毒爆额外增伤！
                 if (fx) {
-                  fx.spawnFloatingText(e.x, e.y - 20, 'COMBO 毒爆!', '#52C41A', 1.25);
-                  fx.spawnParticles(e.x, e.y, 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.45, 3.5);
+                  fx.spawnFloatingText(e.x, e.y - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
+                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 16 : 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
                 }
               }
               enemyManager.applyDirectDamage(
@@ -16161,49 +16167,30 @@ class TowerManager {
   renderMyceliumNetwork(ctx) {
     if (this.networkEdges.length === 0) return;
 
+    // 局部化自然菌根共鸣微光（在达成羁绊的蘑菇基座周围浮动金翠孢子光晕，避免跨全图直线穿插）
+    const seenSymb = new Set();
     for (let i = 0; i < this.networkEdges.length; i++) {
       const edge = this.networkEdges[i];
-      const a = edge.a;
-      const b = edge.b;
-
-      ctx.save();
-      const midX = (a.x + b.x) * 0.5;
-      const midY = (a.y + b.y) * 0.5 + 4;
-
-      const isGrand = a.synergies && a.synergies.hasGrandResonance;
-      // 极轻柔、低饱和、半透明的自然菌根微光质感（透明度仅 0.12 ~ 0.16，绝不喧宾夺主）
-      const glowColor = isGrand ? 'rgba(255, 215, 0, 0.08)' : 'rgba(82, 196, 26, 0.06)';
-      const coreColor = isGrand ? 'rgba(255, 235, 140, 0.16)' : 'rgba(180, 255, 210, 0.13)';
-
-      // 1. 柔和半透明地下根须微光底晕
-      ctx.save();
-      ctx.strokeStyle = glowColor;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y + 8);
-      ctx.quadraticCurveTo(midX, midY + 8, b.x, b.y + 8);
-      ctx.stroke();
-
-      // 2. 纤细极浅地下自然发光菌丝脉络 (1.0px)
-      ctx.strokeStyle = coreColor;
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y + 8);
-      ctx.quadraticCurveTo(midX, midY + 8, b.x, b.y + 8);
-      ctx.stroke();
-      ctx.restore();
-
-      // 3. 极微弱的流动孢子光子 (透明度 0.20)
-      const tProg = ((this.animTimer || 0) * 0.35 + i * 0.33) % 1.0;
-      const inv = 1 - tProg;
-      const nodeX = inv * inv * a.x + 2 * inv * tProg * midX + tProg * tProg * b.x;
-      const nodeY = inv * inv * (a.y + 8) + 2 * inv * tProg * (midY + 8) + tProg * tProg * (b.y + 8);
-      ctx.fillStyle = isGrand ? 'rgba(255, 229, 143, 0.22)' : 'rgba(186, 231, 255, 0.18)';
-      ctx.beginPath();
-      ctx.arc(nodeX, nodeY, 1.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
+      const pair = [edge.a, edge.b];
+      for (let p = 0; p < 2; p++) {
+        const tw = pair[p];
+        if (!tw || seenSymb.has(tw)) continue;
+        seenSymb.add(tw);
+        const isGrand = tw.synergies && tw.synergies.hasGrandResonance;
+        const pulse = 0.72 + Math.sin((this.animTimer || 0) * 3.2 + tw.col) * 0.25;
+        ctx.save();
+        ctx.strokeStyle = isGrand ? `rgba(255, 224, 110, ${0.26 * pulse})` : `rgba(135, 232, 160, ${0.20 * pulse})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(tw.x, tw.y + 11, 20, 9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        const ang = (this.animTimer || 0) * 1.8 + tw.row * 1.1;
+        ctx.fillStyle = isGrand ? 'rgba(255, 235, 145, 0.55)' : 'rgba(186, 255, 210, 0.45)';
+        ctx.beginPath();
+        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
   }
 
@@ -20874,13 +20861,30 @@ class UiManager {
       ctx.lineWidth = isSel ? 2.0 : 1.0;
       ctx.stroke();
 
-      drawArtText(ctx, e.name, ex + 6, ey + 19, {
+      drawArtText(ctx, e.name, ex + 30, ey + 19, {
         style: isSel ? 'gold' : 'parchment',
-        size: 11,
+        size: 10.5,
         align: 'left',
         baseline: 'middle',
         strokeWidth: 0.6
       });
+      // 小型怪物头像微章（匹配守卫图鉴视觉密度与手绘辨识度）
+      const thumbImg = platform.getImage(`assets/vfx/enemy_${e.id}.png`) ||
+        platform.getImage(`assets/enemies/enemy_${e.id}.png`) ||
+        platform.getImage(`assets/enemies/boss_${e.id}.png`);
+      if (thumbImg && thumbImg.width) {
+        const tsc = Math.min(22 / thumbImg.width, 22 / thumbImg.height);
+        const tdw = thumbImg.width * tsc;
+        const tdh = thumbImg.height * tsc;
+        ctx.drawImage(thumbImg, ex + 16 - tdw * 0.5, ey + 18.5 - tdh * 0.5, tdw, tdh);
+      } else {
+        ctx.save();
+        ctx.translate(ex + 16, ey + 18.5);
+        const tsc = e.id.startsWith('boss_') ? 0.36 : 0.72;
+        ctx.scale(tsc, tsc);
+        drawEnemySprite(ctx, e.id, 'walk', 0, 0, 0);
+        ctx.restore();
+      }
       ctx.restore();
 
       this.registerButton(`codex_e_${e.id}`, ex, ey, colW, 38, () => {
@@ -21342,11 +21346,12 @@ class UiManager {
         strokeWidth: 0.7
       });
 
-      // 选中卡牌流金脉冲外框
+      // 选中卡牌圆角流金脉冲外框（与圆角卡底完全贴合，无尖角突出）
       if (isSelected) {
+        roundRectPath(ctx, cx + 1, cy + 1, cardW - 2, cardH - 2, 7);
         ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 2.2;
-        ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
       }
 
       ctx.restore();
@@ -21529,12 +21534,25 @@ class UiManager {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 1. 左侧边缘英雄统御竖栏（处于 X:10..150 左侧林地边栏内，绝不压盖主战场列 0..19）
+    // 统一质感底托：精致暗木黄铜英雄与神术统筹盘（X: 8..190, Y: 384..464），告别松散悬空图标
+    ctx.save();
+    roundRectPath(ctx, 8, 384, 178, 82, 10);
+    const panelGrad = ctx.createLinearGradient(8, 384, 8, 466);
+    panelGrad.addColorStop(0, 'rgba(28, 21, 14, 0.90)');
+    panelGrad.addColorStop(1, 'rgba(16, 12, 8, 0.94)');
+    ctx.fillStyle = panelGrad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.65)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
+
+    // 1. 左侧边缘英雄统御竖栏（紧凑整合于统筹盘内）
     const hx = 34;
     const hy = 434;
-    const hr = 20;
+    const hr = 19;
 
-    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=396)
+    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=390)
     const stanceMeta = {
       guardian: { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
       aggressive: { label: '⚔️ 狂暴', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
@@ -21655,7 +21673,7 @@ class UiManager {
       { id: 'rally', name: '集结', key: 'R', cost: 0, icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
-    const orbR = 14;
+    const orbR = 13;
     const orbStartX = hx + hr + 16;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
@@ -21664,7 +21682,7 @@ class UiManager {
       const spCd = (sp && sp.timer) || 0;
       const spMaxCd = (sp && sp.cd) || 15;
       const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 5);
+      const ox = orbStartX + sIdx * (orbR * 2 + 4);
       const oy = hy;
 
       ctx.save();
@@ -22908,22 +22926,50 @@ class SceneController {
     this.relicManager.render(ctx);
     this.contraptions.render(ctx, this.animTimeSec);
 
-    // 绘制圣树古根逆袭破土树根
+    // 绘制圣树古根逆袭：贴合地表的翠玉金藤脉冲光环与自然曲根
     if (this.elderRootActiveTimer > 0 && this.map && this.map.mapData) {
       const wTile = this.map.mapData.warehouseTile || [19, 12];
       const wx = (wTile[0] + 0.5) * TILE_SIZE;
-      const wy = (wTile[1] + 0.5) * TILE_SIZE;
+      const wy = (wTile[1] + 0.5) * TILE_SIZE + 8;
+      const alpha = Math.min(1.0, this.elderRootActiveTimer / 0.85);
+      const spread = 1.0 - alpha * 0.35;
       ctx.save();
-      ctx.strokeStyle = '#5C381E';
-      ctx.lineWidth = 4.5;
+      ctx.translate(wx, wy);
+      ctx.scale(1.0, 0.62);
+      ctx.globalAlpha = alpha * 0.78;
+      const rGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 58 * spread);
+      rGrad.addColorStop(0, 'rgba(115, 209, 61, 0.36)');
+      rGrad.addColorStop(0.65, 'rgba(255, 215, 0, 0.22)');
+      rGrad.addColorStop(1, 'rgba(82, 196, 26, 0)');
+      ctx.fillStyle = rGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 58 * spread, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.lineCap = 'round';
-      const rootPulse = Math.sin(this.animTimeSec * 15) * 3;
-      for (let rIdx = 0; rIdx < 4; rIdx++) {
-        const ang = (rIdx / 4) * Math.PI * 2;
+      for (let rIdx = 0; rIdx < 7; rIdx++) {
+        const ang = (rIdx / 7) * Math.PI * 2 + 0.37;
+        const swirl = Math.sin(this.animTimeSec * 9 + rIdx * 1.4) * 0.24;
+        const len = (40 + (rIdx % 2) * 14) * spread;
+        const ex = Math.cos(ang + swirl) * len;
+        const ey = Math.sin(ang + swirl) * len;
+        const cx = Math.cos(ang - 0.38) * len * 0.52;
+        const cy = Math.sin(ang - 0.38) * len * 0.52;
+        ctx.strokeStyle = 'rgba(42, 74, 34, 0.72)';
+        ctx.lineWidth = 3.0;
         ctx.beginPath();
-        ctx.moveTo(wx, wy);
-        ctx.quadraticCurveTo(wx + Math.cos(ang) * 35 + rootPulse, wy + Math.sin(ang) * 35, wx + Math.cos(ang) * 60, wy + Math.sin(ang) * 60);
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(cx, cy, ex, ey);
         ctx.stroke();
+
+        ctx.strokeStyle = rIdx % 2 === 0 ? 'rgba(149, 222, 100, 0.85)' : 'rgba(255, 229, 143, 0.85)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFF1B8';
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.0, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }

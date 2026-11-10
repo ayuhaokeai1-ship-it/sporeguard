@@ -86,9 +86,7 @@ class CombatJuiceEngine {
       }
     }
 
-    if (fx) {
-      fx.spawnFloatingText(x, y - 18, `CRIT ${Math.round(damage)}!`, '#FFD700', 1.1);
-    }
+    // 金色星芒火花由本系统负责，真实折算后暴击数值由 enemy.applyDirectDamage 统一飘字，避免同次命中双倍叠字
   }
 
   /**

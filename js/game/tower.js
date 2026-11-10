@@ -513,49 +513,30 @@ class TowerManager {
   renderMyceliumNetwork(ctx) {
     if (this.networkEdges.length === 0) return;
 
+    // 局部化自然菌根共鸣微光（在达成羁绊的蘑菇基座周围浮动金翠孢子光晕，避免跨全图直线穿插）
+    const seenSymb = new Set();
     for (let i = 0; i < this.networkEdges.length; i++) {
       const edge = this.networkEdges[i];
-      const a = edge.a;
-      const b = edge.b;
-
-      ctx.save();
-      const midX = (a.x + b.x) * 0.5;
-      const midY = (a.y + b.y) * 0.5 + 4;
-
-      const isGrand = a.synergies && a.synergies.hasGrandResonance;
-      // 极轻柔、低饱和、半透明的自然菌根微光质感（透明度仅 0.12 ~ 0.16，绝不喧宾夺主）
-      const glowColor = isGrand ? 'rgba(255, 215, 0, 0.08)' : 'rgba(82, 196, 26, 0.06)';
-      const coreColor = isGrand ? 'rgba(255, 235, 140, 0.16)' : 'rgba(180, 255, 210, 0.13)';
-
-      // 1. 柔和半透明地下根须微光底晕
-      ctx.save();
-      ctx.strokeStyle = glowColor;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y + 8);
-      ctx.quadraticCurveTo(midX, midY + 8, b.x, b.y + 8);
-      ctx.stroke();
-
-      // 2. 纤细极浅地下自然发光菌丝脉络 (1.0px)
-      ctx.strokeStyle = coreColor;
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y + 8);
-      ctx.quadraticCurveTo(midX, midY + 8, b.x, b.y + 8);
-      ctx.stroke();
-      ctx.restore();
-
-      // 3. 极微弱的流动孢子光子 (透明度 0.20)
-      const tProg = ((this.animTimer || 0) * 0.35 + i * 0.33) % 1.0;
-      const inv = 1 - tProg;
-      const nodeX = inv * inv * a.x + 2 * inv * tProg * midX + tProg * tProg * b.x;
-      const nodeY = inv * inv * (a.y + 8) + 2 * inv * tProg * (midY + 8) + tProg * tProg * (b.y + 8);
-      ctx.fillStyle = isGrand ? 'rgba(255, 229, 143, 0.22)' : 'rgba(186, 231, 255, 0.18)';
-      ctx.beginPath();
-      ctx.arc(nodeX, nodeY, 1.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
+      const pair = [edge.a, edge.b];
+      for (let p = 0; p < 2; p++) {
+        const tw = pair[p];
+        if (!tw || seenSymb.has(tw)) continue;
+        seenSymb.add(tw);
+        const isGrand = tw.synergies && tw.synergies.hasGrandResonance;
+        const pulse = 0.72 + Math.sin((this.animTimer || 0) * 3.2 + tw.col) * 0.25;
+        ctx.save();
+        ctx.strokeStyle = isGrand ? `rgba(255, 224, 110, ${0.26 * pulse})` : `rgba(135, 232, 160, ${0.20 * pulse})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(tw.x, tw.y + 11, 20, 9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        const ang = (this.animTimer || 0) * 1.8 + tw.row * 1.1;
+        ctx.fillStyle = isGrand ? 'rgba(255, 235, 145, 0.55)' : 'rgba(186, 255, 210, 0.45)';
+        ctx.beginPath();
+        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
   }
 

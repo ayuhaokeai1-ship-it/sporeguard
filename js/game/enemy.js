@@ -325,7 +325,7 @@ class EnemyManager {
     }
 
     if (isCrit && fx) {
-      fx.spawnFloatingText(enemy.x, enemy.y - 12, 'CRIT ' + Math.round(actualDamage), PALETTE.BRANCH_B, 1.15);
+      fx.spawnFloatingText(enemy.x, enemy.y - 14, '💥' + Math.round(actualDamage), '#FFD700', 1.12);
     }
 
     enemy.hp -= actualDamage;

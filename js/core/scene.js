@@ -1174,22 +1174,50 @@ class SceneController {
     this.relicManager.render(ctx);
     this.contraptions.render(ctx, this.animTimeSec);
 
-    // 绘制圣树古根逆袭破土树根
+    // 绘制圣树古根逆袭：贴合地表的翠玉金藤脉冲光环与自然曲根
     if (this.elderRootActiveTimer > 0 && this.map && this.map.mapData) {
       const wTile = this.map.mapData.warehouseTile || [19, 12];
       const wx = (wTile[0] + 0.5) * TILE_SIZE;
-      const wy = (wTile[1] + 0.5) * TILE_SIZE;
+      const wy = (wTile[1] + 0.5) * TILE_SIZE + 8;
+      const alpha = Math.min(1.0, this.elderRootActiveTimer / 0.85);
+      const spread = 1.0 - alpha * 0.35;
       ctx.save();
-      ctx.strokeStyle = '#5C381E';
-      ctx.lineWidth = 4.5;
+      ctx.translate(wx, wy);
+      ctx.scale(1.0, 0.62);
+      ctx.globalAlpha = alpha * 0.78;
+      const rGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 58 * spread);
+      rGrad.addColorStop(0, 'rgba(115, 209, 61, 0.36)');
+      rGrad.addColorStop(0.65, 'rgba(255, 215, 0, 0.22)');
+      rGrad.addColorStop(1, 'rgba(82, 196, 26, 0)');
+      ctx.fillStyle = rGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 58 * spread, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.lineCap = 'round';
-      const rootPulse = Math.sin(this.animTimeSec * 15) * 3;
-      for (let rIdx = 0; rIdx < 4; rIdx++) {
-        const ang = (rIdx / 4) * Math.PI * 2;
+      for (let rIdx = 0; rIdx < 7; rIdx++) {
+        const ang = (rIdx / 7) * Math.PI * 2 + 0.37;
+        const swirl = Math.sin(this.animTimeSec * 9 + rIdx * 1.4) * 0.24;
+        const len = (40 + (rIdx % 2) * 14) * spread;
+        const ex = Math.cos(ang + swirl) * len;
+        const ey = Math.sin(ang + swirl) * len;
+        const cx = Math.cos(ang - 0.38) * len * 0.52;
+        const cy = Math.sin(ang - 0.38) * len * 0.52;
+        ctx.strokeStyle = 'rgba(42, 74, 34, 0.72)';
+        ctx.lineWidth = 3.0;
         ctx.beginPath();
-        ctx.moveTo(wx, wy);
-        ctx.quadraticCurveTo(wx + Math.cos(ang) * 35 + rootPulse, wy + Math.sin(ang) * 35, wx + Math.cos(ang) * 60, wy + Math.sin(ang) * 60);
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(cx, cy, ex, ey);
         ctx.stroke();
+
+        ctx.strokeStyle = rIdx % 2 === 0 ? 'rgba(149, 222, 100, 0.85)' : 'rgba(255, 229, 143, 0.85)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFF1B8';
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.0, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }
