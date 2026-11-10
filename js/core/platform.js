@@ -325,8 +325,7 @@ function loadMapSubpackage(mapId, atlasPath) {
 }
 
 /**
- * 存储接口：仅使用微信本地存储接口 wx.getStorageSync / wx.setStorageSync
- * 严禁使用 localStorage 与 IndexedDB
+ * 存储接口：小游戏环境使用 wx.getStorageSync / wx.setStorageSync，网页/移动端 PWA 自动持久化至 window.localStorage
  */
 function getStorage(key) {
   try {
@@ -334,6 +333,11 @@ function getStorage(key) {
       const val = wx.getStorageSync(key);
       if (val !== undefined && val !== '' && val !== null) {
         return typeof val === 'string' ? JSON.parse(val) : val;
+      }
+    } else if (typeof window !== 'undefined' && window.localStorage) {
+      const val = window.localStorage.getItem(key);
+      if (val !== undefined && val !== '' && val !== null) {
+        return JSON.parse(val);
       }
     }
   } catch (e) {
@@ -351,6 +355,8 @@ function setStorage(key, value) {
     memoryStore[key] = value;
     if (typeof wx !== 'undefined' && typeof wx.setStorageSync === 'function') {
       wx.setStorageSync(key, jsonStr);
+    } else if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, jsonStr);
     }
     return true;
   } catch (e) {

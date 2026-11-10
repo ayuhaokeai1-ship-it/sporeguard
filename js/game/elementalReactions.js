@@ -49,6 +49,11 @@ class ElementalReactionSystem {
     this._isReacting = true;
     try {
 
+    if (enemy._reactCd && enemy._reactCd > 0) {
+      if (enemy.elementalAuras) enemy.elementalAuras[element] = 6.0;
+      return null;
+    }
+
     if (!enemy.elementalAuras) {
       enemy.elementalAuras = {
         pyro: 0,
@@ -104,6 +109,10 @@ class ElementalReactionSystem {
       auras[element] = 6.0;
     }
 
+    if (reactionResult) {
+      enemy._reactCd = 2.6;
+    }
+
     return reactionResult;
     } finally {
       this._isReacting = false;
@@ -114,7 +123,7 @@ class ElementalReactionSystem {
    * 反应 1：蔓延烈焰
    */
   triggerWildfire(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.6 + 60);
+    const dmg = Math.round(baseDmg * 1.15 + 35);
     this.recordReaction('wildfire', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
@@ -124,15 +133,17 @@ class ElementalReactionSystem {
     }
     platform.playSfx('sfx_boom');
 
-    // 溅射点燃周围 80px 内所有敌军
+    // 溅射点燃周围 72px 内最多 4 名敌军
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
-      for (let i = 0; i < list.length; i++) {
+      let hits = 0;
+      for (let i = 0; i < list.length && hits < 4; i++) {
         const other = list[i];
-        if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 80) {
-          other.burnTimer = 4.0;
-          other.burnDps = 25;
-          other.takeDamage(Math.round(dmg * 0.5), null, 'fire');
+        if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 72) {
+          other.burnTimer = 3.0;
+          other.burnDps = 18;
+          other.takeDamage(Math.round(dmg * 0.45), null, 'fire');
+          hits++;
         }
       }
     }
@@ -145,11 +156,11 @@ class ElementalReactionSystem {
    * 反应 2：超导电弧 (连锁闪电)
    */
   triggerSuperconduct(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.5 + 80);
+    const dmg = Math.round(baseDmg * 1.15 + 45);
     this.recordReaction('superconduct', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
-    enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.40); // 削减 40% 护甲
+    enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.35); // 削减 35% 护甲
     platform.playSfx('sfx_shock');
 
     if (scene && scene.fx) {
@@ -167,11 +178,11 @@ class ElementalReactionSystem {
         const next = list[j];
         if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
-        if (d2 <= 130 * 130) {
-          const chainDmg = Math.round(dmg * 0.65);
+        if (d2 <= 120 * 120) {
+          const chainDmg = Math.round(dmg * 0.55);
           next.hp -= chainDmg;
           next.whiteFlashFrames = 2;
-          next.armorReduction = Math.max(next.armorReduction || 0, 0.35);
+          next.armorReduction = Math.max(next.armorReduction || 0, 0.30);
           if (next.hp <= 0) {
             scene.enemyManager.killEnemy(next, scene.fx);
           }
@@ -201,11 +212,11 @@ class ElementalReactionSystem {
    * 反应 3：极寒冰华 (深度冰冻与碎冰斩)
    */
   triggerGlacialFreeze(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.4 + 50);
+    const dmg = Math.round(baseDmg * 1.1 + 30);
     this.recordReaction('freeze', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost');
-    enemy.freezeTimer = 2.8; // 完全冰冻 2.8 秒
+    enemy.freezeTimer = 1.6; // 深度冰冻 1.6 秒
     enemy.isDeepFrozen = true;
     platform.playSfx('sfx_mist');
 
@@ -222,16 +233,16 @@ class ElementalReactionSystem {
    * 反应 4：剧毒粉尘爆轰
    */
   triggerToxicDetonation(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 2.0 + 120);
+    const dmg = Math.round(baseDmg * 1.25 + 60);
     this.recordReaction('detonation', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison');
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒粉尘爆轰! -${dmg}`, '#A0D911');
-      scene.fx.spawnRing(enemy.x, enemy.y, 90, '#BAE637', 0.55);
-      scene.fx.triggerScreenShake(4.0, 0.35);
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒爆轰! -${dmg}`, '#A0D911');
+      scene.fx.spawnRing(enemy.x, enemy.y, 80, '#BAE637', 0.55);
+      scene.fx.triggerScreenShake(3.2, 0.28);
     }
 
     // 生成范围腐蚀酸雾陷阱
@@ -240,9 +251,9 @@ class ElementalReactionSystem {
         kind: 'acid',
         x: enemy.x,
         y: enemy.y,
-        radiusPx: 55,
-        duration: 5.0,
-        dps: 45
+        radiusPx: 48,
+        duration: 4.0,
+        dps: 22
       });
     }
 
@@ -251,34 +262,34 @@ class ElementalReactionSystem {
   }
 
   /**
-   * 反应 5：光合充能 (海量金孢子爆发与全图自然共振)
+   * 反应 5：光合充能 (精选黄金孢子爆发与邻近超频)
    */
   triggerPhotosynthesis(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.2 + 40);
+    const dmg = Math.round(baseDmg * 1.1 + 25);
     this.recordReaction('photosynthesis', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature');
     platform.playSfx('sfx_coin');
 
-    // 散落 12 颗黄金高阶能量孢子
-    if (scene && scene.sporeDropManager) {
-      scene.sporeDropManager.spawnSporeBurst(enemy.x, enemy.y, 12, true);
+    // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
+    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 8) {
+      scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 8, true, 24);
     }
 
-    // 强化周围 120px 防御塔 6 秒内攻击速度 +35%
+    // 强化周围 96px 防御塔 2.6 秒攻击速度
     if (scene && scene.towerManager) {
       const tws = scene.towerManager.towers;
       for (let i = 0; i < tws.length; i++) {
         const t = tws[i];
-        if (Math.hypot(t.x - enemy.x, t.y - enemy.y) <= 120) {
-          t.superchargeTimer = Math.max(t.superchargeTimer || 0, 6.0);
+        if (Math.hypot(t.x - enemy.x, t.y - enemy.y) <= 96) {
+          t.superchargeTimer = Math.max(t.superchargeTimer || 0, 2.6);
         }
       }
     }
 
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `✨光合充能! +孢子超频`, '#FFD666');
-      scene.fx.spawnRing(enemy.x, enemy.y, 80, '#FFF566', 0.5);
+      scene.fx.spawnRing(enemy.x, enemy.y, 70, '#FFF566', 0.45);
     }
 
     this.addFloatingBanner(enemy.x, enemy.y - 32, '✦ 光合充能 ✦', '#FFD666');
@@ -349,11 +360,12 @@ class ElementalReactionSystem {
       }
     }
 
-    // 3. 衰减敌军身上的元素附着
+    // 3. 衰减敌军身上的元素附着与内置冷却
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
+        if (e._reactCd > 0) e._reactCd = Math.max(0, e._reactCd - dt);
         if (e.elementalAuras) {
           const a = e.elementalAuras;
           if (a.pyro > 0) a.pyro = Math.max(0, a.pyro - dt);

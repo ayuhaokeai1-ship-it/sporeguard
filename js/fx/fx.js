@@ -159,12 +159,30 @@ class FxSystem {
   }
 
   spawnFloatingText(x, y, text, color = PALETTE.UI_TEXT, scale = 1.0) {
+    const str = String(text);
+    const active = this.textPool.getActiveList();
+    let baseX = x + (Math.random() - 0.5) * 6;
+    let baseY = y - 8;
+
+    // 防止同名提示文字（如 潜地回避! / 圣光涤罪!）在同一点高频叠字糊成一片
+    let yShift = 0;
+    for (let i = active.length - 1; i >= 0; i--) {
+      const ex = active[i];
+      if (Math.abs(ex.x - baseX) <= 34 && Math.abs(ex.y - (baseY - yShift)) <= 15) {
+        if (ex.text === str && ex.life < 0.28 && str.length > 4) {
+          return;
+        }
+        yShift += 14;
+        if (yShift >= 42) break;
+      }
+    }
+
     const item = this.textPool.acquire(true);
     if (!item) return;
-    item.x = x + (Math.random() - 0.5) * 8;
-    item.y = y - 8;
+    item.x = baseX;
+    item.y = baseY - yShift;
     item.vy = -34;
-    item.text = String(text);
+    item.text = str;
     item.color = color;
     item.life = 0;
     item.maxLife = 0.65;
@@ -214,19 +232,19 @@ class FxSystem {
 
   /**
    * 战利品飞向金库流光光丝（Spore Homing Motes）
-   * 拾取孢子或古代遗物时，生成向上弹跳并沿贝塞尔弧线飞入顶部金库的光子
+   * 拾取孢子或古代遗物时，生成向上弹跳并沿贝塞尔弧线飞入左下角金库的流光
    */
   spawnHomingMotes(startX, startY, count = 3, color = '#FFD700') {
-    const targetX = 148;
-    const targetY = 22;
+    const targetX = 68;
+    const targetY = 512;
     for (let i = 0; i < count; i++) {
       if (this.homingMotes.length >= 32) {
         this.homingMotes.shift();
       }
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
       const burstDist = 18 + Math.random() * 16;
-      const arcMidX = (startX + targetX) * 0.5 + (Math.random() - 0.5) * 60;
-      const arcMidY = Math.min(startY, targetY) - (40 + Math.random() * 50);
+      const arcMidX = (startX + targetX) * 0.5 + (Math.random() - 0.5) * 50;
+      const arcMidY = Math.min(startY, targetY) - (40 + Math.random() * 45);
 
       this.homingMotes.push({
         startX: startX + Math.cos(angle) * (burstDist * 0.3),
@@ -563,8 +581,9 @@ class FxSystem {
       }
     }
 
-    // 2. 飞向顶部金库的战利品与金孢流光轨迹 (Spore Homing Motes)
+    // 2. 飞向底部金库的战利品与金孢流光轨迹 (Spore Homing Motes)
     if (this.homingMotes && this.homingMotes.length > 0) {
+      const moteImg = platform.getImage('assets/vfx/item_golden_spore.png');
       for (let i = 0; i < this.homingMotes.length; i++) {
         const m = this.homingMotes[i];
         const prog = Math.min(1.0, m.timer / m.duration);
@@ -573,15 +592,17 @@ class FxSystem {
         const curY = inv * inv * m.startY + 2 * inv * prog * m.cpY + prog * prog * m.targetY;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.45)';
+        const radGrad = ctx.createRadialGradient(curX, curY, 1, curX, curY, 9);
+        radGrad.addColorStop(0, 'rgba(255, 245, 190, 0.85)');
+        radGrad.addColorStop(0.5, 'rgba(255, 215, 0, 0.35)');
+        radGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = radGrad;
         ctx.beginPath();
-        ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+        ctx.arc(curX, curY, 9, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.arc(curX, curY, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        if (moteImg && moteImg.width) {
+          ctx.drawImage(moteImg, curX - 6, curY - 6, 12, 12);
+        }
         ctx.restore();
       }
     }
@@ -598,13 +619,13 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
+    // 顶部横幅（连锁！/超载！/波次提示）：居中显示在成就吐司与顶部状态栏下方，避免彼此挤压重叠
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
-      const by = 80;
+      const by = 86;
 
       ctx.save();
       ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';

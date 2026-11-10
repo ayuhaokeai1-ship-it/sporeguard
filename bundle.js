@@ -1101,9 +1101,9 @@ const ENEMIES = {
     nameKey: 'enemy_burrower_name',
     typeKey: 'enemy_burrower_type',
     tipKey: 'enemy_burrower_tip',
-    baseHp: 1080,
+    baseHp: 580,
     speed: 1.5,
-    armor: 8,
+    armor: 5,
     threat: 2,
     reward: 12,
     isFlying: false,
@@ -3004,8 +3004,7 @@ function loadMapSubpackage(mapId, atlasPath) {
 }
 
 /**
- * 存储接口：仅使用微信本地存储接口 wx.getStorageSync / wx.setStorageSync
- * 严禁使用 localStorage 与 IndexedDB
+ * 存储接口：小游戏环境使用 wx.getStorageSync / wx.setStorageSync，网页/移动端 PWA 自动持久化至 window.localStorage
  */
 function getStorage(key) {
   try {
@@ -3013,6 +3012,11 @@ function getStorage(key) {
       const val = wx.getStorageSync(key);
       if (val !== undefined && val !== '' && val !== null) {
         return typeof val === 'string' ? JSON.parse(val) : val;
+      }
+    } else if (typeof window !== 'undefined' && window.localStorage) {
+      const val = window.localStorage.getItem(key);
+      if (val !== undefined && val !== '' && val !== null) {
+        return JSON.parse(val);
       }
     }
   } catch (e) {
@@ -3030,6 +3034,8 @@ function setStorage(key, value) {
     memoryStore[key] = value;
     if (typeof wx !== 'undefined' && typeof wx.setStorageSync === 'function') {
       wx.setStorageSync(key, jsonStr);
+    } else if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, jsonStr);
     }
     return true;
   } catch (e) {
@@ -4639,12 +4645,30 @@ class FxSystem {
   }
 
   spawnFloatingText(x, y, text, color = PALETTE.UI_TEXT, scale = 1.0) {
+    const str = String(text);
+    const active = this.textPool.getActiveList();
+    let baseX = x + (Math.random() - 0.5) * 6;
+    let baseY = y - 8;
+
+    // 防止同名提示文字（如 潜地回避! / 圣光涤罪!）在同一点高频叠字糊成一片
+    let yShift = 0;
+    for (let i = active.length - 1; i >= 0; i--) {
+      const ex = active[i];
+      if (Math.abs(ex.x - baseX) <= 34 && Math.abs(ex.y - (baseY - yShift)) <= 15) {
+        if (ex.text === str && ex.life < 0.28 && str.length > 4) {
+          return;
+        }
+        yShift += 14;
+        if (yShift >= 42) break;
+      }
+    }
+
     const item = this.textPool.acquire(true);
     if (!item) return;
-    item.x = x + (Math.random() - 0.5) * 8;
-    item.y = y - 8;
+    item.x = baseX;
+    item.y = baseY - yShift;
     item.vy = -34;
-    item.text = String(text);
+    item.text = str;
     item.color = color;
     item.life = 0;
     item.maxLife = 0.65;
@@ -4694,19 +4718,19 @@ class FxSystem {
 
   /**
    * 战利品飞向金库流光光丝（Spore Homing Motes）
-   * 拾取孢子或古代遗物时，生成向上弹跳并沿贝塞尔弧线飞入顶部金库的光子
+   * 拾取孢子或古代遗物时，生成向上弹跳并沿贝塞尔弧线飞入左下角金库的流光
    */
   spawnHomingMotes(startX, startY, count = 3, color = '#FFD700') {
-    const targetX = 148;
-    const targetY = 22;
+    const targetX = 68;
+    const targetY = 512;
     for (let i = 0; i < count; i++) {
       if (this.homingMotes.length >= 32) {
         this.homingMotes.shift();
       }
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
       const burstDist = 18 + Math.random() * 16;
-      const arcMidX = (startX + targetX) * 0.5 + (Math.random() - 0.5) * 60;
-      const arcMidY = Math.min(startY, targetY) - (40 + Math.random() * 50);
+      const arcMidX = (startX + targetX) * 0.5 + (Math.random() - 0.5) * 50;
+      const arcMidY = Math.min(startY, targetY) - (40 + Math.random() * 45);
 
       this.homingMotes.push({
         startX: startX + Math.cos(angle) * (burstDist * 0.3),
@@ -5043,8 +5067,9 @@ class FxSystem {
       }
     }
 
-    // 2. 飞向顶部金库的战利品与金孢流光轨迹 (Spore Homing Motes)
+    // 2. 飞向底部金库的战利品与金孢流光轨迹 (Spore Homing Motes)
     if (this.homingMotes && this.homingMotes.length > 0) {
+      const moteImg = platform.getImage('assets/vfx/item_golden_spore.png');
       for (let i = 0; i < this.homingMotes.length; i++) {
         const m = this.homingMotes[i];
         const prog = Math.min(1.0, m.timer / m.duration);
@@ -5053,15 +5078,17 @@ class FxSystem {
         const curY = inv * inv * m.startY + 2 * inv * prog * m.cpY + prog * prog * m.targetY;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.45)';
+        const radGrad = ctx.createRadialGradient(curX, curY, 1, curX, curY, 9);
+        radGrad.addColorStop(0, 'rgba(255, 245, 190, 0.85)');
+        radGrad.addColorStop(0.5, 'rgba(255, 215, 0, 0.35)');
+        radGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = radGrad;
         ctx.beginPath();
-        ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+        ctx.arc(curX, curY, 9, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.arc(curX, curY, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        if (moteImg && moteImg.width) {
+          ctx.drawImage(moteImg, curX - 6, curY - 6, 12, 12);
+        }
         ctx.restore();
       }
     }
@@ -5078,13 +5105,13 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：居中显示在顶部状态栏下方，不遮挡资源条与卡片栏
+    // 顶部横幅（连锁！/超载！/波次提示）：居中显示在成就吐司与顶部状态栏下方，避免彼此挤压重叠
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
-      const by = 80;
+      const by = 86;
 
       ctx.save();
       ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
@@ -9831,6 +9858,11 @@ class ElementalReactionSystem {
     this._isReacting = true;
     try {
 
+    if (enemy._reactCd && enemy._reactCd > 0) {
+      if (enemy.elementalAuras) enemy.elementalAuras[element] = 6.0;
+      return null;
+    }
+
     if (!enemy.elementalAuras) {
       enemy.elementalAuras = {
         pyro: 0,
@@ -9886,6 +9918,10 @@ class ElementalReactionSystem {
       auras[element] = 6.0;
     }
 
+    if (reactionResult) {
+      enemy._reactCd = 2.6;
+    }
+
     return reactionResult;
     } finally {
       this._isReacting = false;
@@ -9896,7 +9932,7 @@ class ElementalReactionSystem {
    * 反应 1：蔓延烈焰
    */
   triggerWildfire(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.6 + 60);
+    const dmg = Math.round(baseDmg * 1.15 + 35);
     this.recordReaction('wildfire', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
@@ -9906,15 +9942,17 @@ class ElementalReactionSystem {
     }
     platform.playSfx('sfx_boom');
 
-    // 溅射点燃周围 80px 内所有敌军
+    // 溅射点燃周围 72px 内最多 4 名敌军
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
-      for (let i = 0; i < list.length; i++) {
+      let hits = 0;
+      for (let i = 0; i < list.length && hits < 4; i++) {
         const other = list[i];
-        if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 80) {
-          other.burnTimer = 4.0;
-          other.burnDps = 25;
-          other.takeDamage(Math.round(dmg * 0.5), null, 'fire');
+        if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 72) {
+          other.burnTimer = 3.0;
+          other.burnDps = 18;
+          other.takeDamage(Math.round(dmg * 0.45), null, 'fire');
+          hits++;
         }
       }
     }
@@ -9927,11 +9965,11 @@ class ElementalReactionSystem {
    * 反应 2：超导电弧 (连锁闪电)
    */
   triggerSuperconduct(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.5 + 80);
+    const dmg = Math.round(baseDmg * 1.15 + 45);
     this.recordReaction('superconduct', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
-    enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.40); // 削减 40% 护甲
+    enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.35); // 削减 35% 护甲
     platform.playSfx('sfx_shock');
 
     if (scene && scene.fx) {
@@ -9949,11 +9987,11 @@ class ElementalReactionSystem {
         const next = list[j];
         if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
-        if (d2 <= 130 * 130) {
-          const chainDmg = Math.round(dmg * 0.65);
+        if (d2 <= 120 * 120) {
+          const chainDmg = Math.round(dmg * 0.55);
           next.hp -= chainDmg;
           next.whiteFlashFrames = 2;
-          next.armorReduction = Math.max(next.armorReduction || 0, 0.35);
+          next.armorReduction = Math.max(next.armorReduction || 0, 0.30);
           if (next.hp <= 0) {
             scene.enemyManager.killEnemy(next, scene.fx);
           }
@@ -9983,11 +10021,11 @@ class ElementalReactionSystem {
    * 反应 3：极寒冰华 (深度冰冻与碎冰斩)
    */
   triggerGlacialFreeze(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.4 + 50);
+    const dmg = Math.round(baseDmg * 1.1 + 30);
     this.recordReaction('freeze', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost');
-    enemy.freezeTimer = 2.8; // 完全冰冻 2.8 秒
+    enemy.freezeTimer = 1.6; // 深度冰冻 1.6 秒
     enemy.isDeepFrozen = true;
     platform.playSfx('sfx_mist');
 
@@ -10004,16 +10042,16 @@ class ElementalReactionSystem {
    * 反应 4：剧毒粉尘爆轰
    */
   triggerToxicDetonation(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 2.0 + 120);
+    const dmg = Math.round(baseDmg * 1.25 + 60);
     this.recordReaction('detonation', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison');
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒粉尘爆轰! -${dmg}`, '#A0D911');
-      scene.fx.spawnRing(enemy.x, enemy.y, 90, '#BAE637', 0.55);
-      scene.fx.triggerScreenShake(4.0, 0.35);
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒爆轰! -${dmg}`, '#A0D911');
+      scene.fx.spawnRing(enemy.x, enemy.y, 80, '#BAE637', 0.55);
+      scene.fx.triggerScreenShake(3.2, 0.28);
     }
 
     // 生成范围腐蚀酸雾陷阱
@@ -10022,9 +10060,9 @@ class ElementalReactionSystem {
         kind: 'acid',
         x: enemy.x,
         y: enemy.y,
-        radiusPx: 55,
-        duration: 5.0,
-        dps: 45
+        radiusPx: 48,
+        duration: 4.0,
+        dps: 22
       });
     }
 
@@ -10033,34 +10071,34 @@ class ElementalReactionSystem {
   }
 
   /**
-   * 反应 5：光合充能 (海量金孢子爆发与全图自然共振)
+   * 反应 5：光合充能 (精选黄金孢子爆发与邻近超频)
    */
   triggerPhotosynthesis(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.2 + 40);
+    const dmg = Math.round(baseDmg * 1.1 + 25);
     this.recordReaction('photosynthesis', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature');
     platform.playSfx('sfx_coin');
 
-    // 散落 12 颗黄金高阶能量孢子
-    if (scene && scene.sporeDropManager) {
-      scene.sporeDropManager.spawnSporeBurst(enemy.x, enemy.y, 12, true);
+    // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
+    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 8) {
+      scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 8, true, 24);
     }
 
-    // 强化周围 120px 防御塔 6 秒内攻击速度 +35%
+    // 强化周围 96px 防御塔 2.6 秒攻击速度
     if (scene && scene.towerManager) {
       const tws = scene.towerManager.towers;
       for (let i = 0; i < tws.length; i++) {
         const t = tws[i];
-        if (Math.hypot(t.x - enemy.x, t.y - enemy.y) <= 120) {
-          t.superchargeTimer = Math.max(t.superchargeTimer || 0, 6.0);
+        if (Math.hypot(t.x - enemy.x, t.y - enemy.y) <= 96) {
+          t.superchargeTimer = Math.max(t.superchargeTimer || 0, 2.6);
         }
       }
     }
 
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `✨光合充能! +孢子超频`, '#FFD666');
-      scene.fx.spawnRing(enemy.x, enemy.y, 80, '#FFF566', 0.5);
+      scene.fx.spawnRing(enemy.x, enemy.y, 70, '#FFF566', 0.45);
     }
 
     this.addFloatingBanner(enemy.x, enemy.y - 32, '✦ 光合充能 ✦', '#FFD666');
@@ -10131,11 +10169,12 @@ class ElementalReactionSystem {
       }
     }
 
-    // 3. 衰减敌军身上的元素附着
+    // 3. 衰减敌军身上的元素附着与内置冷却
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
+        if (e._reactCd > 0) e._reactCd = Math.max(0, e._reactCd - dt);
         if (e.elementalAuras) {
           const a = e.elementalAuras;
           if (a.pyro > 0) a.pyro = Math.max(0, a.pyro - dt);
@@ -11989,6 +12028,12 @@ class ElementalComboEngine {
     const hadEarth = aff.earth > 0;
     const hadFrost = aff.frost > 0;
 
+    // 每名敌人保留 2.6 秒连携内置冷却，避免高频攻速下无限瞬发爆破/刷孢子
+    if (enemy._comboCd && enemy._comboCd > 0) {
+      aff[element] = Math.max(aff[element] || 0, 4.0);
+      return null;
+    }
+
     // 刷新当前元素存留时间 (4.5s 附着窗口)
     aff[element] = 4.5;
 
@@ -11996,23 +12041,36 @@ class ElementalComboEngine {
 
     // 1. 【腐殖剧毒 (Miasmic Corrosion)】: wood + poison
     if ((element === 'wood' && hadPoison) || (element === 'poison' && hadWood)) {
+      aff.wood = 0; aff.poison = 0;
       comboTriggered = this.triggerCorrosion(enemy, enemyManager, fx, combatJuice);
     }
     // 2. 【蒸气爆鸣 (Steam Overpressure)】: fire + poison/mist
     else if ((element === 'fire' && hadPoison) || (element === 'poison' && hadFire)) {
+      aff.fire = 0; aff.poison = 0;
       comboTriggered = this.triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice);
     }
     // 3. 【炽热荆棘 (Blazing Bramble)】: earth + fire
     else if ((element === 'fire' && hadEarth) || (element === 'earth' && hadFire)) {
+      aff.fire = 0; aff.earth = 0;
       comboTriggered = this.triggerBlazingBramble(enemy, enemyManager, fx, combatJuice);
     }
     // 4. 【霜冻凋零 (Glacial Frostbite)】: frost + wood/earth
     else if ((element === 'frost' && (hadWood || hadEarth)) || ((element === 'wood' || element === 'earth') && hadFrost)) {
+      aff.frost = 0; aff.wood = 0; aff.earth = 0;
       comboTriggered = this.triggerFrostbite(enemy, enemyManager, fx, combatJuice);
     }
     // 5. 【圣光涤罪 (Solar Superconduct)】: light + (wood/poison/fire/earth)
     else if (element === 'light' && (hadWood || hadPoison || hadFire || hadEarth)) {
+      aff.light = 0;
+      if (hadWood) aff.wood = 0;
+      else if (hadPoison) aff.poison = 0;
+      else if (hadFire) aff.fire = 0;
+      else if (hadEarth) aff.earth = 0;
       comboTriggered = this.triggerSolarSuperconduct(enemy, enemyManager, economy, fx, combatJuice);
+    }
+
+    if (comboTriggered) {
+      enemy._comboCd = 2.6;
     }
 
     // 6. 检测【自然大共鸣 (Grand Resonance)】: 3种以上元素同时附着
@@ -12022,6 +12080,7 @@ class ElementalComboEngine {
     }
     if (activeElemCount >= 3) {
       this.triggerGrandResonance(enemy, enemyManager, fx, combatJuice);
+      enemy._comboCd = 3.2;
       // 清空附着元素，防止无限连锁
       for (const k in aff) aff[k] = 0;
     }
@@ -12162,27 +12221,27 @@ class ElementalComboEngine {
     const cx = enemy.x;
     const cy = enemy.y;
 
-    // 奖励 15 黄金孢子
+    // 战术微额孢子回馈 (+4，内置冷却限制防止无限刷钱)
     if (economy) {
-      economy.addSpores(15);
+      economy.addSpores(4);
     }
 
-    // 致盲 2.5 秒
+    // 致盲 1.6 秒
     const alive = enemyManager.getAliveEnemies();
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
-      if (Math.hypot(e.x - cx, e.y - cy) <= 130) {
+      if (Math.hypot(e.x - cx, e.y - cy) <= 105) {
         e.isBlind = true;
-        e.blindTimer = 2.5;
-        e.activeSlow = Math.max(e.activeSlow || 0, 0.70);
+        e.blindTimer = 1.6;
+        e.activeSlow = Math.max(e.activeSlow || 0, 0.45);
       }
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +15 孢子!', '#FFD700', 1.4);
-      fx.spawnParticles(cx, cy, 38, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 45, 160, 0.35, 0.8, 5.5);
+      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +4孢子', '#FFD700', 1.2);
+      fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
-    if (combatJuice) combatJuice.addTrauma(0.35);
+    if (combatJuice) combatJuice.addTrauma(0.25);
     platform.playSfx('sfx_coin');
     return { id: 'solar', name: '圣光涤罪' };
   }
@@ -12192,23 +12251,26 @@ class ElementalComboEngine {
    */
   triggerGrandResonance(primaryEnemy, enemyManager, fx, combatJuice) {
     const allAlive = enemyManager.getAliveEnemies();
-    const grandDmg = 380;
+    const cx = primaryEnemy ? primaryEnemy.x : 320;
+    const cy = primaryEnemy ? primaryEnemy.y : 240;
+    const grandDmg = 155;
 
     for (let i = 0; i < allAlive.length; i++) {
       const e = allAlive[i];
+      if (Math.hypot(e.x - cx, e.y - cy) > 140) continue;
       e.hp -= grandDmg;
       e.isRooted = true;
-      e.rootTimer = 3.0;
-      e.residualSlowTimer = 3.5;
-      e.residualSlowValue = 0.90;
+      e.rootTimer = 1.6;
+      e.residualSlowTimer = 2.0;
+      e.residualSlowValue = 0.65;
       if (e.hp <= 0) enemyManager.killEnemy(e, fx);
     }
 
     if (fx) {
-      fx.showBanner('🌲 自然大共鸣·天地同力！', '#52C41A', '全屏神圣天罚，破敌万千！', 2.0);
-      fx.spawnParticles(480, 270, 70, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 80, 320, 0.5, 1.2, 7.0);
+      fx.spawnFloatingText(cx, cy - 28, '自然大共鸣! 155AoE', '#52C41A', 1.3);
+      fx.spawnParticles(cx, cy, 42, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 60, 220, 0.4, 0.9, 5.5);
     }
-    if (combatJuice) combatJuice.addTrauma(0.65);
+    if (combatJuice) combatJuice.addTrauma(0.45);
     platform.playSfx('sfx_win');
   }
 
@@ -12249,10 +12311,13 @@ class ElementalComboEngine {
       if (s.life <= 0) this.steamShockwaves.splice(i, 1);
     }
 
-    // 衰减敌怪体内的元素附着时间
+    // 衰减敌怪体内的元素附着时间与连携冷却
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
       for (let i = 0; i < alive.length; i++) {
+        if (alive[i]._comboCd > 0) {
+          alive[i]._comboCd = Math.max(0, alive[i]._comboCd - dt);
+        }
         const aff = alive[i].elementAfflictions;
         if (aff) {
           for (const k in aff) {
@@ -15557,11 +15622,14 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 纯自然圣光微光外晕
+          // 纯自然圣光柔和渐变光晕
           ctx.save();
-          ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
+          const haloGrad = ctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, 15);
+          haloGrad.addColorStop(0, 'rgba(255, 240, 175, 0.45)');
+          haloGrad.addColorStop(1, 'rgba(255, 229, 143, 0)');
+          ctx.fillStyle = haloGrad;
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, 15, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           continue;

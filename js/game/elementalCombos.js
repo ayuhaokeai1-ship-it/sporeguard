@@ -72,6 +72,12 @@ class ElementalComboEngine {
     const hadEarth = aff.earth > 0;
     const hadFrost = aff.frost > 0;
 
+    // 每名敌人保留 2.6 秒连携内置冷却，避免高频攻速下无限瞬发爆破/刷孢子
+    if (enemy._comboCd && enemy._comboCd > 0) {
+      aff[element] = Math.max(aff[element] || 0, 4.0);
+      return null;
+    }
+
     // 刷新当前元素存留时间 (4.5s 附着窗口)
     aff[element] = 4.5;
 
@@ -79,23 +85,36 @@ class ElementalComboEngine {
 
     // 1. 【腐殖剧毒 (Miasmic Corrosion)】: wood + poison
     if ((element === 'wood' && hadPoison) || (element === 'poison' && hadWood)) {
+      aff.wood = 0; aff.poison = 0;
       comboTriggered = this.triggerCorrosion(enemy, enemyManager, fx, combatJuice);
     }
     // 2. 【蒸气爆鸣 (Steam Overpressure)】: fire + poison/mist
     else if ((element === 'fire' && hadPoison) || (element === 'poison' && hadFire)) {
+      aff.fire = 0; aff.poison = 0;
       comboTriggered = this.triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice);
     }
     // 3. 【炽热荆棘 (Blazing Bramble)】: earth + fire
     else if ((element === 'fire' && hadEarth) || (element === 'earth' && hadFire)) {
+      aff.fire = 0; aff.earth = 0;
       comboTriggered = this.triggerBlazingBramble(enemy, enemyManager, fx, combatJuice);
     }
     // 4. 【霜冻凋零 (Glacial Frostbite)】: frost + wood/earth
     else if ((element === 'frost' && (hadWood || hadEarth)) || ((element === 'wood' || element === 'earth') && hadFrost)) {
+      aff.frost = 0; aff.wood = 0; aff.earth = 0;
       comboTriggered = this.triggerFrostbite(enemy, enemyManager, fx, combatJuice);
     }
     // 5. 【圣光涤罪 (Solar Superconduct)】: light + (wood/poison/fire/earth)
     else if (element === 'light' && (hadWood || hadPoison || hadFire || hadEarth)) {
+      aff.light = 0;
+      if (hadWood) aff.wood = 0;
+      else if (hadPoison) aff.poison = 0;
+      else if (hadFire) aff.fire = 0;
+      else if (hadEarth) aff.earth = 0;
       comboTriggered = this.triggerSolarSuperconduct(enemy, enemyManager, economy, fx, combatJuice);
+    }
+
+    if (comboTriggered) {
+      enemy._comboCd = 2.6;
     }
 
     // 6. 检测【自然大共鸣 (Grand Resonance)】: 3种以上元素同时附着
@@ -105,6 +124,7 @@ class ElementalComboEngine {
     }
     if (activeElemCount >= 3) {
       this.triggerGrandResonance(enemy, enemyManager, fx, combatJuice);
+      enemy._comboCd = 3.2;
       // 清空附着元素，防止无限连锁
       for (const k in aff) aff[k] = 0;
     }
@@ -245,27 +265,27 @@ class ElementalComboEngine {
     const cx = enemy.x;
     const cy = enemy.y;
 
-    // 奖励 15 黄金孢子
+    // 战术微额孢子回馈 (+4，内置冷却限制防止无限刷钱)
     if (economy) {
-      economy.addSpores(15);
+      economy.addSpores(4);
     }
 
-    // 致盲 2.5 秒
+    // 致盲 1.6 秒
     const alive = enemyManager.getAliveEnemies();
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
-      if (Math.hypot(e.x - cx, e.y - cy) <= 130) {
+      if (Math.hypot(e.x - cx, e.y - cy) <= 105) {
         e.isBlind = true;
-        e.blindTimer = 2.5;
-        e.activeSlow = Math.max(e.activeSlow || 0, 0.70);
+        e.blindTimer = 1.6;
+        e.activeSlow = Math.max(e.activeSlow || 0, 0.45);
       }
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +15 孢子!', '#FFD700', 1.4);
-      fx.spawnParticles(cx, cy, 38, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 45, 160, 0.35, 0.8, 5.5);
+      fx.spawnFloatingText(cx, cy - 30, '圣光涤罪! +4孢子', '#FFD700', 1.2);
+      fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
-    if (combatJuice) combatJuice.addTrauma(0.35);
+    if (combatJuice) combatJuice.addTrauma(0.25);
     platform.playSfx('sfx_coin');
     return { id: 'solar', name: '圣光涤罪' };
   }
@@ -275,23 +295,26 @@ class ElementalComboEngine {
    */
   triggerGrandResonance(primaryEnemy, enemyManager, fx, combatJuice) {
     const allAlive = enemyManager.getAliveEnemies();
-    const grandDmg = 380;
+    const cx = primaryEnemy ? primaryEnemy.x : 320;
+    const cy = primaryEnemy ? primaryEnemy.y : 240;
+    const grandDmg = 155;
 
     for (let i = 0; i < allAlive.length; i++) {
       const e = allAlive[i];
+      if (Math.hypot(e.x - cx, e.y - cy) > 140) continue;
       e.hp -= grandDmg;
       e.isRooted = true;
-      e.rootTimer = 3.0;
-      e.residualSlowTimer = 3.5;
-      e.residualSlowValue = 0.90;
+      e.rootTimer = 1.6;
+      e.residualSlowTimer = 2.0;
+      e.residualSlowValue = 0.65;
       if (e.hp <= 0) enemyManager.killEnemy(e, fx);
     }
 
     if (fx) {
-      fx.showBanner('🌲 自然大共鸣·天地同力！', '#52C41A', '全屏神圣天罚，破敌万千！', 2.0);
-      fx.spawnParticles(480, 270, 70, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 80, 320, 0.5, 1.2, 7.0);
+      fx.spawnFloatingText(cx, cy - 28, '自然大共鸣! 155AoE', '#52C41A', 1.3);
+      fx.spawnParticles(cx, cy, 42, ['#52C41A', '#FFD700', '#13C2C2', '#BAE7FF'], 60, 220, 0.4, 0.9, 5.5);
     }
-    if (combatJuice) combatJuice.addTrauma(0.65);
+    if (combatJuice) combatJuice.addTrauma(0.45);
     platform.playSfx('sfx_win');
   }
 
@@ -332,10 +355,13 @@ class ElementalComboEngine {
       if (s.life <= 0) this.steamShockwaves.splice(i, 1);
     }
 
-    // 衰减敌怪体内的元素附着时间
+    // 衰减敌怪体内的元素附着时间与连携冷却
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
       for (let i = 0; i < alive.length; i++) {
+        if (alive[i]._comboCd > 0) {
+          alive[i]._comboCd = Math.max(0, alive[i]._comboCd - dt);
+        }
         const aff = alive[i].elementAfflictions;
         if (aff) {
           for (const k in aff) {

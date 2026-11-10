@@ -471,10 +471,21 @@
             if (typeof cb === 'function') showListeners.push(cb);
           },
           getStorageSync: function (key) {
+            try {
+              if (window.localStorage) {
+                const lsVal = window.localStorage.getItem(key);
+                if (lsVal !== null && lsVal !== '') return lsVal;
+              }
+            } catch (e) {}
             return persistentDict[key];
           },
           setStorageSync: function (key, value) {
             persistentDict[key] = value;
+            try {
+              if (window.localStorage) {
+                window.localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+              }
+            } catch (e) {}
             try {
               window.name = JSON.stringify(persistentDict);
             } catch (e) {}

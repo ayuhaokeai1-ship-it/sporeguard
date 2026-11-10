@@ -795,11 +795,14 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 纯自然圣光微光外晕
+          // 纯自然圣光柔和渐变光晕
           ctx.save();
-          ctx.fillStyle = 'rgba(255, 229, 143, 0.35)';
+          const haloGrad = ctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, 15);
+          haloGrad.addColorStop(0, 'rgba(255, 240, 175, 0.45)');
+          haloGrad.addColorStop(1, 'rgba(255, 229, 143, 0)');
+          ctx.fillStyle = haloGrad;
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, 15, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           continue;
