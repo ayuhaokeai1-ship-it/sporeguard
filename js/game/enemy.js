@@ -159,12 +159,12 @@ class EnemyManager {
     e.def = def;
     e.isFlying = Boolean(def.isFlying);
     e.isBoss = Boolean(def.isBoss);
-    if (e.isBoss && this.scene && this.scene.bossOverdriveEngine) {
-      this.scene.bossOverdriveEngine.registerBoss(e);
-    }
     e.fromWave = options.fromWave !== undefined ? options.fromWave : true;
     e.hp = maxHp;
     e.maxHp = maxHp;
+    if (e.isBoss && this.scene && this.scene.bossOverdriveEngine) {
+      this.scene.bossOverdriveEngine.registerBoss(e);
+    }
     e.baseSpeedTiles = def.speed;
     e.speedMultiplier = 1.0;
     e.baseArmor = def.armor || 0;

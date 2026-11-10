@@ -96,36 +96,53 @@ class CombatAnalyticsSystem {
   renderAnalyticsDashboard(ctx) {
     if (!this.isOpen) return;
 
-    const pw = 420;
-    const ph = 330;
+    const pw = 440;
+    const ph = 328;
     const px = Math.round((960 - pw) * 0.5);
-    const py = Math.round((640 - ph) * 0.5);
+    const py = Math.round((540 - ph) * 0.5);
 
     ctx.save();
-    // 1. 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-    ctx.fillRect(0, 0, 960, 640);
+    // 1. 全屏半透明暗林遮罩（严格对齐 960x540 逻辑屏）
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.76)';
+    ctx.fillRect(0, 0, 960, 540);
 
-    // 2. 羊皮纸/深林木纹底框
-    ctx.fillStyle = 'rgba(20, 28, 22, 0.95)';
+    // 2. 深木黄铜边框战报面板
+    ctx.fillStyle = 'rgba(22, 16, 11, 0.96)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 12) : ctx.rect(px, py, pw, ph);
     ctx.fill();
 
-    ctx.strokeStyle = '#D4AF37';
+    ctx.strokeStyle = '#C68F45';
     ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    // 3. 标题与总览
+    // 右上角关闭按钮 [×]
+    const closeX = px + pw - 34;
+    const closeY = py + 12;
+    ctx.fillStyle = 'rgba(64, 38, 20, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(closeX, closeY, 22, 22, 5) : ctx.rect(closeX, closeY, 22, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#E6BB60';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.fillStyle = '#FFF1B8';
+    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('×', closeX + 11, closeY + 11);
+
+    // 3. 标题与总览（纯中文无英文混杂）
     ctx.fillStyle = '#FFE58F';
     ctx.font = 'bold 15px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('📊 实时战斗输出统计与DPS战报', px + 18, py + 26);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('实时战况与输出统计', px + 18, py + 24);
 
     const dps = this.combatDuration > 0 ? Math.round(this.totalDamageDealt / this.combatDuration) : 0;
-    ctx.fillStyle = '#D9D9D9';
-    ctx.font = '11px "Microsoft YaHei UI", sans-serif';
-    ctx.fillText(`战斗总伤: ${this.totalDamageDealt.toLocaleString()}  |  全队DPS: ${dps}/s  |  单发最高: ${this.highestSingleHit.damage}`, px + 18, py + 48);
+    ctx.fillStyle = '#E8D8B8';
+    ctx.font = '11.5px "Microsoft YaHei UI", sans-serif';
+    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 18, py + 47);
 
     // 4. 各单元伤害占比横向柱状图
     const sorted = Object.entries(this.categoryStats)
@@ -133,46 +150,49 @@ class CombatAnalyticsSystem {
       .sort((a, b) => b.damage - a.damage);
 
     const maxDmg = Math.max(1, sorted[0].damage);
-    const startY = py + 72;
-    const rowH = 28;
-    const barMaxW = 180;
+    const startY = py + 68;
+    const rowH = 29;
+    const barMaxW = 175;
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 单位名称与击杀数
+      // 单位名称
       ctx.fillStyle = item.color;
       ctx.font = 'bold 12px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${i + 1}. ${item.name}`, px + 18, ry + 14);
-
-      // 柱状图外框与进度
-      const barX = px + 130;
-      const barY = ry + 4;
-      const barW = Math.max(2, Math.round((item.damage / maxDmg) * barMaxW));
-      const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
+      ctx.fillText(`${i + 1}. ${item.name}`, px + 18, ry + 13);
 
       // 槽位底色
+      const barX = px + 132;
+      const barY = ry + 6;
+      const barW = Math.max(3, Math.round((item.damage / maxDmg) * barMaxW));
+      const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.fillRect(barX, barY, barMaxW, 14);
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(barX, barY, barMaxW, 13, 4) : ctx.rect(barX, barY, barMaxW, 13);
+      ctx.fill();
 
       // 伤害条
       ctx.fillStyle = item.color;
-      ctx.fillRect(barX, barY, barW, 14);
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(barX, barY, barW, 13, 4) : ctx.rect(barX, barY, barW, 13);
+      ctx.fill();
 
       // 数值文本 (伤害 + 占比%)
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '11px monospace';
+      ctx.fillStyle = '#FFFDF5';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%)  [${item.kills}杀]`, barX + barMaxW + 8, ry + 14);
+      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills}灭`, barX + barMaxW + 8, ry + 13);
     }
 
     // 5. 底部关闭说明
-    ctx.fillStyle = '#8C8C8C';
+    ctx.fillStyle = '#B8A88A';
     ctx.font = '11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击任意区域或右上角按钮关闭战报面板', px + pw * 0.5, py + ph - 14);
+    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 14);
 
     ctx.restore();
   }

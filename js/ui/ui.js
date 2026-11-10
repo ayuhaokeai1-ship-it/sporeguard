@@ -2098,10 +2098,10 @@ class UiManager {
         scene.activeAwakeningTargeting = !scene.activeAwakeningTargeting;
         platform.playSfx('sfx_click');
         if (scene.activeAwakeningTargeting) {
-          scene.fx.spawnFloatingText(480, 240, '请点击场上的蘑菇触发灵能觉醒超载!', '#722ED1', 1.5);
+          this.showToast('请点击场上的蘑菇触发灵能觉醒超载!');
         }
       } else {
-        scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
+        this.showToast('灵能觉醒种子不足(击败精英敌人获取)!');
       }
     });
 
@@ -2123,6 +2123,11 @@ class UiManager {
     if (!tower) return;
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const priStr = i18n.t('prio_' + (tower.priority || 'first'));
+    // 安全钳制边界：绝不让边缘/底行守卫的快捷环被底部卡槽栏(Y>=474)或屏幕左右边框裁切遮挡
+    const minAnchorX = (tileScreenY > 350) ? 252 : 108;
+    const anchorX = Math.max(minAnchorX, Math.min(852, tileScreenX));
+    const topY = Math.max(46, Math.min(392, tileScreenY - 50));
+    const botY = Math.min(436, Math.max(108, tileScreenY + 36));
 
     ctx.save();
 
@@ -2130,10 +2135,10 @@ class UiManager {
     if (upgrades.length === 1) {
       const up = upgrades[0];
       const canAfford = scene.economy.canAfford(up.cost);
-      const uw = 114;
+      const uw = 108;
       const uh = 28;
-      const ux = Math.round(tileScreenX - uw * 0.5);
-      const uy = Math.round(tileScreenY - 50);
+      const ux = Math.round(anchorX - uw * 0.5);
+      const uy = Math.round(topY);
 
       roundRectPath(ctx, ux, uy, uw, uh, 14);
       ctx.fillStyle = canAfford ? 'rgba(16, 42, 28, 0.94)' : 'rgba(28, 20, 16, 0.92)';
@@ -2146,7 +2151,7 @@ class UiManager {
       ctx.font = `bold 11px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`⚡ 强化 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+      ctx.fillText(`强化 · ${up.cost}孢`, ux + uw * 0.5, uy + 14);
 
       this.registerButton('quick_up_single', ux, uy, uw, uh, () => {
         scene.tryUpgradeSelectedTower(up.nodeId);
@@ -2156,10 +2161,10 @@ class UiManager {
       for (let i = 0; i < 2; i++) {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
-        const uw = 96;
+        const uw = 92;
         const uh = 28;
-        const ux = Math.round(i === 0 ? tileScreenX - uw - 4 : tileScreenX + 4);
-        const uy = Math.round(tileScreenY - 50);
+        const ux = Math.round(i === 0 ? anchorX - uw - 4 : anchorX + 4);
+        const uy = Math.round(topY);
 
         roundRectPath(ctx, ux, uy, uw, uh, 14);
         ctx.fillStyle = canAfford ? (i === 0 ? 'rgba(12, 36, 56, 0.94)' : 'rgba(16, 44, 28, 0.94)') : 'rgba(28, 20, 16, 0.92)';
@@ -2172,7 +2177,7 @@ class UiManager {
         ctx.font = `bold 10.5px ${UI_FONT}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${i === 0 ? '⚡A线' : '🔥B线'} 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+        ctx.fillText(`${i === 0 ? '甲线' : '乙线'} · ${up.cost}`, ux + uw * 0.5, uy + 14);
 
         this.registerButton('quick_up_branch_' + up.nodeId, ux, uy, uw, uh, () => {
           scene.tryUpgradeSelectedTower(up.nodeId);
@@ -2180,10 +2185,10 @@ class UiManager {
       }
     } else {
       // 已升至顶级
-      const uw = 96;
+      const uw = 88;
       const uh = 24;
-      const ux = Math.round(tileScreenX - uw * 0.5);
-      const uy = Math.round(tileScreenY - 48);
+      const ux = Math.round(anchorX - uw * 0.5);
+      const uy = Math.round(topY + 2);
 
       roundRectPath(ctx, ux, uy, uw, uh, 12);
       ctx.fillStyle = 'rgba(28, 24, 12, 0.92)';
@@ -2196,14 +2201,14 @@ class UiManager {
       ctx.font = `bold 10.5px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🌟 极意宗师', ux + uw * 0.5, uy + 12);
+      ctx.fillText('宗师满阶', ux + uw * 0.5, uy + 12);
     }
 
     // 2. 底部：战术微操双胶囊（索敌 + 属性详情）
     const ph = 28;
-    const py = Math.round(tileScreenY + 36);
-    const px1 = Math.round(tileScreenX - 76); // 索敌
-    const px2 = Math.round(tileScreenX + 6);  // 详情属性
+    const py = Math.round(botY);
+    const px1 = Math.round(anchorX - 74); // 索敌
+    const px2 = Math.round(anchorX + 4);  // 详情属性
 
     // (1) 索敌胶囊
     roundRectPath(ctx, px1, py, 70, ph, 14);
@@ -2217,7 +2222,7 @@ class UiManager {
     ctx.font = `bold 11px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`🎯 ${priStr}`, px1 + 35, py + 14);
+    ctx.fillText(`索敌 · ${priStr}`, px1 + 35, py + 14);
 
     this.registerButton('quick_pri_btn', px1, py, 70, ph, () => {
       if (scene.towerManager) {
@@ -2240,7 +2245,7 @@ class UiManager {
     ctx.font = `bold 11px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('📜 属性', px2 + 35, py + 14);
+    ctx.fillText('详细属性', px2 + 35, py + 14);
 
     this.registerButton('quick_detail_btn', px2, py, 70, ph, () => {
       this.showTowerDetailBoard = !this.showTowerDetailBoard;
@@ -2361,7 +2366,7 @@ class UiManager {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const fullName = `${i18n.t(def.nameKey)} · ${i18n.t(node.nameKey)}`;
-    ctx.fillText(fullName, x + 76, y + 40);
+    ctx.fillText(fullName, x + 76, y + 40, Math.max(80, w - 118));
 
     // 等级阶级徽章（胶囊型，y+54）
     const lvMap = { base: '基础 1阶', lv1: '强化 2阶', a2: '甲线 3阶', a3: '甲线 顶阶', b2: '乙线 3阶', b3: '乙线 顶阶' };
@@ -2622,7 +2627,7 @@ class UiManager {
 
     ctx.fillStyle = isMoss ? THEME.ENAMEL_GREEN : THEME.INK_MID;
     ctx.font = `bold 11px ${UI_FONT}`;
-    ctx.fillText(isMoss ? `◆ 黄金苔藓格 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, x + 76, y + 56);
+    ctx.fillText(isMoss ? `◆ 雕石地基 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, x + 76, y + 56);
 
     // 描述与属性
     this.drawWrappedText(ctx, i18n.t(def.descKey), bx, y + 78, btnW, 16, THEME.INK_MID, `11px ${UI_FONT}`);
@@ -2864,7 +2869,7 @@ class UiManager {
     const bestEndless = (save && save.endlessRecord) ? save.endlessRecord.bestWave : 0;
 
     const mw = 440;
-    const mh = isEndless ? 340 : (isWin ? 370 : 330);
+    const mh = isEndless ? 340 : (isWin ? (scene.hasNextMap() ? 404 : 358) : 344);
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -2873,7 +2878,7 @@ class UiManager {
     ctx.save();
     ctx.textAlign = 'center';
     if (isEndless) {
-      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
+      drawArtText(ctx, '无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
         style: 'ink',
         color: '#8C1D18',
         size: 22,
@@ -2926,61 +2931,105 @@ class UiManager {
       });
     } else {
       ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
-    ctx.font = 'bold 20px ' + CN_FONT;
+      ctx.font = 'bold 21px ' + CN_FONT;
       ctx.textBaseline = 'middle';
-      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 54);
+      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 58);
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 80, 36);
+        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 78, 34);
       }
 
-      ctx.fillStyle = THEME.INK_DARK;
-      ctx.font = `bold 15px ${CN_FONT}`;
+      // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
       const timeSec = Math.round(scene.settlementResult.clearTimeSec * 10) / 10;
-      ctx.fillText(i18n.t('best_time') + ': ' + timeSec + 's', mx + mw * 0.5, my + 134);
-      ctx.fillText(i18n.t('seeds_label') + ': ' + scene.settlementResult.remainingSeeds + ' / 20', mx + mw * 0.5, my + 160);
+      let totalKills = 0;
+      let mvpName = '树人守卫';
+      let maxCatDmg = -1;
+      let totalDmg = 0;
+      if (scene.combatAnalytics) {
+        totalDmg = scene.combatAnalytics.totalDamageDealt || 0;
+        const stats = scene.combatAnalytics.categoryStats || {};
+        for (const key of Object.keys(stats)) {
+          const item = stats[key];
+          totalKills += (item.kills || 0);
+          if ((item.damage || 0) > maxCatDmg) {
+            maxCatDmg = item.damage || 0;
+            mvpName = item.name || mvpName;
+          }
+        }
+      }
+
+      const cardX = mx + 36;
+      const cardY = my + 124;
+      const cardW = mw - 72;
+      const cardH = 78;
+      roundRectPath(ctx, cardX, cardY, cardW, cardH, 10);
+      ctx.fillStyle = 'rgba(88, 58, 28, 0.12)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      const cells = [
+        { k: i18n.t('best_time'), v: `${timeSec}s` },
+        { k: i18n.t('seeds_label'), v: `${scene.settlementResult.remainingSeeds} / 20` },
+        { k: '累计歼灭', v: `${totalKills} 只` },
+        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${Math.round(totalDmg / 100) / 10}k)` : '稳固防线' }
+      ];
+      for (let ci = 0; ci < 4; ci++) {
+        const colI = ci % 2;
+        const rowI = Math.floor(ci / 2);
+        const cx = cardX + 14 + colI * (cardW * 0.5);
+        const cy = cardY + 20 + rowI * 36;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = THEME.INK_MID;
+        ctx.font = `11px ${CN_FONT}`;
+        ctx.fillText(cells[ci].k, cx, cy);
+        ctx.fillStyle = THEME.INK_DARK;
+        ctx.font = `bold 13.5px ${CN_FONT}`;
+        ctx.fillText(cells[ci].v, cx, cy + 16);
+      }
 
       const bx = mx + 65;
       const bw = mw - 130;
 
       if (isWin) {
-        let curBtnY = my + 188;
+        let curBtnY = my + 216;
         if (scene.hasNextMap()) {
-          this.drawPixelButton(ctx, 'settle_next', bx, curBtnY, bw, 38, i18n.t('btn_next_map'), {
+          this.drawPixelButton(ctx, 'settle_next', bx, curBtnY, bw, 36, i18n.t('btn_next_map'), {
             skin: 'btn_green',
             iconKey: 'play'
           }, () => {
             platform.playSfx('sfx_click');
             scene.startNextMap();
           });
-          curBtnY += 46;
+          curBtnY += 44;
         }
 
         // 无尽深渊挑战入口按钮
-        this.drawPixelButton(ctx, 'settle_start_endless', bx, curBtnY, bw, 38, '🔥 挑战无尽深渊', {
+        this.drawPixelButton(ctx, 'settle_start_endless', bx, curBtnY, bw, 36, '挑战无尽深渊', {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
           scene.startEndlessMode();
         });
-        curBtnY += 46;
+        curBtnY += 44;
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, curBtnY, bw, 38, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, curBtnY, bw, 36, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
           scene.enterLevelSelect();
         });
       } else {
-        this.drawPixelButton(ctx, 'settle_restart', bx, my + 196, bw, 42, i18n.t('btn_restart'), {
+        this.drawPixelButton(ctx, 'settle_restart', bx, my + 220, bw, 40, i18n.t('btn_restart'), {
           skin: 'btn_green'
         }, () => {
           platform.playSfx('sfx_click');
           scene.restartLevel();
         });
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, my + 248, bw, 42, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, my + 268, bw, 40, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');

@@ -5837,7 +5837,7 @@ class GameMap {
 
       if (fx) {
         fx.triggerScreenShake(3.5, 0.25);
-        fx.spawnFloatingText(obs.x, obs.y - 24, '🌱 清除障碍！开辟全新领地 + 孢子!', '#FFE58F', 1.6);
+        fx.spawnFloatingText(obs.x, obs.y - 24, `🌱 开辟领地 +${rewardSpores} 孢子!`, '#FFE58F', 1.35);
         if (dropAwakening) {
           fx.spawnFloatingText(obs.x, obs.y - 44, '✨ 发现远古觉醒种子!', '#B37FEB', 1.8);
         }
@@ -6624,12 +6624,12 @@ class EnemyManager {
     e.def = def;
     e.isFlying = Boolean(def.isFlying);
     e.isBoss = Boolean(def.isBoss);
-    if (e.isBoss && this.scene && this.scene.bossOverdriveEngine) {
-      this.scene.bossOverdriveEngine.registerBoss(e);
-    }
     e.fromWave = options.fromWave !== undefined ? options.fromWave : true;
     e.hp = maxHp;
     e.maxHp = maxHp;
+    if (e.isBoss && this.scene && this.scene.bossOverdriveEngine) {
+      this.scene.bossOverdriveEngine.registerBoss(e);
+    }
     e.baseSpeedTiles = def.speed;
     e.speedMultiplier = 1.0;
     e.baseArmor = def.armor || 0;
@@ -10803,36 +10803,53 @@ class CombatAnalyticsSystem {
   renderAnalyticsDashboard(ctx) {
     if (!this.isOpen) return;
 
-    const pw = 420;
-    const ph = 330;
+    const pw = 440;
+    const ph = 328;
     const px = Math.round((960 - pw) * 0.5);
-    const py = Math.round((640 - ph) * 0.5);
+    const py = Math.round((540 - ph) * 0.5);
 
     ctx.save();
-    // 1. 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-    ctx.fillRect(0, 0, 960, 640);
+    // 1. 全屏半透明暗林遮罩（严格对齐 960x540 逻辑屏）
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.76)';
+    ctx.fillRect(0, 0, 960, 540);
 
-    // 2. 羊皮纸/深林木纹底框
-    ctx.fillStyle = 'rgba(20, 28, 22, 0.95)';
+    // 2. 深木黄铜边框战报面板
+    ctx.fillStyle = 'rgba(22, 16, 11, 0.96)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 12) : ctx.rect(px, py, pw, ph);
     ctx.fill();
 
-    ctx.strokeStyle = '#D4AF37';
+    ctx.strokeStyle = '#C68F45';
     ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    // 3. 标题与总览
+    // 右上角关闭按钮 [×]
+    const closeX = px + pw - 34;
+    const closeY = py + 12;
+    ctx.fillStyle = 'rgba(64, 38, 20, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(closeX, closeY, 22, 22, 5) : ctx.rect(closeX, closeY, 22, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#E6BB60';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.fillStyle = '#FFF1B8';
+    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('×', closeX + 11, closeY + 11);
+
+    // 3. 标题与总览（纯中文无英文混杂）
     ctx.fillStyle = '#FFE58F';
     ctx.font = 'bold 15px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('📊 实时战斗输出统计与DPS战报', px + 18, py + 26);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('实时战况与输出统计', px + 18, py + 24);
 
     const dps = this.combatDuration > 0 ? Math.round(this.totalDamageDealt / this.combatDuration) : 0;
-    ctx.fillStyle = '#D9D9D9';
-    ctx.font = '11px "Microsoft YaHei UI", sans-serif';
-    ctx.fillText(`战斗总伤: ${this.totalDamageDealt.toLocaleString()}  |  全队DPS: ${dps}/s  |  单发最高: ${this.highestSingleHit.damage}`, px + 18, py + 48);
+    ctx.fillStyle = '#E8D8B8';
+    ctx.font = '11.5px "Microsoft YaHei UI", sans-serif';
+    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 18, py + 47);
 
     // 4. 各单元伤害占比横向柱状图
     const sorted = Object.entries(this.categoryStats)
@@ -10840,46 +10857,49 @@ class CombatAnalyticsSystem {
       .sort((a, b) => b.damage - a.damage);
 
     const maxDmg = Math.max(1, sorted[0].damage);
-    const startY = py + 72;
-    const rowH = 28;
-    const barMaxW = 180;
+    const startY = py + 68;
+    const rowH = 29;
+    const barMaxW = 175;
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 单位名称与击杀数
+      // 单位名称
       ctx.fillStyle = item.color;
       ctx.font = 'bold 12px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${i + 1}. ${item.name}`, px + 18, ry + 14);
-
-      // 柱状图外框与进度
-      const barX = px + 130;
-      const barY = ry + 4;
-      const barW = Math.max(2, Math.round((item.damage / maxDmg) * barMaxW));
-      const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
+      ctx.fillText(`${i + 1}. ${item.name}`, px + 18, ry + 13);
 
       // 槽位底色
+      const barX = px + 132;
+      const barY = ry + 6;
+      const barW = Math.max(3, Math.round((item.damage / maxDmg) * barMaxW));
+      const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.fillRect(barX, barY, barMaxW, 14);
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(barX, barY, barMaxW, 13, 4) : ctx.rect(barX, barY, barMaxW, 13);
+      ctx.fill();
 
       // 伤害条
       ctx.fillStyle = item.color;
-      ctx.fillRect(barX, barY, barW, 14);
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(barX, barY, barW, 13, 4) : ctx.rect(barX, barY, barW, 13);
+      ctx.fill();
 
       // 数值文本 (伤害 + 占比%)
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '11px monospace';
+      ctx.fillStyle = '#FFFDF5';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%)  [${item.kills}杀]`, barX + barMaxW + 8, ry + 14);
+      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills}灭`, barX + barMaxW + 8, ry + 13);
     }
 
     // 5. 底部关闭说明
-    ctx.fillStyle = '#8C8C8C';
+    ctx.fillStyle = '#B8A88A';
     ctx.font = '11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击任意区域或右上角按钮关闭战报面板', px + pw * 0.5, py + ph - 14);
+    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 14);
 
     ctx.restore();
   }
@@ -14160,6 +14180,7 @@ module.exports = CombatScreenJuice;
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const i18n = require('../i18n');
 const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
 class BossOverdriveEngine {
@@ -14214,8 +14235,9 @@ class BossOverdriveEngine {
     }
 
     this.overdriveAuraAnim += dt;
-    this.currentHp = this.activeBoss.hp;
-    const hpRatio = this.currentHp / this.maxHp;
+    this.maxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
+    this.currentHp = Math.max(0, this.activeBoss.hp);
+    const hpRatio = Math.min(1.0, this.currentHp / this.maxHp);
 
     // 1. 阶段检查与蜕变
     if (this.phase === 1 && hpRatio <= 0.60) {
@@ -14358,12 +14380,14 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (Epic Segmented Boss Bar)
-    const barW = 380;
-    const barH = 18;
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (位于成就横幅 24..72 下方安全区，永不重迭遮挡)
+    const barW = 360;
+    const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 74;
-    const hpRatio = Math.max(0, Math.min(1.0, this.currentHp / this.maxHp));
+    const barY = 92;
+    const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
+    const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
+    const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
 
     // 血条底座背框
     ctx.fillStyle = 'rgba(18, 12, 8, 0.94)';
@@ -14374,8 +14398,10 @@ class BossOverdriveEngine {
     ctx.fill();
     ctx.stroke();
 
-    // 首领名称与阶段标识
-    const bossName = this.activeBoss.name || '远古腐化甲虫皇';
+    // 首领名称与阶段标识（自动本地化读取腐化蛀王 / 剧毒幽蛾后 / 万巢裂殖母体）
+    const bossName = (this.activeBoss.def && this.activeBoss.def.nameKey)
+      ? i18n.t(this.activeBoss.def.nameKey)
+      : (this.activeBoss.name || '林地首领');
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
     ctx.font = `bold 12px ${UI_FONT}`;
@@ -14385,7 +14411,7 @@ class BossOverdriveEngine {
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
-    ctx.fillText(`${Math.ceil(this.currentHp)} / ${this.maxHp}`, barX + barW - 6, barY - 4);
+    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW - 6, barY - 4);
 
     // 内部血条充能槽
     ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';
@@ -19442,10 +19468,10 @@ class UiManager {
         scene.activeAwakeningTargeting = !scene.activeAwakeningTargeting;
         platform.playSfx('sfx_click');
         if (scene.activeAwakeningTargeting) {
-          scene.fx.spawnFloatingText(480, 240, '请点击场上的蘑菇触发灵能觉醒超载!', '#722ED1', 1.5);
+          this.showToast('请点击场上的蘑菇触发灵能觉醒超载!');
         }
       } else {
-        scene.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
+        this.showToast('灵能觉醒种子不足(击败精英敌人获取)!');
       }
     });
 
@@ -19467,6 +19493,11 @@ class UiManager {
     if (!tower) return;
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const priStr = i18n.t('prio_' + (tower.priority || 'first'));
+    // 安全钳制边界：绝不让边缘/底行守卫的快捷环被底部卡槽栏(Y>=474)或屏幕左右边框裁切遮挡
+    const minAnchorX = (tileScreenY > 350) ? 252 : 108;
+    const anchorX = Math.max(minAnchorX, Math.min(852, tileScreenX));
+    const topY = Math.max(46, Math.min(392, tileScreenY - 50));
+    const botY = Math.min(436, Math.max(108, tileScreenY + 36));
 
     ctx.save();
 
@@ -19474,10 +19505,10 @@ class UiManager {
     if (upgrades.length === 1) {
       const up = upgrades[0];
       const canAfford = scene.economy.canAfford(up.cost);
-      const uw = 114;
+      const uw = 108;
       const uh = 28;
-      const ux = Math.round(tileScreenX - uw * 0.5);
-      const uy = Math.round(tileScreenY - 50);
+      const ux = Math.round(anchorX - uw * 0.5);
+      const uy = Math.round(topY);
 
       roundRectPath(ctx, ux, uy, uw, uh, 14);
       ctx.fillStyle = canAfford ? 'rgba(16, 42, 28, 0.94)' : 'rgba(28, 20, 16, 0.92)';
@@ -19490,7 +19521,7 @@ class UiManager {
       ctx.font = `bold 11px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`⚡ 强化 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+      ctx.fillText(`强化 · ${up.cost}孢`, ux + uw * 0.5, uy + 14);
 
       this.registerButton('quick_up_single', ux, uy, uw, uh, () => {
         scene.tryUpgradeSelectedTower(up.nodeId);
@@ -19500,10 +19531,10 @@ class UiManager {
       for (let i = 0; i < 2; i++) {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
-        const uw = 96;
+        const uw = 92;
         const uh = 28;
-        const ux = Math.round(i === 0 ? tileScreenX - uw - 4 : tileScreenX + 4);
-        const uy = Math.round(tileScreenY - 50);
+        const ux = Math.round(i === 0 ? anchorX - uw - 4 : anchorX + 4);
+        const uy = Math.round(topY);
 
         roundRectPath(ctx, ux, uy, uw, uh, 14);
         ctx.fillStyle = canAfford ? (i === 0 ? 'rgba(12, 36, 56, 0.94)' : 'rgba(16, 44, 28, 0.94)') : 'rgba(28, 20, 16, 0.92)';
@@ -19516,7 +19547,7 @@ class UiManager {
         ctx.font = `bold 10.5px ${UI_FONT}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${i === 0 ? '⚡A线' : '🔥B线'} 🪙${up.cost}`, ux + uw * 0.5, uy + 14);
+        ctx.fillText(`${i === 0 ? '甲线' : '乙线'} · ${up.cost}`, ux + uw * 0.5, uy + 14);
 
         this.registerButton('quick_up_branch_' + up.nodeId, ux, uy, uw, uh, () => {
           scene.tryUpgradeSelectedTower(up.nodeId);
@@ -19524,10 +19555,10 @@ class UiManager {
       }
     } else {
       // 已升至顶级
-      const uw = 96;
+      const uw = 88;
       const uh = 24;
-      const ux = Math.round(tileScreenX - uw * 0.5);
-      const uy = Math.round(tileScreenY - 48);
+      const ux = Math.round(anchorX - uw * 0.5);
+      const uy = Math.round(topY + 2);
 
       roundRectPath(ctx, ux, uy, uw, uh, 12);
       ctx.fillStyle = 'rgba(28, 24, 12, 0.92)';
@@ -19540,14 +19571,14 @@ class UiManager {
       ctx.font = `bold 10.5px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🌟 极意宗师', ux + uw * 0.5, uy + 12);
+      ctx.fillText('宗师满阶', ux + uw * 0.5, uy + 12);
     }
 
     // 2. 底部：战术微操双胶囊（索敌 + 属性详情）
     const ph = 28;
-    const py = Math.round(tileScreenY + 36);
-    const px1 = Math.round(tileScreenX - 76); // 索敌
-    const px2 = Math.round(tileScreenX + 6);  // 详情属性
+    const py = Math.round(botY);
+    const px1 = Math.round(anchorX - 74); // 索敌
+    const px2 = Math.round(anchorX + 4);  // 详情属性
 
     // (1) 索敌胶囊
     roundRectPath(ctx, px1, py, 70, ph, 14);
@@ -19561,7 +19592,7 @@ class UiManager {
     ctx.font = `bold 11px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`🎯 ${priStr}`, px1 + 35, py + 14);
+    ctx.fillText(`索敌 · ${priStr}`, px1 + 35, py + 14);
 
     this.registerButton('quick_pri_btn', px1, py, 70, ph, () => {
       if (scene.towerManager) {
@@ -19584,7 +19615,7 @@ class UiManager {
     ctx.font = `bold 11px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('📜 属性', px2 + 35, py + 14);
+    ctx.fillText('详细属性', px2 + 35, py + 14);
 
     this.registerButton('quick_detail_btn', px2, py, 70, ph, () => {
       this.showTowerDetailBoard = !this.showTowerDetailBoard;
@@ -19705,7 +19736,7 @@ class UiManager {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const fullName = `${i18n.t(def.nameKey)} · ${i18n.t(node.nameKey)}`;
-    ctx.fillText(fullName, x + 76, y + 40);
+    ctx.fillText(fullName, x + 76, y + 40, Math.max(80, w - 118));
 
     // 等级阶级徽章（胶囊型，y+54）
     const lvMap = { base: '基础 1阶', lv1: '强化 2阶', a2: '甲线 3阶', a3: '甲线 顶阶', b2: '乙线 3阶', b3: '乙线 顶阶' };
@@ -19966,7 +19997,7 @@ class UiManager {
 
     ctx.fillStyle = isMoss ? THEME.ENAMEL_GREEN : THEME.INK_MID;
     ctx.font = `bold 11px ${UI_FONT}`;
-    ctx.fillText(isMoss ? `◆ 黄金苔藓格 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, x + 76, y + 56);
+    ctx.fillText(isMoss ? `◆ 雕石地基 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, x + 76, y + 56);
 
     // 描述与属性
     this.drawWrappedText(ctx, i18n.t(def.descKey), bx, y + 78, btnW, 16, THEME.INK_MID, `11px ${UI_FONT}`);
@@ -20208,7 +20239,7 @@ class UiManager {
     const bestEndless = (save && save.endlessRecord) ? save.endlessRecord.bestWave : 0;
 
     const mw = 440;
-    const mh = isEndless ? 340 : (isWin ? 370 : 330);
+    const mh = isEndless ? 340 : (isWin ? (scene.hasNextMap() ? 404 : 358) : 344);
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -20217,7 +20248,7 @@ class UiManager {
     ctx.save();
     ctx.textAlign = 'center';
     if (isEndless) {
-      drawArtText(ctx, '🔥 无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
+      drawArtText(ctx, '无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
         style: 'ink',
         color: '#8C1D18',
         size: 22,
@@ -20270,61 +20301,105 @@ class UiManager {
       });
     } else {
       ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
-    ctx.font = 'bold 20px ' + CN_FONT;
+      ctx.font = 'bold 21px ' + CN_FONT;
       ctx.textBaseline = 'middle';
-      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 54);
+      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 58);
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 80, 36);
+        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 78, 34);
       }
 
-      ctx.fillStyle = THEME.INK_DARK;
-      ctx.font = `bold 15px ${CN_FONT}`;
+      // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
       const timeSec = Math.round(scene.settlementResult.clearTimeSec * 10) / 10;
-      ctx.fillText(i18n.t('best_time') + ': ' + timeSec + 's', mx + mw * 0.5, my + 134);
-      ctx.fillText(i18n.t('seeds_label') + ': ' + scene.settlementResult.remainingSeeds + ' / 20', mx + mw * 0.5, my + 160);
+      let totalKills = 0;
+      let mvpName = '树人守卫';
+      let maxCatDmg = -1;
+      let totalDmg = 0;
+      if (scene.combatAnalytics) {
+        totalDmg = scene.combatAnalytics.totalDamageDealt || 0;
+        const stats = scene.combatAnalytics.categoryStats || {};
+        for (const key of Object.keys(stats)) {
+          const item = stats[key];
+          totalKills += (item.kills || 0);
+          if ((item.damage || 0) > maxCatDmg) {
+            maxCatDmg = item.damage || 0;
+            mvpName = item.name || mvpName;
+          }
+        }
+      }
+
+      const cardX = mx + 36;
+      const cardY = my + 124;
+      const cardW = mw - 72;
+      const cardH = 78;
+      roundRectPath(ctx, cardX, cardY, cardW, cardH, 10);
+      ctx.fillStyle = 'rgba(88, 58, 28, 0.12)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      const cells = [
+        { k: i18n.t('best_time'), v: `${timeSec}s` },
+        { k: i18n.t('seeds_label'), v: `${scene.settlementResult.remainingSeeds} / 20` },
+        { k: '累计歼灭', v: `${totalKills} 只` },
+        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${Math.round(totalDmg / 100) / 10}k)` : '稳固防线' }
+      ];
+      for (let ci = 0; ci < 4; ci++) {
+        const colI = ci % 2;
+        const rowI = Math.floor(ci / 2);
+        const cx = cardX + 14 + colI * (cardW * 0.5);
+        const cy = cardY + 20 + rowI * 36;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = THEME.INK_MID;
+        ctx.font = `11px ${CN_FONT}`;
+        ctx.fillText(cells[ci].k, cx, cy);
+        ctx.fillStyle = THEME.INK_DARK;
+        ctx.font = `bold 13.5px ${CN_FONT}`;
+        ctx.fillText(cells[ci].v, cx, cy + 16);
+      }
 
       const bx = mx + 65;
       const bw = mw - 130;
 
       if (isWin) {
-        let curBtnY = my + 188;
+        let curBtnY = my + 216;
         if (scene.hasNextMap()) {
-          this.drawPixelButton(ctx, 'settle_next', bx, curBtnY, bw, 38, i18n.t('btn_next_map'), {
+          this.drawPixelButton(ctx, 'settle_next', bx, curBtnY, bw, 36, i18n.t('btn_next_map'), {
             skin: 'btn_green',
             iconKey: 'play'
           }, () => {
             platform.playSfx('sfx_click');
             scene.startNextMap();
           });
-          curBtnY += 46;
+          curBtnY += 44;
         }
 
         // 无尽深渊挑战入口按钮
-        this.drawPixelButton(ctx, 'settle_start_endless', bx, curBtnY, bw, 38, '🔥 挑战无尽深渊', {
+        this.drawPixelButton(ctx, 'settle_start_endless', bx, curBtnY, bw, 36, '挑战无尽深渊', {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
           scene.startEndlessMode();
         });
-        curBtnY += 46;
+        curBtnY += 44;
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, curBtnY, bw, 38, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, curBtnY, bw, 36, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
           scene.enterLevelSelect();
         });
       } else {
-        this.drawPixelButton(ctx, 'settle_restart', bx, my + 196, bw, 42, i18n.t('btn_restart'), {
+        this.drawPixelButton(ctx, 'settle_restart', bx, my + 220, bw, 40, i18n.t('btn_restart'), {
           skin: 'btn_green'
         }, () => {
           platform.playSfx('sfx_click');
           scene.restartLevel();
         });
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, my + 248, bw, 42, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, my + 268, bw, 40, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
@@ -22220,6 +22295,7 @@ class SceneController {
     this.state = 'SETTLEMENT';
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.clear();
     if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
@@ -22250,6 +22326,7 @@ class SceneController {
     this.state = 'SETTLEMENT';
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.clear();
     if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
@@ -23080,7 +23157,7 @@ class SceneController {
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
     }
-    if (!this.ui.uiZenMode && this.state !== 'PAUSED') {
+    if (!this.ui.uiZenMode && this.state === 'BATTLE') {
       if (this.bossOverdriveEngine) {
         this.bossOverdriveEngine.renderBossHud(ctx);
       }

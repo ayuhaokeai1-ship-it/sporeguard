@@ -270,7 +270,7 @@ class GameMap {
 
       if (fx) {
         fx.triggerScreenShake(3.5, 0.25);
-        fx.spawnFloatingText(obs.x, obs.y - 24, '🌱 清除障碍！开辟全新领地 + 孢子!', '#FFE58F', 1.6);
+        fx.spawnFloatingText(obs.x, obs.y - 24, `🌱 开辟领地 +${rewardSpores} 孢子!`, '#FFE58F', 1.35);
         if (dropAwakening) {
           fx.spawnFloatingText(obs.x, obs.y - 44, '✨ 发现远古觉醒种子!', '#B37FEB', 1.8);
         }

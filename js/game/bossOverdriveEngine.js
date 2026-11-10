@@ -5,6 +5,7 @@
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const i18n = require('../i18n');
 const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
 class BossOverdriveEngine {
@@ -59,8 +60,9 @@ class BossOverdriveEngine {
     }
 
     this.overdriveAuraAnim += dt;
-    this.currentHp = this.activeBoss.hp;
-    const hpRatio = this.currentHp / this.maxHp;
+    this.maxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
+    this.currentHp = Math.max(0, this.activeBoss.hp);
+    const hpRatio = Math.min(1.0, this.currentHp / this.maxHp);
 
     // 1. 阶段检查与蜕变
     if (this.phase === 1 && hpRatio <= 0.60) {
@@ -203,12 +205,14 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (Epic Segmented Boss Bar)
-    const barW = 380;
-    const barH = 18;
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (位于成就横幅 24..72 下方安全区，永不重迭遮挡)
+    const barW = 360;
+    const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 74;
-    const hpRatio = Math.max(0, Math.min(1.0, this.currentHp / this.maxHp));
+    const barY = 92;
+    const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
+    const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
+    const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
 
     // 血条底座背框
     ctx.fillStyle = 'rgba(18, 12, 8, 0.94)';
@@ -219,8 +223,10 @@ class BossOverdriveEngine {
     ctx.fill();
     ctx.stroke();
 
-    // 首领名称与阶段标识
-    const bossName = this.activeBoss.name || '远古腐化甲虫皇';
+    // 首领名称与阶段标识（自动本地化读取腐化蛀王 / 剧毒幽蛾后 / 万巢裂殖母体）
+    const bossName = (this.activeBoss.def && this.activeBoss.def.nameKey)
+      ? i18n.t(this.activeBoss.def.nameKey)
+      : (this.activeBoss.name || '林地首领');
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
     ctx.font = `bold 12px ${UI_FONT}`;
@@ -230,7 +236,7 @@ class BossOverdriveEngine {
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
-    ctx.fillText(`${Math.ceil(this.currentHp)} / ${this.maxHp}`, barX + barW - 6, barY - 4);
+    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW - 6, barY - 4);
 
     // 内部血条充能槽
     ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';

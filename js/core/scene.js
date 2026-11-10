@@ -413,6 +413,7 @@ class SceneController {
     this.state = 'SETTLEMENT';
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.clear();
     if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
@@ -443,6 +444,7 @@ class SceneController {
     this.state = 'SETTLEMENT';
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
+    if (this.bossOverdriveEngine) this.bossOverdriveEngine.clear();
     if (this.ui) this.ui.inspectorOpen = false;
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
@@ -1273,7 +1275,7 @@ class SceneController {
     if (this.weather) {
       this.weather.renderWeatherOverlay(ctx);
     }
-    if (!this.ui.uiZenMode && this.state !== 'PAUSED') {
+    if (!this.ui.uiZenMode && this.state === 'BATTLE') {
       if (this.bossOverdriveEngine) {
         this.bossOverdriveEngine.renderBossHud(ctx);
       }
