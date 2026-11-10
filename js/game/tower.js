@@ -216,6 +216,13 @@ class TowerManager {
     return refund;
   }
 
+  getEnemyRouteLength(map, enemy) {
+    if (!map) return 1;
+    if (enemy.isFlying) return (map.airRoute && map.airRoute.totalLengthPx) || 1;
+    if (enemy.routeIndex === 1 && map.groundRoute2) return map.groundRoute2.totalLengthPx || 1;
+    return (map.groundRoute && map.groundRoute.totalLengthPx) || 1;
+  }
+
   /**
    * 根据炮塔射程、对地/对空能力与索敌优先级筛选最佳目标
    */
@@ -280,7 +287,7 @@ class TowerManager {
             neighbors += 1;
           }
         }
-        const routeLen = cand.isFlying ? map.airRoute.totalLengthPx : map.groundRoute.totalLengthPx;
+        const routeLen = this.getEnemyRouteLength(map, cand);
         const progress = cand.distPx / Math.max(1, routeLen);
         if (neighbors > bestNeighbors || (neighbors === bestNeighbors && progress > bestProgress)) {
           bestNeighbors = neighbors;
@@ -296,7 +303,7 @@ class TowerManager {
     let maxProgress = -1;
     for (let i = 0; i < candidates.length; i++) {
       const e = candidates[i].enemy;
-      const routeLen = e.isFlying ? map.airRoute.totalLengthPx : map.groundRoute.totalLengthPx;
+      const routeLen = this.getEnemyRouteLength(map, e);
       const prog = e.distPx / Math.max(1, routeLen);
       if (prog > maxProgress) {
         maxProgress = prog;
@@ -430,7 +437,7 @@ class TowerManager {
     }
     if (fx) {
       fx.spawnParticles(tower.x, tower.y - 10, 8, ['#52C41A', '#B7EB8F', '#FFE58F'], 25, 75, 0.2, 0.4, 4);
-      fx.spawnFloatingText(tower.x, tower.y - 16, '+HP 苏醒', '#52C41A', 1.05);
+      fx.spawnFloatingText(tower.x, tower.y - 16, isFullRevive ? '+HP 圣愈苏醒!' : `+${Math.round(amount)} 生命`, '#52C41A', 1.0);
     }
   }
 
@@ -561,6 +568,31 @@ class TowerManager {
     }
     const aliveEnemies = enemyManager.getAliveEnemies();
 
+    // 更新灵光菇圣域对邻近防卫塔的伤害/攻速/护盾增益
+    for (let i = 0; i < this.towers.length; i++) {
+      this.towers[i].luminaDmgBonus = 0;
+      this.towers[i].luminaAspdBonus = 0;
+      this.towers[i].hasHolyWard = false;
+    }
+    for (let i = 0; i < this.towers.length; i++) {
+      const lt = this.towers[i];
+      if (lt.typeId !== 'lumina' || lt.isWebbed || lt.dormantTimer > 0) continue;
+      const auraRangePx = (lt.node.range || 4.0) * TILE_SIZE;
+      const dmgB = lt.node.auraDmgBonus || 0;
+      const aspdB = lt.node.auraAspdBonus || 0;
+      const ward = Boolean(lt.node.holyWard);
+      if (!dmgB && !aspdB && !ward) continue;
+      for (let j = 0; j < this.towers.length; j++) {
+        if (i === j) continue;
+        const ot = this.towers[j];
+        if (Math.hypot(ot.x - lt.x, ot.y - lt.y) <= auraRangePx) {
+          if (dmgB > ot.luminaDmgBonus) ot.luminaDmgBonus = dmgB;
+          if (aspdB > ot.luminaAspdBonus) ot.luminaAspdBonus = aspdB;
+          if (ward) ot.hasHolyWard = true;
+        }
+      }
+    }
+
     for (let i = 0; i < this.towers.length; i++) {
       const t = this.towers[i];
 
@@ -619,8 +651,11 @@ class TowerManager {
         continue; // 处于枯萎休眠状态，暂停攻击
       }
 
-      // 冷却递减（狂暴加速，中毒减速，超频4倍射速）
+      // 冷却递减（狂暴加速，中毒减速，灵光光环，超频射速）
       let speedCoeff = (t.superchargeTimer > 0 ? 2.2 : (t.buffTimer > 0 ? 1.6 : 1.0)) * (t.poisonTimer > 0 ? 0.65 : 1.0);
+      if (t.luminaAspdBonus > 0) {
+        speedCoeff *= (1 + t.luminaAspdBonus);
+      }
       if (t.synergies && t.synergies.hasGrandResonance) {
         speedCoeff *= 1.15;
       }
@@ -631,45 +666,70 @@ class TowerManager {
         t.cooldown = Math.max(0, t.cooldown - dt * speedCoeff);
       }
 
-      // 5th Guardian Lumina: Spore Harvest, Healing Pulse & Holy Ward
+      // 第 5 位守卫灵光菇：定期产孢、A线战地群疗脉冲、圣幕净化蛛网酸蚀
       if (t.typeId === 'lumina') {
-        t.sporeHarvestTimer = (t.sporeHarvestTimer || 0) + dt * speedCoeff;
-        const hInterval = t.node.sporeInterval || 10.0;
-        if (t.sporeHarvestTimer >= hInterval) {
-          t.sporeHarvestTimer = 0;
-          const gen = t.node.sporeGen || 8;
-          if (economy) {
-            economy.addSpores(gen);
-          }
-          if (fx) {
-            fx.spawnFloatingText(t.x, t.y - 24, `+${gen} 孢子`, '#FFE58F', 1.15);
-            if (fx.spawnShockwave) fx.spawnShockwave(t.x, t.y, 32, '#FFE58F'); else if (fx.spawnRing) fx.spawnRing(t.x, t.y, 32, '#FFE58F', 0.35, false);
-          }
-          platform.playSfx('sfx_coin');
-
-          // Healing pulse to wounded guards
-          if (sporelingPatrol && t.node.healPerPulse) {
-            sporelingPatrol.healGuards(t.x, t.y, t.node.range * TILE_SIZE, t.node.healPerPulse);
-            if (fx) {
-              fx.spawnParticles(t.x, t.y, 8, ['#52C41A', '#FFE58F'], 20, 40);
+        if (t.node.sporeGen > 0) {
+          t.sporeHarvestTimer = (t.sporeHarvestTimer || 0) + dt * speedCoeff;
+          const hInterval = t.node.sporeInterval || 10.0;
+          if (t.sporeHarvestTimer >= hInterval) {
+            t.sporeHarvestTimer = 0;
+            const gen = t.node.sporeGen;
+            if (economy) {
+              economy.addSpores(gen);
             }
+            if (fx) {
+              fx.spawnFloatingText(t.x, t.y - 24, `+${gen} 孢子`, '#FFE58F', 1.15);
+              if (fx.spawnShockwave) fx.spawnShockwave(t.x, t.y, 32, '#FFE58F');
+              else if (fx.spawnRing) fx.spawnRing(t.x, t.y, 32, '#FFE58F', 0.35, false);
+            }
+            platform.playSfx('sfx_coin');
           }
+        }
 
-          // Holy Ward cleanse against webs & acid
-          if (t.node.holyWard) {
-            const radPx = t.node.range * TILE_SIZE;
-            for (let j = 0; j < this.towers.length; j++) {
-              const ot = this.towers[j];
-              if (Math.hypot(ot.x - t.x, ot.y - t.y) <= radPx) {
-                if (ot.isWebbed || ot.poisonTimer > 0) {
-                  ot.isWebbed = false;
-                  ot.poisonTimer = 0;
-                  if (fx) {
-                    fx.spawnFloatingText(ot.x, ot.y - 20, '圣幕净化!', '#BAE7FF', 1.0);
-                    fx.spawnParticles(ot.x, ot.y, 8, ['#BAE7FF', '#FFFFFF'], 15, 30);
+        const pulseInterval = t.node.healInterval || 4.5;
+        if (t.node.auraHeal > 0 || t.node.holyWard) {
+          t.auraPulseTimer = (t.auraPulseTimer || 0) + dt * speedCoeff;
+          if (t.auraPulseTimer >= pulseInterval) {
+            t.auraPulseTimer = 0;
+            const radPx = (t.node.range || 4.5) * TILE_SIZE;
+            const healAmt = t.node.auraHeal || 0;
+            let didPulse = false;
+
+            if (healAmt > 0) {
+              for (let j = 0; j < this.towers.length; j++) {
+                const ot = this.towers[j];
+                if (ot.hp > 0 && ot.hp < ot.maxHp && Math.hypot(ot.x - t.x, ot.y - t.y) <= radPx) {
+                  this.healTower(ot, healAmt, false, fx);
+                  didPulse = true;
+                }
+              }
+              if (sporelingPatrol) {
+                sporelingPatrol.healGuards(t.x, t.y, radPx, healAmt);
+                didPulse = true;
+              }
+            }
+
+            if (t.node.holyWard) {
+              for (let j = 0; j < this.towers.length; j++) {
+                const ot = this.towers[j];
+                if (Math.hypot(ot.x - t.x, ot.y - t.y) <= radPx) {
+                  if (ot.isWebbed || ot.poisonTimer > 0) {
+                    ot.isWebbed = false;
+                    ot.webHealth = 0;
+                    ot.poisonTimer = 0;
+                    didPulse = true;
+                    if (fx) {
+                      fx.spawnFloatingText(ot.x, ot.y - 20, '圣幕净化!', '#BAE7FF', 1.0);
+                      fx.spawnParticles(ot.x, ot.y, 8, ['#BAE7FF', '#FFFFFF'], 15, 30);
+                    }
                   }
                 }
               }
+            }
+
+            if (didPulse && fx) {
+              if (fx.spawnRing) fx.spawnRing(t.x, t.y, radPx * 0.45, '#73D13D', 0.4, false);
+              fx.spawnParticles(t.x, t.y, 8, ['#52C41A', '#FFE58F'], 20, 40);
             }
           }
         }
@@ -721,7 +781,7 @@ class TowerManager {
             for (let eI = 0; eI < aliveEnemies.length; eI++) {
               const enemy = aliveEnemies[eI];
               if (enemy.state === 'death') continue;
-              const routeLen = enemy.isFlying ? map.airRoute.totalLengthPx : map.groundRoute.totalLengthPx;
+              const routeLen = this.getEnemyRouteLength(map, enemy);
               if (routeLen - enemy.distPx <= 110) {
                 urgentThreat = true;
                 break;
@@ -765,9 +825,17 @@ class TowerManager {
     }
   }
 
+  getBuffedNode(tower) {
+    if (!tower || !tower.node) return tower.node;
+    if (!tower.luminaDmgBonus) return tower.node;
+    return Object.assign({}, tower.node, {
+      damageBonus: (tower.node.damageBonus || 0) + tower.luminaDmgBonus
+    });
+  }
+
   fireTowerAtObstacle(tower, obs, bulletManager) {
-    const node = tower.node;
-    const baseDmg = tower.def.baseDamage;
+    const node = this.getBuffedNode(tower);
+    const baseDmg = tower.typeId === 'lumina' ? (node.damage || tower.def.baseDamage) : tower.def.baseDamage;
     if (tower.typeId === 'watch') {
       const watchNode = Object.assign({}, node);
       if (tower.synergies && tower.synergies.hasTwinWatch) {
@@ -795,8 +863,8 @@ class TowerManager {
 
   fireTower(tower, target, map, enemyManager, bulletManager) {
     tower.recoilTimer = 0.16;
-    const node = tower.node;
-    const baseDmg = tower.def.baseDamage;
+    const node = this.getBuffedNode(tower);
+    const baseDmg = tower.typeId === 'lumina' ? (node.damage || tower.def.baseDamage) : tower.def.baseDamage;
 
     if (tower.typeId === 'watch') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);

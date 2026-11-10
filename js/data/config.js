@@ -48,7 +48,7 @@ const CONFIG = {
   ECONOMY: {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
-      map1: 175,               // PvZ 经典战术开局：175 孢子支持 1 攻击塔 + 1 经济/防御塔，极具策略取舍
+      map1: 210,               // PvZ 经典战术开局：210 孢子正好支持 1 守望菇(115) + 1 灵光菇(95) 开局
       map2: 200,
       map3: 220
     },

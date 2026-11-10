@@ -123,12 +123,14 @@ class SceneController {
       remainingSeeds: 0
     };
 
-    // 指挥官三大主动战术魔法技能 (Q: 生命甘霖, W: 雷霆震爆, E: 大地丰收)
+    // 指挥官四大主动战术魔法技能 (Q: 生命甘霖, W: 雷霆震爆, E: 大地丰收, R: 菇精卫集结)
     this.spells = {
       rain: { id: 'rain', name: '自然甘霖', cost: 45, cd: 25, timer: 0, key: 'Q', radius: 120 },
       shock: { id: 'shock', name: '雷霆震爆', cost: 75, cd: 35, timer: 0, key: 'W', radius: 90 },
-      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 }
+      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 },
+      rally: { id: 'rally', name: '菇精卫集结', cost: 0, cd: 3, timer: 0, key: 'R' }
     };
+    this.isEndlessMode = false;
     this.activeSpellCasting = null;
   }
 
@@ -168,6 +170,7 @@ class SceneController {
   }
 
   startLevel(mapId) {
+    this.isEndlessMode = false;
     const mData = MAPS[mapId] || MAPS.map1;
     this.currentMapId = mData.id;
 
@@ -262,13 +265,24 @@ class SceneController {
   /**
    * 开启无尽深渊试炼模式
    */
-  startEndlessMode() {
+  startEndlessMode(mapId = null) {
+    const isSameMapVictory = this.state === 'SETTLEMENT' && this.settlementResult && this.settlementResult.victory && (!mapId || mapId === this.currentMapId);
+    const needFreshStart = !isSameMapVictory;
+    if (needFreshStart) {
+      this.startLevel(mapId || this.currentMapId || 'map1');
+      if (this.economy) {
+        this.economy.spores += 160;
+      }
+      if (this.waveManager) {
+        this.waveManager.currentWaveIndex = this.waveManager.totalWaves;
+      }
+    }
     this.isEndlessMode = true;
     this.state = 'BATTLE';
     if (this.waveManager) {
       this.waveManager.startEndlessMode(this.economy, this.fx);
     }
-    this.fx.showBanner('🔥 无尽深渊降临！', '#FF4D4F', '无穷无尽的暗黑虫潮正从四面八方涌来，坚持越久奖励越丰厚！', 2.5);
+    this.fx.showBanner('🔥 无尽深渊降临！', '#FF4D4F', '无穷无尽的暗黑虫潮正从两翼涌来，坚持越久纪录越高！', 2.5);
     this.fx.triggerScreenShake(4.5, 0.4);
     platform.playSfx('sfx_horn');
     platform.playBgm('boss_map3');
@@ -626,6 +640,9 @@ class SceneController {
           if (this.contraptions && this.contraptions.handlePointerDown(mx, my, this)) {
             continue;
           }
+          if (this.enemyManager && this.enemyManager.handleClickOnEnemy(mx, my, this.fx)) {
+            continue;
+          }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
             const col = Math.floor(mx / TILE_SIZE);
             const row = Math.floor(my / TILE_SIZE);
@@ -642,7 +659,7 @@ class SceneController {
               // 检查是否点中被蛛网封印的防御塔（进行三连击破茧解救微操）
               const existingTower = this.towerManager.getTowerAt(col, row);
               if (existingTower && existingTower.isWebbed) {
-                this.towerManager.rescueWeb(existingTower, this.fx);
+                this.towerManager.rescueWeb(existingTower, this.fx, this.economy);
                 continue;
               }
 
@@ -1094,7 +1111,7 @@ class SceneController {
     platform.playMusicalScale(this.comboKillCount - 1);
     if (this.achievements) {
       this.achievements.unlock('first_blood', this.fx);
-      if (enemy && (enemy.id === 'shadow_stalker' || enemy.type === 'flank')) {
+      if (enemy && (enemy.routeIndex === 1 || enemy.type === 'burrower')) {
         this.achievements.unlock('subterranean_slayer', this.fx);
       }
       if (this.comboKillCount >= 10) {

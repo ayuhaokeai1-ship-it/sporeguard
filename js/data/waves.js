@@ -13,30 +13,31 @@ const WAVES = {
     {
       wave: 1,
       groups: [
-        { type: 'beetle', count: 6, interval: 0.9, start: 0 },
-        { type: 'beetle', count: 7, interval: 0.85, start: 6 },
-        { type: 'beetle', count: 8, interval: 0.75, start: 13 }
+        { type: 'beetle', count: 5, interval: 0.95, start: 0 },
+        { type: 'beetle', count: 6, interval: 0.90, start: 6 },
+        { type: 'beetle', count: 6, interval: 0.85, start: 13 }
       ]
     },
-    // Wave 2: 极速突袭，迅捷飞蠓蜂拥而至
+    // Wave 2: 极速突袭，迅捷飞蠓双线分进合击
     {
       wave: 2,
       groups: [
         { type: 'beetle', count: 5, interval: 1.0, start: 0 },
-        { type: 'swift', count: 9, interval: 0.65, start: 5 },
-        { type: 'beetle', count: 5, interval: 0.9, start: 14 },
-        { type: 'swift', count: 8, interval: 0.60, start: 18 }
+        { type: 'swift', count: 5, interval: 0.80, start: 5 },
+        { type: 'swift', count: 3, interval: 1.10, start: 9, routeIndex: 1 },
+        { type: 'beetle', count: 4, interval: 0.95, start: 14 },
+        { type: 'swift', count: 5, interval: 0.75, start: 18 }
       ]
     },
-    // Wave 3: 树冠空袭，林光飞蛾掠空（教学性空袭：6 只飞蛾平滑进阶，杜绝猝死）
+    // Wave 3: 树冠空袭，林光飞蛾掠空（教学性空袭：4 只飞蛾平滑进阶，配合侧翼甲虫）
     {
       wave: 3,
       groups: [
         { type: 'beetle', count: 6, interval: 1.0, start: 0 },
-        { type: 'moth', count: 3, interval: 1.2, start: 4 },
-        { type: 'swift', count: 8, interval: 0.70, start: 9 },
-        { type: 'moth', count: 3, interval: 1.2, start: 15 },
-        { type: 'volatile_pod', count: 2, interval: 1.4, start: 20, routeIndex: 1 }
+        { type: 'moth', count: 2, interval: 1.4, start: 4 },
+        { type: 'swift', count: 6, interval: 0.80, start: 9 },
+        { type: 'moth', count: 2, interval: 1.4, start: 15 },
+        { type: 'beetle', count: 3, interval: 1.2, start: 19, routeIndex: 1 }
       ]
     },
     // Wave 4: 坚甲逼近，暗影潜行者侧翼回旋绕袭
@@ -45,22 +46,22 @@ const WAVES = {
       groups: [
         { type: 'armored', count: 1, interval: 2.0, start: 0 },
         { type: 'beetle', count: 5, interval: 0.9, start: 3 },
-        { type: 'armored', count: 1, interval: 2.0, start: 9 },
-        { type: 'weaver', count: 2, interval: 2.5, start: 10 },
-        { type: 'leaper', count: 3, interval: 1.2, start: 12, routeIndex: 1 },
-        { type: 'beetle', count: 3, interval: 1.0, start: 15, routeIndex: 1 },
-        { type: 'swift', count: 4, interval: 0.7, start: 18 },
-        { type: 'moth', count: 4, interval: 1.3, start: 20 }
+        { type: 'weaver', count: 1, interval: 2.5, start: 10 },
+        { type: 'leaper', count: 1, interval: 1.5, start: 13, routeIndex: 1 },
+        { type: 'beetle', count: 3, interval: 1.1, start: 16, routeIndex: 1 },
+        { type: 'swift', count: 4, interval: 0.8, start: 18 },
+        { type: 'moth', count: 3, interval: 1.35, start: 20 }
       ]
     },
-    // Wave 5: 空地一体混合冲锋
+    // Wave 5: 空地一体混合冲锋与爆裂侧袭
     {
       wave: 5,
       groups: [
         { type: 'armored', count: 2, interval: 2.5, start: 0 },
-        { type: 'swift', count: 8, interval: 0.7, start: 4 },
-        { type: 'moth', count: 6, interval: 1.2, start: 12 },
-        { type: 'beetle', count: 8, interval: 0.8, start: 20 },
+        { type: 'swift', count: 8, interval: 0.75, start: 4 },
+        { type: 'moth', count: 5, interval: 1.25, start: 12 },
+        { type: 'volatile_pod', count: 2, interval: 1.6, start: 16, routeIndex: 1 },
+        { type: 'beetle', count: 6, interval: 0.85, start: 20 },
         { type: 'shaman', count: 1, interval: 1.0, start: 24, routeIndex: 1 }
       ]
     },
@@ -145,12 +146,13 @@ const WAVES = {
         { type: 'moth', count: 3, interval: 1.5, start: 12 }
       ]
     },
-    // Wave 3: 引入疾风突刺甲虫
+    // Wave 3: 溪谷双线包抄与树冠飞蛾试探
     {
       wave: 3,
       groups: [
         { type: 'swift', count: 6, interval: 0.8, start: 0 },
         { type: 'beetle', count: 6, interval: 0.9, start: 5 },
+        { type: 'swift', count: 4, interval: 0.9, start: 7, routeIndex: 1 },
         { type: 'moth', count: 5, interval: 1.2, start: 12 }
       ]
     },
@@ -184,12 +186,13 @@ const WAVES = {
         { type: 'beetle', count: 6, interval: 0.8, start: 20 }
       ]
     },
-    // Wave 7: 引入裂殖母虫
+    // Wave 7: 裂殖母虫与东南掘地伏兵夹击
     {
       wave: 7,
       groups: [
         { type: 'splitter', count: 3, interval: 2.0, start: 0 },
-        { type: 'beetle', count: 7, interval: 0.8, start: 6 },
+        { type: 'burrower', count: 2, interval: 1.8, start: 4, routeIndex: 1 },
+        { type: 'beetle', count: 7, interval: 0.8, start: 7 },
         { type: 'moth', count: 6, interval: 1.1, start: 14 }
       ]
     },
@@ -205,14 +208,15 @@ const WAVES = {
         { type: 'moth', count: 6, interval: 1.1, start: 22 }
       ]
     },
-    // Wave 9: 混编破阵大潮
+    // Wave 9: 混编破阵双翼包夹大潮
     {
       wave: 9,
       groups: [
         { type: 'armored', count: 3, interval: 1.8, start: 0 },
         { type: 'moth', count: 7, interval: 1.0, start: 6 },
+        { type: 'swift', count: 6, interval: 0.8, start: 10, routeIndex: 1 },
         { type: 'splitter', count: 4, interval: 1.6, start: 14 },
-        { type: 'swift', count: 8, interval: 0.7, start: 21 }
+        { type: 'swift', count: 7, interval: 0.7, start: 21 }
       ]
     },
     // Wave 10: 混编强袭与后排回旋飞跃
@@ -273,13 +277,14 @@ const WAVES = {
         { type: 'beetle', count: 6, interval: 1.6, start: 26 }
       ]
     },
-    // Wave 3: 高速地面虫群
+    // Wave 3: 幽夜上路与下层地脉双线速攻
     {
       wave: 3,
       groups: [
-        { type: 'swift', count: 8, interval: 1.3, start: 0 },
-        { type: 'beetle', count: 9, interval: 1.5, start: 10 },
-        { type: 'swift', count: 7, interval: 1.3, start: 24 }
+        { type: 'swift', count: 7, interval: 1.3, start: 0 },
+        { type: 'beetle', count: 8, interval: 1.4, start: 8 },
+        { type: 'swift', count: 5, interval: 1.0, start: 14, routeIndex: 1 },
+        { type: 'swift', count: 6, interval: 1.3, start: 24 }
       ]
     },
     // Wave 4: 引入甲壳虫与飞蛾
@@ -302,11 +307,12 @@ const WAVES = {
         { type: 'beetle', count: 7, interval: 1.5, start: 34 }
       ]
     },
-    // Wave 6: 引入裂殖母虫
+    // Wave 6: 裂殖母虫与下路跃击伏兵
     {
       wave: 6,
       groups: [
         { type: 'splitter', count: 5, interval: 2.8, start: 0 },
+        { type: 'leaper', count: 2, interval: 1.5, start: 8, routeIndex: 1 },
         { type: 'moth', count: 6, interval: 2.0, start: 14 },
         { type: 'swift', count: 8, interval: 1.2, start: 26 }
       ]
@@ -328,8 +334,9 @@ const WAVES = {
       groups: [
         { type: 'splitter', count: 6, interval: 2.5, start: 0 },
         { type: 'armored', count: 4, interval: 3.2, start: 12 },
+        { type: 'beetle', count: 6, interval: 1.2, start: 18, routeIndex: 1 },
         { type: 'moth', count: 8, interval: 1.6, start: 24 },
-        { type: 'beetle', count: 8, interval: 1.3, start: 36 }
+        { type: 'beetle', count: 7, interval: 1.3, start: 36 }
       ]
     },
     // Wave 9: 巫毒蝉俑治疗支援，暗穴跳跃者群袭

@@ -1082,9 +1082,11 @@ class EnemyManager {
       customW = 38; customH = 34;
     }
 
+    let usedCustomArt = false;
     if (customImgPath) {
       const cImg = platform.getImage(customImgPath);
       if (cImg && cImg.width) {
+        usedCustomArt = true;
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
         // 高性能纯 GPU 闪白 (去除导致 GPU 重新光栅化的 ctx.filter)
@@ -1099,37 +1101,38 @@ class EnemyManager {
           const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
           if (sparkImg && sparkImg.width) {
             ctx.save();
-            ctx.drawImage(sparkImg, e.x - 16, e.y - 16 - walkBob, 32, 32);
+            ctx.drawImage(sparkImg, e.x - 16, e.y - 16 - walkBob - jumpOffsetY, 32, 32);
             ctx.restore();
           }
         }
-        return;
       }
     }
 
-    // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
-    const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
-    if (!drawn) {
-      const sz = (e.def.artSize.width || 12) * 2;
-      ctx.fillStyle = e.tintColor;
-      ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
-      platform.recordDrawCall(1);
-    }
+    if (!usedCustomArt) {
+      // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
+      const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
+      if (!drawn) {
+        const sz = (e.def.artSize.width || 12) * 2;
+        ctx.fillStyle = e.tintColor;
+        ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
+        platform.recordDrawCall(1);
+      }
 
-    // 命中火花迸发
-    if (flashWhite) {
-      const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
-      if (sparkImg && sparkImg.width) {
-        ctx.save();
-        ctx.drawImage(sparkImg, e.x - 16, e.y - 16, 32, 32);
-        ctx.restore();
+      // 命中火花迸发
+      if (flashWhite) {
+        const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+        if (sparkImg && sparkImg.width) {
+          ctx.save();
+          ctx.drawImage(sparkImg, e.x - 16, e.y - 16, 32, 32);
+          ctx.restore();
+        }
       }
     }
 
     // 精英怪头顶冠军徽标 (100% AI Hand-Painted Royal Crest)
     if (e.isElite && e.state !== 'death') {
       const crestImg = platform.getImage('assets/vfx/icon_elite_crest.png');
-      const cy = e.y - (e.def.artSize.height || 12) - 16;
+      const cy = e.y - (usedCustomArt ? Math.round(customH * 0.5) : (e.def.artSize.height || 12)) - 16 - jumpOffsetY;
       ctx.save();
       if (crestImg && crestImg.width) {
         const cPulse = 1.0 + Math.sin(e.animTimer * 6) * 0.08;
@@ -1145,7 +1148,7 @@ class EnemyManager {
     if (e.state === 'death') return;
 
     // 头部状态图标（标记、破甲、减速）
-    const topY = e.y - e.def.artSize.height - 8;
+    const topY = e.y - (usedCustomArt ? Math.round(customH * 0.5) : e.def.artSize.height) - 8 - jumpOffsetY;
     if (e.markTimer > 0) {
       const mKey = (Math.floor(e.markTimer * 6) % 2 === 0) ? 'mark_icon_0' : 'mark_icon_1';
       drawProjectileSprite(ctx, mKey, e.x, topY - 8, 0, 0.65);

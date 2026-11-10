@@ -166,7 +166,7 @@ class TacticalFeatsSystem {
 
     platform.playSfx('sfx_upgrade');
     if (scene && scene.economy) {
-      scene.economy.add(f.rewardSpores);
+      scene.economy.addSpores(f.rewardSpores);
     }
     if (scene && scene.fx) {
       scene.fx.spawnFloatingText(480, 180, '🎖️ 勋章达成 +' + f.rewardSpores, '#FFD700', 1.5);
@@ -214,7 +214,7 @@ class TacticalFeatsSystem {
     }
 
     // BOSS 属性狂暴增强
-    boss.speed = (boss.speed || 40) * 1.35;
+    boss.speedMultiplier = Math.max(boss.speedMultiplier || 1.0, 1.35);
     boss.enraged = true;
 
     if (scene.fx) {

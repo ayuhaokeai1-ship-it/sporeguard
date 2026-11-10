@@ -1,8 +1,8 @@
 /**
- * 蘑菇守林 SPOREGUARD - 移动端离线服务工作线程 (Service Worker v3)
+ * 蘑菇守林 SPOREGUARD - 移动端离线服务工作线程 (Service Worker v4)
  * 支持手机断网离线游玩与免电脑运行
  */
-const CACHE_NAME = 'sporeguard-mobile-v3';
+const CACHE_NAME = 'sporeguard-mobile-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -106,19 +106,19 @@ function handleKeyDown(rawKey) {
   const key = String(rawKey).toLowerCase();
   platform.unlockAudio();
 
-  if (key === 'arrowup' || key === 'keyw' || key === 'w') {
+  if (key === 'arrowup') {
     gridCursor.active = true;
     clampGridCursor(gridCursor.col, gridCursor.row - 1);
     emitAction('cursor_move', { col: gridCursor.col, row: gridCursor.row });
-  } else if (key === 'arrowdown' || key === 'keys' || key === 's') {
+  } else if (key === 'arrowdown') {
     gridCursor.active = true;
     clampGridCursor(gridCursor.col, gridCursor.row + 1);
     emitAction('cursor_move', { col: gridCursor.col, row: gridCursor.row });
-  } else if (key === 'arrowleft' || key === 'keya' || key === 'a') {
+  } else if (key === 'arrowleft') {
     gridCursor.active = true;
     clampGridCursor(gridCursor.col - 1, gridCursor.row);
     emitAction('cursor_move', { col: gridCursor.col, row: gridCursor.row });
-  } else if (key === 'arrowright' || key === 'keyd' || key === 'd') {
+  } else if (key === 'arrowright') {
     gridCursor.active = true;
     clampGridCursor(gridCursor.col + 1, gridCursor.row);
     emitAction('cursor_move', { col: gridCursor.col, row: gridCursor.row });
@@ -142,7 +142,7 @@ function handleKeyDown(rawKey) {
     }
   } else if (key === 'keyg' || key === 'g') {
     emitAction('hero_battlecry');
-  } else if (key === 'keyv' || key === 'v') {
+  } else if (key === 'keyb' || key === 'b') {
     emitAction('hero_leyline');
   } else if (key === 'keyq' || key === 'q') {
     emitAction('trigger_spell', { spellId: 'rain' });

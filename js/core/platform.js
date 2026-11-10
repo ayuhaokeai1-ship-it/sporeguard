@@ -41,6 +41,7 @@ const memoryStore = {};
 let sfxVoicePool = {};
 let sfxVoiceIndices = {};
 let audioBuffers = {};
+let loadingAudioBuffers = {};
 
 const AUDIO_PATHS = {
   bgm_title: 'audio/bgm_title.wav',

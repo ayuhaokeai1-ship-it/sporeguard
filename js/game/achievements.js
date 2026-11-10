@@ -7,26 +7,26 @@ const storage = require('../save/storage');
 const platform = require('../core/platform');
 
 const ACHIEVEMENTS_DATA = [
-  { id: 'first_blood', title: '🌲 丛林初捷', desc: '击杀首只入侵甲虫，打响林地保卫战第一枪', icon: '⚔️', rewardStars: 1 },
-  { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '以 20 颗种子完全无损的完美战绩通关任意地图', icon: '👑', rewardStars: 2 },
-  { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树英雄达到 5 级并释放「大地轰鸣」奥义', icon: '🌟', rewardStars: 1 },
-  { id: 'subterranean_slayer', title: '🕳️ 潜行覆灭', desc: '全歼自侧翼腐化地穴绕行的全部暗影潜行突袭怪', icon: '🐛', rewardStars: 1 },
-  { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局积累超过 2500 黄金孢子，经济命脉固若金汤', icon: '🪙', rewardStars: 2 },
-  { id: 'multikill_overload', title: '💥 破军狂澜', desc: '触发 10 只以上敌军瞬间连环爆裂群杀', icon: '🔥', rewardStars: 1 },
-  { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座三阶终极进阶形态防御塔', icon: '💎', rewardStars: 2 },
-  { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在狂暴血月天候下坚守阵地并全歼狂暴虫潮', icon: '🌙', rewardStars: 1 },
-  { id: 'spider_regicide', title: '🕷️ 斩灭蛛后', desc: '击破第 10 波织网蜘蛛女王，光复图一晨曦薄雾', icon: '🏆', rewardStars: 3 },
-  { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '在无尽深渊极限模式中突破第 15 波狂暴挑战', icon: '✨', rewardStars: 3 },
-  { id: 'pitcher_gluttony', title: '🪴 奇幻猪笼草', desc: '激活食人猪笼草捕食巨怪并成功消化 3 次', icon: '🍃', rewardStars: 1 },
-  { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '激活古树雷石释放连锁闪电轰击 6 只以上虫群', icon: '🌩️', rewardStars: 1 },
-  { id: 'tactical_stances', title: '🥋 兵无常势', desc: '在同一场战斗中灵活切换大橡树的三大战斗姿态', icon: '🎖️', rewardStars: 1 },
-  { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '建造神圣灵光菇并在单局产出超过 800 黄金孢子', icon: '🍄', rewardStars: 1 },
-  { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '使用极寒雾菇使至少 8 只敌人同时陷入重度减速', icon: '🧊', rewardStars: 1 },
-  { id: 'laceration_field', title: '🌵 荆棘绝阵', desc: '尖刺菇单场割裂创伤累计造成超过 3000 点物理伤害', icon: '🌵', rewardStars: 1 },
-  { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂重炮单发熔岩迫击炮弹直接消灭 5 只聚集敌怪', icon: '🎯', rewardStars: 1 },
-  { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次提前吹响号角迎战，累积丰厚军功孢子', icon: '📯', rewardStars: 1 },
-  { id: 'last_stand', title: '❤️ 绝境逆转', desc: '在生命种子仅剩最后 1 颗时绝境反击取得关卡胜利', icon: '🔥', rewardStars: 2 },
-  { id: 'codex_grandmaster', title: '📜 博学大典', desc: '翻阅林地秘典全部守林神树卫士与暗黑虫潮图鉴档案', icon: '📖', rewardStars: 1 }
+  { id: 'first_blood', title: '🌲 丛林初捷', desc: '击杀首只入侵害虫打响反击', icon: '⚔️', rewardStars: 1 },
+  { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '满 20 颗种子完美通关任一地图', icon: '👑', rewardStars: 2 },
+  { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树升至 5 级并释放奥义', icon: '🌟', rewardStars: 1 },
+  { id: 'subterranean_slayer', title: '🕳️ 侧翼肃清', desc: '击破侧翼小径或潜地突袭害虫', icon: '🐛', rewardStars: 1 },
+  { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局保有超过 2500 黄金孢子', icon: '🪙', rewardStars: 2 },
+  { id: 'multikill_overload', title: '💥 破军狂澜', desc: '瞬间达成 10 连杀连锁清场', icon: '🔥', rewardStars: 1 },
+  { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座终极三阶塔', icon: '💎', rewardStars: 2 },
+  { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在血月天象下坚守并赢下关卡', icon: '🌙', rewardStars: 1 },
+  { id: 'spider_regicide', title: '👑 初战告捷', desc: '击破第 10 波首领光复晨雾林地', icon: '🏆', rewardStars: 3 },
+  { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '无尽深渊模式坚持突破第 15 波', icon: '✨', rewardStars: 3 },
+  { id: 'pitcher_gluttony', title: '🪴 奇幻猪笼草', desc: '激发食人猪笼草成功消化 3 次', icon: '🍃', rewardStars: 1 },
+  { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '古木天雷单次连锁电击 6 敌', icon: '🌩️', rewardStars: 1 },
+  { id: 'tactical_stances', title: '🥋 兵无常势', desc: '单场战斗中切换大橡树 3 种姿态', icon: '🎖️', rewardStars: 1 },
+  { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '灵光菇单局生产 800 以上孢子', icon: '🍄', rewardStars: 1 },
+  { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '雾菇同时冻结减速 8 名以上敌人', icon: '🧊', rewardStars: 1 },
+  { id: 'laceration_field', title: '🌵 荆棘绝阵', desc: '尖刺菇单场累计造成 3000 伤害', icon: '🌵', rewardStars: 1 },
+  { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂菇单发炮弹炸毁 5 只聚集敌', icon: '🎯', rewardStars: 1 },
+  { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次吹响号角提前迎战', icon: '📯', rewardStars: 1 },
+  { id: 'last_stand', title: '❤️ 绝境逆转', desc: '仅剩 1 颗生命种子逆转赢下对局', icon: '🔥', rewardStars: 2 },
+  { id: 'codex_grandmaster', title: '📜 博学大典', desc: '翻阅林地秘典全守卫与害虫图鉴', icon: '📖', rewardStars: 1 }
 ];
 
 class AchievementManager {

@@ -368,26 +368,14 @@ class UiManager {
         return true;
       }
 
-      // (C) 茧丝缠绕快速点击救援 (Tap-to-Rescue)
+      // (C) 茧丝缠绕快速点击救援 (Tap-to-Rescue，统一交由 towerManager.rescueWeb 扣减蛛丝血点)
       if (scene.towerManager && scene.towerManager.towers) {
         for (let i = 0; i < scene.towerManager.towers.length; i++) {
           const tw = scene.towerManager.towers[i];
           if (tw.isWebbed && Math.hypot(mx - tw.x, my - tw.y) <= 38) {
-            tw.webTapCount = (tw.webTapCount || 0) + 1;
-            scene.economy.addSpores(5);
-            scene.fx.spawnFloatingText(tw.x, tw.y - 20, '+5 孢子 撕扯!', '#BAE7FF', 1.0);
-            scene.fx.spawnParticles(tw.x, tw.y, 8, ['#BAE7FF', '#FFFFFF'], 15, 30);
-            platform.playSfx('sfx_thorn');
-
-            if (tw.webTapCount >= 3) {
-              tw.isWebbed = false;
-              tw.webTapCount = 0;
-              tw.superchargeTimer = 4.0; // 破茧狂暴 2.2 倍攻速！
-              scene.fx.spawnFloatingText(tw.x, tw.y - 26, '破茧狂暴 攻速翻倍!', '#FFD700', 1.4);
-              scene.fx.spawnParticles(tw.x, tw.y, 20, ['#FFD700', '#FFA940', '#FFFFFF'], 30, 60);
-              platform.playSfx('sfx_upgrade');
+            if (scene.towerManager.rescueWeb(tw, scene.fx, scene.economy)) {
+              return true;
             }
-            return true;
           }
         }
       }
@@ -732,6 +720,27 @@ class UiManager {
       ctx.fill();
     }
 
+    // 顶部大气手绘木纹金匾标题（纯净无任何图像烘焙文字，支持实时语言切换）
+    const titleBannerW = 430;
+    const titleBannerH = 74;
+    const titleBannerX = (960 - titleBannerW) * 0.5;
+    const titleBannerY = 34;
+    this.drawAiFrame(ctx, 'top_bar', titleBannerX, titleBannerY, titleBannerW, titleBannerH, 0.94);
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', 480, titleBannerY + 32, {
+      style: 'gold',
+      size: 32,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 2.2
+    });
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', 480, titleBannerY + 57, {
+      style: 'parchment',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.9
+    });
+
     // 底部雕刻木质命令栏
     this.drawAiFrame(ctx, 'top_bar', 106, 450, 748, 76, 0.96);
 
@@ -765,7 +774,7 @@ class UiManager {
     });
 
     if (this.showSettingsModal) {
-      this.renderSettingsModal(ctx);
+      this.renderSettingsModal(ctx, scene);
     } else if (this.showGuideModal) {
       this.renderGuideModal(ctx, scene);
     }
@@ -838,6 +847,31 @@ class UiManager {
         ctx.fillStyle = mData.parallaxColors[1] || PALETTE.GROUND_DARK;
         ctx.fillRect(prevX, prevY, prevW, prevH);
       }
+      // 缩略图叠加主路+侧翼双线战术路网示意标
+      const mapPadX = prevX + prevW * (160 / 960);
+      const mapPadY = prevY + prevH * (30 / 540);
+      const mapDrawW = prevW * (640 / 960);
+      const mapDrawH = prevH * (480 / 540);
+      const drawPreviewRoute = (wps, color, lw) => {
+        if (!wps || wps.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let pi = 0; pi < wps.length; pi++) {
+          const px = mapPadX + ((wps[pi][0] + 0.5) / 20) * mapDrawW;
+          const py = mapPadY + ((wps[pi][1] + 0.5) / 15) * mapDrawH;
+          if (pi === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      };
+      drawPreviewRoute(mData.groundWaypoints2, 'rgba(179, 127, 235, 0.85)', 2.4);
+      drawPreviewRoute(mData.groundWaypoints, 'rgba(255, 229, 143, 0.85)', 2.8);
+
       ctx.strokeStyle = THEME.WOOD_DARK;
       ctx.lineWidth = 3;
       ctx.strokeRect(prevX, prevY, prevW, prevH);
@@ -867,14 +901,25 @@ class UiManager {
       ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + 26, cardY + 342);
 
       if (rec.unlocked) {
-        this.drawPixelButton(ctx, 'play_' + mapId, cardX + 28, cardY + 362, cardW - 56, 44, i18n.t('btn_start'), {
+        const hasCleared = rec.stars > 0;
+        const startW = hasCleared ? (cardW - 146) : (cardW - 56);
+        this.drawPixelButton(ctx, 'play_' + mapId, cardX + 24, cardY + 362, startW, 44, i18n.t('btn_start'), {
           skin: 'btn_green',
-          font: `bold 16px ${CN_FONT}`,
+          font: `bold ${hasCleared ? 14 : 16}px ${CN_FONT}`,
           iconKey: 'play'
         }, () => {
           platform.playSfx('sfx_click');
           scene.startLevel(mapId);
         });
+        if (hasCleared) {
+          this.drawPixelButton(ctx, 'endless_' + mapId, cardX + 30 + startW, cardY + 362, 92, 44, '无尽模式', {
+            skin: 'btn_wood',
+            font: `bold 12px ${CN_FONT}`
+          }, () => {
+            platform.playSfx('sfx_horn');
+            scene.startEndlessMode(mapId);
+          });
+        }
       } else {
         this.drawPixelButton(ctx, 'locked_' + mapId, cardX + 28, cardY + 362, cardW - 56, 44, i18n.t('map_locked'), {
           skin: 'btn_wood',
@@ -886,7 +931,7 @@ class UiManager {
     }
 
     if (this.showSettingsModal) {
-      this.renderSettingsModal(ctx);
+      this.renderSettingsModal(ctx, scene);
     }
   }
 
@@ -939,7 +984,7 @@ class UiManager {
       });
 
       if (this.showSettingsModal) {
-        this.renderSettingsModal(ctx);
+        this.renderSettingsModal(ctx, scene);
       } else if (this.showGuideModal) {
         this.renderGuideModal(ctx, scene);
       } else if (scene.state === 'PAUSED') {
@@ -957,6 +1002,9 @@ class UiManager {
     }
     if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
+      if (this.showSettingsModal) {
+        this.renderSettingsModal(ctx, scene);
+      }
       return;
     }
 
@@ -1019,7 +1067,7 @@ class UiManager {
 
     // 8. 模态弹窗（暂停、结算、新手引导、设置）
     if (this.showSettingsModal) {
-      this.renderSettingsModal(ctx);
+      this.renderSettingsModal(ctx, scene);
     } else if (this.showGuideModal) {
       this.renderGuideModal(ctx, scene);
     } else if (scene.state === 'PAUSED') {
@@ -1289,6 +1337,46 @@ class UiManager {
    */
   renderCommanderSpellDock(ctx, scene) {
   }
+  renderRallyTargetingReticle(ctx, scene) {
+    if (!scene || !scene.activeRallyTargeting || !scene.map) return;
+    const mx = this.hoverX;
+    const my = this.hoverY;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const mapX = (mx - mv.OFFSET_X) / (mv.SCALE || 1);
+    const mapY = (my - mv.OFFSET_Y) / (mv.SCALE || 1);
+    const col = Math.floor(mapX / TILE_SIZE);
+    const row = Math.floor(mapY / TILE_SIZE);
+    const isValid = scene.map.inBounds(col, row) && scene.map.isPath(col, row);
+
+    ctx.save();
+    if (scene.map.inBounds(col, row)) {
+      const bx = mv.OFFSET_X + col * TILE_SIZE * mv.SCALE;
+      const by = mv.OFFSET_Y + row * TILE_SIZE * mv.SCALE;
+      const bsz = TILE_SIZE * mv.SCALE;
+      roundRectPath(ctx, bx + 1, by + 1, bsz - 2, bsz - 2, 6);
+      ctx.fillStyle = isValid ? 'rgba(82, 196, 26, 0.30)' : 'rgba(255, 77, 79, 0.25)';
+      ctx.fill();
+      ctx.strokeStyle = isValid ? '#95DE64' : '#FF4D4F';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    const flagImg = platform.getImage('assets/vfx/prop_rally_flag.png');
+    if (mx > 0 && my > 0) {
+      if (flagImg && flagImg.width) {
+        ctx.globalAlpha = 0.88;
+        ctx.drawImage(flagImg, mx - 16, my - 30, 32, 34);
+      }
+      drawArtText(ctx, isValid ? '点击道路集结菇精卫 [R]' : '请移动到道路格上设防', mx, my - 38, {
+        style: isValid ? 'emerald' : 'crimson',
+        size: 13,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 1.8
+      });
+    }
+    ctx.restore();
+  }
+
   renderSpellTargetingReticle(ctx, scene) {
     if (!scene.activeSpellCasting) return;
     const spellId = scene.activeSpellCasting;
@@ -2182,11 +2270,10 @@ class UiManager {
       return;
     }
 
-    // 1. 若为已有防御塔：首先呈现轻量战地灵动快捷环（0 遮挡，无大木板阻挡视线）
+    // 1. 若为已有防御塔且详情面板未展开：呈现轻量战地灵动快捷环（0 遮挡，与详情木板互不重叠）
     if (existingTower) {
-      this.renderTowerTacticalQuickRing(ctx, scene, existingTower, tileScreenX, tileScreenY);
-      // 若玩家未主动开启详情属性木板，保持战地开阔纯净零遮挡（轻度UI）
       if (!this.showTowerDetailBoard) {
+        this.renderTowerTacticalQuickRing(ctx, scene, existingTower, tileScreenX, tileScreenY);
         this.inspectorRect = {
           x: tileScreenX - 110,
           y: tileScreenY - 60,
@@ -2342,19 +2429,26 @@ class UiManager {
     const pillW = 86;
     const pillGap = 9;
     let dmgVal = `${node.damage}`;
-    let dmgLabel = '伤害';
+    let dmgLabel = '攻击';
     let dmgIcon = 'atk';
+    let dmgCat = 24;
     if (tower.typeId === 'lumina') {
-      dmgVal = `+${node.sporeGen || 8}/次`;
-      dmgLabel = '产孢';
-      dmgIcon = 'spore';
+      if (node.branch === 'A') {
+        dmgVal = `${node.damage}/+${node.auraHeal || 25}`;
+        dmgLabel = '圣光·疗';
+        dmgIcon = 'atk';
+      } else {
+        dmgVal = `+${node.sporeGen || 12}/次`;
+        dmgLabel = '产孢';
+        dmgIcon = 'spore';
+        dmgCat = 16;
+      }
     } else if (tower.typeId === 'mist') {
       dmgVal = `${node.dps}/秒`;
       dmgLabel = '雾伤';
-      dmgIcon = 'atk';
     }
     const statItems = [
-      { cat: 24, icon: 'atk', label: '攻击', val: dmgVal },
+      { cat: dmgCat, icon: dmgIcon, label: dmgLabel, val: dmgVal },
       { cat: 24, icon: 'aspd', label: '间隔', val: `${node.interval}s` },
       { cat: 16, icon: 'target', label: '射程', val: `${node.range}格` }
     ];
@@ -2362,23 +2456,23 @@ class UiManager {
       const st = statItems[i];
       const sx = x + 26 + i * (pillW + pillGap);
       ctx.save();
-      roundRectPath(ctx, sx, statsY, pillW, 30, 8);
+      roundRectPath(ctx, sx, statsY, pillW, 32, 8);
       ctx.fillStyle = 'rgba(84, 56, 32, 0.10)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      drawUiIcon(ctx, st.cat, st.icon, sx + 5, statsY + 5, 20);
+      drawUiIcon(ctx, st.cat, st.icon, sx + 5, statsY + 6, 20);
       ctx.fillStyle = '#855F38';
-      ctx.font = `10px ${UI_FONT}`;
+      ctx.font = `9.5px ${UI_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(st.label, sx + 27, statsY + 10);
+      ctx.fillText(st.label, sx + 27, statsY + 9);
 
       ctx.fillStyle = THEME.INK_DARK;
-      ctx.font = `bold 12px ${UI_FONT}`;
-      ctx.fillText(st.val, sx + 27, statsY + 21);
+      ctx.font = `bold 11.5px ${UI_FONT}`;
+      ctx.fillText(st.val, sx + 27, statsY + 23);
       ctx.restore();
     }
 
@@ -2899,11 +2993,13 @@ class UiManager {
   }
 
   renderSettingsModal(ctx, scene) {
+    const curScene = scene || this.scene;
+    const inBattle = Boolean(curScene && (curScene.state === 'BATTLE' || curScene.state === 'PAUSED'));
     ctx.fillStyle = 'rgba(10, 16, 12, 0.82)';
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 380;
-    const mh = 360;
+    const mh = inBattle ? 360 : 276;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -2914,13 +3010,13 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 56);
+    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 48);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 50, my + 70);
-    ctx.lineTo(mx + mw - 50, my + 70);
+    ctx.moveTo(mx + 50, my + 64);
+    ctx.lineTo(mx + mw - 50, my + 64);
     ctx.stroke();
     ctx.restore();
 
@@ -2929,7 +3025,7 @@ class UiManager {
     const bw = mw - 80;
     const btnH = 34;
     const gap = 8;
-    let curY = my + 82;
+    let curY = my + 76;
 
     // 1. 音效开关
     this.drawPixelButton(
@@ -2988,48 +3084,50 @@ class UiManager {
     );
     curY += btnH + gap;
 
-    // 4. 战况战报统计
-    this.drawPixelButton(
-      ctx,
-      'set_analytics',
-      bx,
-      curY,
-      bw,
-      btnH,
-      '📊 查看实时战况与DPS统计',
-      { skin: 'btn_wood' },
-      () => {
-        platform.playSfx('sfx_click');
-        if (scene && scene.combatAnalytics) {
-          scene.combatAnalytics.isOpen = true;
+    if (inBattle) {
+      // 4. 战况战报统计
+      this.drawPixelButton(
+        ctx,
+        'set_analytics',
+        bx,
+        curY,
+        bw,
+        btnH,
+        '📊 查看实时战况与DPS统计',
+        { skin: 'btn_wood' },
+        () => {
+          platform.playSfx('sfx_click');
+          if (curScene && curScene.combatAnalytics) {
+            curScene.combatAnalytics.isOpen = true;
+          }
+          this.showSettingsModal = false;
         }
-        this.showSettingsModal = false;
-      }
-    );
-    curY += btnH + gap;
+      );
+      curY += btnH + gap;
 
-    // 5. 重新挑战本关
-    this.drawPixelButton(
-      ctx,
-      'set_restart',
-      bx,
-      curY,
-      bw,
-      btnH,
-      '🔁 重新挑战本关',
-      { skin: 'btn_wood' },
-      () => {
-        platform.playSfx('sfx_click');
-        this.showSettingsModal = false;
-        if (scene && typeof scene.startLevel === 'function') {
-          scene.startLevel(scene.currentMapId);
+      // 5. 重新挑战本关
+      this.drawPixelButton(
+        ctx,
+        'set_restart',
+        bx,
+        curY,
+        bw,
+        btnH,
+        '🔁 重新挑战本关',
+        { skin: 'btn_wood' },
+        () => {
+          platform.playSfx('sfx_click');
+          this.showSettingsModal = false;
+          if (curScene && typeof curScene.startLevel === 'function') {
+            curScene.startLevel(curScene.currentMapId);
+          }
         }
-      }
-    );
-    curY += btnH + gap;
+      );
+      curY += btnH + gap;
+    }
 
-    // 6. 返回游戏继续战斗
-    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, '⚔️ 返回战场继续战斗', {
+    // 6. 返回游戏 / 关闭设置
+    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, inBattle ? '⚔️ 返回战场继续战斗' : '✅ 关闭系统设置', {
       skin: 'btn_green'
     }, () => {
       platform.playSfx('sfx_click');
@@ -3186,11 +3284,11 @@ class UiManager {
    */
   renderCodexGuardiansTab(ctx, x, y, w, h) {
     const towers = [
-      { id: 'watch', name: '瞭望菇', role: '防空远程', cost: 100, desc: '射程覆盖广，精准破甲点杀空中飞蛾与高速突袭怪。' },
-      { id: 'mist', name: '雾菇', role: '范围减速', cost: 125, desc: '释放大范围孢子迷雾，极寒减速并融毁敌军坚硬护甲。' },
-      { id: 'thorn', name: '尖刺菇', role: '破甲割裂', cost: 110, desc: '刺穿地面造成连续破甲割裂与巨额流血创伤。' },
-      { id: 'burst', name: '爆裂菇', role: '高爆重炮', cost: 135, desc: '发射熔岩高爆弹丸，巨额AOE溅射击退密集聚拢虫潮。' },
-      { id: 'lumina', name: '灵光菇', role: '神圣丰收', cost: 75, desc: '持续生产黄金孢子与祝福晨露，维系全线防守经济命脉。' }
+      { id: 'watch', name: '瞭望菇', role: '防空远程', cost: TOWERS.watch.nodes.base.cost, desc: '射程覆盖广，精准破甲点杀空中飞蛾与高速突袭怪。' },
+      { id: 'mist', name: '雾菇', role: '范围减速', cost: TOWERS.mist.nodes.base.cost, desc: '释放大范围孢子迷雾，极寒减速并融毁敌军坚硬护甲。' },
+      { id: 'thorn', name: '尖刺菇', role: '破甲割裂', cost: TOWERS.thorn.nodes.base.cost, desc: '刺穿地面造成连续破甲割裂与巨额流血创伤。' },
+      { id: 'burst', name: '爆裂菇', role: '高爆重炮', cost: TOWERS.burst.nodes.base.cost, desc: '发射熔岩高爆弹丸，巨额AOE溅射击退密集聚拢虫潮。' },
+      { id: 'lumina', name: '灵光菇', role: '神圣丰收', cost: TOWERS.lumina.nodes.base.cost, desc: '持续生产黄金孢子与祝福晨露，增幅邻塔并维系防线经济命脉。' }
     ];
 
     const curTowerId = this.codexSelectedTower || 'watch';
@@ -3300,14 +3398,20 @@ class UiManager {
     });
     this.drawWrappedText(ctx, tItem.desc, rx + 92, y + 42, rw - 110, 18, '#4A3319', `12px ${CN_FONT}`);
 
-    // 属性横向数值条 (修复射程像素计算)
+    // 属性横向数值条 (实时读取 TOWERS 数据表数值)
     const statsY = y + 74;
     const baseNode = curDef.nodes.base || {};
+    const statDmgLabel = curTowerId === 'mist'
+      ? { k: '雾伤', v: `${baseNode.dps || 5}/秒` }
+      : (curTowerId === 'lumina'
+        ? { k: '产孢', v: `+${baseNode.sporeGen || 12}/${baseNode.sporeInterval || 10}s` }
+        : { k: '伤害', v: baseNode.damage || 0 });
+    const statRoleLabel = curTowerId === 'thorn' ? '穿透' : ((curTowerId === 'mist' || curTowerId === 'lumina') ? '领域' : (curTowerId === 'burst' ? '溅射' : '精准'));
     const statsList = [
-      { k: '伤害', v: baseNode.damage || 0 },
+      statDmgLabel,
       { k: '射程', v: `${baseNode.range || 0} 格 (${Math.round((baseNode.range || 0) * 32)}px)` },
       { k: '攻速', v: `${(1 / (baseNode.interval || 1)).toFixed(1)} 次/秒` },
-      { k: '类型', v: baseNode.damageType === 'pierce' ? '穿透' : (baseNode.damageType === 'magic' ? '魔法' : '物理') }
+      { k: '类型', v: statRoleLabel }
     ];
     const statW = Math.floor((rw - 32 - 24) / 4);
     for (let si = 0; si < statsList.length; si++) {
@@ -3420,22 +3524,22 @@ class UiManager {
    */
   renderCodexBestiaryTab(ctx, x, y, w, h) {
     const allEnemies = [
-      { id: 'beetle', name: '甲壳幼虫', danger: '★☆☆☆☆', hp: 35, speed: '中速', armor: '无', tag: '前锋兵' },
-      { id: 'swift', name: '疾风甲虫', danger: '★★☆☆☆', hp: 28, speed: '极速', armor: '轻甲', tag: '突击兵' },
-      { id: 'armored', name: '重甲巨甲虫', danger: '★★★☆☆', hp: 120, speed: '龟速', armor: '高硬甲', tag: '装甲先锋' },
-      { id: 'moth', name: '荧光飞蛾', danger: '★★★☆☆', hp: 45, speed: '快速', armor: '无', tag: '浮空飞行' },
-      { id: 'splitter', name: '裂殖母虫', danger: '★★★☆☆', hp: 90, speed: '中速', armor: '中甲', tag: '亡语分裂' },
-      { id: 'larva', name: '分裂幼虫', danger: '★★☆☆☆', hp: 18, speed: '极速', armor: '无', tag: '虫海群攻' },
-      { id: 'burrower', name: '掘地潜行者', danger: '★★★★☆', hp: 80, speed: '快速', armor: '地底免伤', tag: '潜地特种' },
-      { id: 'volatile_pod', name: '自爆恶蝉', danger: '★★★★☆', hp: 70, speed: '快速', armor: '轻甲', tag: '蓄力自爆' },
-      { id: 'weaver', name: '纺织毒蛛', danger: '★★★★☆', hp: 110, speed: '中速', armor: '中甲', tag: '吐网封塔' },
-      { id: 'leaper', name: '跃迁跳蚤', danger: '★★★★☆', hp: 75, speed: '跳跃', armor: '轻甲', tag: '跃迁突袭' },
-      { id: 'shaman', name: '巫毒蝉俑', danger: '★★★★☆', hp: 130, speed: '缓慢', armor: '高抗性', tag: '群体治疗' },
-      { id: 'skeletal_husk', name: '枯骨巨蝎', danger: '★★★★☆', hp: 160, speed: '缓慢', armor: '坚韧骨盾', tag: '正面减伤' },
-      { id: 'siege_beetle', name: '攻城巨角兽', danger: '★★★★★', hp: 280, speed: '极慢', armor: '重型装甲', tag: '践踏震晕' },
-      { id: 'boss_m1', name: '巨角天牛王', danger: '★★★★★', hp: 450, speed: '冲锋', armor: '首领护甲', tag: '第一关首领' },
-      { id: 'boss_m2', name: '剧毒飞蛾后', danger: '★★★★★', hp: 600, speed: '盘旋', armor: '毒瘴屏障', tag: '第二关首领' },
-      { id: 'boss_m3', name: '万虫巢母', danger: '★★★★★★', hp: 950, speed: '狂暴', armor: '繁衍神甲', tag: '深渊终极首领' }
+      { id: 'beetle', name: '腐蚀幼甲虫', danger: '★☆☆☆☆', speed: '中速', tag: '前锋兵' },
+      { id: 'swift', name: '疾风飞蛾', danger: '★★☆☆☆', speed: '极速', tag: '突击兵' },
+      { id: 'armored', name: '重装坚盾甲虫', danger: '★★★☆☆', speed: '缓慢', tag: '装甲先锋' },
+      { id: 'moth', name: '幻翼魔蛾', danger: '★★★☆☆', speed: '快速', tag: '浮空飞行' },
+      { id: 'splitter', name: '母体裂殖虫', danger: '★★★☆☆', speed: '中速', tag: '亡语分裂' },
+      { id: 'larva', name: '分裂幼虫', danger: '★★☆☆☆', speed: '极速', tag: '虫海群攻' },
+      { id: 'burrower', name: '掘地潜行蝎', danger: '★★★★☆', speed: '较快', tag: '潜地特种' },
+      { id: 'volatile_pod', name: '烈性酸蚀蝉', danger: '★★★★☆', speed: '极速', tag: '蓄力自爆' },
+      { id: 'weaver', name: '幽林织网蛛', danger: '★★★★☆', speed: '中速', tag: '吐网封塔' },
+      { id: 'leaper', name: '疾风飞跃蝗', danger: '★★★★☆', speed: '跳跃', tag: '跃迁突袭' },
+      { id: 'shaman', name: '幽林菌巫', danger: '★★★★☆', speed: '缓慢', tag: '群体治疗' },
+      { id: 'skeletal_husk', name: '枯骨虫骸', danger: '★★★★☆', speed: '中速', tag: '复生残骸' },
+      { id: 'siege_beetle', name: '铁壁攻城巨兜', danger: '★★★★★', speed: '极慢', tag: '正面坚盾' },
+      { id: 'boss_m1', name: '腐化蛀王', danger: '★★★★★', speed: '冲锋', tag: '第一关首领' },
+      { id: 'boss_m2', name: '剧毒幽蛾后', danger: '★★★★★', speed: '盘旋', tag: '第二关首领' },
+      { id: 'boss_m3', name: '万巢裂殖母体', danger: '★★★★★★', speed: '狂暴', tag: '最终首领' }
     ];
 
     const curEnemyId = this.codexSelectedEnemy || 'beetle';
@@ -3790,7 +3894,7 @@ class UiManager {
       ctx.font = '9px ' + CN_FONT;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      const shortDesc = a.desc.length > 22 ? a.desc.slice(0, 22) + '...' : a.desc;
+      const shortDesc = a.desc.length > 26 ? a.desc.slice(0, 25) + '...' : a.desc;
       ctx.fillText(shortDesc, cx + 32, cy + 19.5);
 
       // 右侧星级与状态
@@ -3812,12 +3916,12 @@ class UiManager {
   // =========================================================================
   renderPvZTopSeedBank(ctx, scene) {
     const bankX = 10;
-    const bankY = 470;
-    const bankH = 64; // 充足充裕的高度，完全不压平卡牌尺寸！
+    const bankY = 478;
+    const bankH = 58; // 贴底安放，让行 0~13 战场完全无遮挡！
 
-    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque: 90x60px 舒展大气)
+    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque: 90x56px 舒展大气)
     const sporeW = 90;
-    const sporeH = 60;
+    const sporeH = 56;
     const sporeX = bankX + 2;
     const sporeY = bankY + 2;
 
@@ -3858,10 +3962,10 @@ class UiManager {
     });
     ctx.restore();
 
-    // 2. 5大蘑菇植物卡牌栏 (PvZ 经典纵向饱满卡槽: 54x60px)
+    // 2. 5大蘑菇植物卡牌栏 (PvZ 经典纵向饱满卡槽: 54x56px)
     const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
     const cardW = 54;
-    const cardH = 60;
+    const cardH = 56;
     const startX = sporeX + sporeW + 8;
 
     for (let i = 0; i < towerOrder.length; i++) {
@@ -3993,7 +4097,7 @@ class UiManager {
   renderPvZTopWaveBar(ctx, scene) {
     const waveMgr = scene.waveManager;
     const barX = 492;
-    const barY = 481;
+    const barY = 486;
     const barW = 200;
     const barH = 42; // 高度 42px，按键舒适，大字号完全舒展
 
@@ -4052,7 +4156,7 @@ class UiManager {
   // =========================================================================
   renderPvZTopRightMenu(ctx, scene) {
     const btnH = 42;
-    const btnY = 481;
+    const btnY = 486;
 
     this.drawPixelButton(
       ctx,
@@ -4114,39 +4218,98 @@ class UiManager {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 1. 英雄圆形头像盘 (位于左下角 Y: 494，不遮挡任何草地)
+    // 1. 左侧边缘英雄统御竖栏（处于 X:10..150 左侧林地边栏内，绝不压盖主战场列 0..19）
     const hx = 34;
-    const hy = 436;
-    const hr = 22;
+    const hy = 434;
+    const hr = 20;
 
+    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=396)
+    const stanceMeta = {
+      guardian: { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
+      aggressive: { label: '⚔️ 狂暴', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
+      scout: { label: '🏹 游侠', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
+    }[hero.stance || 'guardian'] || { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
+
+    ctx.save();
+    roundRectPath(ctx, 12, hy - hr - 24, 58, 18, 9);
+    ctx.fillStyle = stanceMeta.bg;
+    ctx.fill();
+    ctx.strokeStyle = stanceMeta.bd;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    drawArtText(ctx, stanceMeta.label, 41, hy - hr - 15, {
+      style: 'parchment',
+      color: stanceMeta.col,
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.7
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_hero_stance', 12, hy - hr - 24, 58, 18, () => {
+      hero.cycleStance(scene.fx);
+      if (hero.stanceSwitchedCount >= 3 && scene.achievements) {
+        scene.achievements.unlock('tactical_stances', scene.fx);
+      }
+    });
+
+    // 1.2 英雄大招 [F] 触发胶囊（位于头像右侧 y=hy-hr-24）
+    const ultCd = hero.skillCooldown || 0;
+    const ultReady = ultCd <= 0 && hero.state !== 'dead';
+    ctx.save();
+    roundRectPath(ctx, 74, hy - hr - 24, 72, 18, 9);
+    ctx.fillStyle = ultReady ? 'rgba(62, 42, 10, 0.94)' : 'rgba(24, 18, 12, 0.88)';
+    ctx.fill();
+    ctx.strokeStyle = ultReady ? '#FFD700' : 'rgba(140, 110, 70, 0.45)';
+    ctx.lineWidth = ultReady ? 1.5 : 1.0;
+    ctx.stroke();
+    drawArtText(ctx, ultReady ? '⚡裂地斩[F]' : `奥义 ${Math.ceil(ultCd)}s`, 110, hy - hr - 15, {
+      style: ultReady ? 'gold' : 'dim',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.7
+    });
+    ctx.restore();
+
+    this.registerButton('pvz_hero_ult', 74, hy - hr - 24, 72, 18, () => {
+      if (ultReady && typeof hero.castUltimateSkill === 'function') {
+        hero.castUltimateSkill(scene.enemyManager, scene.fx);
+        platform.playSfx('sfx_thunder');
+      } else {
+        this.showToast(hero.state === 'dead' ? '英雄正在复活中' : `大招冷却中: ${Math.ceil(ultCd)}s`);
+      }
+    });
+
+    // 1.3 英雄圆形头像盘（点击选中并调遣英雄站位）
     ctx.save();
     ctx.beginPath();
     ctx.arc(hx, hy, hr, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
-    ctx.strokeStyle = '#C68F45';
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = (scene.activeHeroRally || hero.isSelected) ? '#FFD700' : '#C68F45';
+    ctx.lineWidth = (scene.activeHeroRally || hero.isSelected) ? 2.2 : 1.6;
     ctx.stroke();
 
     const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
     ctx.beginPath();
     ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
     ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
-    ctx.lineWidth = 3.2;
+    ctx.lineWidth = 3.0;
     ctx.stroke();
 
     const heroImg = platform.getImage('assets/vfx/hero_oak.png');
     if (heroImg && heroImg.width) {
-      ctx.drawImage(heroImg, hx - 20, hy - 20, 40, 40);
+      ctx.drawImage(heroImg, hx - 18, hy - 18, 36, 36);
     } else {
-      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 18, align: 'center', baseline: 'middle' });
+      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 17, align: 'center', baseline: 'middle' });
     }
 
-    const ultReady = (hero.ultCooldownTimer || 0) <= 0;
     if (ultReady) {
-      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.12;
-      ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.7 + Math.sin(this.uiAnimTime * 8) * 0.3) + ')';
-      ctx.lineWidth = 2.0;
+      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.10;
+      ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.65 + Math.sin(this.uiAnimTime * 8) * 0.25) + ')';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
       ctx.stroke();
@@ -4165,70 +4328,68 @@ class UiManager {
     ctx.restore();
 
     this.registerButton('pvz_hero_badge', hx - hr, hy - hr, hr * 2, hr * 2, () => {
-      if (ultReady && typeof hero.castUltimate === 'function') {
-        hero.castUltimate(scene);
-        platform.playSfx('sfx_thunder');
-      } else {
-        scene.activeHeroRally = true;
-        hero.isSelected = true;
-        platform.playSfx('sfx_click');
+      scene.activeHeroRally = !scene.activeHeroRally;
+      hero.isSelected = scene.activeHeroRally;
+      platform.playSfx('sfx_click');
+      if (scene.activeHeroRally && scene.fx) {
+        scene.fx.spawnFloatingText(hero.x, hero.y - 26, '请点击道路/地面调遣英雄!', '#FFE58F', 1.1);
       }
     });
 
-    // 2. 3 大自然神术法球 (甘霖 45, 天雷 75, 丰饶 10s)
+    // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]菇精卫集结0) 紧凑对齐于左侧栏
     const spellList = [
-      { id: 'rain', name: '甘霖', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
-      { id: 'shock', name: '天雷', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
-      { id: 'harvest', name: '丰饶', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' }
+      { id: 'rain', name: '甘霖', key: 'Q', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
+      { id: 'shock', name: '天雷', key: 'W', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
+      { id: 'harvest', name: '丰饶', key: 'E', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
+      { id: 'rally', name: '集结', key: 'R', cost: 0, icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
-    const orbR = 17;
-    const orbStartY = hy;
-    const orbStartX = hx + hr + 18;
+    const orbR = 14;
+    const orbStartX = hx + hr + 16;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
       const spItem = spellList[sIdx];
       const sp = scene.spells ? scene.spells[spItem.id] : null;
       const spCd = (sp && sp.timer) || 0;
-      const spMaxCd = (sp && sp.cooldown) || 15;
+      const spMaxCd = (sp && sp.cd) || 15;
       const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 10);
-      const oy = orbStartY;
+      const ox = orbStartX + sIdx * (orbR * 2 + 5);
+      const oy = hy;
 
       ctx.save();
       ctx.beginPath();
       ctx.arc(ox, oy, orbR, 0, Math.PI * 2);
       ctx.fillStyle = canCast ? 'rgba(20, 28, 22, 0.94)' : 'rgba(16, 14, 12, 0.88)';
       ctx.fill();
-      ctx.strokeStyle = canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)';
-      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = (spItem.id === 'rally' && scene.activeRallyTargeting)
+        ? '#FFD700'
+        : (canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)');
+      ctx.lineWidth = (spItem.id === 'rally' && scene.activeRallyTargeting) ? 2.0 : 1.3;
       ctx.stroke();
 
       const spImg = platform.getImage(spItem.icon) || platform.getImage(spItem.vfx);
       if (spImg && spImg.width) {
         if (!canCast) ctx.globalAlpha = 0.45;
-        ctx.drawImage(spImg, ox - 13, oy - 13, 26, 26);
+        ctx.drawImage(spImg, ox - 10, oy - 10, 20, 20);
       } else {
-        drawArtText(ctx, spItem.name[0], ox, oy - 2, {
+        drawArtText(ctx, spItem.name[0], ox, oy - 1, {
           style: canCast ? 'emerald' : 'dim',
-          size: 13,
+          size: 12,
           align: 'center',
           baseline: 'middle'
         });
       }
 
-      if (spItem.cost > 0) {
-        roundRectPath(ctx, ox - 16, oy + orbR - 8, 32, 12, 3);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
-        ctx.fill();
-        drawArtText(ctx, spItem.cost + '🪙', ox, oy + orbR - 2, {
-          style: canCast ? 'gold' : 'dim',
-          size: 9,
-          align: 'center',
-          baseline: 'middle',
-          strokeWidth: 0.6
-        });
-      }
+      roundRectPath(ctx, ox - 13, oy + orbR - 7, 26, 11, 3);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+      ctx.fill();
+      drawArtText(ctx, spItem.cost > 0 ? (spItem.cost + '') : spItem.key, ox, oy + orbR - 1.5, {
+        style: canCast ? 'gold' : 'dim',
+        size: 8.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.5
+      });
 
       if (spCd > 0) {
         const sweepRatio = spCd / Math.max(1, spMaxCd);
@@ -4245,7 +4406,9 @@ class UiManager {
       this.registerButton('pvz_spell_' + spItem.id, ox - orbR, oy - orbR, orbR * 2, orbR * 2, () => {
         if (canCast) {
           scene.triggerSpell(spItem.id);
-          platform.playSfx('sfx_laser');
+          platform.playSfx('sfx_click');
+        } else {
+          this.showToast(spCd > 0 ? `冷却中: ${Math.ceil(spCd)}s` : `孢子不足 (需 ${spItem.cost})`);
         }
       });
     }

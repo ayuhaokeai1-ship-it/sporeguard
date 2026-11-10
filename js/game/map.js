@@ -175,33 +175,40 @@ class GameMap {
       }
     }
 
-    // 3. 标记地面路径经过的所有格子（含转角判定）
-    const wps = this.mapData.groundWaypoints;
-    const cornerSet = new Set();
-    for (let i = 1; i < wps.length - 1; i++) {
-      cornerSet.add(wps[i][0] + ',' + wps[i][1]);
+    // 3. 标记地面主路与侧翼小径经过的所有格子（含转角判定）
+    const routesToMark = [this.mapData.groundWaypoints];
+    if (this.mapData.groundWaypoints2 && this.mapData.groundWaypoints2.length > 1) {
+      routesToMark.push(this.mapData.groundWaypoints2);
     }
 
-    for (let i = 0; i < wps.length - 1; i++) {
-      const [c0, r0] = wps[i];
-      const [c1, r1] = wps[i + 1];
-      const dc = Math.sign(c1 - c0);
-      const dr = Math.sign(r1 - r0);
-      let c = c0;
-      let r = r0;
-      let safety = 0;
-      while (safety++ < 100) {
-        if (this.inBounds(c, r)) {
-          this.grid[r][c].type = 'path';
-          if (cornerSet.has(c + ',' + r)) {
-            this.grid[r][c].pathKind = 'turn';
-          } else {
-            this.grid[r][c].pathKind = dc !== 0 ? 'h' : 'v';
+    for (let rIdx = 0; rIdx < routesToMark.length; rIdx++) {
+      const wps = routesToMark[rIdx];
+      const cornerSet = new Set();
+      for (let i = 1; i < wps.length - 1; i++) {
+        cornerSet.add(wps[i][0] + ',' + wps[i][1]);
+      }
+
+      for (let i = 0; i < wps.length - 1; i++) {
+        const [c0, r0] = wps[i];
+        const [c1, r1] = wps[i + 1];
+        const dc = Math.sign(c1 - c0);
+        const dr = Math.sign(r1 - r0);
+        let c = c0;
+        let r = r0;
+        let safety = 0;
+        while (safety++ < 100) {
+          if (this.inBounds(c, r)) {
+            this.grid[r][c].type = 'path';
+            if (cornerSet.has(c + ',' + r)) {
+              this.grid[r][c].pathKind = 'turn';
+            } else {
+              this.grid[r][c].pathKind = dc !== 0 ? 'h' : 'v';
+            }
           }
+          if (c === c1 && r === r1) break;
+          if (c !== c1) c += dc;
+          if (r !== r1) r += dr;
         }
-        if (c === c1 && r === r1) break;
-        if (c !== c1) c += dc;
-        if (r !== r1) r += dr;
       }
     }
 
@@ -245,6 +252,7 @@ class GameMap {
       obs.isTargeted = false;
       const tile = this.grid[obs.row][obs.col];
       tile.type = 'moss'; // 障碍物破除后，化为肥沃战术灵土坑位，开辟全新种植位！
+      tile.unlockedFromObs = true;
       tile.obstacle = null;
       if (scene && scene.targetedObstacle === obs) {
         scene.targetedObstacle = null;
@@ -282,6 +290,11 @@ class GameMap {
 
   inBounds(col, row) {
     return col >= 0 && col < this.cols && row >= 0 && row < this.rows;
+  }
+
+  isPath(col, row) {
+    const tile = this.getTile(col, row);
+    return Boolean(tile && (tile.type === 'path' || tile.type === 'spawn'));
   }
 
   getTile(col, row) {
@@ -536,6 +549,15 @@ class GameMap {
       const bgW = (CONFIG.RESOLUTION.LOGICAL_WIDTH || 960) / mv.SCALE;
       const bgH = (CONFIG.RESOLUTION.LOGICAL_HEIGHT || 540) / mv.SCALE;
       drawSubImage(ctx, atlasImg, sb.x, sb.y, sb.w, sb.h, bgX, bgY, bgW, bgH);
+      // 绘制破除障碍后动态开辟出的新肥沃苔地槽位
+      for (let r = 0; r < this.rows; r++) {
+        for (let c = 0; c < this.cols; c++) {
+          const tile = this.grid[r][c];
+          if (tile && tile.type === 'moss' && tile.unlockedFromObs) {
+            drawMapTile(ctx, atlasPath, 'moss_' + (tile.variant % 2), c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          }
+        }
+      }
     } else {
       ctx.fillStyle = this.mapData.parallaxColors[0] || PALETTE.GROUND_DARKEST;
       ctx.fillRect(0, 0, CONFIG.LAYOUT.MAP.WIDTH, CONFIG.LAYOUT.MAP.HEIGHT);
