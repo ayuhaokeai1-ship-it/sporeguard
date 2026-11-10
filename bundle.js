@@ -1000,8 +1000,8 @@ const ENEMIES = {
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
     baseHp: 1600,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
-    speed: 0.80,         // 格/秒
-    armor: 18,
+    speed: 0.78,         // 格/秒
+    armor: 14,
     threat: 5,
     reward: 120,
     isFlying: false,
@@ -1016,12 +1016,12 @@ const ENEMIES = {
       phase2Summon: {
         type: 'armored',
         count: 2,
-        interval: 1.5
+        interval: 9.5
       },
-      phase3Threshold: 0.33, // 生命降至 33%：狂暴冲锋加速 +30%，护甲提升至 18
-      phase3SpeedMultiplier: 1.45,
+      phase3Threshold: 0.33, // 生命降至 33%：狂暴冲锋加速 +25%，护甲提升至 16
+      phase3SpeedMultiplier: 1.25,
       phase3Earthquake: true,
-      phase3Armor: 18,
+      phase3Armor: 16,
       phase3SlowImmune: false,
       phase3DeathSplit: null
     }
@@ -1262,45 +1262,41 @@ const MAPS = {
     bossId: 'boss_m1',
     // 地面路径拐点（格坐标 [col, row]），总长 45 格
     groundWaypoints: [
-      [0, 2],
-      [6, 2],
-      [6, 11],
-      [12, 11],
-      [12, 3],
-      [17, 3],
-      [17, 12],
-      [19, 12]
+      [0.0, 2.3], [0.75, 2.13], [1.82, 1.87], [2.99, 1.65], [4.0, 1.6], [4.86, 1.72],
+      [5.67, 1.95], [6.35, 2.33], [6.8, 2.9], [6.9, 3.74], [6.74, 4.81], [6.51, 5.94],
+      [6.4, 7.0], [6.41, 8.01], [6.44, 9.04], [6.59, 9.95], [6.9, 10.6], [7.47, 10.95],
+      [8.25, 11.09], [9.08, 11.03], [9.8, 10.8], [10.43, 10.39], [11.03, 9.8], [11.54, 9.06],
+      [11.9, 8.2], [11.98, 7.11], [11.86, 5.8], [11.76, 4.54], [11.9, 3.6], [12.39, 3.04],
+      [13.09, 2.72], [13.88, 2.59], [14.6, 2.6], [15.31, 2.73], [16.04, 3.01], [16.68, 3.46],
+      [17.1, 4.1], [17.18, 5.05], [17.02, 6.26], [16.8, 7.51], [16.7, 8.6], [16.75, 9.52],
+      [16.87, 10.36], [17.05, 11.07], [17.3, 11.6], [17.69, 11.89], [18.19, 11.99], [18.67, 11.99],
+      [19.0, 12.0]
     ],
     spawnTile2: [0, 9],
     // 侧翼巢穴·西部幽暗林径突袭路径 (Secondary Flank Route - 南部双线包抄)
     groundWaypoints2: [
-      [0, 9],
-      [4, 9],
-      [4, 13],
-      [17, 13],
-      [17, 12],
-      [19, 12]
+      [0.0, 9.2], [0.47, 9.19], [1.16, 9.17], [1.89, 9.22], [2.5, 9.4], [2.91, 9.79],
+      [3.22, 10.34], [3.54, 10.91], [4.0, 11.4], [4.6, 11.78], [5.29, 12.12], [6.09, 12.4],
+      [7.0, 12.6], [8.09, 12.72], [9.34, 12.76], [10.61, 12.74], [11.8, 12.7], [12.88, 12.61],
+      [13.9, 12.47], [14.88, 12.32], [15.8, 12.2], [16.73, 12.12], [17.65, 12.07], [18.44, 12.03],
+      [19.0, 12.0]
     ],
     // 空中航线拐点（跳过部分地面转角，长度约 35.8 格 ≈ 地面路线 80%）
     airWaypoints: [
-      [0, 2],
-      [5, 2],
-      [8, 9],
-      [12, 9],
-      [15, 4],
-      [17, 4],
+      [0, 2], [5, 2], [8, 9], [12, 9], [15, 4], [17, 4],
       [19, 12]
     ],
     warehouseTile: [19, 12],
     spawnTile: [0, 2],
     // 黄金战术苔地格（提示玩家最佳放置点，可建造）
     mossTiles: [
-      [5, 3], [7, 6], [7, 10], [2, 11], [9, 8], [11, 4], [11, 7],
-      [11, 10], [13, 4], [14, 7], [16, 4], [16, 8], [16, 11]
+      [5, 3], [8, 5], [5, 10], [2, 11], [8, 7], [10, 7],
+      [14, 11], [12, 2], [14, 4], [14, 7], [1, 12], [15, 1],
+      [18, 9]
     ],
     // 障碍物 (4处纯净自然林地险隘，绝无重叠重合与被压资产)
     obstacles: [
-      [3, 7], [8, 3], [13, 9], [15, 2]
+      [3, 7], [8, 3], [13, 9], [18, 3]
     ],
     parallaxColors: ['#14213D', '#1F3B2C', '#2E5E3E'],
     mistAlpha: 0.16,
@@ -1323,50 +1319,39 @@ const MAPS = {
     bossId: 'boss_m2',
     // 地面路径拐点，总长 52 格（双回环溪谷，适合雾菇+爆裂菇群清与高台对空）
     groundWaypoints: [
-      [0, 11],
-      [4, 11],
-      [4, 2],
-      [9, 2],
-      [9, 12],
-      [14, 12],
-      [14, 3],
-      [18, 3],
-      [18, 8],
-      [19, 8]
+      [0.0, 10.7], [0.54, 10.71], [1.32, 10.75], [2.15, 10.69], [2.8, 10.4], [3.24, 9.83],
+      [3.57, 9.04], [3.81, 8.14], [4.0, 7.2], [4.05, 6.14], [3.97, 4.96], [3.93, 3.84],
+      [4.1, 3.0], [4.57, 2.48], [5.24, 2.18], [5.96, 2.06], [6.6, 2.1], [7.16, 2.27],
+      [7.71, 2.61], [8.17, 3.11], [8.5, 3.8], [8.62, 4.78], [8.59, 6.01], [8.52, 7.29],
+      [8.5, 8.4], [8.51, 9.35], [8.5, 10.23], [8.59, 10.97], [8.9, 11.5], [9.54, 11.81],
+      [10.41, 11.94], [11.33, 11.87], [12.1, 11.6], [12.69, 11.09], [13.19, 10.36], [13.6, 9.48],
+      [13.9, 8.5], [13.98, 7.3], [13.88, 5.9], [13.82, 4.57], [14.0, 3.6], [14.57, 3.05],
+      [15.39, 2.76], [16.24, 2.72], [16.9, 2.9], [17.28, 3.39], [17.51, 4.17], [17.69, 5.04],
+      [17.9, 5.8], [18.19, 6.45], [18.51, 7.08], [18.8, 7.62], [19.0, 8.0]
     ],
     spawnTile2: [19, 12],
     // 东南溪谷暗穴·侧翼汇流突袭路径 (无碰撞直切防线中枢)
     groundWaypoints2: [
-      [19, 12],
-      [16, 12],
-      [16, 9],
-      [14, 9],
-      [14, 3],
-      [18, 3],
-      [18, 8],
-      [19, 8]
+      [19.0, 12.2], [18.28, 12.35], [17.24, 12.57], [16.17, 12.72], [15.4, 12.6], [15.01, 12.16],
+      [14.84, 11.49], [14.8, 10.67], [14.8, 9.8], [14.84, 8.74], [14.94, 7.49], [15.13, 6.35],
+      [15.4, 5.6], [15.79, 5.38], [16.28, 5.52], [16.81, 5.85], [17.3, 6.2], [17.78, 6.61],
+      [18.27, 7.14], [18.7, 7.65], [19.0, 8.0]
     ],
     // 空中航线拐点（长约 42.1 格 ≈ 地面路线 81%）
     airWaypoints: [
-      [0, 11],
-      [4, 11],
-      [4, 4],
-      [9, 4],
-      [9, 10],
-      [14, 10],
-      [14, 4],
-      [18, 4],
-      [19, 8]
+      [0, 11], [4, 11], [4, 4], [9, 4], [9, 10], [14, 10],
+      [14, 4], [18, 4], [19, 8]
     ],
     warehouseTile: [19, 8],
     spawnTile: [0, 11],
     mossTiles: [
-      [3, 10], [5, 3], [6, 6], [8, 3], [8, 8], [10, 11],
-      [11, 7], [13, 4], [13, 11], [15, 4], [17, 4], [17, 7], [17, 10]
+      [5, 9], [5, 4], [16, 10], [2, 9], [10, 3], [11, 7],
+      [10, 8], [12, 5], [16, 4], [18, 2], [12, 13], [2, 3],
+      [5, 11]
     ],
     // 障碍物
     obstacles: [
-      [2, 6], [6, 7], [11, 6], [16, 7]
+      [2, 6], [7, 7], [12, 3], [17, 1]
     ],
     parallaxColors: ['#14213D', '#1F3A5F', '#2E5E3E'],
     mistAlpha: 0.12,
@@ -1389,44 +1374,40 @@ const MAPS = {
     bossId: 'boss_m3',
     // 地面路径拐点，总长 60 格（三层平行长廊，极佳适配尖刺菇直线穿透与中枢联防）
     groundWaypoints: [
-      [0, 2],
-      [17, 2],
-      [17, 6],
-      [2, 6],
-      [2, 10],
-      [14, 10],
-      [14, 13],
-      [19, 13]
+      [0.0, 2.2], [0.95, 2.16], [2.31, 2.09], [3.87, 2.03], [5.4, 2.0], [6.92, 1.99],
+      [8.53, 2.01], [10.12, 2.04], [11.6, 2.1], [13.04, 2.15], [14.47, 2.2], [15.71, 2.33],
+      [16.6, 2.6], [17.11, 3.12], [17.32, 3.83], [17.24, 4.54], [16.9, 5.1], [16.23, 5.46],
+      [15.26, 5.71], [14.08, 5.88], [12.8, 6.0], [11.35, 6.03], [9.71, 5.97], [8.07, 5.91],
+      [6.6, 5.9], [5.29, 5.93], [4.06, 5.97], [3.03, 6.1], [2.3, 6.4], [1.89, 6.99],
+      [1.75, 7.79], [1.88, 8.6], [2.3, 9.2], [3.08, 9.52], [4.2, 9.67], [5.49, 9.74],
+      [6.8, 9.8], [8.18, 9.84], [9.69, 9.82], [11.15, 9.82], [12.4, 9.9], [13.34, 10.08],
+      [14.08, 10.33], [14.76, 10.64], [15.5, 11.0], [16.43, 11.48], [17.44, 12.07], [18.36, 12.62],
+      [19.0, 13.0]
     ],
     spawnTile2: [0, 8],
     // 幽夜地脉·下层峡谷双线合围路径 (Zero collision across lower chasm)
     groundWaypoints2: [
-      [0, 8],
-      [0, 12],
-      [12, 12],
-      [12, 13],
-      [19, 13]
+      [0.0, 8.0], [0.07, 8.66], [0.15, 9.62], [0.31, 10.62], [0.6, 11.4], [1.01, 11.9],
+      [1.53, 12.26], [2.17, 12.51], [3.0, 12.7], [4.06, 12.81], [5.32, 12.82], [6.68, 12.8],
+      [8.0, 12.8], [9.32, 12.83], [10.69, 12.85], [12.01, 12.88], [13.2, 12.9], [14.25, 12.93],
+      [15.19, 12.96], [16.04, 12.98], [16.8, 13.0], [17.5, 13.01], [18.12, 13.01], [18.64, 13.0],
+      [19.0, 13.0]
     ],
     // 空中航线拐点（长约 48.8 格 ≈ 地面路线 81%）
     airWaypoints: [
-      [0, 2],
-      [15, 2],
-      [15, 6],
-      [4, 6],
-      [4, 10],
-      [14, 10],
+      [0, 2], [15, 2], [15, 6], [4, 6], [4, 10], [14, 10],
       [19, 13]
     ],
     warehouseTile: [19, 13],
     spawnTile: [0, 2],
     mossTiles: [
-      [4, 3], [8, 3], [12, 3], [16, 4], [3, 5], [7, 5],
-      [11, 5], [15, 5], [3, 8], [6, 8], [10, 8], [12, 8],
-      [13, 8], [5, 11], [9, 11], [13, 11], [16, 12]
+      [3, 4], [7, 4], [11, 4], [15, 4], [4, 8], [10, 8],
+      [12, 8], [15, 8], [5, 11], [9, 11], [12, 11], [18, 6],
+      [17, 9], [1, 4], [13, 4], [19, 4], [18, 1]
     ],
     // 障碍物
     obstacles: [
-      [3, 4], [8, 5], [13, 4], [16, 10]
+      [9, 4], [6, 8], [14, 7], [10, 1]
     ],
     parallaxColors: ['#14213D', '#1F3A5F', '#1F3B2C'],
     mistAlpha: 0.20,
@@ -1521,7 +1502,7 @@ const WAVES = {
         { type: 'splitter', count: 3, interval: 2.0, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
-        { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
+        { type: 'burrower', count: 2, interval: 2.2, start: 10, routeIndex: 1 },
         { type: 'splitter', count: 2, interval: 2.2, start: 14 },
         { type: 'swift', count: 8, interval: 0.7, start: 20 }
       ]
@@ -1543,7 +1524,7 @@ const WAVES = {
       groups: [
         { type: 'swift', count: 16, interval: 0.55, start: 0 },
         { type: 'moth', count: 12, interval: 0.85, start: 8 },
-        { type: 'leaper', count: 6, interval: 0.95, start: 12, routeIndex: 1 },
+        { type: 'leaper', count: 3, interval: 1.5, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -1564,12 +1545,13 @@ const WAVES = {
       wave: 10,
       groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
-        { type: 'armored', count: 3, interval: 2.0, start: 5 },
-        { type: 'moth', count: 10, interval: 0.95, start: 12 },
-        { type: 'leaper', count: 6, interval: 1.0, start: 16, routeIndex: 1 },
-        { type: 'splitter', count: 5, interval: 1.6, start: 22 },
-        { type: 'burrower', count: 5, interval: 1.3, start: 26, routeIndex: 1 },
-        { type: 'swift', count: 14, interval: 0.55, start: 30 }
+        { type: 'armored', count: 1, interval: 2.5, start: 6 },
+        { type: 'beetle', count: 5, interval: 1.2, start: 8 },
+        { type: 'moth', count: 6, interval: 1.3, start: 13 },
+        { type: 'leaper', count: 3, interval: 1.4, start: 18, routeIndex: 1 },
+        { type: 'splitter', count: 3, interval: 2.0, start: 24 },
+        { type: 'burrower', count: 2, interval: 1.8, start: 29, routeIndex: 1 },
+        { type: 'swift', count: 10, interval: 0.7, start: 34 }
       ]
     }
   ],
@@ -5742,39 +5724,38 @@ class GameMap {
       }
     }
 
-    // 3. 标记地面主路与侧翼小径经过的所有格子（含转角判定）
-    const routesToMark = [this.mapData.groundWaypoints];
-    if (this.mapData.groundWaypoints2 && this.mapData.groundWaypoints2.length > 1) {
-      routesToMark.push(this.mapData.groundWaypoints2);
+    // 3. 按连续曲线线段距离精确标记地面主路与侧翼小径覆盖的所有网格，适配平滑自然弯曲道路
+    const routesForGrid = [this.groundRoute];
+    if (this.groundRoute2) {
+      routesForGrid.push(this.groundRoute2);
     }
-
-    for (let rIdx = 0; rIdx < routesToMark.length; rIdx++) {
-      const wps = routesToMark[rIdx];
-      const cornerSet = new Set();
-      for (let i = 1; i < wps.length - 1; i++) {
-        cornerSet.add(wps[i][0] + ',' + wps[i][1]);
-      }
-
-      for (let i = 0; i < wps.length - 1; i++) {
-        const [c0, r0] = wps[i];
-        const [c1, r1] = wps[i + 1];
-        const dc = Math.sign(c1 - c0);
-        const dr = Math.sign(r1 - r0);
-        let c = c0;
-        let r = r0;
-        let safety = 0;
-        while (safety++ < 100) {
-          if (this.inBounds(c, r)) {
-            this.grid[r][c].type = 'path';
-            if (cornerSet.has(c + ',' + r)) {
-              this.grid[r][c].pathKind = 'turn';
-            } else {
-              this.grid[r][c].pathKind = dc !== 0 ? 'h' : 'v';
+    const pathHitRadius = TILE_SIZE * 0.56;
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const cell = this.grid[r][c];
+        if (!cell || cell.type !== 'grass') continue;
+        const cx = (c + 0.5) * TILE_SIZE;
+        const cy = (r + 0.5) * TILE_SIZE;
+        let onPath = false;
+        for (let rIdx = 0; rIdx < routesForGrid.length && !onPath; rIdx++) {
+          const segs = routesForGrid[rIdx].segments;
+          for (let i = 0; i < segs.length; i++) {
+            const s = segs[i];
+            const vx = s.x1 - s.x0;
+            const vy = s.y1 - s.y0;
+            const len2 = vx * vx + vy * vy;
+            const t = len2 > 0 ? Math.max(0, Math.min(1, ((cx - s.x0) * vx + (cy - s.y0) * vy) / len2)) : 0;
+            const px = s.x0 + vx * t;
+            const py = s.y0 + vy * t;
+            if (Math.hypot(cx - px, cy - py) <= pathHitRadius) {
+              onPath = true;
+              cell.pathKind = Math.abs(vx) >= Math.abs(vy) ? 'h' : 'v';
+              break;
             }
           }
-          if (c === c1 && r === r1) break;
-          if (c !== c1) c += dc;
-          if (r !== r1) r += dr;
+        }
+        if (onPath) {
+          cell.type = 'path';
         }
       }
     }
@@ -5865,8 +5846,10 @@ class GameMap {
   }
 
   getTile(col, row) {
-    if (!this.inBounds(col, row)) return null;
-    return this.grid[row][col];
+    const c = Math.round(col);
+    const r = Math.round(row);
+    if (!Number.isFinite(c) || !Number.isFinite(r) || !this.inBounds(c, r)) return null;
+    return this.grid[r][c];
   }
 
   /**
@@ -8801,11 +8784,16 @@ class SporelingPatrol {
     if (!map || !map.mapData || !map.mapData.groundWaypoints) return;
     const wps = map.mapData.groundWaypoints;
     if (wps && wps.length >= 2) {
-      // 默认插在地面路径第一折角附近的战略要冲
-      const pt = wps[1] || wps[0];
-      const col = Array.isArray(pt) ? pt[0] : (pt.col !== undefined ? pt.col : 6);
-      const row = Array.isArray(pt) ? pt[1] : (pt.row !== undefined ? pt.row : 2);
-      this.setRallyPoint(col, row, map, null, true);
+      // 默认插在地面路径约 25% 处的咽喉要冲附近
+      const prefIdx = Math.max(1, Math.min(wps.length - 2, Math.floor(wps.length * 0.25)));
+      const tryOrder = [prefIdx, Math.floor(wps.length * 0.5), 1, 0];
+      for (let i = 0; i < tryOrder.length; i++) {
+        const pt = wps[tryOrder[i]];
+        if (!pt) continue;
+        const col = Math.round(Array.isArray(pt) ? pt[0] : (pt.col !== undefined ? pt.col : 6));
+        const row = Math.round(Array.isArray(pt) ? pt[1] : (pt.row !== undefined ? pt.row : 2));
+        if (this.setRallyPoint(col, row, map, null, true)) break;
+      }
     }
   }
 
@@ -18171,30 +18159,29 @@ class UiManager {
         ctx.fillStyle = mData.parallaxColors[1] || PALETTE.GROUND_DARK;
         ctx.fillRect(prevX, prevY, prevW, prevH);
       }
-      // 缩略图叠加主路+侧翼双线战术路网示意标
+      // 缩略图保留手绘原生道路质感，仅用极精简点位标记出怪巢穴与守护林屋
       const mapPadX = prevX + prevW * (160 / 960);
       const mapPadY = prevY + prevH * (30 / 540);
       const mapDrawW = prevW * (640 / 960);
       const mapDrawH = prevH * (480 / 540);
-      const drawPreviewRoute = (wps, color, lw) => {
-        if (!wps || wps.length < 2) return;
+      const drawLandmarkDot = (tile, fillCol, rimCol, rad) => {
+        if (!tile) return;
+        const px = mapPadX + ((tile[0] + 0.5) / 20) * mapDrawW;
+        const py = mapPadY + ((tile[1] + 0.5) / 15) * mapDrawH;
         ctx.save();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.fillStyle = rimCol;
         ctx.beginPath();
-        for (let pi = 0; pi < wps.length; pi++) {
-          const px = mapPadX + ((wps[pi][0] + 0.5) / 20) * mapDrawW;
-          const py = mapPadY + ((wps[pi][1] + 0.5) / 15) * mapDrawH;
-          if (pi === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
+        ctx.arc(px, py, rad + 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = fillCol;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       };
-      drawPreviewRoute(mData.groundWaypoints2, 'rgba(179, 127, 235, 0.85)', 2.4);
-      drawPreviewRoute(mData.groundWaypoints, 'rgba(255, 229, 143, 0.85)', 2.8);
+      drawLandmarkDot(mData.spawnTile, '#FF4D4F', 'rgba(20, 12, 10, 0.85)', 3.2);
+      drawLandmarkDot(mData.spawnTile2, '#B37FEB', 'rgba(20, 12, 18, 0.85)', 2.8);
+      drawLandmarkDot(mData.warehouseTile, '#FFD666', 'rgba(42, 24, 10, 0.90)', 3.6);
 
       ctx.strokeStyle = THEME.WOOD_DARK;
       ctx.lineWidth = 3;

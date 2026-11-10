@@ -175,39 +175,38 @@ class GameMap {
       }
     }
 
-    // 3. 标记地面主路与侧翼小径经过的所有格子（含转角判定）
-    const routesToMark = [this.mapData.groundWaypoints];
-    if (this.mapData.groundWaypoints2 && this.mapData.groundWaypoints2.length > 1) {
-      routesToMark.push(this.mapData.groundWaypoints2);
+    // 3. 按连续曲线线段距离精确标记地面主路与侧翼小径覆盖的所有网格，适配平滑自然弯曲道路
+    const routesForGrid = [this.groundRoute];
+    if (this.groundRoute2) {
+      routesForGrid.push(this.groundRoute2);
     }
-
-    for (let rIdx = 0; rIdx < routesToMark.length; rIdx++) {
-      const wps = routesToMark[rIdx];
-      const cornerSet = new Set();
-      for (let i = 1; i < wps.length - 1; i++) {
-        cornerSet.add(wps[i][0] + ',' + wps[i][1]);
-      }
-
-      for (let i = 0; i < wps.length - 1; i++) {
-        const [c0, r0] = wps[i];
-        const [c1, r1] = wps[i + 1];
-        const dc = Math.sign(c1 - c0);
-        const dr = Math.sign(r1 - r0);
-        let c = c0;
-        let r = r0;
-        let safety = 0;
-        while (safety++ < 100) {
-          if (this.inBounds(c, r)) {
-            this.grid[r][c].type = 'path';
-            if (cornerSet.has(c + ',' + r)) {
-              this.grid[r][c].pathKind = 'turn';
-            } else {
-              this.grid[r][c].pathKind = dc !== 0 ? 'h' : 'v';
+    const pathHitRadius = TILE_SIZE * 0.56;
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const cell = this.grid[r][c];
+        if (!cell || cell.type !== 'grass') continue;
+        const cx = (c + 0.5) * TILE_SIZE;
+        const cy = (r + 0.5) * TILE_SIZE;
+        let onPath = false;
+        for (let rIdx = 0; rIdx < routesForGrid.length && !onPath; rIdx++) {
+          const segs = routesForGrid[rIdx].segments;
+          for (let i = 0; i < segs.length; i++) {
+            const s = segs[i];
+            const vx = s.x1 - s.x0;
+            const vy = s.y1 - s.y0;
+            const len2 = vx * vx + vy * vy;
+            const t = len2 > 0 ? Math.max(0, Math.min(1, ((cx - s.x0) * vx + (cy - s.y0) * vy) / len2)) : 0;
+            const px = s.x0 + vx * t;
+            const py = s.y0 + vy * t;
+            if (Math.hypot(cx - px, cy - py) <= pathHitRadius) {
+              onPath = true;
+              cell.pathKind = Math.abs(vx) >= Math.abs(vy) ? 'h' : 'v';
+              break;
             }
           }
-          if (c === c1 && r === r1) break;
-          if (c !== c1) c += dc;
-          if (r !== r1) r += dr;
+        }
+        if (onPath) {
+          cell.type = 'path';
         }
       }
     }
@@ -298,8 +297,10 @@ class GameMap {
   }
 
   getTile(col, row) {
-    if (!this.inBounds(col, row)) return null;
-    return this.grid[row][col];
+    const c = Math.round(col);
+    const r = Math.round(row);
+    if (!Number.isFinite(c) || !Number.isFinite(r) || !this.inBounds(c, r)) return null;
+    return this.grid[r][c];
   }
 
   /**

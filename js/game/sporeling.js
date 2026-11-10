@@ -122,11 +122,16 @@ class SporelingPatrol {
     if (!map || !map.mapData || !map.mapData.groundWaypoints) return;
     const wps = map.mapData.groundWaypoints;
     if (wps && wps.length >= 2) {
-      // 默认插在地面路径第一折角附近的战略要冲
-      const pt = wps[1] || wps[0];
-      const col = Array.isArray(pt) ? pt[0] : (pt.col !== undefined ? pt.col : 6);
-      const row = Array.isArray(pt) ? pt[1] : (pt.row !== undefined ? pt.row : 2);
-      this.setRallyPoint(col, row, map, null, true);
+      // 默认插在地面路径约 25% 处的咽喉要冲附近
+      const prefIdx = Math.max(1, Math.min(wps.length - 2, Math.floor(wps.length * 0.25)));
+      const tryOrder = [prefIdx, Math.floor(wps.length * 0.5), 1, 0];
+      for (let i = 0; i < tryOrder.length; i++) {
+        const pt = wps[tryOrder[i]];
+        if (!pt) continue;
+        const col = Math.round(Array.isArray(pt) ? pt[0] : (pt.col !== undefined ? pt.col : 6));
+        const row = Math.round(Array.isArray(pt) ? pt[1] : (pt.row !== undefined ? pt.row : 2));
+        if (this.setRallyPoint(col, row, map, null, true)) break;
+      }
     }
   }
 

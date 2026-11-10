@@ -847,30 +847,29 @@ class UiManager {
         ctx.fillStyle = mData.parallaxColors[1] || PALETTE.GROUND_DARK;
         ctx.fillRect(prevX, prevY, prevW, prevH);
       }
-      // 缩略图叠加主路+侧翼双线战术路网示意标
+      // 缩略图保留手绘原生道路质感，仅用极精简点位标记出怪巢穴与守护林屋
       const mapPadX = prevX + prevW * (160 / 960);
       const mapPadY = prevY + prevH * (30 / 540);
       const mapDrawW = prevW * (640 / 960);
       const mapDrawH = prevH * (480 / 540);
-      const drawPreviewRoute = (wps, color, lw) => {
-        if (!wps || wps.length < 2) return;
+      const drawLandmarkDot = (tile, fillCol, rimCol, rad) => {
+        if (!tile) return;
+        const px = mapPadX + ((tile[0] + 0.5) / 20) * mapDrawW;
+        const py = mapPadY + ((tile[1] + 0.5) / 15) * mapDrawH;
         ctx.save();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.fillStyle = rimCol;
         ctx.beginPath();
-        for (let pi = 0; pi < wps.length; pi++) {
-          const px = mapPadX + ((wps[pi][0] + 0.5) / 20) * mapDrawW;
-          const py = mapPadY + ((wps[pi][1] + 0.5) / 15) * mapDrawH;
-          if (pi === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
+        ctx.arc(px, py, rad + 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = fillCol;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       };
-      drawPreviewRoute(mData.groundWaypoints2, 'rgba(179, 127, 235, 0.85)', 2.4);
-      drawPreviewRoute(mData.groundWaypoints, 'rgba(255, 229, 143, 0.85)', 2.8);
+      drawLandmarkDot(mData.spawnTile, '#FF4D4F', 'rgba(20, 12, 10, 0.85)', 3.2);
+      drawLandmarkDot(mData.spawnTile2, '#B37FEB', 'rgba(20, 12, 18, 0.85)', 2.8);
+      drawLandmarkDot(mData.warehouseTile, '#FFD666', 'rgba(42, 24, 10, 0.90)', 3.6);
 
       ctx.strokeStyle = THEME.WOOD_DARK;
       ctx.lineWidth = 3;

@@ -126,8 +126,8 @@ const ENEMIES = {
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
     baseHp: 1600,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
-    speed: 0.80,         // 格/秒
-    armor: 18,
+    speed: 0.78,         // 格/秒
+    armor: 14,
     threat: 5,
     reward: 120,
     isFlying: false,
@@ -142,12 +142,12 @@ const ENEMIES = {
       phase2Summon: {
         type: 'armored',
         count: 2,
-        interval: 1.5
+        interval: 9.5
       },
-      phase3Threshold: 0.33, // 生命降至 33%：狂暴冲锋加速 +30%，护甲提升至 18
-      phase3SpeedMultiplier: 1.45,
+      phase3Threshold: 0.33, // 生命降至 33%：狂暴冲锋加速 +25%，护甲提升至 16
+      phase3SpeedMultiplier: 1.25,
       phase3Earthquake: true,
-      phase3Armor: 18,
+      phase3Armor: 16,
       phase3SlowImmune: false,
       phase3DeathSplit: null
     }

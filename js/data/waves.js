@@ -74,7 +74,7 @@ const WAVES = {
         { type: 'splitter', count: 3, interval: 2.0, start: 5 },
         { type: 'weaver', count: 2, interval: 2.0, start: 2 },
         { type: 'beetle', count: 6, interval: 0.9, start: 6 },
-        { type: 'burrower', count: 3, interval: 1.5, start: 10, routeIndex: 1 },
+        { type: 'burrower', count: 2, interval: 2.2, start: 10, routeIndex: 1 },
         { type: 'splitter', count: 2, interval: 2.2, start: 14 },
         { type: 'swift', count: 8, interval: 0.7, start: 20 }
       ]
@@ -96,7 +96,7 @@ const WAVES = {
       groups: [
         { type: 'swift', count: 16, interval: 0.55, start: 0 },
         { type: 'moth', count: 12, interval: 0.85, start: 8 },
-        { type: 'leaper', count: 6, interval: 0.95, start: 12, routeIndex: 1 },
+        { type: 'leaper', count: 3, interval: 1.5, start: 12, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 2.2, start: 16 },
         { type: 'splitter', count: 4, interval: 1.8, start: 24 }
       ]
@@ -117,12 +117,13 @@ const WAVES = {
       wave: 10,
       groups: [
         { type: 'boss_m1', count: 1, interval: 1.0, start: 0 },
-        { type: 'armored', count: 3, interval: 2.0, start: 5 },
-        { type: 'moth', count: 10, interval: 0.95, start: 12 },
-        { type: 'leaper', count: 6, interval: 1.0, start: 16, routeIndex: 1 },
-        { type: 'splitter', count: 5, interval: 1.6, start: 22 },
-        { type: 'burrower', count: 5, interval: 1.3, start: 26, routeIndex: 1 },
-        { type: 'swift', count: 14, interval: 0.55, start: 30 }
+        { type: 'armored', count: 1, interval: 2.5, start: 6 },
+        { type: 'beetle', count: 5, interval: 1.2, start: 8 },
+        { type: 'moth', count: 6, interval: 1.3, start: 13 },
+        { type: 'leaper', count: 3, interval: 1.4, start: 18, routeIndex: 1 },
+        { type: 'splitter', count: 3, interval: 2.0, start: 24 },
+        { type: 'burrower', count: 2, interval: 1.8, start: 29, routeIndex: 1 },
+        { type: 'swift', count: 10, interval: 0.7, start: 34 }
       ]
     }
   ],
