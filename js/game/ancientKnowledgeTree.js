@@ -6,6 +6,7 @@
 
 const storage = require('../save/storage');
 const PALETTE = require('../data/palette');
+const platform = require('../core/platform');
 
 const TALENT_BRANCHES = {
   BLOOM: 'bloom',       // 丰饶繁育分支 (经济与资源)
@@ -429,10 +430,49 @@ class AncientKnowledgeTree {
       ctx.fill();
       ctx.stroke();
 
-      // 天赋图标与阶层
-      ctx.font = '28px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(t.icon, cx + cardW * 0.5, cy + 38);
+      // 天赋手绘原画徽章圆盘（彻底替代 Windows 方块 Emoji，统一暗黑奇幻插画质感）
+      const iconAssets = {
+        mycelium_network: 'assets/vfx/item_awakening_seed.png',
+        bountiful_harvest: 'assets/vfx/prop_dew.png',
+        photosynthetic_surge: 'assets/vfx/relic_lumina.png',
+        elder_photosynthesis: 'assets/vfx/item_golden_spore.png',
+        bark_armor: 'assets/vfx/relic_shield.png',
+        iron_sporelings: 'assets/vfx/sporeling_guard.png',
+        deep_entanglement: 'assets/vfx/vfx_spikes.png',
+        living_citadel: 'assets/vfx/prop_lumina_a.png',
+        superconduct_resonance: 'assets/vfx/relic_lightning.png',
+        pyro_fissure: 'assets/vfx/vfx_explosion.png',
+        toxic_miasma: 'assets/vfx/vfx_acid_puddle.png',
+        prismatic_singularity: 'assets/vfx/relic_amber.png',
+        quickened_mysticism: 'assets/vfx/relic_clover.png',
+        tempest_surge: 'assets/vfx/vfx_mist.png',
+        fertile_awakening: 'assets/vfx/card_lumina.png',
+        avatar_of_nature: 'assets/vfx/hero_oak.png'
+      };
+      const iconImg = platform.getImage(iconAssets[t.id] || 'assets/vfx/item_golden_spore.png');
+      const medCx = cx + cardW * 0.5;
+      const medCy = cy + 36;
+      const medR = 23;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(medCx, medCy, medR, 0, Math.PI * 2);
+      ctx.fillStyle = curRank > 0 ? 'rgba(28, 48, 24, 0.96)' : 'rgba(18, 14, 10, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = isMax ? '#FFD700' : (curRank > 0 ? '#73D13D' : 'rgba(196, 143, 69, 0.55)');
+      ctx.lineWidth = isMax ? 2.0 : 1.3;
+      ctx.stroke();
+      if (iconImg && iconImg.width) {
+        const sc = Math.min(34 / iconImg.width, 34 / iconImg.height);
+        const dw = iconImg.width * sc;
+        const dh = iconImg.height * sc;
+        ctx.drawImage(iconImg, medCx - dw * 0.5, medCy - dh * 0.5, dw, dh);
+      } else {
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t.icon, medCx, medCy);
+      }
+      ctx.restore();
 
       ctx.font = 'bold 14px sans-serif';
       ctx.fillStyle = isMax ? '#FFE58F' : '#FFFFFF';

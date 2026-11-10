@@ -155,6 +155,11 @@ class FxSystem {
    * 弹出伤害或奖励数字
    */
   spawnDamageText(x, y, text, color = '#FF4D4F') {
+    const numVal = Number(text);
+    // 屏蔽低于 15 的高频微小灼烧/毒伤持续跳字，避免伤害数字垂直堆叠遮挡怪物本体
+    if (!Number.isNaN(numVal) && Math.abs(numVal) < 15) {
+      return;
+    }
     return this.spawnFloatingText(x, y, text, color, 1.0);
   }
 
@@ -163,26 +168,27 @@ class FxSystem {
     const active = this.textPool.getActiveList();
     const isShortNumber = /^[+\-💥]?\d+/.test(str);
     // 密集波次降噪：同屏飘字过多时仅保留关键反应与高额伤害，彻底杜绝文字墙
-    if (active.length >= 22 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
+    if (active.length >= 20 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
       return;
     }
-    let baseX = x + (Math.random() - 0.5) * 14;
+    const staggerSide = (active.length % 2 === 0) ? 1 : -1;
+    let baseX = x + staggerSide * 8 + (Math.random() - 0.5) * 6;
     let baseY = y - 10;
 
-    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与高频词在局部区域重叠堆砌
+    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与相邻伤害数字重叠
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
       const dx = Math.abs(ex.x - baseX);
       const dy = Math.abs(ex.y - (baseY - yShift));
-      if (!isShortNumber && dx <= 64 && dy <= 42 && ex.life < 0.52) {
+      if (!isShortNumber && dx <= 68 && dy <= 44 && ex.life < 0.56) {
         if (ex.text === str || str.length <= 6) {
           return;
         }
       }
-      if (dx <= 40 && dy <= 16) {
-        yShift += 14;
-        if (yShift >= 28) break;
+      if (dx <= 46 && dy <= 18) {
+        yShift += 17;
+        if (yShift >= 34) break;
       }
     }
 

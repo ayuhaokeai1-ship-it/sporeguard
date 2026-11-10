@@ -3656,26 +3656,26 @@ const storage = require('../save/storage');
 const platform = require('../core/platform');
 
 const ACHIEVEMENTS_DATA = [
-  { id: 'first_blood', title: '🌲 丛林初捷', desc: '击杀首只入侵害虫打响反击', icon: '⚔️', rewardStars: 1 },
-  { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '满 20 颗种子完美通关任一地图', icon: '👑', rewardStars: 2 },
-  { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树升至 5 级并释放奥义', icon: '🌟', rewardStars: 1 },
-  { id: 'subterranean_slayer', title: '🕳️ 侧翼肃清', desc: '击破侧翼小径或潜地突袭害虫', icon: '🐛', rewardStars: 1 },
-  { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局保有超过 2500 黄金孢子', icon: '🪙', rewardStars: 2 },
-  { id: 'multikill_overload', title: '💥 破军狂澜', desc: '瞬间达成 10 连杀连锁清场', icon: '🔥', rewardStars: 1 },
-  { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座终极三阶塔', icon: '💎', rewardStars: 2 },
-  { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在血月天象下坚守并赢下关卡', icon: '🌙', rewardStars: 1 },
-  { id: 'spider_regicide', title: '👑 初战告捷', desc: '击破第 10 波首领光复晨雾林地', icon: '🏆', rewardStars: 3 },
-  { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '无尽深渊模式坚持突破第 15 波', icon: '✨', rewardStars: 3 },
-  { id: 'pitcher_gluttony', title: '🪴 奇幻猪笼草', desc: '激发食人猪笼草成功消化 3 次', icon: '🍃', rewardStars: 1 },
-  { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '古木天雷单次连锁电击 6 敌', icon: '🌩️', rewardStars: 1 },
-  { id: 'tactical_stances', title: '🥋 兵无常势', desc: '单场战斗中切换大橡树 3 种姿态', icon: '🎖️', rewardStars: 1 },
-  { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '灵光菇单局生产 800 以上孢子', icon: '🍄', rewardStars: 1 },
-  { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '雾菇同时冻结减速 8 名以上敌人', icon: '🧊', rewardStars: 1 },
-  { id: 'laceration_field', title: '🌵 荆棘绝阵', desc: '尖刺菇单场累计造成 3000 伤害', icon: '🌵', rewardStars: 1 },
-  { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂菇单发炮弹炸毁 5 只聚集敌', icon: '🎯', rewardStars: 1 },
-  { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次吹响号角提前迎战', icon: '📯', rewardStars: 1 },
-  { id: 'last_stand', title: '❤️ 绝境逆转', desc: '仅剩 1 颗生命种子逆转赢下对局', icon: '🔥', rewardStars: 2 },
-  { id: 'codex_grandmaster', title: '📜 博学大典', desc: '翻阅林地秘典全守卫与害虫图鉴', icon: '📖', rewardStars: 1 }
+  { id: 'first_blood', title: '丛林初捷', desc: '击杀首只入侵害虫打响反击', icon: '⚔️', rewardStars: 1 },
+  { id: 'flawless_defense', title: '滴水不漏', desc: '满 20 颗种子完美通关任一地图', icon: '👑', rewardStars: 2 },
+  { id: 'hero_awakened', title: '守护神觉醒', desc: '大橡树升至 5 级并释放奥义', icon: '🌟', rewardStars: 1 },
+  { id: 'subterranean_slayer', title: '侧翼肃清', desc: '击破侧翼小径或潜地突袭害虫', icon: '🐛', rewardStars: 1 },
+  { id: 'spore_tycoon', title: '孢子大亨', desc: '单局保有超过 2500 黄金孢子', icon: '🪙', rewardStars: 2 },
+  { id: 'multikill_overload', title: '破军狂澜', desc: '瞬间达成 10 连杀连锁清场', icon: '🔥', rewardStars: 1 },
+  { id: 'iron_wall', title: '永固棱堡', desc: '场上同时拥有 4 座终极三阶塔', icon: '💎', rewardStars: 2 },
+  { id: 'weather_survivor', title: '血月征服者', desc: '在血月天象下坚守并赢下关卡', icon: '🌙', rewardStars: 1 },
+  { id: 'spider_regicide', title: '初战告捷', desc: '击破第 10 波首领光复晨雾林地', icon: '🏆', rewardStars: 3 },
+  { id: 'endless_champion', title: '深渊开拓者', desc: '无尽深渊模式坚持突破第 15 波', icon: '✨', rewardStars: 3 },
+  { id: 'pitcher_gluttony', title: '奇幻猪笼草', desc: '激发食人猪笼草成功消化 3 次', icon: '🍃', rewardStars: 1 },
+  { id: 'thunder_conduit', title: '灵脉雷音', desc: '古木天雷单次连锁电击 6 敌', icon: '⚡', rewardStars: 1 },
+  { id: 'tactical_stances', title: '兵无常势', desc: '单场战斗中切换大橡树 3 种姿态', icon: '🛡️', rewardStars: 1 },
+  { id: 'holy_cornucopia', title: '丰收晨露', desc: '灵光菇单局生产 800 以上孢子', icon: '🍄', rewardStars: 1 },
+  { id: 'permafrost_hold', title: '深度冻结', desc: '雾菇同时冻结减速 8 名以上敌人', icon: '❄️', rewardStars: 1 },
+  { id: 'laceration_field', title: '荆棘绝阵', desc: '尖刺菇单场累计造成 3000 伤害', icon: '🌿', rewardStars: 1 },
+  { id: 'artillery_barrage', title: '熔岩落日', desc: '爆裂菇单发炮弹炸毁 5 只聚集敌', icon: '💣', rewardStars: 1 },
+  { id: 'audacious_commander', title: '兵贵神速', desc: '累计 5 次吹响号角提前迎战', icon: '📯', rewardStars: 1 },
+  { id: 'last_stand', title: '绝境逆转', desc: '仅剩 1 颗生命种子逆转赢下对局', icon: '❤️', rewardStars: 2 },
+  { id: 'codex_grandmaster', title: '博学大典', desc: '翻阅林地秘典全守卫与害虫图鉴', icon: '📜', rewardStars: 1 }
 ];
 
 class AchievementManager {
@@ -3807,7 +3807,7 @@ class AchievementManager {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`🏆 成就达成：${item.title}`, tx + 56, ty + 16);
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 56, ty + 16);
 
     // 描述详情
     ctx.fillStyle = '#D9D9D9';
@@ -4623,6 +4623,11 @@ class FxSystem {
    * 弹出伤害或奖励数字
    */
   spawnDamageText(x, y, text, color = '#FF4D4F') {
+    const numVal = Number(text);
+    // 屏蔽低于 15 的高频微小灼烧/毒伤持续跳字，避免伤害数字垂直堆叠遮挡怪物本体
+    if (!Number.isNaN(numVal) && Math.abs(numVal) < 15) {
+      return;
+    }
     return this.spawnFloatingText(x, y, text, color, 1.0);
   }
 
@@ -4631,26 +4636,27 @@ class FxSystem {
     const active = this.textPool.getActiveList();
     const isShortNumber = /^[+\-💥]?\d+/.test(str);
     // 密集波次降噪：同屏飘字过多时仅保留关键反应与高额伤害，彻底杜绝文字墙
-    if (active.length >= 22 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
+    if (active.length >= 20 && isShortNumber && !str.startsWith('💥') && !str.startsWith('+')) {
       return;
     }
-    let baseX = x + (Math.random() - 0.5) * 14;
+    const staggerSide = (active.length % 2 === 0) ? 1 : -1;
+    let baseX = x + staggerSide * 8 + (Math.random() - 0.5) * 6;
     let baseY = y - 10;
 
-    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与高频词在局部区域重叠堆砌
+    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与相邻伤害数字重叠
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
       const dx = Math.abs(ex.x - baseX);
       const dy = Math.abs(ex.y - (baseY - yShift));
-      if (!isShortNumber && dx <= 64 && dy <= 42 && ex.life < 0.52) {
+      if (!isShortNumber && dx <= 68 && dy <= 44 && ex.life < 0.56) {
         if (ex.text === str || str.length <= 6) {
           return;
         }
       }
-      if (dx <= 40 && dy <= 16) {
-        yShift += 14;
-        if (yShift >= 28) break;
+      if (dx <= 46 && dy <= 18) {
+        yShift += 17;
+        if (yShift >= 34) break;
       }
     }
 
@@ -9937,7 +9943,7 @@ class ElementalReactionSystem {
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `🔥蔓延烈焰! -${dmg}`, '#FF4D4F');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FF4D4F');
       scene.fx.spawnRing(enemy.x, enemy.y, 65, '#FF7A45', 0.45);
     }
     platform.playSfx('sfx_boom');
@@ -9973,7 +9979,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_shock');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `⚡超导电弧! -${dmg}`, '#40A9FF');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#40A9FF');
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
@@ -10030,7 +10036,6 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_mist');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `❄️极寒冰华! 深度冰冻`, '#36CFC9');
       scene.fx.spawnRing(enemy.x, enemy.y, 60, '#87E8DE', 0.5);
     }
 
@@ -10049,7 +10054,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒爆轰! -${dmg}`, '#A0D911');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#A0D911');
       scene.fx.spawnRing(enemy.x, enemy.y, 80, '#BAE637', 0.55);
       scene.fx.triggerScreenShake(3.2, 0.28);
     }
@@ -10097,7 +10102,7 @@ class ElementalReactionSystem {
     }
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `✨光合充能! +孢子超频`, '#FFD666');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FFD666');
       scene.fx.spawnRing(enemy.x, enemy.y, 70, '#FFF566', 0.45);
     }
 
@@ -10119,7 +10124,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_thorn');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `☠️腐蚀破甲! -60%护甲`, '#B37FEB');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#B37FEB');
       scene.fx.spawnRing(enemy.x, enemy.y, 70, '#D3ADF7', 0.45);
     }
 
@@ -13284,6 +13289,7 @@ module.exports = TacticalFeatsSystem;
 
 const storage = require('../save/storage');
 const PALETTE = require('../data/palette');
+const platform = require('../core/platform');
 
 const TALENT_BRANCHES = {
   BLOOM: 'bloom',       // 丰饶繁育分支 (经济与资源)
@@ -13707,10 +13713,49 @@ class AncientKnowledgeTree {
       ctx.fill();
       ctx.stroke();
 
-      // 天赋图标与阶层
-      ctx.font = '28px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(t.icon, cx + cardW * 0.5, cy + 38);
+      // 天赋手绘原画徽章圆盘（彻底替代 Windows 方块 Emoji，统一暗黑奇幻插画质感）
+      const iconAssets = {
+        mycelium_network: 'assets/vfx/item_awakening_seed.png',
+        bountiful_harvest: 'assets/vfx/prop_dew.png',
+        photosynthetic_surge: 'assets/vfx/relic_lumina.png',
+        elder_photosynthesis: 'assets/vfx/item_golden_spore.png',
+        bark_armor: 'assets/vfx/relic_shield.png',
+        iron_sporelings: 'assets/vfx/sporeling_guard.png',
+        deep_entanglement: 'assets/vfx/vfx_spikes.png',
+        living_citadel: 'assets/vfx/prop_lumina_a.png',
+        superconduct_resonance: 'assets/vfx/relic_lightning.png',
+        pyro_fissure: 'assets/vfx/vfx_explosion.png',
+        toxic_miasma: 'assets/vfx/vfx_acid_puddle.png',
+        prismatic_singularity: 'assets/vfx/relic_amber.png',
+        quickened_mysticism: 'assets/vfx/relic_clover.png',
+        tempest_surge: 'assets/vfx/vfx_mist.png',
+        fertile_awakening: 'assets/vfx/card_lumina.png',
+        avatar_of_nature: 'assets/vfx/hero_oak.png'
+      };
+      const iconImg = platform.getImage(iconAssets[t.id] || 'assets/vfx/item_golden_spore.png');
+      const medCx = cx + cardW * 0.5;
+      const medCy = cy + 36;
+      const medR = 23;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(medCx, medCy, medR, 0, Math.PI * 2);
+      ctx.fillStyle = curRank > 0 ? 'rgba(28, 48, 24, 0.96)' : 'rgba(18, 14, 10, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = isMax ? '#FFD700' : (curRank > 0 ? '#73D13D' : 'rgba(196, 143, 69, 0.55)');
+      ctx.lineWidth = isMax ? 2.0 : 1.3;
+      ctx.stroke();
+      if (iconImg && iconImg.width) {
+        const sc = Math.min(34 / iconImg.width, 34 / iconImg.height);
+        const dw = iconImg.width * sc;
+        const dh = iconImg.height * sc;
+        ctx.drawImage(iconImg, medCx - dw * 0.5, medCy - dh * 0.5, dw, dh);
+      } else {
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t.icon, medCx, medCy);
+      }
+      ctx.restore();
 
       ctx.font = 'bold 14px sans-serif';
       ctx.fillStyle = isMax ? '#FFE58F' : '#FFFFFF';
@@ -20308,7 +20353,7 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 48);
+    ctx.fillText('森林守卫 · 系统设置', mx + mw * 0.5, my + 48);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
@@ -20333,7 +20378,7 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '🔊 音效: ' + (audioCfg.sfx ? '开启' : '关闭'),
+      '游戏音效：' + (audioCfg.sfx ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.sfx ? 'sfx_on' : 'sfx_off' },
       () => {
         const next = !audioCfg.sfx;
@@ -20352,7 +20397,7 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '🎵 背景音乐: ' + (audioCfg.bgm ? '开启' : '关闭'),
+      '背景音乐：' + (audioCfg.bgm ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.bgm ? 'bgm_on' : 'bgm_off' },
       () => {
         const next = !audioCfg.bgm;
@@ -20371,8 +20416,8 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '📖 查阅森林图鉴与秘典',
-      { skin: 'btn_wood' },
+      '查阅森林图鉴与秘典',
+      { skin: 'btn_wood', iconKey: 'guide' },
       () => {
         platform.playSfx('sfx_click');
         this.guideStep = 0;
@@ -20391,7 +20436,7 @@ class UiManager {
         curY,
         bw,
         btnH,
-        '📊 查看实时战况与DPS统计',
+        '查看实时战况与输出统计',
         { skin: 'btn_wood' },
         () => {
           platform.playSfx('sfx_click');
@@ -20411,7 +20456,7 @@ class UiManager {
         curY,
         bw,
         btnH,
-        '🔁 重新挑战本关',
+        '重新挑战本关',
         { skin: 'btn_wood' },
         () => {
           platform.playSfx('sfx_click');
@@ -20425,8 +20470,9 @@ class UiManager {
     }
 
     // 6. 返回游戏 / 关闭设置
-    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, inBattle ? '⚔️ 返回战场继续战斗' : '✅ 关闭系统设置', {
-      skin: 'btn_green'
+    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, inBattle ? '返回战场继续战斗' : '关闭系统设置', {
+      skin: 'btn_green',
+      iconKey: inBattle ? 'play' : undefined
     }, () => {
       platform.playSfx('sfx_click');
       this.showSettingsModal = false;
@@ -21189,15 +21235,24 @@ class UiManager {
       ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
       ctx.stroke();
 
-      // 图标
-      ctx.font = '13px sans-serif';
+      // 统一徽章底托圆框（消除同列双表情混杂）
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx + 15, cy + 13, 9.5, 0, Math.PI * 2);
+      ctx.fillStyle = a.unlocked ? 'rgba(212, 136, 6, 0.22)' : 'rgba(20, 14, 10, 0.65)';
+      ctx.fill();
+      ctx.strokeStyle = a.unlocked ? '#D48806' : 'rgba(196, 143, 69, 0.40)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.font = '12px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(a.icon, cx + 16, cy + 13);
+      ctx.fillText(a.icon, cx + 15, cy + 13);
+      ctx.restore();
 
       // 标题
-      drawArtText(ctx, a.title, cx + 32, cy + 8.5, {
-        style: a.unlocked ? 'ink' : 'parchment',
+      drawArtText(ctx, a.title, cx + 30, cy + 8.5, {
+        style: a.unlocked ? 'ink' : 'gold',
         size: 10.5,
         align: 'left',
         baseline: 'middle',
@@ -21210,7 +21265,7 @@ class UiManager {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       const shortDesc = a.desc.length > 26 ? a.desc.slice(0, 25) + '...' : a.desc;
-      ctx.fillText(shortDesc, cx + 32, cy + 19.5);
+      ctx.fillText(shortDesc, cx + 30, cy + 19.5);
 
       // 右侧星级与状态
       drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 13, {
@@ -22152,7 +22207,7 @@ class SceneController {
       this.activeAwakeningTargeting = !this.activeAwakeningTargeting;
       platform.playSfx('sfx_upgrade');
       if (this.activeAwakeningTargeting) {
-        this.fx.spawnFloatingText(480, 240, '🍃 请点击场上任意蘑菇释放觉醒大招!', '#52C41A', 1.5);
+        if (this.ui) this.ui.showToast('🍃 请点击场上任意蘑菇释放觉醒大招!');
       }
     } else {
       this.ui.showToast('觉醒古种不足 (击败精英/破除障碍物获取)');
@@ -22233,7 +22288,7 @@ class SceneController {
         this.activeSpellCasting = null;
         this.activeHeroRally = false;
         platform.playSfx('sfx_click');
-        this.fx.spawnFloatingText(480, 240, '请在巡逻道路上点击设防集合点!', '#95DE64', 1.5);
+        if (this.ui) this.ui.showToast('请在巡逻道路上点击设防集合点!');
       }
       return;
     }
@@ -22597,11 +22652,11 @@ class SceneController {
           if (this.awakeningSeeds > 0) {
             this.activeAwakeningTargeting = !this.activeAwakeningTargeting;
             platform.playSfx('sfx_click');
-            if (this.activeAwakeningTargeting) {
-              this.fx.spawnFloatingText(480, 240, '请点击场上的蘑菇触发灵能觉醒超载!', '#722ED1', 1.5);
+            if (this.activeAwakeningTargeting && this.ui) {
+              this.ui.showToast('请点击场上的蘑菇触发灵能觉醒超载!');
             }
-          } else {
-            this.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
+          } else if (this.ui) {
+            this.ui.showToast('灵能觉醒种子不足(击败精英敌人获取)!');
           }
         }
       } else if (act.type === 'cycle_speed') {

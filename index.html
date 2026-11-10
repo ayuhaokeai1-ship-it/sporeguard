@@ -334,19 +334,19 @@
       <span>蘑菇保卫战</span>
     </div>
     <div class="toolbar-actions">
-      <button id="btnPwaInstall" class="tb-btn tb-install">📲 安装为手机App</button>
+      <button id="btnPwaInstall" class="tb-btn tb-install">📲 安装桌面应用</button>
       <a id="btnDownloadPkg" href="https://github.com/ayuhaokeai1-ship-it/sporeguard/releases/download/v1.0.0/sporeguard_mobile.zip" download="sporeguard_mobile.zip" class="tb-btn tb-download">📥 下载安装包</a>
       <button id="btnFullscreen" class="tb-btn tb-fs">⛶ 全屏</button>
       <button id="btnCloseToolbar" class="tb-btn tb-close" title="收起">✕</button>
     </div>
   </div>
 
-  <div id="floatingAppBadge" style="display:flex;" title="安装为手机桌面App或全屏">📲 安装App</div>
+  <div id="floatingAppBadge" style="display:flex;" title="安装为桌面应用或全屏">📲 安装桌面版</div>
 
   <!-- 安装到手机桌面教程弹窗 -->
   <div id="iosInstallModal">
     <div class="modal-card">
-      <h3>📲 安装为手机桌面 App (无需电脑开机)</h3>
+      <h3>📲 安装到手机主屏幕 (无需电脑开机)</h3>
       <div class="step-item">
         <span class="step-num">1</span>
         <span>在手机浏览器（Safari / Chrome / 微信外部打开）中点击底部的 <b>「分享」图标 ⬆️</b> 或菜单「···」。</span>
@@ -630,7 +630,7 @@
         e.preventDefault();
         deferredPrompt = e;
         const btn = document.getElementById('btnPwaInstall');
-        if (btn) btn.innerText = '📲 一键安装App';
+        if (btn) btn.innerText = '📲 一键安装应用';
       });
 
       // 菜单按钮交互绑定

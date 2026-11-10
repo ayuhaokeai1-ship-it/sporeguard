@@ -400,7 +400,7 @@ class SceneController {
       this.activeAwakeningTargeting = !this.activeAwakeningTargeting;
       platform.playSfx('sfx_upgrade');
       if (this.activeAwakeningTargeting) {
-        this.fx.spawnFloatingText(480, 240, '🍃 请点击场上任意蘑菇释放觉醒大招!', '#52C41A', 1.5);
+        if (this.ui) this.ui.showToast('🍃 请点击场上任意蘑菇释放觉醒大招!');
       }
     } else {
       this.ui.showToast('觉醒古种不足 (击败精英/破除障碍物获取)');
@@ -481,7 +481,7 @@ class SceneController {
         this.activeSpellCasting = null;
         this.activeHeroRally = false;
         platform.playSfx('sfx_click');
-        this.fx.spawnFloatingText(480, 240, '请在巡逻道路上点击设防集合点!', '#95DE64', 1.5);
+        if (this.ui) this.ui.showToast('请在巡逻道路上点击设防集合点!');
       }
       return;
     }
@@ -845,11 +845,11 @@ class SceneController {
           if (this.awakeningSeeds > 0) {
             this.activeAwakeningTargeting = !this.activeAwakeningTargeting;
             platform.playSfx('sfx_click');
-            if (this.activeAwakeningTargeting) {
-              this.fx.spawnFloatingText(480, 240, '请点击场上的蘑菇触发灵能觉醒超载!', '#722ED1', 1.5);
+            if (this.activeAwakeningTargeting && this.ui) {
+              this.ui.showToast('请点击场上的蘑菇触发灵能觉醒超载!');
             }
-          } else {
-            this.fx.spawnFloatingText(480, 240, '灵能觉醒种子不足(击败精英敌人获取)!', '#FF4D4F', 1.2);
+          } else if (this.ui) {
+            this.ui.showToast('灵能觉醒种子不足(击败精英敌人获取)!');
           }
         }
       } else if (act.type === 'cycle_speed') {

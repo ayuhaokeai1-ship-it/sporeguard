@@ -3009,7 +3009,7 @@ class UiManager {
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ 森林守卫系统设置 ⚙️', mx + mw * 0.5, my + 48);
+    ctx.fillText('森林守卫 · 系统设置', mx + mw * 0.5, my + 48);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
@@ -3034,7 +3034,7 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '🔊 音效: ' + (audioCfg.sfx ? '开启' : '关闭'),
+      '游戏音效：' + (audioCfg.sfx ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.sfx ? 'sfx_on' : 'sfx_off' },
       () => {
         const next = !audioCfg.sfx;
@@ -3053,7 +3053,7 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '🎵 背景音乐: ' + (audioCfg.bgm ? '开启' : '关闭'),
+      '背景音乐：' + (audioCfg.bgm ? '开启' : '关闭'),
       { skin: 'btn_wood', iconKey: audioCfg.bgm ? 'bgm_on' : 'bgm_off' },
       () => {
         const next = !audioCfg.bgm;
@@ -3072,8 +3072,8 @@ class UiManager {
       curY,
       bw,
       btnH,
-      '📖 查阅森林图鉴与秘典',
-      { skin: 'btn_wood' },
+      '查阅森林图鉴与秘典',
+      { skin: 'btn_wood', iconKey: 'guide' },
       () => {
         platform.playSfx('sfx_click');
         this.guideStep = 0;
@@ -3092,7 +3092,7 @@ class UiManager {
         curY,
         bw,
         btnH,
-        '📊 查看实时战况与DPS统计',
+        '查看实时战况与输出统计',
         { skin: 'btn_wood' },
         () => {
           platform.playSfx('sfx_click');
@@ -3112,7 +3112,7 @@ class UiManager {
         curY,
         bw,
         btnH,
-        '🔁 重新挑战本关',
+        '重新挑战本关',
         { skin: 'btn_wood' },
         () => {
           platform.playSfx('sfx_click');
@@ -3126,8 +3126,9 @@ class UiManager {
     }
 
     // 6. 返回游戏 / 关闭设置
-    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, inBattle ? '⚔️ 返回战场继续战斗' : '✅ 关闭系统设置', {
-      skin: 'btn_green'
+    this.drawPixelButton(ctx, 'set_close', bx, curY, bw, btnH, inBattle ? '返回战场继续战斗' : '关闭系统设置', {
+      skin: 'btn_green',
+      iconKey: inBattle ? 'play' : undefined
     }, () => {
       platform.playSfx('sfx_click');
       this.showSettingsModal = false;
@@ -3890,15 +3891,24 @@ class UiManager {
       ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
       ctx.stroke();
 
-      // 图标
-      ctx.font = '13px sans-serif';
+      // 统一徽章底托圆框（消除同列双表情混杂）
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx + 15, cy + 13, 9.5, 0, Math.PI * 2);
+      ctx.fillStyle = a.unlocked ? 'rgba(212, 136, 6, 0.22)' : 'rgba(20, 14, 10, 0.65)';
+      ctx.fill();
+      ctx.strokeStyle = a.unlocked ? '#D48806' : 'rgba(196, 143, 69, 0.40)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.font = '12px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(a.icon, cx + 16, cy + 13);
+      ctx.fillText(a.icon, cx + 15, cy + 13);
+      ctx.restore();
 
       // 标题
-      drawArtText(ctx, a.title, cx + 32, cy + 8.5, {
-        style: a.unlocked ? 'ink' : 'parchment',
+      drawArtText(ctx, a.title, cx + 30, cy + 8.5, {
+        style: a.unlocked ? 'ink' : 'gold',
         size: 10.5,
         align: 'left',
         baseline: 'middle',
@@ -3911,7 +3921,7 @@ class UiManager {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       const shortDesc = a.desc.length > 26 ? a.desc.slice(0, 25) + '...' : a.desc;
-      ctx.fillText(shortDesc, cx + 32, cy + 19.5);
+      ctx.fillText(shortDesc, cx + 30, cy + 19.5);
 
       // 右侧星级与状态
       drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 13, {

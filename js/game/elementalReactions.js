@@ -128,7 +128,7 @@ class ElementalReactionSystem {
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `🔥蔓延烈焰! -${dmg}`, '#FF4D4F');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FF4D4F');
       scene.fx.spawnRing(enemy.x, enemy.y, 65, '#FF7A45', 0.45);
     }
     platform.playSfx('sfx_boom');
@@ -164,7 +164,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_shock');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `⚡超导电弧! -${dmg}`, '#40A9FF');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#40A9FF');
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
@@ -221,7 +221,6 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_mist');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `❄️极寒冰华! 深度冰冻`, '#36CFC9');
       scene.fx.spawnRing(enemy.x, enemy.y, 60, '#87E8DE', 0.5);
     }
 
@@ -240,7 +239,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `💥剧毒爆轰! -${dmg}`, '#A0D911');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#A0D911');
       scene.fx.spawnRing(enemy.x, enemy.y, 80, '#BAE637', 0.55);
       scene.fx.triggerScreenShake(3.2, 0.28);
     }
@@ -288,7 +287,7 @@ class ElementalReactionSystem {
     }
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `✨光合充能! +孢子超频`, '#FFD666');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FFD666');
       scene.fx.spawnRing(enemy.x, enemy.y, 70, '#FFF566', 0.45);
     }
 
@@ -310,7 +309,7 @@ class ElementalReactionSystem {
     platform.playSfx('sfx_thorn');
 
     if (scene && scene.fx) {
-      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `☠️腐蚀破甲! -60%护甲`, '#B37FEB');
+      scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#B37FEB');
       scene.fx.spawnRing(enemy.x, enemy.y, 70, '#D3ADF7', 0.45);
     }
 

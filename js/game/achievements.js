@@ -7,26 +7,26 @@ const storage = require('../save/storage');
 const platform = require('../core/platform');
 
 const ACHIEVEMENTS_DATA = [
-  { id: 'first_blood', title: '🌲 丛林初捷', desc: '击杀首只入侵害虫打响反击', icon: '⚔️', rewardStars: 1 },
-  { id: 'flawless_defense', title: '🛡️ 滴水不漏', desc: '满 20 颗种子完美通关任一地图', icon: '👑', rewardStars: 2 },
-  { id: 'hero_awakened', title: '🌳 守护神觉醒', desc: '大橡树升至 5 级并释放奥义', icon: '🌟', rewardStars: 1 },
-  { id: 'subterranean_slayer', title: '🕳️ 侧翼肃清', desc: '击破侧翼小径或潜地突袭害虫', icon: '🐛', rewardStars: 1 },
-  { id: 'spore_tycoon', title: '💰 孢子大亨', desc: '单局保有超过 2500 黄金孢子', icon: '🪙', rewardStars: 2 },
-  { id: 'multikill_overload', title: '💥 破军狂澜', desc: '瞬间达成 10 连杀连锁清场', icon: '🔥', rewardStars: 1 },
-  { id: 'iron_wall', title: '🏰 永固棱堡', desc: '场上同时拥有 4 座终极三阶塔', icon: '💎', rewardStars: 2 },
-  { id: 'weather_survivor', title: '🩸 血月征服者', desc: '在血月天象下坚守并赢下关卡', icon: '🌙', rewardStars: 1 },
-  { id: 'spider_regicide', title: '👑 初战告捷', desc: '击破第 10 波首领光复晨雾林地', icon: '🏆', rewardStars: 3 },
-  { id: 'endless_champion', title: '🌌 深渊开拓者', desc: '无尽深渊模式坚持突破第 15 波', icon: '✨', rewardStars: 3 },
-  { id: 'pitcher_gluttony', title: '🪴 奇幻猪笼草', desc: '激发食人猪笼草成功消化 3 次', icon: '🍃', rewardStars: 1 },
-  { id: 'thunder_conduit', title: '⚡ 灵脉雷音', desc: '古木天雷单次连锁电击 6 敌', icon: '🌩️', rewardStars: 1 },
-  { id: 'tactical_stances', title: '🥋 兵无常势', desc: '单场战斗中切换大橡树 3 种姿态', icon: '🎖️', rewardStars: 1 },
-  { id: 'holy_cornucopia', title: '☀️ 丰收晨露', desc: '灵光菇单局生产 800 以上孢子', icon: '🍄', rewardStars: 1 },
-  { id: 'permafrost_hold', title: '❄️ 深度冻结', desc: '雾菇同时冻结减速 8 名以上敌人', icon: '🧊', rewardStars: 1 },
-  { id: 'laceration_field', title: '🌵 荆棘绝阵', desc: '尖刺菇单场累计造成 3000 伤害', icon: '🌵', rewardStars: 1 },
-  { id: 'artillery_barrage', title: '💣 熔岩落日', desc: '爆裂菇单发炮弹炸毁 5 只聚集敌', icon: '🎯', rewardStars: 1 },
-  { id: 'audacious_commander', title: '⏱️ 兵贵神速', desc: '累计 5 次吹响号角提前迎战', icon: '📯', rewardStars: 1 },
-  { id: 'last_stand', title: '❤️ 绝境逆转', desc: '仅剩 1 颗生命种子逆转赢下对局', icon: '🔥', rewardStars: 2 },
-  { id: 'codex_grandmaster', title: '📜 博学大典', desc: '翻阅林地秘典全守卫与害虫图鉴', icon: '📖', rewardStars: 1 }
+  { id: 'first_blood', title: '丛林初捷', desc: '击杀首只入侵害虫打响反击', icon: '⚔️', rewardStars: 1 },
+  { id: 'flawless_defense', title: '滴水不漏', desc: '满 20 颗种子完美通关任一地图', icon: '👑', rewardStars: 2 },
+  { id: 'hero_awakened', title: '守护神觉醒', desc: '大橡树升至 5 级并释放奥义', icon: '🌟', rewardStars: 1 },
+  { id: 'subterranean_slayer', title: '侧翼肃清', desc: '击破侧翼小径或潜地突袭害虫', icon: '🐛', rewardStars: 1 },
+  { id: 'spore_tycoon', title: '孢子大亨', desc: '单局保有超过 2500 黄金孢子', icon: '🪙', rewardStars: 2 },
+  { id: 'multikill_overload', title: '破军狂澜', desc: '瞬间达成 10 连杀连锁清场', icon: '🔥', rewardStars: 1 },
+  { id: 'iron_wall', title: '永固棱堡', desc: '场上同时拥有 4 座终极三阶塔', icon: '💎', rewardStars: 2 },
+  { id: 'weather_survivor', title: '血月征服者', desc: '在血月天象下坚守并赢下关卡', icon: '🌙', rewardStars: 1 },
+  { id: 'spider_regicide', title: '初战告捷', desc: '击破第 10 波首领光复晨雾林地', icon: '🏆', rewardStars: 3 },
+  { id: 'endless_champion', title: '深渊开拓者', desc: '无尽深渊模式坚持突破第 15 波', icon: '✨', rewardStars: 3 },
+  { id: 'pitcher_gluttony', title: '奇幻猪笼草', desc: '激发食人猪笼草成功消化 3 次', icon: '🍃', rewardStars: 1 },
+  { id: 'thunder_conduit', title: '灵脉雷音', desc: '古木天雷单次连锁电击 6 敌', icon: '⚡', rewardStars: 1 },
+  { id: 'tactical_stances', title: '兵无常势', desc: '单场战斗中切换大橡树 3 种姿态', icon: '🛡️', rewardStars: 1 },
+  { id: 'holy_cornucopia', title: '丰收晨露', desc: '灵光菇单局生产 800 以上孢子', icon: '🍄', rewardStars: 1 },
+  { id: 'permafrost_hold', title: '深度冻结', desc: '雾菇同时冻结减速 8 名以上敌人', icon: '❄️', rewardStars: 1 },
+  { id: 'laceration_field', title: '荆棘绝阵', desc: '尖刺菇单场累计造成 3000 伤害', icon: '🌿', rewardStars: 1 },
+  { id: 'artillery_barrage', title: '熔岩落日', desc: '爆裂菇单发炮弹炸毁 5 只聚集敌', icon: '💣', rewardStars: 1 },
+  { id: 'audacious_commander', title: '兵贵神速', desc: '累计 5 次吹响号角提前迎战', icon: '📯', rewardStars: 1 },
+  { id: 'last_stand', title: '绝境逆转', desc: '仅剩 1 颗生命种子逆转赢下对局', icon: '❤️', rewardStars: 2 },
+  { id: 'codex_grandmaster', title: '博学大典', desc: '翻阅林地秘典全守卫与害虫图鉴', icon: '📜', rewardStars: 1 }
 ];
 
 class AchievementManager {
@@ -158,7 +158,7 @@ class AchievementManager {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`🏆 成就达成：${item.title}`, tx + 56, ty + 16);
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 56, ty + 16);
 
     // 描述详情
     ctx.fillStyle = '#D9D9D9';
