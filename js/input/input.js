@@ -170,8 +170,6 @@ function handleKeyDown(rawKey) {
     emitAction('cycle_hero_stance');
   } else if (key === 'keym' || key === 'm') {
     emitAction('toggle_mastery');
-  } else if (key === 'keyt' || key === 't') {
-    emitAction('toggle_shovel');
   } else if (key === 'keyh' || key === 'h') {
     emitAction('toggle_zen_mode');
   } else if (key === 'escape') {

@@ -225,9 +225,9 @@ class TacticalFeatsSystem {
 
     // 召唤两只甲虫护卫
     if (scene.enemyManager && scene.map) {
-      const sp = scene.map.spawnPoint || { x: 32, y: 32 };
-      scene.enemyManager.spawnEnemy('beetle', sp.x, sp.y, scene.map.groundRoute);
-      scene.enemyManager.spawnEnemy('swift', sp.x - 20, sp.y, scene.map.groundRoute);
+      const waveIdx = (scene.waveManager && scene.waveManager.currentWaveIndex) || 1;
+      scene.enemyManager.spawnEnemy('beetle', scene.map, waveIdx, { fromWave: false, startDistPx: 18 });
+      scene.enemyManager.spawnEnemy('swift', scene.map, waveIdx, { fromWave: false, startDistPx: 0 });
     }
   }
 

@@ -139,7 +139,8 @@ class WaveManager {
       start: g.start || 0,
       spawned: 0,
       timer: g.interval || 1.5, // 到达 start 时间后立即刷出第 1 只
-      groupLateralBase: ((idx % 3) - 1) * 3
+      groupLateralBase: ((idx % 3) - 1) * 3,
+      routeIndex: g.routeIndex || 0
     }));
 
     // 检查是否包含首领或大波次（PVZ经典：一大波僵尸正在逼近 / 最终波次决战号角）

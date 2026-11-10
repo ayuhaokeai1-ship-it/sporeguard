@@ -56,7 +56,6 @@ class SceneController {
     this.towerManager = new TowerManager();
     this.sporelingPatrol = new SporelingPatrol();
     this.sporeDropManager = new SporeDropManager();
-    this.shovelActive = false;
     this.flankAlertTimer = 0;
     this.crisisSlowMoTriggered = false;
     this.contraptions = new ForestContraptions();
@@ -183,7 +182,6 @@ class SceneController {
     this.towerManager.clear();
     this.sporelingPatrol.initDefaultRally(this.map);
     this.sporeDropManager.reset();
-    this.shovelActive = false;
     this.flankAlertTimer = 0;
     this.crisisSlowMoTriggered = false;
     this.contraptions.initForMap(this.currentMapId);
@@ -377,70 +375,31 @@ class SceneController {
     return this.towerManager.upgradeTower(tower, chosen.nodeId, this.economy, this.fx);
   }
 
-  toggleShovel() {
-    this.shovelActive = !this.shovelActive;
-    if (this.shovelActive) {
-      this.ui.showToast('⛏️ 铲子模式已激活：轻触任意蘑菇回收 85% 孢子！');
-      platform.playSfx('sfx_click');
-    } else {
-      this.ui.showToast('已退出铲子模式');
-    }
-  }
-
-  shovelTower(tower) {
-    if (!tower) return;
-    const tile = this.map.getTile(tower.col, tower.row);
-    if (tile) {
-      tile.tower = null;
-    }
-    const idx = this.towerManager.towers.indexOf(tower);
-    if (idx !== -1) {
-      this.towerManager.towers.splice(idx, 1);
-    }
-    const refund = Math.floor((tower.totalInvested || 75) * 0.85);
-    this.economy.addSpores(refund);
-    this.ui.inspectorOpen = false;
-    this.selectedTile = { col: -1, row: -1 };
-    this.shovelActive = false;
-
-    this.fx.spawnFloatingText(tower.x, tower.y - 20, '+' + refund + ' 孢子回收 ⛏️', '#FFE58F', 1.3);
-    this.fx.spawnParticles(tower.x, tower.y, 18, ['#8C6842', '#D48806', '#52C41A', '#FFFDF5'], 25, 45);
-    platform.playSfx('sfx_sell');
-  }
-
   triggerFlankAlert() {
     this.flankAlertTimer = 4.0;
     platform.playSfx('sfx_horn');
   }
 
-  sellSelectedTower() {
-    if (this.state !== 'BATTLE') return 0;
-    const tower = this.towerManager.getTowerAt(this.selectedTile.col, this.selectedTile.row);
-    if (!tower) return 0;
-    return this.towerManager.sellTower(tower, this.map, this.economy, this.fx);
+  toggleAwakening() {
+    if (this.state !== 'BATTLE') return;
+    if (this.awakeningSeeds > 0) {
+      this.activeAwakeningTargeting = !this.activeAwakeningTargeting;
+      platform.playSfx('sfx_upgrade');
+      if (this.activeAwakeningTargeting) {
+        this.fx.spawnFloatingText(480, 240, '🍃 请点击场上任意蘑菇释放觉醒大招!', '#52C41A', 1.5);
+      }
+    } else {
+      this.ui.showToast('觉醒古种不足 (击败精英/破除障碍物获取)');
+      platform.playSfx('sfx_hurt');
+    }
   }
 
   onVictory() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
-    this.shovelActive = false;
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
     if (this.ui) this.ui.inspectorOpen = false;
-    if (this.bulletManager) {
-      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
-      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
-    }
-    if (this.enemyManager && this.enemyManager.flyingWebs) {
-      this.enemyManager.flyingWebs.length = 0;
-    }
-    if (this.bulletManager) {
-      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
-      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
-    }
-    if (this.enemyManager && this.enemyManager.flyingWebs) {
-      this.enemyManager.flyingWebs.length = 0;
-    }
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -468,24 +427,9 @@ class SceneController {
   onDefeat() {
     if (this.state === 'SETTLEMENT') return;
     this.state = 'SETTLEMENT';
-    this.shovelActive = false;
     this.activeAwakeningTargeting = false;
     this.selectedBuildTowerId = null;
     if (this.ui) this.ui.inspectorOpen = false;
-    if (this.bulletManager) {
-      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
-      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
-    }
-    if (this.enemyManager && this.enemyManager.flyingWebs) {
-      this.enemyManager.flyingWebs.length = 0;
-    }
-    if (this.bulletManager) {
-      if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
-      if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
-    }
-    if (this.enemyManager && this.enemyManager.flyingWebs) {
-      this.enemyManager.flyingWebs.length = 0;
-    }
     if (this.bulletManager) {
       if (this.bulletManager.hazardPool) this.bulletManager.hazardPool.clear();
       if (this.bulletManager.bulletPool) this.bulletManager.bulletPool.clear();
@@ -838,9 +782,7 @@ class SceneController {
           this.tryUpgradeSelectedTower(act.branch);
         }
       } else if (act.type === 'sell_selected') {
-        if (this.state === 'BATTLE') {
-          this.sellSelectedTower();
-        } else if (this.state === 'LEVEL_SELECT') {
+        if (this.state === 'LEVEL_SELECT') {
           this.enterTitle();
         }
       } else if (act.type === 'cycle_priority') {

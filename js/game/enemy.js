@@ -708,15 +708,17 @@ class EnemyManager {
       if (e.atkCooldown > 0) e.atkCooldown -= dt;
 
       let attackingTower = null;
+      const isBreaker = e.type === 'armored' || e.type === 'siege_beetle' || e.type === 'skeletal_husk' || e.isBoss;
       if (towerManager && towerManager.towers && towerManager.towers.length > 0) {
         const isMoth = e.type === 'moth';
-        const atkRange = isMoth ? 130 : 44; // 飞蛾远程 130px，地面甲虫近战 44px
-        const atkInterval = isMoth ? 1.5 : 0.8; // PvZ 经典 0.8s 逼真啃食节奏
-        const atkDamage = isMoth ? 18 : (
-          e.type === 'armored' ? 48 :
-          e.type === 'siege_beetle' ? 75 :
-          e.isBoss ? 95 :
-          (e.type === 'swift' ? 18 : 28)
+        const atkRange = isMoth ? 120 : 38; // 飞蛾远程 120px 喷毒，地面甲虫近身 38px 啃噬
+        const atkInterval = isMoth ? 2.4 : (isBreaker ? 1.4 : 1.8);
+        const atkDamage = isMoth ? 9 : (
+          e.type === 'armored' ? 26 :
+          e.type === 'skeletal_husk' ? 24 :
+          e.type === 'siege_beetle' ? 55 :
+          e.isBoss ? 72 :
+          (e.type === 'splitter' ? 14 : (e.type === 'swift' ? 7 : 9))
         );
 
         let bestTower = null;
@@ -726,8 +728,13 @@ class EnemyManager {
           if (tw.dormantTimer > 0) continue; // 忽略已休眠枯萎的塔
           const d = Math.hypot(tw.x - e.x, tw.y - e.y);
           if (d <= atkRange) {
-            // 甜美孢子气味：虫群优先啃食后排灵光太阳蘑菇！
-            let score = d - (tw.typeId === 'lumina' ? 1000 : 0);
+            // 飞蛾与跳跃虫优先打击灵光菇后勤；近战虫群优先被厚甲尖刺菇吸引仇恨
+            let score = d;
+            if ((isMoth || e.isLeaper) && tw.typeId === 'lumina') {
+              score -= 900;
+            } else if (!isMoth && !e.isLeaper && tw.typeId === 'thorn') {
+              score -= 600;
+            }
             if (score < bestScore) {
               bestScore = score;
               bestTower = tw;
@@ -740,7 +747,7 @@ class EnemyManager {
             e.atkCooldown = atkInterval;
             towerManager.damageTower(bestTower, atkDamage, e, fx);
             if (isMoth) {
-              bestTower.poisonTimer = 3.0;
+              bestTower.poisonTimer = 2.6;
             }
             if (fx) {
               fx.spawnParticles(bestTower.x, bestTower.y - 6, 4, [e.tintColor, '#FF7875'], 20, 50, 0.15, 0.25, 3);
@@ -790,7 +797,7 @@ class EnemyManager {
 
       const isMeleeAttacking = attackingTower && e.type !== 'moth';
       const isBlockedByGuard = e.isBlocked && e.blockedBy && e.blockedBy.state !== 'dead';
-      const moveSlow = (isMeleeAttacking || isBlockedByGuard) ? 0 : (attackingTower ? 0.5 : 1.0);
+      const moveSlow = isBlockedByGuard ? 0 : (isMeleeAttacking ? (isBreaker ? 0.25 : 0.6) : (attackingTower ? 0.55 : 1.0));
       e.distPx += speedPxPerSec * dt * moveSlow;
 
       // 特种敌人（织网蛛 / 毒蛾）吐丝技能

@@ -15,7 +15,7 @@ const MAPS = {
     subpackage: 'map1',
     atlasPath: 'subpackages/map1/atlas.png',
     bossBgmPath: 'subpackages/map1/boss.wav',
-    initialSpores: 300,
+    initialSpores: 175,
     hpCoefficient: 1.0,
     totalWaves: 10,
     bossId: 'boss_m1',
@@ -84,7 +84,7 @@ const MAPS = {
     subpackage: 'map2',
     atlasPath: 'subpackages/map2/atlas.png',
     bossBgmPath: 'subpackages/map2/boss.wav',
-    initialSpores: 320,
+    initialSpores: 200,
     hpCoefficient: 1.1,
     totalWaves: 12,
     bossId: 'boss_m2',
@@ -152,7 +152,7 @@ const MAPS = {
     subpackage: 'map3',
     atlasPath: 'subpackages/map3/atlas.png',
     bossBgmPath: 'subpackages/map3/boss.wav',
-    initialSpores: 350,
+    initialSpores: 220,
     hpCoefficient: 1.2,
     totalWaves: 15,
     bossId: 'boss_m3',
@@ -165,6 +165,19 @@ const MAPS = {
       [2, 10],
       [14, 10],
       [14, 13],
+      [19, 13]
+    ],
+    spawnTile2: [18, 5],
+    // 幽夜地脉·伏行暗穴盘旋突袭路径 (Secondary Flank Route - 撕咬后排经济与高台防线)
+    groundWaypoints2: [
+      [18, 5],
+      [18, 8],
+      [15, 8],
+      [15, 12],
+      [18, 12],
+      [18, 8],
+      [15, 8],
+      [15, 13],
       [19, 13]
     ],
     // 空中航线拐点（长约 48.8 格 ≈ 地面路线 81%）

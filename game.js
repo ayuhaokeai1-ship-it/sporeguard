@@ -45,8 +45,6 @@ function bootstrapGame() {
     'assets/vfx/vfx_bomb.png',
     'assets/vfx/vfx_explosion.png',
     'assets/vfx/vfx_web_cocoon.png',
-    'assets/vfx/prop_scarab.png',
-    'assets/vfx/prop_stump.png',
     'assets/vfx/prop_dew.png',
     'assets/vfx/prop_pitcher.png',
     'assets/vfx/prop_pitcher_eating.png',
@@ -56,8 +54,6 @@ function bootstrapGame() {
     'assets/vfx/relic_shield.png',
     'assets/vfx/relic_lightning.png',
     'assets/vfx/relic_clover.png',
-    'assets/vfx/prop_spring.png',
-    'assets/vfx/prop_debris.png',
     'assets/vfx/prop_lumina_base.png',
     'assets/vfx/prop_lumina_a.png',
     'assets/vfx/prop_lumina_b.png',
@@ -82,7 +78,6 @@ function bootstrapGame() {
     'assets/vfx/item_golden_spore.png',
     'assets/vfx/item_awakening_seed.png',
     'assets/vfx/secondary_spawner_burrow.png',
-    'assets/vfx/enemy_shadow_stalker.png',
     'assets/vfx/card_lumina.png',
 'assets/ui/cards/card_watch.png',
     'assets/ui/cards/card_mist.png',
@@ -92,7 +87,15 @@ function bootstrapGame() {
     'assets/vfx/prop_rally_flag.png',
     'assets/vfx/sporeling_guard.png',
     'assets/vfx/proj_spider_silk_ball.png',
-    'assets/vfx/icon_elite_crest.png'
+    'assets/vfx/icon_elite_crest.png',
+    'assets/vfx/enemy_weaver.png',
+    'assets/vfx/obs_ancient_stump.png',
+    'assets/vfx/obs_crystal_mush.png',
+    'assets/vfx/obs_moss_rock.png',
+    'assets/vfx/obs_moss_stump.png',
+    'assets/ui/icons/spell_rain.png',
+    'assets/ui/icons/spell_shock.png',
+    'assets/ui/icons/spell_harvest.png'
   ];
 
   Promise.all([

@@ -131,9 +131,9 @@
     /* 悬浮唤醒图标 (工具栏收起时显示) */
     #floatingAppBadge {
       position: fixed;
-      bottom: 12px;
+      top: 10px;
       right: 12px;
-      top: auto;
+      bottom: auto;
       left: auto;
       height: 28px;
       padding: 0 10px;
@@ -1299,7 +1299,6 @@
             S.startLevel('map1');
             const tw = S.towerManager.buildTower('watch', 5, 3, S.map, S.economy, S.fx);
             tw.hp = Math.round(tw.maxHp * 0.25);
-            S.shovelActive = true;
             document.title = 'RESCUE_OK';
           } catch (e) {
             document.title = 'RESCUE_ERR: ' + e.message;
@@ -1332,9 +1331,8 @@
             const S = window.__SPOREGUARD__.scene;
             ensureGuideSeen();
             S.startLevel('map1');
-            // Build a watch tower to test card cooldown
             S.towerManager.buildTower('watch', 5, 3, S.map, S.economy, S.fx);
-            S.ui.triggerCardCooldown('watch');
+            S.ui.notifyTowerBuilt('watch');
             document.title = 'BATTLE_OK';
           } catch (e) {
             document.title = 'BATTLE_ERR: ' + e.message;

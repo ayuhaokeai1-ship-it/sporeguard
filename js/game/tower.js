@@ -62,7 +62,7 @@ class TowerManager {
     }
 
     const center = tileCenter(col, row);
-    const maxHp = typeId === 'thorn' ? 360 : (typeId === 'burst' ? 120 : (typeId === 'mist' ? 100 : (typeId === 'lumina' ? 80 : 90)));
+    const maxHp = typeId === 'thorn' ? 720 : (typeId === 'burst' ? 280 : (typeId === 'mist' ? 240 : (typeId === 'lumina' ? 180 : 220)));
     const tower = {
       id: this.nextId++,
       typeId,
@@ -398,11 +398,11 @@ class TowerManager {
       }
     }
 
-    // 濒死急救告警 (HP 降至 35% 以下时首次触发急救提醒，引导玩家使用铲子挽救 85% 孢子)
+    // 濒死急救告警 (HP 降至 35% 以下时首次触发求援告警，引导玩家施放甘霖或调遣英雄协防)
     if (tower.hp > 0 && tower.hp / tower.maxHp <= 0.35 && (prevHp / tower.maxHp > 0.35 || !tower.dangerWarned)) {
       tower.dangerWarned = true;
       if (fx) {
-        fx.spawnFloatingText(tower.x, tower.y - 24, '⚠️ 濒死！建议铲除抢救', '#FFA39E', 1.3);
+        fx.spawnFloatingText(tower.x, tower.y - 24, '⚠️ 守卫垂危！求援！', '#FFA39E', 1.3);
       }
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try { navigator.vibrate([20, 40, 20]); } catch (e) {}
@@ -623,6 +623,9 @@ class TowerManager {
       let speedCoeff = (t.superchargeTimer > 0 ? 2.2 : (t.buffTimer > 0 ? 1.6 : 1.0)) * (t.poisonTimer > 0 ? 0.65 : 1.0);
       if (t.synergies && t.synergies.hasGrandResonance) {
         speedCoeff *= 1.15;
+      }
+      if (this.scene && this.scene.photosyntheticSurgeBonus && this.towers.length >= 3) {
+        speedCoeff *= (1.0 + this.scene.photosyntheticSurgeBonus);
       }
       if (t.cooldown > 0) {
         t.cooldown = Math.max(0, t.cooldown - dt * speedCoeff);
@@ -1038,42 +1041,15 @@ class TowerManager {
         ctx.restore();
       }
 
-            // 濒死预警与铲除抢救视觉指示 (HP <= 35%)
+      // 濒死预警指示 (HP <= 35%)
       if (isCritical) {
         ctx.save();
-        const curScene = this.scene || (typeof window !== 'undefined' && window.__SPOREGUARD__ && window.__SPOREGUARD__.scene);
-        const isShovelMode = curScene && curScene.shovelActive;
         const pulse = 0.8 + Math.sin((t.animTimer || 0) * 10) * 0.2;
-
-        if (isShovelMode) {
-          // 铲子模式下：高亮显示可抢救回收的孢子数，强烈吸引玩家点击回收
-          const refundAmount = Math.floor((t.totalInvested || 75) * 0.85);
-          ctx.fillStyle = 'rgba(10, 30, 16, 0.88)';
-          const rw = 80;
-          const rh = 17;
-          const rx = t.x - rw * 0.5;
-          const ry = tileY - 26;
-          ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(rx, ry, rw, rh, 4);
-          else ctx.rect(rx, ry, rw, rh);
-          ctx.fill();
-          ctx.strokeStyle = '#52C41A';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          ctx.fillStyle = '#95DE64';
-          ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(`⛏️ 抢救 +${refundAmount}`, t.x, ry + rh * 0.5);
-        } else {
-          // 常规战斗中：闪烁警示浮标，提醒玩家植物即将永久阵亡
-          ctx.fillStyle = `rgba(255, 77, 79, ${0.85 * pulse})`;
-          ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('⚠️ 濒死急救!', t.x, tileY - 18);
-        }
+        ctx.fillStyle = `rgba(255, 77, 79, ${0.85 * pulse})`;
+        ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚠️ 守卫垂危!', t.x, tileY - 18);
         ctx.restore();
       }
 

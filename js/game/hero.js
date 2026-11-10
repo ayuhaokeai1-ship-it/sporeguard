@@ -27,9 +27,18 @@ const platform = require('../core/platform');
 class ForestHero {
   constructor(map = null) {
     this.map = map;
-    // 初始位置设定在核心防线要冲 (道路弯道指挥台，完全避开机关与障碍物)
-    this.x = 200;
-    this.y = 200;
+    // 初始位置按当前地图路网核心要冲设定，完全避开机关与障碍物
+    const mapId = (map && map.mapId) || 'map1';
+    if (mapId === 'map2') {
+      this.x = 144;
+      this.y = 272;
+    } else if (mapId === 'map3') {
+      this.x = 208;
+      this.y = 80;
+    } else {
+      this.x = 208;
+      this.y = 176;
+    }
     this.targetX = this.x;
     this.targetY = this.y;
     
@@ -232,7 +241,7 @@ class ForestHero {
     // 不灭战魂锁血期间完全免死
     if (this.undyingTimer > 0) {
       if (fx) {
-        fx.spawnFloatingText(this.x, this.y - 20, 'IMMUNE!', '#FFD700', 0.6);
+        fx.spawnFloatingText(this.x, this.y - 20, '免死!', '#FFD700', 0.8);
       }
       return;
     }

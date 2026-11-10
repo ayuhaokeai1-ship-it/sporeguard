@@ -38,16 +38,16 @@ const TALENT_DEFS = {
     costPerRank: 2,
     effect: (rank) => ({ extraHarvestSpores: rank * 40, doubleSporeChance: rank * 0.4 })
   },
-  root_recycling: {
-    id: 'root_recycling',
+  photosynthetic_surge: {
+    id: 'photosynthetic_surge',
     branch: TALENT_BRANCHES.BLOOM,
     tier: 3,
-    name: '根系循环',
-    icon: '♻️',
-    desc: '铲除回收蘑菇返还比例由 70% 提升至 85%（满级 95%），实现灵活战场转线',
+    name: '光合激涌',
+    icon: '☀️',
+    desc: '当场上守卫达 3 株及以上时，激活光合激涌使全队攻击与产孢速度 +10%（满级 +20%）',
     maxRank: 2,
     costPerRank: 2,
-    effect: (rank) => ({ refundBonus: rank * 0.125 })
+    effect: (rank) => ({ teamAtkSpeedBonus: rank * 0.10 })
   },
   elder_photosynthesis: {
     id: 'elder_photosynthesis',
@@ -55,7 +55,7 @@ const TALENT_DEFS = {
     tier: 4,
     name: '远古光合',
     icon: '☀️',
-    desc: '波次结算时，剩余未使用的孢子产生 +12% 丰厚利息（上限 180 孢子）',
+    desc: '波次结算时，剩余未使用的孢子产生 +12% 丰厚利息（最高180孢子）',
     maxRank: 1,
     costPerRank: 3,
     effect: (rank) => ({ waveInterestRate: 0.12, maxInterest: 180 })
@@ -218,6 +218,9 @@ class AncientKnowledgeTree {
       superconduct_resonance: 1,
       quickened_mysticism: 1
     };
+    if (this.ranks.root_recycling) {
+      delete this.ranks.root_recycling;
+    }
     if (typeof savedTree.totalPoints === 'number') {
       this.totalPointsEarned = Math.max(12, savedTree.totalPoints);
     }
@@ -230,8 +233,8 @@ class AncientKnowledgeTree {
         ranks: this.ranks,
         totalPoints: this.totalPointsEarned
       };
-      if (storage.setStorage) {
-        storage.setStorage('sporeguard_save_v1', save);
+      if (storage.saveNow) {
+        storage.saveNow();
       }
     } catch (e) {}
   }
@@ -307,10 +310,10 @@ class AncientKnowledgeTree {
       scene.hero.thornReflectDmg = barkRank * 18;
     }
 
-    // 3. 根系循环：铲除返还提升
-    const recRank = this.getRank('root_recycling');
-    if (recRank > 0) {
-      scene.shovelRefundMultiplier = 0.70 + recRank * 0.125;
+    // 3. 光合激涌：全队攻速与产孢提速
+    const psRank = this.getRank('photosynthetic_surge');
+    if (psRank > 0) {
+      scene.photosyntheticSurgeBonus = psRank * 0.10;
     }
 
     // 4. 始源觉醒：额外觉醒古种
@@ -361,12 +364,12 @@ class AncientKnowledgeTree {
     ctx.save();
 
     // 1. 顶部领悟点数与流派切换标签
-    ctx.fillStyle = 'rgba(255, 229, 143, 0.95)';
-    ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = '#4A2E14';
+    ctx.font = 'bold 14px "PingFang SC", "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const avail = this.getAvailablePoints();
-    ctx.fillText(`✨ 领悟之光: ${avail} 点可用 (已消耗: ${this.getSpentPoints()})`, x + 20, y + 25);
+    ctx.fillText(`✨ 领悟之光: ${avail} 点可用 (已用 ${this.getSpentPoints()})`, x + 16, y + 25);
 
     const branches = [
       { id: TALENT_BRANCHES.BLOOM, name: '🌱 丰饶繁育' },
@@ -375,11 +378,12 @@ class AncientKnowledgeTree {
       { id: TALENT_BRANCHES.COMMAND, name: '👑 自然神术' }
     ];
 
-    const tabW = 120;
+    const tabW = 108;
     const tabH = 30;
+    const tabStartX = x + w - (branches.length * tabW + (branches.length - 1) * 6) - 12;
     for (let i = 0; i < branches.length; i++) {
       const b = branches[i];
-      const tx = x + 340 + i * (tabW + 8);
+      const tx = tabStartX + i * (tabW + 6);
       const ty = y + 10;
       const isCur = this.activeTab === b.id;
 
@@ -460,9 +464,10 @@ class AncientKnowledgeTree {
       ctx.stroke();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : `点数不足`), btnX + btnW * 0.5, btnY + 19);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : `点数不足`), btnX + btnW * 0.5, btnY + btnH * 0.5);
 
       if (ui && canUp && !isMax) {
         ui.registerButton('tal_up_' + t.id, btnX, btnY, btnW, btnH, () => {

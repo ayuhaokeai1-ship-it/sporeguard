@@ -48,13 +48,40 @@ class SporeDropManager {
   update(dt, map, economy, fx, scene) {
     this.animTimeSec += dt;
 
-    // 自然掉落晨露金孢 (PvZ 阳光飘落机制)
+    // 自然掉落晨露金孢 (PvZ 阳光飘落机制，自动避开障碍物、机关与已建防御塔)
     this.naturalSpawnTimer -= dt;
     if (this.naturalSpawnTimer <= 0) {
       this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
-      // 随机落于地图草地与林径视野内 (x: 64..576, y: 50..390)
-      const rx = 64 + Math.random() * 512;
-      const ry = 50 + Math.random() * 340;
+      let rx = 64 + Math.random() * 512;
+      let ry = 64 + Math.random() * 316;
+      const obstacles = (map && map.obstacles) || [];
+      const pitcher = scene && scene.contraptions && scene.contraptions.pitcher;
+      const thunder = scene && scene.contraptions && scene.contraptions.thunderTree;
+      for (let attempt = 0; attempt < 16; attempt++) {
+        const cx = 64 + Math.random() * 512;
+        const cy = 64 + Math.random() * 316;
+        let blocked = false;
+        for (let oi = 0; oi < obstacles.length; oi++) {
+          const obs = obstacles[oi];
+          if (!obs.cleared && Math.hypot(cx - obs.x, cy - obs.y) < 48) {
+            blocked = true;
+            break;
+          }
+        }
+        if (!blocked && pitcher && Math.hypot(cx - pitcher.x, cy - pitcher.y) < 48) blocked = true;
+        if (!blocked && thunder && Math.hypot(cx - thunder.x, cy - thunder.y) < 48) blocked = true;
+        if (!blocked && map && map.getTile) {
+          const col = Math.floor(cx / TILE_SIZE);
+          const row = Math.floor(cy / TILE_SIZE);
+          const tile = map.getTile(col, row);
+          if (tile && tile.tower) blocked = true;
+        }
+        if (!blocked) {
+          rx = cx;
+          ry = cy;
+          break;
+        }
+      }
       this.spawnDrop(rx, ry, 15, true, 40);
     }
 

@@ -304,7 +304,7 @@ class GameMap {
     if (!tile) return false;
     if (tile.tower) return false;
     // 严格锁定固定战术坑位（战术灵土）：场地不再是无限草坪随意插塔
-    // 坑位总数稀缺固定（12~16个），考验战术取舍；更换阵容或残血急救时必须使用铲子！
+    // 坑位总数稀缺固定（12~17个），植物死了就是死了，考验极限战术选位与前排掩护！
     return tile.type === 'moss';
   }
 

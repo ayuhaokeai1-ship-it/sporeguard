@@ -63,10 +63,10 @@ class ForestContraptions {
         animTimer: 0
       };
       this.thunderTree = {
-        col: 14,
-        row: 8,
-        x: (14 + 0.5) * TILE_SIZE,
-        y: (8 + 0.5) * TILE_SIZE,
+        col: 12,
+        row: 9,
+        x: (12 + 0.5) * TILE_SIZE,
+        y: (9 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 24.0,
         cost: 45,
@@ -75,10 +75,10 @@ class ForestContraptions {
       };
     } else {
       this.pitcher = {
-        col: 9,
-        row: 6,
-        x: (9 + 0.5) * TILE_SIZE,
-        y: (6 + 0.5) * TILE_SIZE,
+        col: 5,
+        row: 4,
+        x: (5 + 0.5) * TILE_SIZE,
+        y: (4 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 18.0,
         cost: 35,
@@ -86,10 +86,10 @@ class ForestContraptions {
         animTimer: 0
       };
       this.thunderTree = {
-        col: 13,
-        row: 6,
-        x: (13 + 0.5) * TILE_SIZE,
-        y: (6 + 0.5) * TILE_SIZE,
+        col: 8,
+        row: 8,
+        x: (8 + 0.5) * TILE_SIZE,
+        y: (8 + 0.5) * TILE_SIZE,
         cd: 0,
         maxCd: 24.0,
         cost: 45,
@@ -133,18 +133,46 @@ class ForestContraptions {
       }
     }
 
-    // 3. 草丛露珠自然凝聚（最多 3 颗，不可在已有位置重复）
+    // 3. 草丛露珠自然凝聚（最多 3 颗，避开道路、造塔坑位、障碍物与大型机关）
     this.dewSpawnTimer -= dt;
     if (this.dewSpawnTimer <= 0 && this.dewDrops.length < 3 && scene && scene.map) {
       this.dewSpawnTimer = 8.0 + Math.random() * 6.0;
-      const mossList = scene.map.mapData.mossTiles || [];
-      if (mossList.length > 0) {
-        const pick = mossList[Math.floor(Math.random() * mossList.length)];
-        const rx = (pick[0] + 0.2 + Math.random() * 0.6) * TILE_SIZE;
-        const ry = (pick[1] + 0.2 + Math.random() * 0.6) * TILE_SIZE;
+      const map = scene.map;
+      const obstacles = map.obstacles || [];
+      const candidates = [];
+      for (let r = 1; r < map.rows - 1; r++) {
+        for (let c = 1; c < map.cols - 1; c++) {
+          const tile = map.getTile(c, r);
+          if (!tile || tile.type !== 'grass' || tile.tower) continue;
+          const cx = (c + 0.5) * TILE_SIZE;
+          const cy = (r + 0.5) * TILE_SIZE;
+          let blocked = false;
+          // 远离道路格、障碍物、环境机关与已有露珠
+          for (let dr = -1; dr <= 1 && !blocked; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const adj = map.getTile(c + dc, r + dr);
+              if (adj && (adj.type === 'path' || adj.type === 'spawn' || adj.type === 'goal')) {
+                blocked = true;
+                break;
+              }
+            }
+          }
+          if (!blocked && this.pitcher && Math.hypot(cx - this.pitcher.x, cy - this.pitcher.y) < 46) blocked = true;
+          if (!blocked && this.thunderTree && Math.hypot(cx - this.thunderTree.x, cy - this.thunderTree.y) < 46) blocked = true;
+          for (let oi = 0; oi < obstacles.length && !blocked; oi++) {
+            if (!obstacles[oi].cleared && Math.hypot(cx - obstacles[oi].x, cy - obstacles[oi].y) < 44) blocked = true;
+          }
+          for (let di = 0; di < this.dewDrops.length && !blocked; di++) {
+            if (Math.hypot(cx - this.dewDrops[di].x, cy - this.dewDrops[di].y) < 48) blocked = true;
+          }
+          if (!blocked) candidates.push([cx, cy]);
+        }
+      }
+      if (candidates.length > 0) {
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
         this.dewDrops.push({
-          x: rx,
-          y: ry,
+          x: pick[0] + (Math.random() - 0.5) * 10,
+          y: pick[1] + (Math.random() - 0.5) * 10,
           animTimer: Math.random() * 3.0,
           life: 14.0
         });
@@ -334,9 +362,14 @@ class ForestContraptions {
 
       // 可激活充能光芒微光
       if (isReady) {
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+        const pulse = Math.sin(time * 6) * 2;
+        const grad = ctx.createRadialGradient(p.x, p.y - 18, 2, p.x, p.y - 18, 18 + pulse);
+        grad.addColorStop(0, 'rgba(255, 224, 90, 0.36)');
+        grad.addColorStop(0.55, 'rgba(255, 215, 0, 0.14)');
+        grad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(p.x, p.y - 18, 14 + Math.sin(time * 6) * 2, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y - 18, 18 + pulse, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -356,7 +389,7 @@ class ForestContraptions {
       ctx.fill();
 
       // 纯 AI 手绘雷暴古木（远古中空雷击树桩，无任何英文字母或残次切边）
-      const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png') || platform.getImage('assets/vfx/prop_stump.png');
+      const stumpImg = platform.getImage('assets/vfx/prop_thunder_stump.png');
       if (stumpImg && stumpImg.width) {
         const sw = 52;
         const sh = 50;
@@ -365,9 +398,14 @@ class ForestContraptions {
 
       // 内部雷电灵力光晕
       if (isReady) {
-        ctx.fillStyle = 'rgba(64, 169, 255, 0.22)';
+        const pulse = Math.sin(time * 8) * 2;
+        const grad = ctx.createRadialGradient(t.x, t.y - 10, 2, t.x, t.y - 10, 20 + pulse);
+        grad.addColorStop(0, 'rgba(105, 192, 255, 0.34)');
+        grad.addColorStop(0.55, 'rgba(64, 169, 255, 0.12)');
+        grad.addColorStop(1, 'rgba(64, 169, 255, 0)');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(t.x, t.y - 10, 16 + Math.sin(time * 8) * 2, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y - 10, 20 + pulse, 0, Math.PI * 2);
         ctx.fill();
       }
 

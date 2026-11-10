@@ -94,7 +94,7 @@ class RelicArsenalSystem {
         nameKey: 'relic_tear_name',
         name: '玄冰霜华之泪',
         desc: '迷雾孢子在地面凝结 4 秒冻土，敌人移动速度额外削减 40%',
-        icon: 'assets/vfx/range_frost_bloom.png',
+        icon: 'assets/vfx/prop_dew.png',
         rarity: 'rare',
         isUnlocked: true,
         stats: { extraSlow: 0.40 }

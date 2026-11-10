@@ -228,8 +228,8 @@ module.exports = {
   guide_step1_body: 'Swarms are marching toward your Seed Vault! Tap any grass or glowing Moss tile to preview range & covered path tiles, then tap again to plant.',
   guide_step2_title: '4 Towers · Dual Evolution',
   guide_step2_body: 'Watch (Anti-Air), Mist (Slow/Shred), Thorn (Line Pierce), Burst (AoE). Upgrade to Lv1, then specialize into Cyan Branch A or Orange Branch B!',
-  guide_step3_title: 'Multi-Kill & 60% Refund',
-  guide_step3_body: 'Kill 3+ foes within 0.5s for Chain/Overload bonuses! Sell any tower anytime for a 60% Spore refund. Touch, Mouse/KB & Gamepad supported!',
+  guide_step3_title: 'Multi-Kill & Tactical Sockets',
+  guide_step3_body: 'Kill 3+ foes within 0.5s for Chain/Overload bonuses! Plant placements are permanent until fallen—choose wisely on fixed glowing Moss tiles!',
   guide_next: 'NEXT',
   guide_done: 'LET\'S GO'
 ,
