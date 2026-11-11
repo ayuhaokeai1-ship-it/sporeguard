@@ -2468,7 +2468,7 @@ module.exports = {
   btn_start: '开始守林',
   btn_level_select: '选择林区',
   btn_settings: '系统设置',
-  btn_guide: '作战指南',
+  btn_guide: '林地秘典',
   btn_back: '返回',
   btn_resume: '继续战斗',
   btn_restart: '重新挑战',
@@ -2719,7 +2719,7 @@ module.exports = {
   btn_start: 'START GAME',
   btn_level_select: 'SELECT MAP',
   btn_settings: 'SETTINGS',
-  btn_guide: 'HOW TO PLAY',
+  btn_guide: 'CODEX',
   btn_back: 'BACK',
   btn_resume: 'RESUME',
   btn_restart: 'RESTART',
@@ -7275,6 +7275,10 @@ class EnemyManager {
     const isKilled = enemy.hp <= 0;
 
     const dType = damageType || (appliesMark ? 'watch' : 'burst');
+    if (opts.sourceTower) {
+      opts.sourceTower.totalDamage = (opts.sourceTower.totalDamage || 0) + Math.round(actualDamage);
+      if (isKilled) opts.sourceTower.kills = (opts.sourceTower.kills || 0) + 1;
+    }
     if (this.scene) {
       if (this.scene.combatAnalytics) {
         this.scene.combatAnalytics.recordDamage(dType, Math.round(actualDamage), isKilled);
@@ -15631,14 +15635,15 @@ class BulletManager {
         b.armorPierceRatio = 0;
         b.flatArmorPierce = 0;
         b.holySmite = false;
+        b.sourceTower = null;
       },
       CONFIG.POOL_CAPS.BULLETS
     );
 
-    // 雾团与灼烧区对象池（上限 40）
+    // 雾团、酸雾与灼烧区对象池（上限 40）
     this.hazardPool = new ObjectPool(
       () => ({
-        kind: 'mist', // 'mist' | 'burn'
+        kind: 'mist', // 'mist' | 'burn' | 'acid'
         spriteKey: 'mist_base',
         x: 0,
         y: 0,
@@ -15650,9 +15655,18 @@ class BulletManager {
         armorReduction: 0,
         dps: 4,
         affectAir: true,
-        color: PALETTE.BRANCH_A
+        color: PALETTE.BRANCH_A,
+        sourceTower: null
       }),
-      null,
+      (h) => {
+        h.sourceTower = null;
+        h.slow = 0;
+        h.residualSlowDuration = 0;
+        h.armorReduction = 0;
+        h.dps = 0;
+        h.timer = 0;
+        h.affectAir = true;
+      },
       CONFIG.POOL_CAPS.HAZARDS
     );
   }
@@ -15792,6 +15806,9 @@ class BulletManager {
         ex.duration = Math.max(ex.duration, node.cloudDuration || 3.0);
         ex.slow = Math.max(ex.slow, node.slow || 0.30);
         ex.dps = Math.max(ex.dps, node.dps || 4);
+        if (node.sourceTower && !ex.sourceTower) {
+          ex.sourceTower = node.sourceTower;
+        }
         return ex;
       }
     }
@@ -15811,6 +15828,7 @@ class BulletManager {
     h.dps = node.dps || 4;
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
+    h.sourceTower = node.sourceTower || null;
     return h;
   }
 
@@ -15834,6 +15852,32 @@ class BulletManager {
     h.dps = burnCfg.dps || 8;
     h.affectAir = false; // 爆裂菇灼烧区仅作用于地面
     h.color = PALETTE.BRANCH_B;
+    h.sourceTower = burnCfg.sourceTower || null;
+    return h;
+  }
+
+  /**
+   * 通用地面持续区域生成器（酸雾腐蚀区等元素反应/机关衍生物）
+   */
+  spawnHazard(cfg = {}) {
+    const h = this.hazardPool.acquire(true);
+    if (!h) return null;
+
+    const kind = cfg.kind || 'acid';
+    h.kind = kind;
+    h.spriteKey = cfg.spriteKey || (kind === 'acid' ? 'acid_0' : (kind === 'mist' ? 'mist_base' : 'burn_0'));
+    h.x = Number(cfg.x) || 0;
+    h.y = Number(cfg.y) || 0;
+    h.radiusPx = Math.max(16, Number(cfg.radiusPx) || 48);
+    h.duration = Math.max(0.2, Number(cfg.duration) || 3.5);
+    h.timer = 0;
+    h.slow = Number(cfg.slow) || 0;
+    h.residualSlowDuration = Number(cfg.residualSlowDuration) || 0;
+    h.armorReduction = cfg.armorReduction !== undefined ? cfg.armorReduction : (kind === 'acid' ? 0.25 : 0);
+    h.dps = Number(cfg.dps) || 0;
+    h.affectAir = cfg.affectAir !== undefined ? Boolean(cfg.affectAir) : false;
+    h.color = cfg.color || (kind === 'acid' ? '#A0D911' : (kind === 'mist' ? PALETTE.BRANCH_A : PALETTE.BRANCH_B));
+    h.sourceTower = cfg.sourceTower || null;
     return h;
   }
 
@@ -15872,6 +15916,9 @@ class BulletManager {
           }
           if (h.dps > 0) {
             e.dotSources.push(h.dps);
+            if (h.sourceTower) {
+              h.sourceTower.totalDamage = (h.sourceTower.totalDamage || 0) + h.dps * dt;
+            }
           }
         }
       }
@@ -15936,7 +15983,7 @@ class BulletManager {
             economy,
             fx,
             'lumina',
-            { holySmite: b.holySmite }
+            { holySmite: b.holySmite, sourceTower: b.sourceTower }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
@@ -16020,7 +16067,7 @@ class BulletManager {
             economy,
             fx,
             'watch',
-            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
+            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0, sourceTower: b.sourceTower }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
@@ -16118,7 +16165,7 @@ class BulletManager {
               economy,
               fx,
               'thorn',
-              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
+              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0, sourceTower: b.sourceTower }
             );
             if (fx) {
               fx.onSingleHit(e.x, e.y, b.branchColor);
@@ -16212,7 +16259,9 @@ class BulletManager {
                 combatTimeSec,
                 map,
                 economy,
-                fx
+                fx,
+                'burst',
+                { sourceTower: b.sourceTower }
               );
               if (this.elementalCombos) {
                 this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
@@ -16261,6 +16310,10 @@ class BulletManager {
         grad.addColorStop(0, `rgba(179, 127, 235, ${0.28 * alpha})`);
         grad.addColorStop(0.55, `rgba(146, 84, 222, ${0.16 * alpha})`);
         grad.addColorStop(1, 'rgba(114, 46, 209, 0)');
+      } else if (h.kind === 'acid') {
+        grad.addColorStop(0, `rgba(160, 217, 17, ${0.34 * alpha})`);
+        grad.addColorStop(0.55, `rgba(91, 140, 0, ${0.20 * alpha})`);
+        grad.addColorStop(1, 'rgba(35, 120, 4, 0)');
       } else {
         grad.addColorStop(0, `rgba(255, 122, 69, ${0.35 * alpha})`);
         grad.addColorStop(0.60, `rgba(212, 56, 13, ${0.18 * alpha})`);
@@ -16271,9 +16324,21 @@ class BulletManager {
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
 
+      if (h.kind === 'acid') {
+        ctx.strokeStyle = `rgba(186, 230, 55, ${0.36 * alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       // 少量飘动的柔和微光孢子粒子
       const pulseTime = animTimeSec * 2.2 + i;
-      ctx.fillStyle = h.kind === 'mist' ? `rgba(211, 173, 247, ${0.40 * alpha})` : `rgba(255, 213, 145, ${0.40 * alpha})`;
+      ctx.fillStyle = h.kind === 'mist'
+        ? `rgba(211, 173, 247, ${0.40 * alpha})`
+        : (h.kind === 'acid'
+          ? `rgba(186, 230, 55, ${0.52 * alpha})`
+          : `rgba(255, 213, 145, ${0.40 * alpha})`);
       for (let pIdx = 0; pIdx < 3; pIdx++) {
         const pAng = (pIdx / 3) * Math.PI * 2 + pulseTime * 0.35;
         const pDist = r * 0.45 + Math.sin(pulseTime + pIdx) * (r * 0.15);
@@ -16483,7 +16548,9 @@ class TowerManager {
       isWebbed: false,     // 是否被腐化蛛丝封印瘫痪
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
-      superchargeTimer: 0  // 能量肥料超频大招倒计时
+      superchargeTimer: 0, // 能量肥料超频大招倒计时
+      totalDamage: 0,
+      kills: 0
     };
 
     const tile = map.getTile(col, row);
@@ -17246,15 +17313,18 @@ class TowerManager {
       if (tower.synergies && tower.synergies.hasTwinWatch) {
         watchNode.critChance = (watchNode.critChance || 0) + 0.20;
       }
-      bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
+      const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
+      if (wb) wb.sourceTower = tower;
       if (this.mushroomMastery && this.mushroomMastery.hasMastery('watch', 'watch_m2')) {
         if (Math.random() < 0.22) {
-          bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
+          const wb2 = bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
+          if (wb2) wb2.sourceTower = tower;
         }
       }
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'mist') {
-      bulletManager.spawnMistCloud(target.x, target.y, node);
+      const mh = bulletManager.spawnMistCloud(target.x, target.y, node);
+      if (mh) mh.sourceTower = tower;
       platform.playSfx('sfx_mist');
     } else if (tower.typeId === 'thorn') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);
@@ -17264,23 +17334,28 @@ class TowerManager {
 
       // 主刺
       const thornOpts = { hasPoisonThorn: tower.synergies && tower.synergies.hasPoisonThorn };
-      bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      const tb = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      if (tb) tb.sourceTower = tower;
 
       // A3 箭袋：每次齐射增加 2 根侧刺（左右各偏 12°），侧刺伤害 50%
       if (node.sideSpikes && node.sideSpikes >= 2) {
         const deltaRad = ((node.sideAngleDeg || 12) * Math.PI) / 180;
         const sideRatio = node.sideDamageRatio || 0.50;
-        bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle - deltaRad, node, baseDmg, sideRatio);
-        bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle + deltaRad, node, baseDmg, sideRatio);
+        const tbL = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle - deltaRad, node, baseDmg, sideRatio);
+        const tbR = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle + deltaRad, node, baseDmg, sideRatio);
+        if (tbL) tbL.sourceTower = tower;
+        if (tbR) tbR.sourceTower = tower;
       }
       platform.playSfx('sfx_thorn');
     } else if (tower.typeId === 'burst') {
       const pred = enemyManager.predictEnemyPosition(target, node.flightTime || 0.38, map);
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
-      bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
+      const bb = bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
+      if (bb) bb.sourceTower = tower;
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'lumina') {
-      bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
+      const lb = bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
+      if (lb) lb.sourceTower = tower;
       platform.playSfx('sfx_laser');
     }
   }
@@ -17840,6 +17915,30 @@ class WaveManager {
     if (hasFlank) pushTag('侧翼来袭');
     if (tags.length === 0) pushTag('前锋虫群');
     return `第 ${this.currentWaveIndex} 波 · ${tags.join(' · ')}`;
+  }
+
+  /**
+   * 计算当前战斗波次的实时推进百分比 (0.0 -> 1.0)，用于平滑波次进度条与无尽模式展示
+   */
+  getWaveSubProgress(enemyManager) {
+    if (this.phase !== 'combat' || !this.activeGroups || this.activeGroups.length === 0) {
+      return this.phase === 'completed' ? 1.0 : 0.0;
+    }
+    let totalToSpawn = 0;
+    let totalSpawned = 0;
+    for (let i = 0; i < this.activeGroups.length; i++) {
+      const g = this.activeGroups[i];
+      totalToSpawn += (g.count || 0);
+      totalSpawned += (g.spawned || 0);
+    }
+    if (totalToSpawn <= 0) return 0.5;
+    const spawnRatio = Math.min(1.0, totalSpawned / totalToSpawn);
+    const aliveCount = (enemyManager && typeof enemyManager.getAliveEnemies === 'function')
+      ? enemyManager.getAliveEnemies().length
+      : 0;
+    const defeatedCount = Math.max(0, totalSpawned - aliveCount);
+    const killRatio = Math.min(1.0, defeatedCount / totalToSpawn);
+    return Math.max(0.05, Math.min(1.0, spawnRatio * 0.45 + killRatio * 0.55));
   }
 
   /**
@@ -19214,6 +19313,8 @@ class UiManager {
       scene.combatAnalytics.renderToggleButton(ctx, 118, 14);
     }
 
+    this.bottomHoverTip = null;
+
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 觉醒豆)
     this.renderPvZTopSeedBank(ctx, scene);
 
@@ -19247,6 +19348,33 @@ class UiManager {
 
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
+
+    // 6.8 底栏英雄 / 神术 / 卡牌悬停轻量说明条
+    if (this.bottomHoverTip && !this.inspectorOpen && !this.isDragging && !this.showSettingsModal && !this.showGuideModal && !(scene.combatAnalytics && scene.combatAnalytics.isOpen)) {
+      const tip = this.bottomHoverTip;
+      ctx.save();
+      ctx.font = `bold 11px ${CN_FONT}`;
+      const tw = Math.ceil(ctx.measureText(tip.text).width);
+      const pw = Math.min(460, tw + 22);
+      const ph = 24;
+      const px = Math.max(10, Math.min(950 - pw, Math.round(tip.x - pw * 0.5)));
+      const py = Math.round(tip.y);
+      roundRectPath(ctx, px, py, pw, ph, 7);
+      ctx.fillStyle = 'rgba(20, 14, 9, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = '#C68F45';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      drawArtText(ctx, tip.text, px + pw * 0.5, py + ph * 0.5, {
+        style: 'gold',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0,
+        maxWidth: pw - 16
+      });
+      ctx.restore();
+    }
 
     // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让首领血条）
     if (this.toastTimer > 0 && this.toastText) {
@@ -20541,7 +20669,7 @@ class UiManager {
     }
 
     const pw = 344;
-    const ph = existingTower ? 276 : 232;
+    const ph = existingTower ? 292 : 232;
     // 智能停靠：停靠在屏幕边缘，确保地面的 360 度攻击范围完整无遮挡展示
     let px = tileScreenX < 480 ? Math.min(Math.round(tileScreenX + 32), 960 - pw - 14) : Math.max(14, Math.round(tileScreenX - pw - 32));
     px = Math.max(14, Math.min(960 - pw - 14, px));
@@ -20742,18 +20870,18 @@ class UiManager {
     if (upgrades.length === 0) {
       // 已升至顶级
       ctx.save();
-      roundRectPath(ctx, bx, y + 118, btnW, 78, 10);
+      roundRectPath(ctx, bx, y + 118, btnW, 64, 10);
       ctx.fillStyle = 'rgba(62, 107, 56, 0.14)';
       ctx.fill();
       ctx.strokeStyle = THEME.BRONZE_MID;
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      drawUiIcon(ctx, 24, 'crown', x + w * 0.5 - 18, y + 124, 36);
+      drawUiIcon(ctx, 24, 'crown', x + w * 0.5 - 16, y + 123, 32);
       ctx.fillStyle = THEME.INK_DARK;
-      ctx.font = `bold 13px ${UI_FONT}`;
+      ctx.font = `bold 12.5px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`已升至最高阶 · 覆盖道路 ${cov.coveredTiles} 格`, x + w * 0.5, y + 174);
+      ctx.fillText(`已升至最高阶 · 覆盖道路 ${cov.coveredTiles} 格`, x + w * 0.5, y + 167);
       ctx.restore();
     } else if (upgrades.length === 1) {
       // 单分支升级 (Base -> LV1)
@@ -20762,7 +20890,7 @@ class UiManager {
       const upIcon = up.branch === 'A' ? 'branch_a' : (up.branch === 'B' ? 'branch_b' : 'upgrade');
       const upCat = (up.branch === 'A' || up.branch === 'B') ? 24 : 16;
 
-      if (this.isPointHovered(bx, y + 118, btnW, 38)) {
+      if (this.isPointHovered(bx, y + 118, btnW, 36)) {
         this.hoveredUpgradeNodeId = up.nodeId;
       }
       this.drawPixelButton(
@@ -20771,7 +20899,7 @@ class UiManager {
         bx,
         y + 118,
         btnW,
-        38,
+        36,
         `强化: ${i18n.t(up.nameKey)}`,
         {
           skin: canAfford ? 'btn_green' : 'btn_wood',
@@ -20790,7 +20918,7 @@ class UiManager {
 
       // 升级效果预览胶囊
       ctx.save();
-      roundRectPath(ctx, bx, y + 162, btnW, 28, 6);
+      roundRectPath(ctx, bx, y + 158, btnW, 25, 6);
       ctx.fillStyle = 'rgba(92, 64, 40, 0.08)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(140, 94, 42, 0.25)';
@@ -20801,16 +20929,18 @@ class UiManager {
       ctx.font = `11px ${UI_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`效果: ${i18n.t(up.descKey)}`, bx + 10, y + 176, btnW - 20);
+      ctx.fillText(`效果: ${i18n.t(up.descKey)}`, bx + 10, y + 170.5, btnW - 20);
       ctx.restore();
     } else if (upgrades.length === 2) {
-      // 双分支路线选择（甲线 vs 乙线）
+      // 双分支路线选择（甲线 vs 乙线）+ 悬停实时分支特性对比条
+      let hoveredBranch = null;
       for (let i = 0; i < 2; i++) {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
-        const by = y + 118 + i * 42;
-        if (this.isPointHovered(bx, by, btnW, 36)) {
+        const by = y + 116 + i * 35;
+        if (this.isPointHovered(bx, by, btnW, 32)) {
           this.hoveredUpgradeNodeId = up.nodeId;
+          hoveredBranch = up;
         }
         this.drawPixelButton(
           ctx,
@@ -20818,12 +20948,12 @@ class UiManager {
           bx,
           by,
           btnW,
-          36,
+          32,
           `${up.branch === 'A' ? '甲线' : '乙线'}: ${i18n.t(up.nameKey)}`,
           {
             skin: canAfford ? (up.branch === 'A' ? 'btn_blue' : 'btn_green') : 'btn_wood',
             align: 'left',
-            font: `bold 13px ${UI_FONT}`,
+            font: `bold 12.5px ${UI_FONT}`,
             iconCat: 24,
             iconKey: up.branch === 'A' ? 'branch_a' : 'branch_b',
             iconSize: 18,
@@ -20835,18 +20965,51 @@ class UiManager {
           }
         );
       }
+
+      ctx.save();
+      roundRectPath(ctx, bx, y + 186, btnW, 22, 6);
+      ctx.fillStyle = hoveredBranch ? 'rgba(64, 44, 24, 0.14)' : 'rgba(92, 64, 40, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = hoveredBranch ? THEME.BRONZE_MID : 'rgba(140, 94, 42, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = hoveredBranch ? THEME.INK_DARK : THEME.INK_MID;
+      ctx.font = `${hoveredBranch ? 'bold ' : ''}10.5px ${UI_FONT}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const branchTip = hoveredBranch
+        ? `${hoveredBranch.branch === 'A' ? '甲线' : '乙线'}效果: ${i18n.t(hoveredBranch.descKey)}`
+        : '悬停甲线 / 乙线可实时预览分支特性与射程增幅';
+      ctx.fillText(branchTip, bx + 8, y + 197, btnW - 16);
+      ctx.restore();
     }
 
-    // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 30px 下边距，不贴木框）
+    // 3.5 单塔累计战功统计栏 (Pop Count & Damage Contribution)
+    const tdmg = Math.round(tower.totalDamage || 0);
+    const tdmgStr = tdmg >= 1000 ? `${(tdmg / 1000).toFixed(1)}k` : String(tdmg);
+    const tkills = tower.kills || 0;
+    ctx.save();
+    roundRectPath(ctx, bx, y + 211, btnW, 20, 5);
+    ctx.fillStyle = 'rgba(72, 48, 28, 0.08)';
+    ctx.fill();
+    ctx.fillStyle = THEME.INK_MID;
+    ctx.font = `bold 10.5px ${UI_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`本塔战功：输出 ${tdmgStr} 伤害  ·  击杀 ${tkills} 虫  ·  覆路 ${cov.coveredTiles} 格`, bx + btnW * 0.5, y + 221, btnW - 12);
+    ctx.restore();
+
+    // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 22px 下边距，不贴木框）
     const prioKey = 'prio_' + tower.priority;
     const canCyclePrio = (def.priorities && def.priorities.length > 1);
     this.drawPixelButton(
       ctx,
       'btn_tower_prio',
       bx,
-      y + 208,
+      y + 236,
       btnW,
-      36,
+      34,
       `切换索敌策略：${i18n.t(prioKey)}`,
       {
         skin: 'btn_blue',
@@ -22776,6 +22939,14 @@ class UiManager {
 
       ctx.restore();
 
+      if (this.isPointHovered(cx, cy, cardW, cardH)) {
+        this.bottomHoverTip = {
+          x: cx + cardW * 0.5,
+          y: 446,
+          text: `[${i + 1}] ${i18n.t(def.nameKey)} (${cost}孢) · ${i18n.t(def.roleKey)} · 点选地基或拖拽建造`
+        };
+      }
+
       this.registerButton('slot_' + tId, cx, cy, cardW, cardH, () => {
         scene.selectBuildTowerType(tId);
         platform.playSfx('sfx_click');
@@ -22788,6 +22959,13 @@ class UiManager {
     const awkW = 68;
     const awkH = cardH;
     const isAwk = Boolean(scene.activeAwakeningTargeting);
+    if (this.isPointHovered(awkX, awkY, awkW, awkH)) {
+      this.bottomHoverTip = {
+        x: awkX + awkW * 0.5,
+        y: 446,
+        text: `[空格] 灵能觉醒种子 (余 ${scene.awakeningSeeds || 0} 颗) · 激活后点击守卫释放全屏大招`
+      };
+    }
 
     ctx.save();
     if (!this.drawAiFrame(ctx, isAwk ? 'btn_green' : 'tower_card', awkX, awkY, awkW, awkH, 0.98)) {
@@ -22905,7 +23083,9 @@ class UiManager {
     ctx.save();
     const currentW = waveMgr.currentWaveIndex;
     const totalW = waveMgr.totalWaves;
-    const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
+    const isEndless = Boolean(scene.isEndlessMode);
+    const subProg = typeof waveMgr.getWaveSubProgress === 'function' ? waveMgr.getWaveSubProgress(scene.enemyManager) : 0.5;
+    const ratio = isEndless ? Math.max(0.06, subProg) : Math.max(0, Math.min(1.0, ((currentW - 1) + subProg) / Math.max(1, totalW)));
 
     // 外围使用叶片安全的 3-Slice 橡木牌匾框
     if (!this.drawAiFrame(ctx, 'top_bar', barX, barY, barW, barH, 0.98)) {
@@ -22917,7 +23097,7 @@ class UiManager {
       ctx.stroke();
     }
 
-    // 内部深嵌进度槽（严格放在木牌匾中心橡木区 barX+18..barX+182, barY+13..barY+43）
+    // 内部深嵌进度槽（实时随当波清怪推进平滑充能；无尽模式呈现紫色深渊流光槽）
     const slotX = barX + 18;
     const slotY = barY + 13;
     const slotW = barW - 36;
@@ -22925,7 +23105,7 @@ class UiManager {
     roundRectPath(ctx, slotX, slotY, slotW, slotH, 6);
     ctx.fillStyle = 'rgba(16, 11, 7, 0.88)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.55)';
+    ctx.strokeStyle = isEndless ? 'rgba(179, 127, 235, 0.65)' : 'rgba(198, 143, 69, 0.55)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
@@ -22933,7 +23113,10 @@ class UiManager {
       const fillW = Math.max(8, Math.round((slotW - 4) * ratio));
       roundRectPath(ctx, slotX + 2, slotY + 2, fillW, slotH - 4, 4);
       const barGrad = ctx.createLinearGradient(slotX, slotY, slotX, slotY + slotH);
-      if (currentW >= totalW) {
+      if (isEndless) {
+        barGrad.addColorStop(0, '#B37FEB');
+        barGrad.addColorStop(1, '#531DAB');
+      } else if (currentW >= totalW) {
         barGrad.addColorStop(0, '#FF7875');
         barGrad.addColorStop(1, '#A8071A');
       } else {
@@ -22944,8 +23127,9 @@ class UiManager {
       ctx.fill();
     }
 
-    drawArtText(ctx, '第 ' + currentW + ' / ' + totalW + ' 波', barX + barW * 0.5, barY + barH * 0.5, {
-      style: currentW >= totalW ? 'crimson' : 'gold',
+    const waveTitle = isEndless ? `🔥 无尽第 ${currentW} 波` : `第 ${currentW} / ${totalW} 波`;
+    drawArtText(ctx, waveTitle, barX + barW * 0.5, barY + barH * 0.5, {
+      style: isEndless ? 'parchment' : (currentW >= totalW ? 'crimson' : 'gold'),
       size: 13.5,
       align: 'center',
       baseline: 'middle',
@@ -23075,6 +23259,13 @@ class UiManager {
     });
     ctx.restore();
 
+    if (this.isPointHovered(stX, stY, stW, stH)) {
+      this.bottomHoverTip = {
+        x: 110,
+        y: 344,
+        text: '[Z] 切换英雄姿态：守卫(高甲回春) · 狂暴(高攻速伤) · 游侠(飞刺游击)'
+      };
+    }
     this.registerButton('pvz_hero_stance', stX, stY, stW, stH, () => {
       hero.cycleStance(scene.fx);
       if (hero.stanceSwitchedCount >= 3 && scene.achievements) {
@@ -23108,6 +23299,13 @@ class UiManager {
     });
     ctx.restore();
 
+    if (this.isPointHovered(ultX, ultY, ultW, ultH)) {
+      this.bottomHoverTip = {
+        x: 118,
+        y: 344,
+        text: ultReady ? '[F] 施放英雄奥义「大地裂地斩」· 范围重击并眩晕周围虫潮' : `英雄奥义冷却中 (${Math.ceil(ultCd)}s)`
+      };
+    }
     this.registerButton('pvz_hero_ult', ultX, ultY, ultW, ultH, () => {
       if (ultReady && typeof hero.castUltimateSkill === 'function') {
         hero.castUltimateSkill(scene.enemyManager, scene.fx);
@@ -23117,44 +23315,74 @@ class UiManager {
       }
     });
 
-    // 1.3 英雄圆形头像盘（严密位于内框中左安全区）
+    // 1.3 英雄圆形头像盘（外圈显示生命与琥珀经验进度环；阵亡显示复活读秒扫盘）
+    const isDead = hero.state === 'dead';
+    const xpRatio = hero.level >= hero.maxLevel ? 1.0 : Math.max(0, Math.min(1.0, (hero.xp || 0) / Math.max(1, hero.xpToNext || 100)));
     ctx.save();
     ctx.beginPath();
     ctx.arc(hx, hy, hr, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
+    ctx.fillStyle = isDead ? 'rgba(16, 12, 12, 0.96)' : 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
     ctx.strokeStyle = (scene.activeHeroRally || hero.isSelected) ? '#FFD700' : '#C68F45';
     ctx.lineWidth = (scene.activeHeroRally || hero.isSelected) ? 2.2 : 1.5;
     ctx.stroke();
 
     const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
-    ctx.beginPath();
-    ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
-    ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
-    ctx.lineWidth = 2.6;
-    ctx.stroke();
+    if (hpRatio > 0 && !isDead) {
+      ctx.beginPath();
+      ctx.arc(hx, hy, hr + 1.8, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
+      ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+    }
+
+    // 外圈琥珀金色 XP 经验进展弧线
+    if (xpRatio > 0) {
+      ctx.beginPath();
+      ctx.arc(hx, hy, hr + 4.3, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * xpRatio);
+      ctx.strokeStyle = hero.level >= hero.maxLevel ? '#FFD700' : 'rgba(255, 214, 102, 0.82)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
 
     const heroImg = platform.getImage('assets/vfx/hero_oak.png');
     if (heroImg && heroImg.width) {
+      if (isDead) ctx.globalAlpha = 0.38;
       ctx.drawImage(heroImg, hx - 13, hy - 13, 26, 26);
+      ctx.globalAlpha = 1.0;
     } else {
       drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 15, align: 'center', baseline: 'middle' });
     }
 
-    if (ultReady) {
-      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.08;
-      ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.65 + Math.sin(this.uiAnimTime * 8) * 0.25) + ')';
-      ctx.lineWidth = 1.6;
+    if (isDead) {
+      const revRatio = Math.max(0, Math.min(1.0, (hero.reviveTimer || 0) / Math.max(1, hero.reviveTimeTotal || 14)));
       ctx.beginPath();
-      ctx.arc(hx, hy, (hr + 3.5) * uPulse, 0, Math.PI * 2);
+      ctx.moveTo(hx, hy);
+      ctx.arc(hx, hy, hr, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * revRatio);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fill();
+      drawArtText(ctx, `${Math.ceil(hero.reviveTimer || 0)}s`, hx, hy, {
+        style: 'crimson',
+        size: 10.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0
+      });
+    } else if (ultReady) {
+      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.08;
+      ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.55 + Math.sin(this.uiAnimTime * 8) * 0.25) + ')';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.arc(hx, hy, (hr + 5.8) * uPulse, 0, Math.PI * 2);
       ctx.stroke();
     }
 
     roundRectPath(ctx, hx - 13, 437.5, 26, 11, 4);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
     ctx.fill();
-    drawArtText(ctx, 'Lv.' + (hero.level || 1), hx, 443, {
-      style: 'gold',
+    drawArtText(ctx, isDead ? '复活' : ('Lv.' + (hero.level || 1)), hx, 443, {
+      style: isDead ? 'crimson' : 'gold',
       size: 9,
       align: 'center',
       baseline: 'middle',
@@ -23162,6 +23390,14 @@ class UiManager {
     });
     ctx.restore();
 
+    if (this.isPointHovered(hx - hr, hy - hr, hr * 2, hr * 2)) {
+      const xpNeed = hero.level >= hero.maxLevel ? '已满阶' : `还差 ${Math.max(0, Math.ceil((hero.xpToNext || 100) - (hero.xp || 0)))} 经验进阶`;
+      this.bottomHoverTip = {
+        x: 112,
+        y: 344,
+        text: isDead ? `橡木守护者阵亡中 (${Math.ceil(hero.reviveTimer || 0)}s 后重生)` : `橡木守护者 Lv.${hero.level} (${Math.round(hero.hp)}/${hero.maxHp} 生命 · ${xpNeed}) · 点击后点地调遣`
+      };
+    }
     this.registerButton('pvz_hero_badge', hx - hr, hy - hr, hr * 2, hr * 2, () => {
       scene.activeHeroRally = !scene.activeHeroRally;
       hero.isSelected = scene.activeHeroRally;
@@ -23173,10 +23409,10 @@ class UiManager {
 
     // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]集结0) — 严密收进右下安全区 [62..164, 417..450]
     const spellList = [
-      { id: 'rain', name: '甘霖', key: 'Q', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
-      { id: 'shock', name: '天雷', key: 'W', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
-      { id: 'harvest', name: '丰饶', key: 'E', cost: 0, icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
-      { id: 'rally', name: '集结', key: 'R', cost: 0, icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
+      { id: 'rain', name: '自然甘霖', key: 'Q', cost: 45, tip: '全场友军恢复生命并攻速翻倍 6s', icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
+      { id: 'shock', name: '雷霆震爆', key: 'W', cost: 75, tip: '区域落雷轰击并眩晕敌军 3s', icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
+      { id: 'harvest', name: '大地丰收', key: 'E', cost: 0, tip: '立刻凝结 +120 黄金孢子', icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
+      { id: 'rally', name: '菇精卫集结', key: 'R', cost: 0, tip: '点击巡逻道路派遣双哨菇精卫近战拦截', icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
     const orbR = 10.5;
@@ -23240,6 +23476,14 @@ class UiManager {
 
       ctx.restore();
 
+      if (this.isPointHovered(ox - orbR, oy - orbR, orbR * 2, orbR * 2)) {
+        const costTag = spItem.cost > 0 ? `(${spItem.cost}孢)` : '(免费)';
+        this.bottomHoverTip = {
+          x: 118,
+          y: 344,
+          text: spCd > 0 ? `[${spItem.key}] ${spItem.name} · 冷却中 (${Math.ceil(spCd)}s)` : `[${spItem.key}] ${spItem.name} ${costTag} · ${spItem.tip}`
+        };
+      }
       this.registerButton('pvz_spell_' + spItem.id, ox - orbR, oy - orbR, orbR * 2, orbR * 2, () => {
         if (canCast) {
           scene.triggerSpell(spItem.id);

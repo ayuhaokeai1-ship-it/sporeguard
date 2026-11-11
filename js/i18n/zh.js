@@ -59,7 +59,7 @@ module.exports = {
   btn_start: '开始守林',
   btn_level_select: '选择林区',
   btn_settings: '系统设置',
-  btn_guide: '作战指南',
+  btn_guide: '林地秘典',
   btn_back: '返回',
   btn_resume: '继续战斗',
   btn_restart: '重新挑战',

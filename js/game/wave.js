@@ -98,6 +98,30 @@ class WaveManager {
   }
 
   /**
+   * 计算当前战斗波次的实时推进百分比 (0.0 -> 1.0)，用于平滑波次进度条与无尽模式展示
+   */
+  getWaveSubProgress(enemyManager) {
+    if (this.phase !== 'combat' || !this.activeGroups || this.activeGroups.length === 0) {
+      return this.phase === 'completed' ? 1.0 : 0.0;
+    }
+    let totalToSpawn = 0;
+    let totalSpawned = 0;
+    for (let i = 0; i < this.activeGroups.length; i++) {
+      const g = this.activeGroups[i];
+      totalToSpawn += (g.count || 0);
+      totalSpawned += (g.spawned || 0);
+    }
+    if (totalToSpawn <= 0) return 0.5;
+    const spawnRatio = Math.min(1.0, totalSpawned / totalToSpawn);
+    const aliveCount = (enemyManager && typeof enemyManager.getAliveEnemies === 'function')
+      ? enemyManager.getAliveEnemies().length
+      : 0;
+    const defeatedCount = Math.max(0, totalSpawned - aliveCount);
+    const killRatio = Math.min(1.0, defeatedCount / totalToSpawn);
+    return Math.max(0.05, Math.min(1.0, spawnRatio * 0.45 + killRatio * 0.55));
+  }
+
+  /**
    * 进入无尽深渊模式
    */
   startEndlessMode(economy, fx) {

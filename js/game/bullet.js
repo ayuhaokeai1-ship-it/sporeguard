@@ -72,14 +72,15 @@ class BulletManager {
         b.armorPierceRatio = 0;
         b.flatArmorPierce = 0;
         b.holySmite = false;
+        b.sourceTower = null;
       },
       CONFIG.POOL_CAPS.BULLETS
     );
 
-    // 雾团与灼烧区对象池（上限 40）
+    // 雾团、酸雾与灼烧区对象池（上限 40）
     this.hazardPool = new ObjectPool(
       () => ({
-        kind: 'mist', // 'mist' | 'burn'
+        kind: 'mist', // 'mist' | 'burn' | 'acid'
         spriteKey: 'mist_base',
         x: 0,
         y: 0,
@@ -91,9 +92,18 @@ class BulletManager {
         armorReduction: 0,
         dps: 4,
         affectAir: true,
-        color: PALETTE.BRANCH_A
+        color: PALETTE.BRANCH_A,
+        sourceTower: null
       }),
-      null,
+      (h) => {
+        h.sourceTower = null;
+        h.slow = 0;
+        h.residualSlowDuration = 0;
+        h.armorReduction = 0;
+        h.dps = 0;
+        h.timer = 0;
+        h.affectAir = true;
+      },
       CONFIG.POOL_CAPS.HAZARDS
     );
   }
@@ -233,6 +243,9 @@ class BulletManager {
         ex.duration = Math.max(ex.duration, node.cloudDuration || 3.0);
         ex.slow = Math.max(ex.slow, node.slow || 0.30);
         ex.dps = Math.max(ex.dps, node.dps || 4);
+        if (node.sourceTower && !ex.sourceTower) {
+          ex.sourceTower = node.sourceTower;
+        }
         return ex;
       }
     }
@@ -252,6 +265,7 @@ class BulletManager {
     h.dps = node.dps || 4;
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
+    h.sourceTower = node.sourceTower || null;
     return h;
   }
 
@@ -275,6 +289,32 @@ class BulletManager {
     h.dps = burnCfg.dps || 8;
     h.affectAir = false; // 爆裂菇灼烧区仅作用于地面
     h.color = PALETTE.BRANCH_B;
+    h.sourceTower = burnCfg.sourceTower || null;
+    return h;
+  }
+
+  /**
+   * 通用地面持续区域生成器（酸雾腐蚀区等元素反应/机关衍生物）
+   */
+  spawnHazard(cfg = {}) {
+    const h = this.hazardPool.acquire(true);
+    if (!h) return null;
+
+    const kind = cfg.kind || 'acid';
+    h.kind = kind;
+    h.spriteKey = cfg.spriteKey || (kind === 'acid' ? 'acid_0' : (kind === 'mist' ? 'mist_base' : 'burn_0'));
+    h.x = Number(cfg.x) || 0;
+    h.y = Number(cfg.y) || 0;
+    h.radiusPx = Math.max(16, Number(cfg.radiusPx) || 48);
+    h.duration = Math.max(0.2, Number(cfg.duration) || 3.5);
+    h.timer = 0;
+    h.slow = Number(cfg.slow) || 0;
+    h.residualSlowDuration = Number(cfg.residualSlowDuration) || 0;
+    h.armorReduction = cfg.armorReduction !== undefined ? cfg.armorReduction : (kind === 'acid' ? 0.25 : 0);
+    h.dps = Number(cfg.dps) || 0;
+    h.affectAir = cfg.affectAir !== undefined ? Boolean(cfg.affectAir) : false;
+    h.color = cfg.color || (kind === 'acid' ? '#A0D911' : (kind === 'mist' ? PALETTE.BRANCH_A : PALETTE.BRANCH_B));
+    h.sourceTower = cfg.sourceTower || null;
     return h;
   }
 
@@ -313,6 +353,9 @@ class BulletManager {
           }
           if (h.dps > 0) {
             e.dotSources.push(h.dps);
+            if (h.sourceTower) {
+              h.sourceTower.totalDamage = (h.sourceTower.totalDamage || 0) + h.dps * dt;
+            }
           }
         }
       }
@@ -377,7 +420,7 @@ class BulletManager {
             economy,
             fx,
             'lumina',
-            { holySmite: b.holySmite }
+            { holySmite: b.holySmite, sourceTower: b.sourceTower }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'light', enemyManager, economy, fx, this.combatJuice);
@@ -461,7 +504,7 @@ class BulletManager {
             economy,
             fx,
             'watch',
-            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
+            { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0, sourceTower: b.sourceTower }
           );
           if (this.elementalCombos) {
             this.elementalCombos.checkCombo(tgt, 'wood', enemyManager, economy, fx, this.combatJuice);
@@ -559,7 +602,7 @@ class BulletManager {
               economy,
               fx,
               'thorn',
-              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0 }
+              { armorPierceRatio: b.armorPierceRatio || 0, flatArmorPierce: b.flatArmorPierce || 0, sourceTower: b.sourceTower }
             );
             if (fx) {
               fx.onSingleHit(e.x, e.y, b.branchColor);
@@ -653,7 +696,9 @@ class BulletManager {
                 combatTimeSec,
                 map,
                 economy,
-                fx
+                fx,
+                'burst',
+                { sourceTower: b.sourceTower }
               );
               if (this.elementalCombos) {
                 this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
@@ -702,6 +747,10 @@ class BulletManager {
         grad.addColorStop(0, `rgba(179, 127, 235, ${0.28 * alpha})`);
         grad.addColorStop(0.55, `rgba(146, 84, 222, ${0.16 * alpha})`);
         grad.addColorStop(1, 'rgba(114, 46, 209, 0)');
+      } else if (h.kind === 'acid') {
+        grad.addColorStop(0, `rgba(160, 217, 17, ${0.34 * alpha})`);
+        grad.addColorStop(0.55, `rgba(91, 140, 0, ${0.20 * alpha})`);
+        grad.addColorStop(1, 'rgba(35, 120, 4, 0)');
       } else {
         grad.addColorStop(0, `rgba(255, 122, 69, ${0.35 * alpha})`);
         grad.addColorStop(0.60, `rgba(212, 56, 13, ${0.18 * alpha})`);
@@ -712,9 +761,21 @@ class BulletManager {
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
 
+      if (h.kind === 'acid') {
+        ctx.strokeStyle = `rgba(186, 230, 55, ${0.36 * alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       // 少量飘动的柔和微光孢子粒子
       const pulseTime = animTimeSec * 2.2 + i;
-      ctx.fillStyle = h.kind === 'mist' ? `rgba(211, 173, 247, ${0.40 * alpha})` : `rgba(255, 213, 145, ${0.40 * alpha})`;
+      ctx.fillStyle = h.kind === 'mist'
+        ? `rgba(211, 173, 247, ${0.40 * alpha})`
+        : (h.kind === 'acid'
+          ? `rgba(186, 230, 55, ${0.52 * alpha})`
+          : `rgba(255, 213, 145, ${0.40 * alpha})`);
       for (let pIdx = 0; pIdx < 3; pIdx++) {
         const pAng = (pIdx / 3) * Math.PI * 2 + pulseTime * 0.35;
         const pDist = r * 0.45 + Math.sin(pulseTime + pIdx) * (r * 0.15);

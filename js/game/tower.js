@@ -95,7 +95,9 @@ class TowerManager {
       isWebbed: false,     // 是否被腐化蛛丝封印瘫痪
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
-      superchargeTimer: 0  // 能量肥料超频大招倒计时
+      superchargeTimer: 0, // 能量肥料超频大招倒计时
+      totalDamage: 0,
+      kills: 0
     };
 
     const tile = map.getTile(col, row);
@@ -858,15 +860,18 @@ class TowerManager {
       if (tower.synergies && tower.synergies.hasTwinWatch) {
         watchNode.critChance = (watchNode.critChance || 0) + 0.20;
       }
-      bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
+      const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
+      if (wb) wb.sourceTower = tower;
       if (this.mushroomMastery && this.mushroomMastery.hasMastery('watch', 'watch_m2')) {
         if (Math.random() < 0.22) {
-          bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
+          const wb2 = bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
+          if (wb2) wb2.sourceTower = tower;
         }
       }
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'mist') {
-      bulletManager.spawnMistCloud(target.x, target.y, node);
+      const mh = bulletManager.spawnMistCloud(target.x, target.y, node);
+      if (mh) mh.sourceTower = tower;
       platform.playSfx('sfx_mist');
     } else if (tower.typeId === 'thorn') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);
@@ -876,23 +881,28 @@ class TowerManager {
 
       // 主刺
       const thornOpts = { hasPoisonThorn: tower.synergies && tower.synergies.hasPoisonThorn };
-      bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      const tb = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
+      if (tb) tb.sourceTower = tower;
 
       // A3 箭袋：每次齐射增加 2 根侧刺（左右各偏 12°），侧刺伤害 50%
       if (node.sideSpikes && node.sideSpikes >= 2) {
         const deltaRad = ((node.sideAngleDeg || 12) * Math.PI) / 180;
         const sideRatio = node.sideDamageRatio || 0.50;
-        bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle - deltaRad, node, baseDmg, sideRatio);
-        bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle + deltaRad, node, baseDmg, sideRatio);
+        const tbL = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle - deltaRad, node, baseDmg, sideRatio);
+        const tbR = bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle + deltaRad, node, baseDmg, sideRatio);
+        if (tbL) tbL.sourceTower = tower;
+        if (tbR) tbR.sourceTower = tower;
       }
       platform.playSfx('sfx_thorn');
     } else if (tower.typeId === 'burst') {
       const pred = enemyManager.predictEnemyPosition(target, node.flightTime || 0.38, map);
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
-      bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
+      const bb = bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
+      if (bb) bb.sourceTower = tower;
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'lumina') {
-      bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
+      const lb = bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
+      if (lb) lb.sourceTower = tower;
       platform.playSfx('sfx_laser');
     }
   }

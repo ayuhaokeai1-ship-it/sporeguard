@@ -59,7 +59,7 @@ module.exports = {
   btn_start: 'START GAME',
   btn_level_select: 'SELECT MAP',
   btn_settings: 'SETTINGS',
-  btn_guide: 'HOW TO PLAY',
+  btn_guide: 'CODEX',
   btn_back: 'BACK',
   btn_resume: 'RESUME',
   btn_restart: 'RESTART',

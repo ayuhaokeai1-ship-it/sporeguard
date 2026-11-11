@@ -333,6 +333,10 @@ class EnemyManager {
     const isKilled = enemy.hp <= 0;
 
     const dType = damageType || (appliesMark ? 'watch' : 'burst');
+    if (opts.sourceTower) {
+      opts.sourceTower.totalDamage = (opts.sourceTower.totalDamage || 0) + Math.round(actualDamage);
+      if (isKilled) opts.sourceTower.kills = (opts.sourceTower.kills || 0) + 1;
+    }
     if (this.scene) {
       if (this.scene.combatAnalytics) {
         this.scene.combatAnalytics.recordDamage(dType, Math.round(actualDamage), isKilled);
