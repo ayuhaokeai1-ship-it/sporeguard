@@ -352,10 +352,11 @@ class BulletManager {
             e.armorReduction = Math.max(e.armorReduction, h.armorReduction);
           }
           if (h.dps > 0) {
-            e.dotSources.push(h.dps);
-            if (h.sourceTower) {
-              h.sourceTower.totalDamage = (h.sourceTower.totalDamage || 0) + h.dps * dt;
-            }
+            e.dotSources.push({
+              dps: h.dps,
+              sourceTower: h.sourceTower || null,
+              kind: h.kind || 'mist'
+            });
           }
         }
       }
@@ -716,7 +717,10 @@ class BulletManager {
 
           // B3 熔金：爆心留下灼烧区（半径 1.0 格，持续 3 秒，每秒 8 点伤害）
           if (b.burnZoneCfg) {
-            this.spawnBurnZone(b.targetX, b.targetY, b.burnZoneCfg);
+            const burnCfg = b.sourceTower
+              ? Object.assign({}, b.burnZoneCfg, { sourceTower: b.sourceTower })
+              : b.burnZoneCfg;
+            this.spawnBurnZone(b.targetX, b.targetY, burnCfg);
           }
 
           this.bulletPool.releaseAt(i);

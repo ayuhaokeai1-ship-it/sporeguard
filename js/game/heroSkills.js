@@ -144,7 +144,11 @@ class HeroSkillSystem {
           // 判定处于英雄面朝方向的半圆内
           const dirX = e.x - hx;
           if (dirX * facing >= -15) {
-            e.takeDamage(this.skills.cleave.damage, scene.fx, 'physical');
+            if (scene && scene.enemyManager && typeof scene.enemyManager.applyDamage === 'function') {
+              scene.enemyManager.applyDamage(e, this.skills.cleave.damage, false, 'physical', scene.fx, 'hero');
+            } else {
+              e.takeDamage(this.skills.cleave.damage, scene.fx, 'physical', 'hero');
+            }
             e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
             // 物理后退击退
             e.x += facing * 26;
@@ -204,7 +208,11 @@ class HeroSkillSystem {
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
         if (Math.hypot(e.x - hx, e.y - hy) <= radius) {
-          e.takeDamage(this.skills.roots.damage, scene.fx, 'nature');
+          if (scene && scene.enemyManager && typeof scene.enemyManager.applyDamage === 'function') {
+            scene.enemyManager.applyDamage(e, this.skills.roots.damage, false, 'nature', scene.fx, 'hero');
+          } else {
+            e.takeDamage(this.skills.roots.damage, scene.fx, 'nature', 'hero');
+          }
           e.rootTimer = Math.max(e.rootTimer || 0, this.skills.roots.duration);
           count++;
         }

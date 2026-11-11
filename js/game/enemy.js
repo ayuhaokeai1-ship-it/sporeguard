@@ -35,17 +35,22 @@ class EnemyManager {
     const self = this;
     this.pool = new ObjectPool(
       () => ({
-        takeDamage(amount, fx = null, dType = 'nature') {
+        takeDamage(amount, fx = null, dType = 'nature', sourceCat = null) {
           if (this.state === 'death' || this.hp <= 0) return;
           const dmg = Math.max(1, Math.round(amount));
           this.hp -= dmg;
           this.whiteFlashFrames = 2;
+          const isKilled = this.hp <= 0;
+          if (self.scene && self.scene.combatAnalytics) {
+            const cat = sourceCat || (dType === 'physical' ? 'hero' : 'reactions');
+            self.scene.combatAnalytics.recordDamage(cat, dmg, isKilled);
+          }
           if (fx) {
             if (typeof fx.spawnFloatingText === 'function') {
               fx.spawnFloatingText(Math.round(this.x), Math.round(this.y - 14), '-' + dmg, '#FF4D4F', 0.9);
             }
           }
-          if (this.hp <= 0) {
+          if (isKilled) {
             self.killEnemy(this, fx);
           }
         },
@@ -182,6 +187,23 @@ class EnemyManager {
     e.slowImmune = false;
     e.markTimer = 0;
     e.armorReduction = 0;
+    e.burnTimer = 0;
+    e.burnDps = 0;
+    e.poisonTimer = 0;
+    e.poisonDps = 0;
+    e.freezeTimer = 0;
+    e.isDeepFrozen = false;
+    e.rootTimer = 0;
+    e.stunTimer = 0;
+    e._reactCd = 0;
+    if (e.elementAuras) {
+      e.elementAuras.pyro = 0;
+      e.elementAuras.hydro = 0;
+      e.elementAuras.electro = 0;
+      e.elementAuras.cryo = 0;
+      e.elementAuras.toxic = 0;
+      e.elementAuras.dendro = 0;
+    }
     e.dotSources.length = 0;
 
     e.state = 'walk';
@@ -470,6 +492,23 @@ class EnemyManager {
 
     enemy.hp -= dmg;
     enemy.whiteFlashFrames = 3;
+    const isKilled = enemy.hp <= 0;
+
+    if (source && typeof source === 'object' && source.typeId) {
+      source.totalDamage = (source.totalDamage || 0) + dmg;
+      if (isKilled) source.kills = (source.kills || 0) + 1;
+    }
+    if (this.scene && this.scene.combatAnalytics) {
+      let analyticsCat = null;
+      if (typeof source === 'string' && source) {
+        analyticsCat = source;
+      } else if (source && source.typeId) {
+        analyticsCat = source.typeId;
+      } else {
+        analyticsCat = dType === 'physical' ? 'hero' : 'reactions';
+      }
+      this.scene.combatAnalytics.recordDamage(analyticsCat, dmg, isKilled);
+    }
 
     if (finalFx && typeof finalFx.spawnFloatingText === 'function') {
       const color = isCrit ? '#FFD700' : (dType === 'magic' ? '#69C0FF' : (dType === 'pierce' ? '#FF7A45' : '#FF4D4F'));
@@ -477,7 +516,7 @@ class EnemyManager {
       finalFx.spawnFloatingText(Math.round(enemy.x), Math.round(enemy.y - 14), text, color, isCrit ? 1.2 : 0.9);
     }
 
-    if (enemy.hp <= 0) {
+    if (isKilled) {
       this.killEnemy(enemy, finalFx);
     }
     return dmg;
@@ -654,23 +693,64 @@ class EnemyManager {
         e.residualSlowTimer = Math.max(0, e.residualSlowTimer - dt);
       }
 
-      // 5.4 & 5.5 结算持续伤害（雾团、灼烧区）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
+      // 递减火焰灼烧与酸液毒素持续伤害计步，注入统一 DoT 结算管线
+      if (e.burnTimer > 0) {
+        e.burnTimer = Math.max(0, e.burnTimer - dt);
+        e.dotSources.push({ dps: e.burnDps || 18, sourceTower: null, kind: 'reactions' });
+      }
+      if (e.poisonTimer > 0) {
+        e.poisonTimer = Math.max(0, e.poisonTimer - dt);
+        e.dotSources.push({ dps: e.poisonDps || 24, sourceTower: null, kind: 'reactions' });
+      }
+
+      // 5.4 & 5.5 结算持续伤害（雾团、灼烧区、元素酸毒）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
       if (e.dotSources.length > 0) {
+        const readDps = (s) => (typeof s === 'number' ? s : (s && s.dps ? s.dps : 0));
         if (e.dotSources.length > CONFIG.COMBAT.MAX_DOT_SOURCES) {
-          e.dotSources.sort((a, b) => b - a);
+          e.dotSources.sort((a, b) => readDps(b) - readDps(a));
         }
         const count = Math.min(CONFIG.COMBAT.MAX_DOT_SOURCES, e.dotSources.length);
         const effArmor = this.getEffectiveArmor(e);
         let totalDps = 0;
+        let topTickDmg = -1;
+        let topSourceTower = null;
+        let topAnalyticsCat = 'mist';
+        const analytics = this.scene ? this.scene.combatAnalytics : null;
+
         for (let k = 0; k < count; k++) {
-          const srcDps = e.dotSources[k];
+          const entry = e.dotSources[k];
+          const srcDps = readDps(entry);
+          if (srcDps <= 0) continue;
           const actualDps = Math.max(srcDps - effArmor, srcDps * CONFIG.COMBAT.MIN_ARMOR_DAMAGE_RATIO);
+          const tickDmg = actualDps * dt;
           totalDps += actualDps;
+
+          const sTower = entry && typeof entry === 'object' ? entry.sourceTower : null;
+          const kind = entry && typeof entry === 'object' ? entry.kind : 'mist';
+          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : 'reactions');
+
+          if (sTower) {
+            sTower.totalDamage = (sTower.totalDamage || 0) + tickDmg;
+          }
+          if (analytics) {
+            analytics.recordDamage(cat, tickDmg, false);
+          }
+          if (tickDmg > topTickDmg) {
+            topTickDmg = tickDmg;
+            topSourceTower = sTower;
+            topAnalyticsCat = cat;
+          }
         }
         e.hp -= totalDps * dt;
         e.dotSources.length = 0;
 
         if (e.hp <= 0) {
+          if (topSourceTower) {
+            topSourceTower.kills = (topSourceTower.kills || 0) + 1;
+          }
+          if (analytics && typeof analytics.recordKill === 'function') {
+            analytics.recordKill(topAnalyticsCat);
+          }
           this.handleEnemyDeath(e, totalDps, combatTimeSec, map, economy, fx);
           continue;
         }

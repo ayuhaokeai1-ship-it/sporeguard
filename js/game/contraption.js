@@ -291,7 +291,7 @@ class ForestContraptions {
           scene.economy.spendSpores(p.cost);
           p.cd = p.maxCd;
           p.digestTimer = 4.0;
-          scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx);
+          scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
           scene.fx.spawnFloatingText(p.x, p.y - 20, '巨口吞噬!', '#722ED1', 1.35);
           scene.fx.spawnParticles(p.x, p.y, 25, ['#722ED1', '#B7EB8F', '#52C41A', '#FFD700'], 35, 80);
           platform.playSfx('sfx_mist');
@@ -331,7 +331,7 @@ class ForestContraptions {
           const e = enemies[i];
           if (!e.__active || e.state === 'death') continue;
           if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
-            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx);
+            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
             scene.enemyManager.applyStun(e, 2.2);
             hitCount += 1;
             if (scene.fx) {

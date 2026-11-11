@@ -126,7 +126,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.15 + 35);
     this.recordReaction('wildfire', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire', 'reactions');
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FF4D4F');
       scene.fx.spawnRing(enemy.x, enemy.y, 65, '#FF7A45', 0.45);
@@ -142,7 +142,7 @@ class ElementalReactionSystem {
         if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 72) {
           other.burnTimer = 3.0;
           other.burnDps = 18;
-          other.takeDamage(Math.round(dmg * 0.45), null, 'fire');
+          other.takeDamage(Math.round(dmg * 0.45), null, 'fire', 'reactions');
           hits++;
         }
       }
@@ -159,7 +159,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.15 + 45);
     this.recordReaction('superconduct', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
     enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.35); // 削减 35% 护甲
     platform.playSfx('sfx_shock');
 
@@ -180,12 +180,8 @@ class ElementalReactionSystem {
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
         if (d2 <= 120 * 120) {
           const chainDmg = Math.round(dmg * 0.55);
-          next.hp -= chainDmg;
-          next.whiteFlashFrames = 2;
           next.armorReduction = Math.max(next.armorReduction || 0, 0.30);
-          if (next.hp <= 0) {
-            scene.enemyManager.killEnemy(next, scene.fx);
-          }
+          next.takeDamage(chainDmg, scene ? scene.fx : null, 'shock', 'reactions');
 
           if (this.chainArcs.length < 8) {
             this.chainArcs.push({
@@ -215,7 +211,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.1 + 30);
     this.recordReaction('freeze', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost', 'reactions');
     enemy.freezeTimer = 1.6; // 深度冰冻 1.6 秒
     enemy.isDeepFrozen = true;
     platform.playSfx('sfx_mist');
@@ -235,7 +231,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.25 + 60);
     this.recordReaction('detonation', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison', 'reactions');
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
@@ -267,7 +263,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.1 + 25);
     this.recordReaction('photosynthesis', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature', 'reactions');
     platform.playSfx('sfx_coin');
 
     // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
@@ -302,7 +298,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.5 + 75);
     this.recordReaction('corrosion', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
     enemy.armorReduction = 0.60; // 破甲 60%
     enemy.poisonTimer = 5.0;
     enemy.poisonDps = 35;

@@ -549,13 +549,10 @@ class SceneController {
         if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
           const shockBase = 350;
           const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
-          e.hp -= finalShockDmg;
+          this.enemyManager.applyDamage(e, finalShockDmg, true, 'magic', this.fx, 'reactions');
           e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
           enemiesHit++;
-          if (e.hp <= 0) {
-            this.enemyManager.handleEnemyDeath(e, finalShockDmg, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
-          }
         }
       }
       this.fx.triggerShake(8, 350);
@@ -1340,8 +1337,10 @@ class SceneController {
       }
     }
 
-    // 屏幕级特效横幅与红边闪烁
-    this.fx.renderScreenOverlayFx(ctx);
+    // 屏幕级特效横幅与红边闪烁（暂停与结算模态覆盖时不展示过渡横幅，避免从木框两侧穿帮）
+    if (this.state === 'BATTLE') {
+      this.fx.renderScreenOverlayFx(ctx);
+    }
 
     // 环绕式奇幻森林战斗 HUD（顶部资源条、右上控制栏、底部植物塔卡片栏、动态弹出式防御塔升级面板）
     this.ui.renderBattleHud(ctx, this);

@@ -261,15 +261,18 @@ class SporelingPatrol {
           g.attackCooldown = g.attackInterval;
           g.thrustTimer = 0.22;
           const dmg = Math.max(3, g.attackDmg - (e.baseArmor || 0) * 0.35);
-          e.hp -= dmg;
+          if (enemyManager && typeof enemyManager.applyDamage === 'function') {
+            enemyManager.applyDamage(e, dmg, false, 'physical', fx, 'sporelings');
+          } else {
+            e.hp -= dmg;
+            if (e.hp <= 0 && enemyManager) enemyManager.killEnemy(e, fx);
+          }
           if (fx) {
             fx.spawnParticles(e.x, e.y, 4, ['#FFFAEE', '#FFD700'], 15, 45, 0.15, 0.25, 2);
-            fx.spawnFloatingText(e.x, e.y - 12, `-${Math.round(dmg)}`, '#FFF1B8', 0.6);
           }
           platform.playSfx('sfx_hit');
 
-          if (e.hp <= 0 && enemyManager) {
-            enemyManager.killEnemy(e, fx);
+          if (e.hp <= 0 || e.state === 'death') {
             g.blockedEnemy = null;
             g.state = 'idle';
           }

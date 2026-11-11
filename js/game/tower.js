@@ -870,8 +870,8 @@ class TowerManager {
       }
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'mist') {
-      const mh = bulletManager.spawnMistCloud(target.x, target.y, node);
-      if (mh) mh.sourceTower = tower;
+      const mh = bulletManager.spawnMistCloud(target.x, target.y, Object.assign({}, node, { sourceTower: tower }));
+      if (mh && !mh.sourceTower) mh.sourceTower = tower;
       platform.playSfx('sfx_mist');
     } else if (tower.typeId === 'thorn') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);
@@ -1069,11 +1069,11 @@ class TowerManager {
           ctx.stroke();
         }
 
-        // 头顶微操解救气泡标签：精致圆角药丸胶囊
+        // 头顶微操解救气泡标签：精致圆角药丸胶囊（避让自身血条防遮挡）
         const badgeW = 74;
         const badgeH = 18;
         const badgeX = Math.round(t.x - badgeW * 0.5);
-        const badgeY = tileY - 20;
+        const badgeY = (t.hp < t.maxHp && t.hp > 0) ? (tileY - 31) : (tileY - 21);
 
         ctx.globalAlpha = 0.95;
         ctx.fillStyle = 'rgba(20, 36, 48, 0.88)';

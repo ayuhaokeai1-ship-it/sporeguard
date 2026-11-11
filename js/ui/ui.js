@@ -863,14 +863,14 @@ class UiManager {
     }
 
     // 顶部木质横幅与两侧导航等高同心对齐（centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 268, 12, 292, 48, 0.98);
+    this.drawAiFrame(ctx, 'top_bar', 260, 12, 292, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 414, 36);
+    ctx.fillText(i18n.t('btn_level_select'), 406, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 104, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 96, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 14.5px ${CN_FONT}`
     }, () => {
@@ -878,8 +878,9 @@ class UiManager {
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 136, 18, 118, 36, '林地秘典', {
+    this.drawPixelButton(ctx, 'lvl_codex', 128, 18, 120, 36, i18n.t('btn_guide'), {
       skin: 'btn_wood',
+      iconCat: 24,
       iconKey: 'guide',
       font: `bold 14px ${CN_FONT}`
     }, () => {
@@ -890,26 +891,26 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 574, 18, 134, 36, 0.96)) {
-        roundRectPath(ctx, 574, 18, 134, 36, 8);
+      if (!this.drawAiFrame(ctx, 'top_bar', 564, 18, 140, 36, 0.96)) {
+        roundRectPath(ctx, 564, 18, 140, 36, 8);
         ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 641, 36, {
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 634, 36, {
         style: 'gold',
         size: 11.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0,
-        maxWidth: 112
+        maxWidth: 118
       });
       ctx.restore();
     }
 
-    this.drawPixelButton(ctx, 'lvl_settings', 716, 18, 114, 36, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'lvl_settings', 714, 18, 124, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
       font: `bold 14px ${CN_FONT}`
@@ -994,15 +995,41 @@ class UiManager {
       }
 
       const descPad = compact ? 22 : 28;
-      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 214 : 254), cardW - descPad * 2, compact ? 16 : 18, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 210 : 244), cardW - descPad * 2, compact ? 15.5 : 17.5, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+
+      // 中部战术威胁与首领情报小框（消除中间羊皮纸空洞，提升关卡识别度）
+      const mapIntel = ({
+        map1: { route: '双路汇流 · 初阶虫群', boss: '首领：腐化蛀王' },
+        map2: { route: '溪谷双径 · 潜行与防空', boss: '首领：剧毒幽蛾后' },
+        map3: { route: '荧光双道 · 自爆与复生', boss: '首领：万巢裂殖母体' },
+        map4: { route: '古殿双圣道 · 终局围剿', boss: '首领：蚀日圣甲皇' }
+      })[mapId] || { route: '双线协同作战', boss: '首领压阵' };
+      const intelY = cardY + (compact ? 270 : 282);
+      const intelH = compact ? 38 : 36;
+      ctx.save();
+      roundRectPath(ctx, cardX + descPad, intelY, cardW - descPad * 2, intelH, 7);
+      ctx.fillStyle = 'rgba(110, 74, 38, 0.10)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.30)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = THEME.INK_DARK;
+      ctx.font = `bold ${compact ? 10 : 11}px ${CN_FONT}`;
+      ctx.fillText(mapIntel.route, cardX + cardW * 0.5, intelY + 12, cardW - descPad * 2 - 10);
+      ctx.fillStyle = '#9E3818';
+      ctx.font = `bold ${compact ? 10 : 10.5}px ${CN_FONT}`;
+      ctx.fillText(mapIntel.boss, cardX + cardW * 0.5, intelY + 27, cardW - descPad * 2 - 10);
+      ctx.restore();
 
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold ${compact ? 11 : 12}px ${CN_FONT}`;
       ctx.textAlign = 'left';
       const timeStr = rec.bestTime !== null ? (rec.bestTime + 's') : i18n.t('record_none');
       const seedStr = rec.bestSeeds > 0 ? (rec.bestSeeds + ' / 20') : i18n.t('record_none');
-      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 320 : 326));
-      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 340 : 346));
+      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 322 : 328));
+      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 342 : 348));
 
       const btnY = cardY + 368;
       if (rec.unlocked) {
@@ -1230,9 +1257,9 @@ class UiManager {
       this.renderSettlementOverlay(ctx, scene);
     }
 
-    // 8.5 实时战斗DPS战报分析仪表盘 (全屏弹窗)
+    // 8.5 实时战斗DPS战报分析仪表盘 (全屏弹窗，传入 ui 共用 9-Slice 手绘羊皮纸木框)
     if (scene.combatAnalytics) {
-      scene.combatAnalytics.renderAnalyticsDashboard(ctx);
+      scene.combatAnalytics.renderAnalyticsDashboard(ctx, this);
     }
   }
 
@@ -2487,10 +2514,13 @@ class UiManager {
 
     const pw = 344;
     const ph = existingTower ? 292 : 232;
-    // 智能停靠：停靠在屏幕边缘，确保地面的 360 度攻击范围完整无遮挡展示
+    const hasActiveBossHud = Boolean(scene.bossOverdriveEngine && scene.bossOverdriveEngine.activeBoss && scene.bossOverdriveEngine.activeBoss.hp > 0);
+    const hasAchieveToast = Boolean(scene.achievements && scene.achievements.currentToast && scene.achievements.toastTimer > 0);
+    const minPy = hasActiveBossHud ? 110 : (hasAchieveToast ? 62 : 24);
+    // 智能停靠：停靠在屏幕边缘并自动避让顶部成就吐司/Boss 血条与底部卡槽
     let px = tileScreenX < 480 ? Math.min(Math.round(tileScreenX + 32), 960 - pw - 14) : Math.max(14, Math.round(tileScreenX - pw - 32));
     px = Math.max(14, Math.min(960 - pw - 14, px));
-    let py = Math.max(24, Math.min(526 - ph, Math.round(tileScreenY - ph * 0.5)));
+    let py = Math.max(minPy, Math.min(470 - ph, Math.round(tileScreenY - ph * 0.5)));
 
     this.inspectorRect = { x: px, y: py, w: pw, h: ph };
 
@@ -3547,9 +3577,7 @@ class UiManager {
       let totalKills = 0;
       let mvpName = '树人守卫';
       let maxCatDmg = -1;
-      let totalDmg = 0;
       if (scene.combatAnalytics) {
-        totalDmg = scene.combatAnalytics.totalDamageDealt || 0;
         const stats = scene.combatAnalytics.categoryStats || {};
         for (const key of Object.keys(stats)) {
           const item = stats[key];
@@ -3560,6 +3588,10 @@ class UiManager {
           }
         }
       }
+      if (scene.economy && (scene.economy.totalKills || 0) > totalKills) {
+        totalKills = scene.economy.totalKills;
+      }
+      const mvpDmgText = maxCatDmg >= 1000 ? `${(Math.round(maxCatDmg / 100) / 10)}k` : String(Math.round(Math.max(0, maxCatDmg)));
 
       const cardX = mx + 44;
       const cardY = my + 126;
@@ -3586,7 +3618,7 @@ class UiManager {
         { k: '通关用时', v: `${timeSec}s` },
         { k: '剩余种子', v: `${scene.settlementResult.remainingSeeds} / 20` },
         { k: '累计歼灭', v: `${totalKills} 只` },
-        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${Math.round(totalDmg / 100) / 10}k)` : '稳固防线' }
+        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${mvpDmgText})` : '稳固防线' }
       ];
       for (let ci = 0; ci < 4; ci++) {
         const colI = ci % 2;
@@ -4850,6 +4882,13 @@ class UiManager {
       );
 
       const hovered = this.isPointHovered(barX, barY, barW, barH);
+      if (hovered) {
+        this.bottomHoverTip = {
+          x: barX + barW * 0.5,
+          y: 446,
+          text: typeof waveMgr.getUpcomingWaveDetailText === 'function' ? waveMgr.getUpcomingWaveDetailText() : threatStr
+        };
+      }
       const drawY = hovered ? barY - 1 : barY;
       ctx.save();
       if (!this.drawAiFrame(ctx, 'btn_green', barX, drawY, barW, barH, 1.0)) {

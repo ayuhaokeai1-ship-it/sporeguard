@@ -4,6 +4,8 @@
  * 实时监测：各类防御塔伤害输出、英雄微操输出、元素反应爆轰贡献、击杀榜与DPS柱状图
  */
 
+const platform = require('../core/platform');
+
 class CombatAnalyticsSystem {
   constructor() {
     this.isOpen = false;
@@ -13,14 +15,14 @@ class CombatAnalyticsSystem {
 
     // 各作战单元数据
     this.categoryStats = {
-      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#69C0FF', icon: 'assets/vfx/proj_watch_arrow.png' },
-      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#FF7A45', icon: 'assets/vfx/proj_burst_shell.png' },
-      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#95DE64', icon: 'assets/vfx/vfx_spikes.png' },
-      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#B37FEB', icon: 'assets/vfx/vfx_mist.png' },
-      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#FFD666', icon: 'assets/vfx/item_golden_spore.png' },
-      hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#52C41A', icon: 'assets/vfx/hero_oak.png' },
-      sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#A0D911', icon: 'assets/vfx/sporeling_guard.png' },
-      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#FF4D4F', icon: 'assets/vfx/vfx_hit_spark.png' }
+      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/vfx/proj_watch_arrow.png' },
+      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/vfx/proj_burst_shell.png' },
+      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/vfx/vfx_spikes.png' },
+      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/vfx/vfx_mist.png' },
+      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/vfx/item_golden_spore.png' },
+      hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#237804', icon: 'assets/vfx/hero_oak.png' },
+      sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#5B8C00', icon: 'assets/vfx/sporeling_guard.png' },
+      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_hit_spark.png' }
     };
 
     this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
@@ -53,6 +55,16 @@ class CombatAnalyticsSystem {
     if (cat) {
       cat.damage += damage;
       if (isKill) cat.kills++;
+    }
+  }
+
+  /**
+   * 仅记一次击杀归因（用于持续伤害击杀结算，避免重复叠加伤害数值）
+   */
+  recordKill(sourceType) {
+    const cat = this.categoryStats[sourceType];
+    if (cat) {
+      cat.kills++;
     }
   }
 
@@ -99,58 +111,77 @@ class CombatAnalyticsSystem {
   }
 
   /**
-   * 渲染弹出的高质感 DPS 战报仪表盘
+   * 渲染弹出的高质感 DPS 战报仪表盘（与全作 9-Slice 古树羊皮纸木框保持完全一致的艺术风格）
    */
-  renderAnalyticsDashboard(ctx) {
+  renderAnalyticsDashboard(ctx, ui = null) {
     if (!this.isOpen) return;
 
-    const pw = 476;
-    const ph = 336;
+    const pw = 540;
+    const ph = 368;
     const px = Math.round((960 - pw) * 0.5);
     const py = Math.round((540 - ph) * 0.5);
 
     ctx.save();
     // 1. 全屏半透明暗林遮罩（严格对齐 960x540 逻辑屏）
-    ctx.fillStyle = 'rgba(6, 12, 8, 0.76)';
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.78)';
     ctx.fillRect(0, 0, 960, 540);
 
-    // 2. 深木黄铜边框战报面板
-    ctx.fillStyle = 'rgba(22, 16, 11, 0.96)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 12) : ctx.rect(px, py, pw, ph);
-    ctx.fill();
+    // 2. 使用统一 9-Slice 手绘羊皮纸木框底座
+    if (ui && typeof ui.drawWoodlandPanel === 'function') {
+      ui.drawWoodlandPanel(ctx, px, py, pw, ph, '#8C5E2A', 0.99, 14, true);
+    } else {
+      ctx.fillStyle = '#F3E5C8';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 14) : ctx.rect(px, py, pw, ph);
+      ctx.fill();
+      ctx.strokeStyle = '#6B4226';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
 
-    ctx.strokeStyle = '#C68F45';
-    ctx.lineWidth = 2.0;
-    ctx.stroke();
-
-    // 右上角关闭按钮 [×]（严密内收 14px 安全边距）
-    const closeX = px + pw - 38;
-    const closeY = py + 14;
-    ctx.fillStyle = 'rgba(64, 38, 20, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(closeX, closeY, 24, 24, 5) : ctx.rect(closeX, closeY, 24, 24);
-    ctx.fill();
-    ctx.strokeStyle = '#E6BB60';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.fillStyle = '#FFF1B8';
-    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    // 顶部木匾牌标题栏
+    if (ui && typeof ui.drawAiFrame === 'function') {
+      ui.drawAiFrame(ctx, 'top_bar', px + 88, py - 14, pw - 176, 40, 0.99);
+    } else {
+      ctx.fillStyle = '#3E2714';
+      ctx.fillRect(px + 88, py - 14, pw - 176, 40);
+    }
+    ctx.fillStyle = '#FFE58F';
+    ctx.font = 'bold 16px "Microsoft YaHei UI", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('×', closeX + 12, closeY + 12);
+    ctx.fillText('实时战况与输出统计', px + pw * 0.5, py + 6);
 
-    // 3. 标题与总览（纯中文无英文混杂）
-    ctx.fillStyle = '#FFE58F';
-    ctx.font = 'bold 15px "Microsoft YaHei UI", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('实时战况与输出统计', px + 22, py + 26);
+    // 右上角木质关闭按钮 [×]
+    const closeX = px + pw - 50;
+    const closeY = py + 24;
+    if (ui && typeof ui.drawAiFrame === 'function') {
+      ui.drawAiFrame(ctx, 'btn_wood', closeX, closeY, 26, 26, 0.98);
+    } else {
+      ctx.fillStyle = '#5C381C';
+      ctx.fillRect(closeX, closeY, 26, 26);
+    }
+    ctx.fillStyle = '#FFF1B8';
+    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    ctx.fillText('×', closeX + 13, closeY + 13);
 
+    // 3. 战报总览胶囊栏（严格嵌入羊皮纸安全内框）
+    const totalShown = Math.round(this.totalDamageDealt);
+    const maxHitShown = Math.round(this.highestSingleHit.damage);
     const dps = this.combatDuration > 0 ? Math.round(this.totalDamageDealt / this.combatDuration) : 0;
-    ctx.fillStyle = '#E8D8B8';
-    ctx.font = '11.5px "Microsoft YaHei UI", sans-serif';
-    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 22, py + 49);
+
+    ctx.fillStyle = 'rgba(72, 46, 22, 0.11)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(px + 28, py + 34, pw - 90, 26, 7) : ctx.rect(px + 28, py + 34, pw - 90, 26);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#3A2312';
+    ctx.font = 'bold 11.5px "Microsoft YaHei UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`总伤：${totalShown.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${maxHitShown}`, px + 40, py + 47);
 
     // 4. 各单元伤害占比横向柱状图
     const sorted = Object.entries(this.categoryStats)
@@ -158,49 +189,62 @@ class CombatAnalyticsSystem {
       .sort((a, b) => b.damage - a.damage);
 
     const maxDmg = Math.max(1, sorted[0].damage);
-    const startY = py + 72;
-    const rowH = 29;
-    const barMaxW = 172;
+    const startY = py + 70;
+    const rowH = 31;
+    const barMaxW = 168;
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 单位名称
-      ctx.fillStyle = item.color;
+      // 偶数行极淡羊皮纸压纹底带，提升视觉可读性
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(105, 72, 36, 0.06)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
+        ctx.fill();
+      }
+
+      // 单位小图标
+      const ic = item.icon && typeof platform !== 'undefined' ? platform.getImage(item.icon) : null;
+      if (ic && ic.width) {
+        ctx.drawImage(ic, px + 32, ry + 4, 20, 20);
+      }
+
+      // 单位名称（深棕高亮色，确保在羊皮纸上锐利清晰）
+      ctx.fillStyle = '#3A2312';
       ctx.font = 'bold 12px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${i + 1}. ${item.name}`, px + 22, ry + 13);
+      ctx.fillText(`${i + 1}. ${item.name}`, px + 58, ry + 14.5);
 
-      // 槽位底色
-      const barX = px + 138;
-      const barY = ry + 6;
-      const barW = Math.max(3, Math.round((item.damage / maxDmg) * barMaxW));
+      const barX = px + 182;
+      const barY = ry + 7.5;
+      const dmgRounded = Math.round(item.damage);
+      const barW = dmgRounded > 0 ? Math.max(4, Math.round((item.damage / maxDmg) * barMaxW)) : 3;
       const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillStyle = 'rgba(58, 35, 18, 0.14)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(barX, barY, barMaxW, 13, 4) : ctx.rect(barX, barY, barMaxW, 13);
       ctx.fill();
 
-      // 伤害条
       ctx.fillStyle = item.color;
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(barX, barY, barW, 13, 4) : ctx.rect(barX, barY, barW, 13);
       ctx.fill();
 
-      // 数值文本 (伤害 + 占比% + 击杀，右侧留足呼吸边距)
-      ctx.fillStyle = '#FFFDF5';
-      ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
+      // 数值文本（伤害 + 占比% + 击杀）
+      ctx.fillStyle = '#3A2312';
+      ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 10, ry + 13, pw - 22 - (barX + barMaxW + 10 - px));
+      ctx.fillText(`${dmgRounded.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 10, ry + 14.5, (px + pw - 28) - (barX + barMaxW + 10));
     }
 
-    // 5. 底部关闭说明
-    ctx.fillStyle = '#B8A88A';
+    // 5. 底部关闭提示（严密内收木框内部底栏）
+    ctx.fillStyle = '#6B4E34';
     ctx.font = '11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 16);
+    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 24);
 
     ctx.restore();
   }

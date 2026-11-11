@@ -98,6 +98,21 @@ class WaveManager {
   }
 
   /**
+   * 悬停提前迎战或出怪传送门时显示精确的下波兵力明细（复用 getUpcomingWaveSummary）
+   */
+  getUpcomingWaveDetailText() {
+    const summary = this.getUpcomingWaveSummary();
+    if (!summary || summary.length === 0) {
+      return `第 ${this.currentWaveIndex} 波 · 前锋虫群来袭`;
+    }
+    const parts = summary.slice(0, 4).map((item) => {
+      const nm = item.def && item.def.nameKey ? i18n.t(item.def.nameKey) : item.type;
+      return `${nm}×${item.count}`;
+    });
+    return `第 ${this.currentWaveIndex} 波兵力：${parts.join(' · ')}`;
+  }
+
+  /**
    * 计算当前战斗波次的实时推进百分比 (0.0 -> 1.0)，用于平滑波次进度条与无尽模式展示
    */
   getWaveSubProgress(enemyManager) {

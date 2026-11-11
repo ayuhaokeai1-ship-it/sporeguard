@@ -331,7 +331,7 @@
   <div id="mobileAppToolbar" class="hidden">
     <div class="toolbar-left">
       <span class="app-icon">🍄</span>
-      <span>蘑菇保卫战</span>
+      <span>蘑菇守林</span>
     </div>
     <div class="toolbar-actions">
       <button id="btnPwaInstall" class="tb-btn tb-install">📲 安装桌面应用</button>
@@ -341,7 +341,7 @@
     </div>
   </div>
 
-  <div id="floatingAppBadge" style="display:flex;" title="安装为桌面应用或全屏">📲 安装桌面版</div>
+  <div id="floatingAppBadge" style="display:none;" title="安装为桌面应用或全屏">📲 安装桌面版</div>
 
   <!-- 安装到手机桌面教程弹窗 -->
   <div id="iosInstallModal">
@@ -357,7 +357,7 @@
       </div>
       <div class="step-item">
         <span class="step-num">3</span>
-        <span>点击右上角 <b>「添加」</b>，手机桌面即可生成专属《蘑菇保卫战》图标！</span>
+        <span>点击右上角 <b>「添加」</b>，手机桌面即可生成专属《蘑菇守林》图标！</span>
       </div>
       <div class="modal-note">
         ✨ <b>离线单机特性</b>：添加到主屏幕后，全部地图与美术资源将永久保存在手机中。即使以后电脑关机或手机在地铁、飞行模式断网，也能像原生 App 一样秒开单机畅玩！
@@ -624,13 +624,17 @@
         hideListeners.forEach(function (fn) { fn(); });
       });
 
-      // PWA 注册与安装管理
+      // PWA 注册与安装管理（仅在移动端显示悬浮安装按钮，避免桌面端遮挡游戏角标）
       let deferredPrompt = null;
+      const isMobileUa = () => /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         const btn = document.getElementById('btnPwaInstall');
         if (btn) btn.innerText = '📲 一键安装应用';
+        const badge = document.getElementById('floatingAppBadge');
+        if (badge && isMobileUa()) badge.style.display = 'flex';
       });
 
       // 菜单按钮交互绑定
@@ -713,16 +717,11 @@
           });
         }
 
-        // 移动端默认隐藏顶栏，使用轻量右上角悬浮球，不遮挡游戏波次、生命与金币
+        // 仅在移动触控设备显示悬浮安装徽章，保持桌面/离线完整游玩沉浸纯净
         function checkToolbarMode() {
-          const isMobileOrNarrow = window.innerWidth < 960 || window.innerHeight < 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-          if (isMobileOrNarrow) {
-            toolbar.classList.add('hidden');
-            badge.style.display = 'flex';
-          } else {
-            toolbar.classList.remove('hidden');
-            badge.style.display = 'none';
-          }
+          const isMobileTouch = isMobileUa();
+          toolbar.classList.add('hidden');
+          badge.style.display = isMobileTouch ? 'flex' : 'none';
         }
         checkToolbarMode();
         checkOrientationOverlay();

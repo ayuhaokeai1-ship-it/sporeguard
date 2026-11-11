@@ -644,7 +644,7 @@ class FxSystem {
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
       const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
-      const by = hasBossHud ? 116 : 64;
+      const by = hasBossHud ? 144 : 64;
       const bandCenterY = by + (b.subText ? 26 : 18);
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');

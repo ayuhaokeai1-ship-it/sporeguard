@@ -5413,7 +5413,7 @@ class FxSystem {
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
       const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
-      const by = hasBossHud ? 116 : 64;
+      const by = hasBossHud ? 144 : 64;
       const bandCenterY = by + (b.subText ? 26 : 18);
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
@@ -6977,17 +6977,22 @@ class EnemyManager {
     const self = this;
     this.pool = new ObjectPool(
       () => ({
-        takeDamage(amount, fx = null, dType = 'nature') {
+        takeDamage(amount, fx = null, dType = 'nature', sourceCat = null) {
           if (this.state === 'death' || this.hp <= 0) return;
           const dmg = Math.max(1, Math.round(amount));
           this.hp -= dmg;
           this.whiteFlashFrames = 2;
+          const isKilled = this.hp <= 0;
+          if (self.scene && self.scene.combatAnalytics) {
+            const cat = sourceCat || (dType === 'physical' ? 'hero' : 'reactions');
+            self.scene.combatAnalytics.recordDamage(cat, dmg, isKilled);
+          }
           if (fx) {
             if (typeof fx.spawnFloatingText === 'function') {
               fx.spawnFloatingText(Math.round(this.x), Math.round(this.y - 14), '-' + dmg, '#FF4D4F', 0.9);
             }
           }
-          if (this.hp <= 0) {
+          if (isKilled) {
             self.killEnemy(this, fx);
           }
         },
@@ -7124,6 +7129,23 @@ class EnemyManager {
     e.slowImmune = false;
     e.markTimer = 0;
     e.armorReduction = 0;
+    e.burnTimer = 0;
+    e.burnDps = 0;
+    e.poisonTimer = 0;
+    e.poisonDps = 0;
+    e.freezeTimer = 0;
+    e.isDeepFrozen = false;
+    e.rootTimer = 0;
+    e.stunTimer = 0;
+    e._reactCd = 0;
+    if (e.elementAuras) {
+      e.elementAuras.pyro = 0;
+      e.elementAuras.hydro = 0;
+      e.elementAuras.electro = 0;
+      e.elementAuras.cryo = 0;
+      e.elementAuras.toxic = 0;
+      e.elementAuras.dendro = 0;
+    }
     e.dotSources.length = 0;
 
     e.state = 'walk';
@@ -7412,6 +7434,23 @@ class EnemyManager {
 
     enemy.hp -= dmg;
     enemy.whiteFlashFrames = 3;
+    const isKilled = enemy.hp <= 0;
+
+    if (source && typeof source === 'object' && source.typeId) {
+      source.totalDamage = (source.totalDamage || 0) + dmg;
+      if (isKilled) source.kills = (source.kills || 0) + 1;
+    }
+    if (this.scene && this.scene.combatAnalytics) {
+      let analyticsCat = null;
+      if (typeof source === 'string' && source) {
+        analyticsCat = source;
+      } else if (source && source.typeId) {
+        analyticsCat = source.typeId;
+      } else {
+        analyticsCat = dType === 'physical' ? 'hero' : 'reactions';
+      }
+      this.scene.combatAnalytics.recordDamage(analyticsCat, dmg, isKilled);
+    }
 
     if (finalFx && typeof finalFx.spawnFloatingText === 'function') {
       const color = isCrit ? '#FFD700' : (dType === 'magic' ? '#69C0FF' : (dType === 'pierce' ? '#FF7A45' : '#FF4D4F'));
@@ -7419,7 +7458,7 @@ class EnemyManager {
       finalFx.spawnFloatingText(Math.round(enemy.x), Math.round(enemy.y - 14), text, color, isCrit ? 1.2 : 0.9);
     }
 
-    if (enemy.hp <= 0) {
+    if (isKilled) {
       this.killEnemy(enemy, finalFx);
     }
     return dmg;
@@ -7596,23 +7635,64 @@ class EnemyManager {
         e.residualSlowTimer = Math.max(0, e.residualSlowTimer - dt);
       }
 
-      // 5.4 & 5.5 结算持续伤害（雾团、灼烧区）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
+      // 递减火焰灼烧与酸液毒素持续伤害计步，注入统一 DoT 结算管线
+      if (e.burnTimer > 0) {
+        e.burnTimer = Math.max(0, e.burnTimer - dt);
+        e.dotSources.push({ dps: e.burnDps || 18, sourceTower: null, kind: 'reactions' });
+      }
+      if (e.poisonTimer > 0) {
+        e.poisonTimer = Math.max(0, e.poisonTimer - dt);
+        e.dotSources.push({ dps: e.poisonDps || 24, sourceTower: null, kind: 'reactions' });
+      }
+
+      // 5.4 & 5.5 结算持续伤害（雾团、灼烧区、元素酸毒）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
       if (e.dotSources.length > 0) {
+        const readDps = (s) => (typeof s === 'number' ? s : (s && s.dps ? s.dps : 0));
         if (e.dotSources.length > CONFIG.COMBAT.MAX_DOT_SOURCES) {
-          e.dotSources.sort((a, b) => b - a);
+          e.dotSources.sort((a, b) => readDps(b) - readDps(a));
         }
         const count = Math.min(CONFIG.COMBAT.MAX_DOT_SOURCES, e.dotSources.length);
         const effArmor = this.getEffectiveArmor(e);
         let totalDps = 0;
+        let topTickDmg = -1;
+        let topSourceTower = null;
+        let topAnalyticsCat = 'mist';
+        const analytics = this.scene ? this.scene.combatAnalytics : null;
+
         for (let k = 0; k < count; k++) {
-          const srcDps = e.dotSources[k];
+          const entry = e.dotSources[k];
+          const srcDps = readDps(entry);
+          if (srcDps <= 0) continue;
           const actualDps = Math.max(srcDps - effArmor, srcDps * CONFIG.COMBAT.MIN_ARMOR_DAMAGE_RATIO);
+          const tickDmg = actualDps * dt;
           totalDps += actualDps;
+
+          const sTower = entry && typeof entry === 'object' ? entry.sourceTower : null;
+          const kind = entry && typeof entry === 'object' ? entry.kind : 'mist';
+          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : 'reactions');
+
+          if (sTower) {
+            sTower.totalDamage = (sTower.totalDamage || 0) + tickDmg;
+          }
+          if (analytics) {
+            analytics.recordDamage(cat, tickDmg, false);
+          }
+          if (tickDmg > topTickDmg) {
+            topTickDmg = tickDmg;
+            topSourceTower = sTower;
+            topAnalyticsCat = cat;
+          }
         }
         e.hp -= totalDps * dt;
         e.dotSources.length = 0;
 
         if (e.hp <= 0) {
+          if (topSourceTower) {
+            topSourceTower.kills = (topSourceTower.kills || 0) + 1;
+          }
+          if (analytics && typeof analytics.recordKill === 'function') {
+            analytics.recordKill(topAnalyticsCat);
+          }
           this.handleEnemyDeath(e, totalDps, combatTimeSec, map, economy, fx);
           continue;
         }
@@ -8434,7 +8514,7 @@ class ForestHero {
     // 天赋 1：尖刺重甲近战创伤反弹 45%
     if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
       const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
-      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, null);
+      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, 'hero');
       if (fx) {
         fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
       }
@@ -8510,7 +8590,7 @@ class ForestHero {
         const e = alive[i];
         const dist = Math.hypot(e.x - this.x, e.y - this.y);
         if (dist <= baseRadius) {
-          enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, null);
+          enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, 'hero');
           // 强力定身晕眩
           e.activeSlow = 0.95;
           e.residualSlowValue = 0.85;
@@ -8552,7 +8632,7 @@ class ForestHero {
         for (let i = 0; i < targets.length; i++) {
           const e = targets[i];
           if (!e.isFlying && Math.hypot(e.x - this.x, e.y - this.y) <= 90) {
-            enemyManager.applyDamage(e, cleaveDmg, true, 'physical', fx, null);
+            enemyManager.applyDamage(e, cleaveDmg, true, 'physical', fx, 'hero');
             e.activeSlow = 0.85;
             e.residualSlowTimer = 2.0;
           }
@@ -8624,7 +8704,7 @@ class ForestHero {
           const e = alive[eIdx];
           if (!e.isFlying && e.state !== 'death' && Math.hypot(e.x - trap.x, e.y - trap.y) <= trap.triggerRadius) {
             triggered = true;
-            enemyManager.applyDamage(e, trap.damage, true, 'magic', fx, null);
+            enemyManager.applyDamage(e, trap.damage, true, 'magic', fx, 'hero');
             e.activeSlow = 0.95;
             e.residualSlowValue = 0.90;
             e.residualSlowTimer = trap.rootDuration;
@@ -8658,7 +8738,7 @@ class ForestHero {
         for (let eIdx = 0; eIdx < alive.length; eIdx++) {
           const e = alive[eIdx];
           if (e.state !== 'death' && Math.hypot(e.x - spr.x, e.y - spr.y) <= 16) {
-            enemyManager.applyDamage(e, spr.damage, false, 'pierce', fx, null);
+            enemyManager.applyDamage(e, spr.damage, false, 'pierce', fx, 'hero');
             e.activeSlow = 0.45;
             e.residualSlowTimer = 2.0;
             if (fx) {
@@ -8785,7 +8865,7 @@ class ForestHero {
         if (closest) {
           this.rangedThornCooldown = 1.4;
           const thornDmg = Math.round(this.atkDamage * 0.95);
-          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, null);
+          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, 'hero');
           platform.playSfx('sfx_watch');
           if (fx) {
             fx.spawnParticles(closest.x, closest.y, 6, ['#52C41A', '#73D13D', '#FFFFFF'], 15, 45, 0.15, 0.3, 2.5);
@@ -8855,7 +8935,7 @@ class ForestHero {
 
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
-              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
+              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, 'hero');
             if (this.transcendence) {
               this.transcendence.onHeroHitTarget(target, enemyManager, fx);
             }
@@ -9436,15 +9516,18 @@ class SporelingPatrol {
           g.attackCooldown = g.attackInterval;
           g.thrustTimer = 0.22;
           const dmg = Math.max(3, g.attackDmg - (e.baseArmor || 0) * 0.35);
-          e.hp -= dmg;
+          if (enemyManager && typeof enemyManager.applyDamage === 'function') {
+            enemyManager.applyDamage(e, dmg, false, 'physical', fx, 'sporelings');
+          } else {
+            e.hp -= dmg;
+            if (e.hp <= 0 && enemyManager) enemyManager.killEnemy(e, fx);
+          }
           if (fx) {
             fx.spawnParticles(e.x, e.y, 4, ['#FFFAEE', '#FFD700'], 15, 45, 0.15, 0.25, 2);
-            fx.spawnFloatingText(e.x, e.y - 12, `-${Math.round(dmg)}`, '#FFF1B8', 0.6);
           }
           platform.playSfx('sfx_hit');
 
-          if (e.hp <= 0 && enemyManager) {
-            enemyManager.killEnemy(e, fx);
+          if (e.hp <= 0 || e.state === 'death') {
             g.blockedEnemy = null;
             g.state = 'idle';
           }
@@ -10436,7 +10519,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.15 + 35);
     this.recordReaction('wildfire', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'fire', 'reactions');
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(enemy.x), Math.round(enemy.y - 18), `-${dmg}`, '#FF4D4F');
       scene.fx.spawnRing(enemy.x, enemy.y, 65, '#FF7A45', 0.45);
@@ -10452,7 +10535,7 @@ class ElementalReactionSystem {
         if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) <= 72) {
           other.burnTimer = 3.0;
           other.burnDps = 18;
-          other.takeDamage(Math.round(dmg * 0.45), null, 'fire');
+          other.takeDamage(Math.round(dmg * 0.45), null, 'fire', 'reactions');
           hits++;
         }
       }
@@ -10469,7 +10552,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.15 + 45);
     this.recordReaction('superconduct', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
     enemy.armorReduction = Math.max(enemy.armorReduction || 0, 0.35); // 削减 35% 护甲
     platform.playSfx('sfx_shock');
 
@@ -10490,12 +10573,8 @@ class ElementalReactionSystem {
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
         if (d2 <= 120 * 120) {
           const chainDmg = Math.round(dmg * 0.55);
-          next.hp -= chainDmg;
-          next.whiteFlashFrames = 2;
           next.armorReduction = Math.max(next.armorReduction || 0, 0.30);
-          if (next.hp <= 0) {
-            scene.enemyManager.killEnemy(next, scene.fx);
-          }
+          next.takeDamage(chainDmg, scene ? scene.fx : null, 'shock', 'reactions');
 
           if (this.chainArcs.length < 8) {
             this.chainArcs.push({
@@ -10525,7 +10604,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.1 + 30);
     this.recordReaction('freeze', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'frost', 'reactions');
     enemy.freezeTimer = 1.6; // 深度冰冻 1.6 秒
     enemy.isDeepFrozen = true;
     platform.playSfx('sfx_mist');
@@ -10545,7 +10624,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.25 + 60);
     this.recordReaction('detonation', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'poison', 'reactions');
     platform.playSfx('sfx_boom');
 
     if (scene && scene.fx) {
@@ -10577,7 +10656,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.1 + 25);
     this.recordReaction('photosynthesis', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature', 'reactions');
     platform.playSfx('sfx_coin');
 
     // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
@@ -10612,7 +10691,7 @@ class ElementalReactionSystem {
     const dmg = Math.round(baseDmg * 1.5 + 75);
     this.recordReaction('corrosion', dmg);
 
-    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock');
+    enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
     enemy.armorReduction = 0.60; // 破甲 60%
     enemy.poisonTimer = 5.0;
     enemy.poisonDps = 35;
@@ -10929,7 +11008,11 @@ class HeroSkillSystem {
           // 判定处于英雄面朝方向的半圆内
           const dirX = e.x - hx;
           if (dirX * facing >= -15) {
-            e.takeDamage(this.skills.cleave.damage, scene.fx, 'physical');
+            if (scene && scene.enemyManager && typeof scene.enemyManager.applyDamage === 'function') {
+              scene.enemyManager.applyDamage(e, this.skills.cleave.damage, false, 'physical', scene.fx, 'hero');
+            } else {
+              e.takeDamage(this.skills.cleave.damage, scene.fx, 'physical', 'hero');
+            }
             e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
             // 物理后退击退
             e.x += facing * 26;
@@ -10989,7 +11072,11 @@ class HeroSkillSystem {
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
         if (Math.hypot(e.x - hx, e.y - hy) <= radius) {
-          e.takeDamage(this.skills.roots.damage, scene.fx, 'nature');
+          if (scene && scene.enemyManager && typeof scene.enemyManager.applyDamage === 'function') {
+            scene.enemyManager.applyDamage(e, this.skills.roots.damage, false, 'nature', scene.fx, 'hero');
+          } else {
+            e.takeDamage(this.skills.roots.damage, scene.fx, 'nature', 'hero');
+          }
           e.rootTimer = Math.max(e.rootTimer || 0, this.skills.roots.duration);
           count++;
         }
@@ -11206,6 +11293,8 @@ module.exports = HeroSkillSystem;
  * 实时监测：各类防御塔伤害输出、英雄微操输出、元素反应爆轰贡献、击杀榜与DPS柱状图
  */
 
+const platform = require('../core/platform');
+
 class CombatAnalyticsSystem {
   constructor() {
     this.isOpen = false;
@@ -11215,14 +11304,14 @@ class CombatAnalyticsSystem {
 
     // 各作战单元数据
     this.categoryStats = {
-      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#69C0FF', icon: 'assets/vfx/proj_watch_arrow.png' },
-      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#FF7A45', icon: 'assets/vfx/proj_burst_shell.png' },
-      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#95DE64', icon: 'assets/vfx/vfx_spikes.png' },
-      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#B37FEB', icon: 'assets/vfx/vfx_mist.png' },
-      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#FFD666', icon: 'assets/vfx/item_golden_spore.png' },
-      hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#52C41A', icon: 'assets/vfx/hero_oak.png' },
-      sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#A0D911', icon: 'assets/vfx/sporeling_guard.png' },
-      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#FF4D4F', icon: 'assets/vfx/vfx_hit_spark.png' }
+      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/vfx/proj_watch_arrow.png' },
+      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/vfx/proj_burst_shell.png' },
+      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/vfx/vfx_spikes.png' },
+      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/vfx/vfx_mist.png' },
+      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/vfx/item_golden_spore.png' },
+      hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#237804', icon: 'assets/vfx/hero_oak.png' },
+      sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#5B8C00', icon: 'assets/vfx/sporeling_guard.png' },
+      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_hit_spark.png' }
     };
 
     this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
@@ -11255,6 +11344,16 @@ class CombatAnalyticsSystem {
     if (cat) {
       cat.damage += damage;
       if (isKill) cat.kills++;
+    }
+  }
+
+  /**
+   * 仅记一次击杀归因（用于持续伤害击杀结算，避免重复叠加伤害数值）
+   */
+  recordKill(sourceType) {
+    const cat = this.categoryStats[sourceType];
+    if (cat) {
+      cat.kills++;
     }
   }
 
@@ -11301,58 +11400,77 @@ class CombatAnalyticsSystem {
   }
 
   /**
-   * 渲染弹出的高质感 DPS 战报仪表盘
+   * 渲染弹出的高质感 DPS 战报仪表盘（与全作 9-Slice 古树羊皮纸木框保持完全一致的艺术风格）
    */
-  renderAnalyticsDashboard(ctx) {
+  renderAnalyticsDashboard(ctx, ui = null) {
     if (!this.isOpen) return;
 
-    const pw = 476;
-    const ph = 336;
+    const pw = 540;
+    const ph = 368;
     const px = Math.round((960 - pw) * 0.5);
     const py = Math.round((540 - ph) * 0.5);
 
     ctx.save();
     // 1. 全屏半透明暗林遮罩（严格对齐 960x540 逻辑屏）
-    ctx.fillStyle = 'rgba(6, 12, 8, 0.76)';
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.78)';
     ctx.fillRect(0, 0, 960, 540);
 
-    // 2. 深木黄铜边框战报面板
-    ctx.fillStyle = 'rgba(22, 16, 11, 0.96)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 12) : ctx.rect(px, py, pw, ph);
-    ctx.fill();
+    // 2. 使用统一 9-Slice 手绘羊皮纸木框底座
+    if (ui && typeof ui.drawWoodlandPanel === 'function') {
+      ui.drawWoodlandPanel(ctx, px, py, pw, ph, '#8C5E2A', 0.99, 14, true);
+    } else {
+      ctx.fillStyle = '#F3E5C8';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 14) : ctx.rect(px, py, pw, ph);
+      ctx.fill();
+      ctx.strokeStyle = '#6B4226';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
 
-    ctx.strokeStyle = '#C68F45';
-    ctx.lineWidth = 2.0;
-    ctx.stroke();
-
-    // 右上角关闭按钮 [×]（严密内收 14px 安全边距）
-    const closeX = px + pw - 38;
-    const closeY = py + 14;
-    ctx.fillStyle = 'rgba(64, 38, 20, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(closeX, closeY, 24, 24, 5) : ctx.rect(closeX, closeY, 24, 24);
-    ctx.fill();
-    ctx.strokeStyle = '#E6BB60';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.fillStyle = '#FFF1B8';
-    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    // 顶部木匾牌标题栏
+    if (ui && typeof ui.drawAiFrame === 'function') {
+      ui.drawAiFrame(ctx, 'top_bar', px + 88, py - 14, pw - 176, 40, 0.99);
+    } else {
+      ctx.fillStyle = '#3E2714';
+      ctx.fillRect(px + 88, py - 14, pw - 176, 40);
+    }
+    ctx.fillStyle = '#FFE58F';
+    ctx.font = 'bold 16px "Microsoft YaHei UI", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('×', closeX + 12, closeY + 12);
+    ctx.fillText('实时战况与输出统计', px + pw * 0.5, py + 6);
 
-    // 3. 标题与总览（纯中文无英文混杂）
-    ctx.fillStyle = '#FFE58F';
-    ctx.font = 'bold 15px "Microsoft YaHei UI", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('实时战况与输出统计', px + 22, py + 26);
+    // 右上角木质关闭按钮 [×]
+    const closeX = px + pw - 50;
+    const closeY = py + 24;
+    if (ui && typeof ui.drawAiFrame === 'function') {
+      ui.drawAiFrame(ctx, 'btn_wood', closeX, closeY, 26, 26, 0.98);
+    } else {
+      ctx.fillStyle = '#5C381C';
+      ctx.fillRect(closeX, closeY, 26, 26);
+    }
+    ctx.fillStyle = '#FFF1B8';
+    ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
+    ctx.fillText('×', closeX + 13, closeY + 13);
 
+    // 3. 战报总览胶囊栏（严格嵌入羊皮纸安全内框）
+    const totalShown = Math.round(this.totalDamageDealt);
+    const maxHitShown = Math.round(this.highestSingleHit.damage);
     const dps = this.combatDuration > 0 ? Math.round(this.totalDamageDealt / this.combatDuration) : 0;
-    ctx.fillStyle = '#E8D8B8';
-    ctx.font = '11.5px "Microsoft YaHei UI", sans-serif';
-    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 22, py + 49);
+
+    ctx.fillStyle = 'rgba(72, 46, 22, 0.11)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(px + 28, py + 34, pw - 90, 26, 7) : ctx.rect(px + 28, py + 34, pw - 90, 26);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#3A2312';
+    ctx.font = 'bold 11.5px "Microsoft YaHei UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`总伤：${totalShown.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${maxHitShown}`, px + 40, py + 47);
 
     // 4. 各单元伤害占比横向柱状图
     const sorted = Object.entries(this.categoryStats)
@@ -11360,49 +11478,62 @@ class CombatAnalyticsSystem {
       .sort((a, b) => b.damage - a.damage);
 
     const maxDmg = Math.max(1, sorted[0].damage);
-    const startY = py + 72;
-    const rowH = 29;
-    const barMaxW = 172;
+    const startY = py + 70;
+    const rowH = 31;
+    const barMaxW = 168;
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 单位名称
-      ctx.fillStyle = item.color;
+      // 偶数行极淡羊皮纸压纹底带，提升视觉可读性
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(105, 72, 36, 0.06)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
+        ctx.fill();
+      }
+
+      // 单位小图标
+      const ic = item.icon && typeof platform !== 'undefined' ? platform.getImage(item.icon) : null;
+      if (ic && ic.width) {
+        ctx.drawImage(ic, px + 32, ry + 4, 20, 20);
+      }
+
+      // 单位名称（深棕高亮色，确保在羊皮纸上锐利清晰）
+      ctx.fillStyle = '#3A2312';
       ctx.font = 'bold 12px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${i + 1}. ${item.name}`, px + 22, ry + 13);
+      ctx.fillText(`${i + 1}. ${item.name}`, px + 58, ry + 14.5);
 
-      // 槽位底色
-      const barX = px + 138;
-      const barY = ry + 6;
-      const barW = Math.max(3, Math.round((item.damage / maxDmg) * barMaxW));
+      const barX = px + 182;
+      const barY = ry + 7.5;
+      const dmgRounded = Math.round(item.damage);
+      const barW = dmgRounded > 0 ? Math.max(4, Math.round((item.damage / maxDmg) * barMaxW)) : 3;
       const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillStyle = 'rgba(58, 35, 18, 0.14)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(barX, barY, barMaxW, 13, 4) : ctx.rect(barX, barY, barMaxW, 13);
       ctx.fill();
 
-      // 伤害条
       ctx.fillStyle = item.color;
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(barX, barY, barW, 13, 4) : ctx.rect(barX, barY, barW, 13);
       ctx.fill();
 
-      // 数值文本 (伤害 + 占比% + 击杀，右侧留足呼吸边距)
-      ctx.fillStyle = '#FFFDF5';
-      ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
+      // 数值文本（伤害 + 占比% + 击杀）
+      ctx.fillStyle = '#3A2312';
+      ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 10, ry + 13, pw - 22 - (barX + barMaxW + 10 - px));
+      ctx.fillText(`${dmgRounded.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 10, ry + 14.5, (px + pw - 28) - (barX + barMaxW + 10));
     }
 
-    // 5. 底部关闭说明
-    ctx.fillStyle = '#B8A88A';
+    // 5. 底部关闭提示（严密内收木框内部底栏）
+    ctx.fillStyle = '#6B4E34';
     ctx.font = '11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 16);
+    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 24);
 
     ctx.restore();
   }
@@ -14912,11 +15043,11 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=58..106 安全带，内外留白饱满)
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=62..108 安全带，留足 10px 间距零重叠)
     const barW = 360;
     const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 82;
+    const barY = 86;
     const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
     const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
     const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
@@ -15285,7 +15416,7 @@ class ForestContraptions {
           scene.economy.spendSpores(p.cost);
           p.cd = p.maxCd;
           p.digestTimer = 4.0;
-          scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx);
+          scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
           scene.fx.spawnFloatingText(p.x, p.y - 20, '巨口吞噬!', '#722ED1', 1.35);
           scene.fx.spawnParticles(p.x, p.y, 25, ['#722ED1', '#B7EB8F', '#52C41A', '#FFD700'], 35, 80);
           platform.playSfx('sfx_mist');
@@ -15325,7 +15456,7 @@ class ForestContraptions {
           const e = enemies[i];
           if (!e.__active || e.state === 'death') continue;
           if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
-            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx);
+            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
             scene.enemyManager.applyStun(e, 2.2);
             hitCount += 1;
             if (scene.fx) {
@@ -15915,10 +16046,11 @@ class BulletManager {
             e.armorReduction = Math.max(e.armorReduction, h.armorReduction);
           }
           if (h.dps > 0) {
-            e.dotSources.push(h.dps);
-            if (h.sourceTower) {
-              h.sourceTower.totalDamage = (h.sourceTower.totalDamage || 0) + h.dps * dt;
-            }
+            e.dotSources.push({
+              dps: h.dps,
+              sourceTower: h.sourceTower || null,
+              kind: h.kind || 'mist'
+            });
           }
         }
       }
@@ -16279,7 +16411,10 @@ class BulletManager {
 
           // B3 熔金：爆心留下灼烧区（半径 1.0 格，持续 3 秒，每秒 8 点伤害）
           if (b.burnZoneCfg) {
-            this.spawnBurnZone(b.targetX, b.targetY, b.burnZoneCfg);
+            const burnCfg = b.sourceTower
+              ? Object.assign({}, b.burnZoneCfg, { sourceTower: b.sourceTower })
+              : b.burnZoneCfg;
+            this.spawnBurnZone(b.targetX, b.targetY, burnCfg);
           }
 
           this.bulletPool.releaseAt(i);
@@ -17323,8 +17458,8 @@ class TowerManager {
       }
       platform.playSfx('sfx_shoot');
     } else if (tower.typeId === 'mist') {
-      const mh = bulletManager.spawnMistCloud(target.x, target.y, node);
-      if (mh) mh.sourceTower = tower;
+      const mh = bulletManager.spawnMistCloud(target.x, target.y, Object.assign({}, node, { sourceTower: tower }));
+      if (mh && !mh.sourceTower) mh.sourceTower = tower;
       platform.playSfx('sfx_mist');
     } else if (tower.typeId === 'thorn') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);
@@ -17522,11 +17657,11 @@ class TowerManager {
           ctx.stroke();
         }
 
-        // 头顶微操解救气泡标签：精致圆角药丸胶囊
+        // 头顶微操解救气泡标签：精致圆角药丸胶囊（避让自身血条防遮挡）
         const badgeW = 74;
         const badgeH = 18;
         const badgeX = Math.round(t.x - badgeW * 0.5);
-        const badgeY = tileY - 20;
+        const badgeY = (t.hp < t.maxHp && t.hp > 0) ? (tileY - 31) : (tileY - 21);
 
         ctx.globalAlpha = 0.95;
         ctx.fillStyle = 'rgba(20, 36, 48, 0.88)';
@@ -17915,6 +18050,21 @@ class WaveManager {
     if (hasFlank) pushTag('侧翼来袭');
     if (tags.length === 0) pushTag('前锋虫群');
     return `第 ${this.currentWaveIndex} 波 · ${tags.join(' · ')}`;
+  }
+
+  /**
+   * 悬停提前迎战或出怪传送门时显示精确的下波兵力明细（复用 getUpcomingWaveSummary）
+   */
+  getUpcomingWaveDetailText() {
+    const summary = this.getUpcomingWaveSummary();
+    if (!summary || summary.length === 0) {
+      return `第 ${this.currentWaveIndex} 波 · 前锋虫群来袭`;
+    }
+    const parts = summary.slice(0, 4).map((item) => {
+      const nm = item.def && item.def.nameKey ? i18n.t(item.def.nameKey) : item.type;
+      return `${nm}×${item.count}`;
+    });
+    return `第 ${this.currentWaveIndex} 波兵力：${parts.join(' · ')}`;
   }
 
   /**
@@ -19046,14 +19196,14 @@ class UiManager {
     }
 
     // 顶部木质横幅与两侧导航等高同心对齐（centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 268, 12, 292, 48, 0.98);
+    this.drawAiFrame(ctx, 'top_bar', 260, 12, 292, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 414, 36);
+    ctx.fillText(i18n.t('btn_level_select'), 406, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 104, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 96, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 14.5px ${CN_FONT}`
     }, () => {
@@ -19061,8 +19211,9 @@ class UiManager {
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 136, 18, 118, 36, '林地秘典', {
+    this.drawPixelButton(ctx, 'lvl_codex', 128, 18, 120, 36, i18n.t('btn_guide'), {
       skin: 'btn_wood',
+      iconCat: 24,
       iconKey: 'guide',
       font: `bold 14px ${CN_FONT}`
     }, () => {
@@ -19073,26 +19224,26 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 574, 18, 134, 36, 0.96)) {
-        roundRectPath(ctx, 574, 18, 134, 36, 8);
+      if (!this.drawAiFrame(ctx, 'top_bar', 564, 18, 140, 36, 0.96)) {
+        roundRectPath(ctx, 564, 18, 140, 36, 8);
         ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 641, 36, {
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 634, 36, {
         style: 'gold',
         size: 11.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0,
-        maxWidth: 112
+        maxWidth: 118
       });
       ctx.restore();
     }
 
-    this.drawPixelButton(ctx, 'lvl_settings', 716, 18, 114, 36, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'lvl_settings', 714, 18, 124, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
       font: `bold 14px ${CN_FONT}`
@@ -19177,15 +19328,41 @@ class UiManager {
       }
 
       const descPad = compact ? 22 : 28;
-      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 214 : 254), cardW - descPad * 2, compact ? 16 : 18, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 210 : 244), cardW - descPad * 2, compact ? 15.5 : 17.5, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+
+      // 中部战术威胁与首领情报小框（消除中间羊皮纸空洞，提升关卡识别度）
+      const mapIntel = ({
+        map1: { route: '双路汇流 · 初阶虫群', boss: '首领：腐化蛀王' },
+        map2: { route: '溪谷双径 · 潜行与防空', boss: '首领：剧毒幽蛾后' },
+        map3: { route: '荧光双道 · 自爆与复生', boss: '首领：万巢裂殖母体' },
+        map4: { route: '古殿双圣道 · 终局围剿', boss: '首领：蚀日圣甲皇' }
+      })[mapId] || { route: '双线协同作战', boss: '首领压阵' };
+      const intelY = cardY + (compact ? 270 : 282);
+      const intelH = compact ? 38 : 36;
+      ctx.save();
+      roundRectPath(ctx, cardX + descPad, intelY, cardW - descPad * 2, intelH, 7);
+      ctx.fillStyle = 'rgba(110, 74, 38, 0.10)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.30)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = THEME.INK_DARK;
+      ctx.font = `bold ${compact ? 10 : 11}px ${CN_FONT}`;
+      ctx.fillText(mapIntel.route, cardX + cardW * 0.5, intelY + 12, cardW - descPad * 2 - 10);
+      ctx.fillStyle = '#9E3818';
+      ctx.font = `bold ${compact ? 10 : 10.5}px ${CN_FONT}`;
+      ctx.fillText(mapIntel.boss, cardX + cardW * 0.5, intelY + 27, cardW - descPad * 2 - 10);
+      ctx.restore();
 
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold ${compact ? 11 : 12}px ${CN_FONT}`;
       ctx.textAlign = 'left';
       const timeStr = rec.bestTime !== null ? (rec.bestTime + 's') : i18n.t('record_none');
       const seedStr = rec.bestSeeds > 0 ? (rec.bestSeeds + ' / 20') : i18n.t('record_none');
-      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 320 : 326));
-      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 340 : 346));
+      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 322 : 328));
+      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 342 : 348));
 
       const btnY = cardY + 368;
       if (rec.unlocked) {
@@ -19413,9 +19590,9 @@ class UiManager {
       this.renderSettlementOverlay(ctx, scene);
     }
 
-    // 8.5 实时战斗DPS战报分析仪表盘 (全屏弹窗)
+    // 8.5 实时战斗DPS战报分析仪表盘 (全屏弹窗，传入 ui 共用 9-Slice 手绘羊皮纸木框)
     if (scene.combatAnalytics) {
-      scene.combatAnalytics.renderAnalyticsDashboard(ctx);
+      scene.combatAnalytics.renderAnalyticsDashboard(ctx, this);
     }
   }
 
@@ -20670,10 +20847,13 @@ class UiManager {
 
     const pw = 344;
     const ph = existingTower ? 292 : 232;
-    // 智能停靠：停靠在屏幕边缘，确保地面的 360 度攻击范围完整无遮挡展示
+    const hasActiveBossHud = Boolean(scene.bossOverdriveEngine && scene.bossOverdriveEngine.activeBoss && scene.bossOverdriveEngine.activeBoss.hp > 0);
+    const hasAchieveToast = Boolean(scene.achievements && scene.achievements.currentToast && scene.achievements.toastTimer > 0);
+    const minPy = hasActiveBossHud ? 110 : (hasAchieveToast ? 62 : 24);
+    // 智能停靠：停靠在屏幕边缘并自动避让顶部成就吐司/Boss 血条与底部卡槽
     let px = tileScreenX < 480 ? Math.min(Math.round(tileScreenX + 32), 960 - pw - 14) : Math.max(14, Math.round(tileScreenX - pw - 32));
     px = Math.max(14, Math.min(960 - pw - 14, px));
-    let py = Math.max(24, Math.min(526 - ph, Math.round(tileScreenY - ph * 0.5)));
+    let py = Math.max(minPy, Math.min(470 - ph, Math.round(tileScreenY - ph * 0.5)));
 
     this.inspectorRect = { x: px, y: py, w: pw, h: ph };
 
@@ -21730,9 +21910,7 @@ class UiManager {
       let totalKills = 0;
       let mvpName = '树人守卫';
       let maxCatDmg = -1;
-      let totalDmg = 0;
       if (scene.combatAnalytics) {
-        totalDmg = scene.combatAnalytics.totalDamageDealt || 0;
         const stats = scene.combatAnalytics.categoryStats || {};
         for (const key of Object.keys(stats)) {
           const item = stats[key];
@@ -21743,6 +21921,10 @@ class UiManager {
           }
         }
       }
+      if (scene.economy && (scene.economy.totalKills || 0) > totalKills) {
+        totalKills = scene.economy.totalKills;
+      }
+      const mvpDmgText = maxCatDmg >= 1000 ? `${(Math.round(maxCatDmg / 100) / 10)}k` : String(Math.round(Math.max(0, maxCatDmg)));
 
       const cardX = mx + 44;
       const cardY = my + 126;
@@ -21769,7 +21951,7 @@ class UiManager {
         { k: '通关用时', v: `${timeSec}s` },
         { k: '剩余种子', v: `${scene.settlementResult.remainingSeeds} / 20` },
         { k: '累计歼灭', v: `${totalKills} 只` },
-        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${Math.round(totalDmg / 100) / 10}k)` : '稳固防线' }
+        { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${mvpDmgText})` : '稳固防线' }
       ];
       for (let ci = 0; ci < 4; ci++) {
         const colI = ci % 2;
@@ -23033,6 +23215,13 @@ class UiManager {
       );
 
       const hovered = this.isPointHovered(barX, barY, barW, barH);
+      if (hovered) {
+        this.bottomHoverTip = {
+          x: barX + barW * 0.5,
+          y: 446,
+          text: typeof waveMgr.getUpcomingWaveDetailText === 'function' ? waveMgr.getUpcomingWaveDetailText() : threatStr
+        };
+      }
       const drawY = hovered ? barY - 1 : barY;
       ctx.save();
       if (!this.drawAiFrame(ctx, 'btn_green', barX, drawY, barW, barH, 1.0)) {
@@ -24053,13 +24242,10 @@ class SceneController {
         if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
           const shockBase = 350;
           const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
-          e.hp -= finalShockDmg;
+          this.enemyManager.applyDamage(e, finalShockDmg, true, 'magic', this.fx, 'reactions');
           e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
           enemiesHit++;
-          if (e.hp <= 0) {
-            this.enemyManager.handleEnemyDeath(e, finalShockDmg, this.logicalCombatTimeSec, this.map, this.economy, this.fx);
-          }
         }
       }
       this.fx.triggerShake(8, 350);
@@ -24844,8 +25030,10 @@ class SceneController {
       }
     }
 
-    // 屏幕级特效横幅与红边闪烁
-    this.fx.renderScreenOverlayFx(ctx);
+    // 屏幕级特效横幅与红边闪烁（暂停与结算模态覆盖时不展示过渡横幅，避免从木框两侧穿帮）
+    if (this.state === 'BATTLE') {
+      this.fx.renderScreenOverlayFx(ctx);
+    }
 
     // 环绕式奇幻森林战斗 HUD（顶部资源条、右上控制栏、底部植物塔卡片栏、动态弹出式防御塔升级面板）
     this.ui.renderBattleHud(ctx, this);

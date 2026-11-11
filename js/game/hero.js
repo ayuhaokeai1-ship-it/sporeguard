@@ -263,7 +263,7 @@ class ForestHero {
     // 天赋 1：尖刺重甲近战创伤反弹 45%
     if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
       const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
-      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, null);
+      enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, 'hero');
       if (fx) {
         fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
       }
@@ -339,7 +339,7 @@ class ForestHero {
         const e = alive[i];
         const dist = Math.hypot(e.x - this.x, e.y - this.y);
         if (dist <= baseRadius) {
-          enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, null);
+          enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, 'hero');
           // 强力定身晕眩
           e.activeSlow = 0.95;
           e.residualSlowValue = 0.85;
@@ -381,7 +381,7 @@ class ForestHero {
         for (let i = 0; i < targets.length; i++) {
           const e = targets[i];
           if (!e.isFlying && Math.hypot(e.x - this.x, e.y - this.y) <= 90) {
-            enemyManager.applyDamage(e, cleaveDmg, true, 'physical', fx, null);
+            enemyManager.applyDamage(e, cleaveDmg, true, 'physical', fx, 'hero');
             e.activeSlow = 0.85;
             e.residualSlowTimer = 2.0;
           }
@@ -453,7 +453,7 @@ class ForestHero {
           const e = alive[eIdx];
           if (!e.isFlying && e.state !== 'death' && Math.hypot(e.x - trap.x, e.y - trap.y) <= trap.triggerRadius) {
             triggered = true;
-            enemyManager.applyDamage(e, trap.damage, true, 'magic', fx, null);
+            enemyManager.applyDamage(e, trap.damage, true, 'magic', fx, 'hero');
             e.activeSlow = 0.95;
             e.residualSlowValue = 0.90;
             e.residualSlowTimer = trap.rootDuration;
@@ -487,7 +487,7 @@ class ForestHero {
         for (let eIdx = 0; eIdx < alive.length; eIdx++) {
           const e = alive[eIdx];
           if (e.state !== 'death' && Math.hypot(e.x - spr.x, e.y - spr.y) <= 16) {
-            enemyManager.applyDamage(e, spr.damage, false, 'pierce', fx, null);
+            enemyManager.applyDamage(e, spr.damage, false, 'pierce', fx, 'hero');
             e.activeSlow = 0.45;
             e.residualSlowTimer = 2.0;
             if (fx) {
@@ -614,7 +614,7 @@ class ForestHero {
         if (closest) {
           this.rangedThornCooldown = 1.4;
           const thornDmg = Math.round(this.atkDamage * 0.95);
-          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, null);
+          enemyManager.applyDamage(closest, thornDmg, false, 'physical', fx, 'hero');
           platform.playSfx('sfx_watch');
           if (fx) {
             fx.spawnParticles(closest.x, closest.y, 6, ['#52C41A', '#73D13D', '#FFFFFF'], 15, 45, 0.15, 0.3, 2.5);
@@ -684,7 +684,7 @@ class ForestHero {
 
             for (let h = 0; h < hits; h++) {
               const target = potentialTargets[h];
-              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, null);
+              enemyManager.applyDamage(target, finalHitDmg, isCrit, 'physical', fx, 'hero');
             if (this.transcendence) {
               this.transcendence.onHeroHitTarget(target, enemyManager, fx);
             }
