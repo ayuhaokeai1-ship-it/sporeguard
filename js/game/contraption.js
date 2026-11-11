@@ -336,6 +336,35 @@ class ForestContraptions {
     return false;
   }
 
+  /**
+   * 绘制地形机关状态微胶囊（清晰提示花费或剩余冷却，不遮挡原生立绘）
+   */
+  drawContraptionBadge(ctx, cx, cy, text, borderColor, textColor) {
+    ctx.save();
+    const w = 52;
+    const h = 14;
+    const x = Math.round(cx - w * 0.5);
+    const y = Math.round(cy);
+    ctx.fillStyle = 'rgba(16, 12, 8, 0.86)';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(x, y, w, h, 7);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 9.5px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, y + h * 0.5);
+    ctx.restore();
+  }
+
   render(ctx, time) {
     // 1. 绘制食虫巨猪笼草 (100% 纯 AI 手绘高精美术资产)
     if (this.pitcher) {
@@ -373,6 +402,11 @@ class ForestContraptions {
         ctx.fill();
       }
 
+      const pLabel = isDigesting ? '消化中' : (p.cd > 0 ? `${Math.ceil(p.cd)}s` : `吞噬 ${p.cost}`);
+      const pBorder = isReady ? 'rgba(115, 209, 61, 0.85)' : 'rgba(140, 110, 75, 0.50)';
+      const pCol = isReady ? '#D9F7BE' : '#B8A88A';
+      this.drawContraptionBadge(ctx, p.x, p.y + 13, pLabel, pBorder, pCol);
+
       ctx.restore();
     }
 
@@ -408,6 +442,11 @@ class ForestContraptions {
         ctx.arc(t.x, t.y - 10, 20 + pulse, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      const tLabel = isReady ? `天雷 ${t.cost}` : `${Math.ceil(t.cd)}s`;
+      const tBorder = isReady ? 'rgba(64, 169, 255, 0.85)' : 'rgba(140, 110, 75, 0.50)';
+      const tCol = isReady ? '#BAE7FF' : '#B8A88A';
+      this.drawContraptionBadge(ctx, t.x, t.y + 13, tLabel, tBorder, tCol);
 
       ctx.restore();
     }

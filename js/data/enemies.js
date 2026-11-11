@@ -158,8 +158,8 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 2200,        // 从 3200 提升至 5200
-    speed: 1.05,         // 格/秒（空中航线）
+    baseHp: 2200,        // 飞行首领本体中等血量，主打召唤与高速突袭
+    speed: 0.90,         // 格/秒（空中航线）
     armor: 10,
     threat: 5,
     reward: 140,

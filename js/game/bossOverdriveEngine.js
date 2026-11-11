@@ -75,8 +75,8 @@ class BossOverdriveEngine {
       this.triggerPhase3Transition(scene);
     }
 
-    // 2. 二阶段狂暴践踏技能
-    if (this.phase >= 2) {
+    // 2. 二阶段狂暴践踏技能（仅陆地重甲首领发动撼地践踏；空中蛾后专注毒粉狂暴）
+    if (this.phase >= 2 && !this.activeBoss.isFlying) {
       this.stompCooldown -= dt;
       if (this.stompCooldown <= 0) {
         this.stompCooldown = 7.5;

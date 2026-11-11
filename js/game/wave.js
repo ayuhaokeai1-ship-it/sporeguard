@@ -64,6 +64,40 @@ class WaveManager {
   }
 
   /**
+   * 提炼即将到来波次的简明战术预警文本（防空/侧翼/潜地/吐网/首领）
+   */
+  getUpcomingThreatSummaryText() {
+    const waveDef = this.waveList[Math.min(this.totalWaves, this.currentWaveIndex) - 1];
+    if (!waveDef || !waveDef.groups) {
+      return `第 ${this.currentWaveIndex} 波 · 深渊强袭`;
+    }
+    const tags = [];
+    const seen = new Set();
+    const pushTag = (t) => {
+      if (!seen.has(t) && tags.length < 3) {
+        seen.add(t);
+        tags.push(t);
+      }
+    };
+    let hasFlank = false;
+    for (let i = 0; i < waveDef.groups.length; i++) {
+      const g = waveDef.groups[i];
+      if (!g) continue;
+      if (g.routeIndex === 1) hasFlank = true;
+      const def = ENEMIES[g.type];
+      if (def && def.isBoss) pushTag('首领降临');
+      else if (def && def.isFlying) pushTag('防空警报');
+      else if (g.type === 'burrower') pushTag('潜地突袭');
+      else if (g.type === 'weaver') pushTag('蛛网封塔');
+      else if (g.type === 'leaper') pushTag('后排跃击');
+      else if (g.type === 'armored' || g.type === 'siege_beetle') pushTag('重甲护卫');
+    }
+    if (hasFlank) pushTag('侧翼来袭');
+    if (tags.length === 0) pushTag('前锋虫群');
+    return `第 ${this.currentWaveIndex} 波 · ${tags.join(' · ')}`;
+  }
+
+  /**
    * 进入无尽深渊模式
    */
   startEndlessMode(economy, fx) {

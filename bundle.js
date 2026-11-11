@@ -1032,8 +1032,8 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 2200,        // 从 3200 提升至 5200
-    speed: 1.05,         // 格/秒（空中航线）
+    baseHp: 2200,        // 飞行首领本体中等血量，主打召唤与高速突袭
+    speed: 0.90,         // 格/秒（空中航线）
     armor: 10,
     threat: 5,
     reward: 140,
@@ -1678,7 +1678,7 @@ const WAVES = {
       groups: [
         { type: 'boss_m2', count: 1, interval: 1.0, start: 0 },
         { type: 'moth', count: 7, interval: 2.0, start: 6 },
-        { type: 'leaper', count: 4, interval: 1.4, start: 10, routeIndex: 1 },
+        { type: 'leaper', count: 3, interval: 1.6, start: 10, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 3.5, start: 18 },
         { type: 'burrower', count: 3, interval: 1.8, start: 24, routeIndex: 1 },
         { type: 'splitter', count: 4, interval: 2.8, start: 30 },
@@ -14250,8 +14250,8 @@ class BossOverdriveEngine {
       this.triggerPhase3Transition(scene);
     }
 
-    // 2. 二阶段狂暴践踏技能
-    if (this.phase >= 2) {
+    // 2. 二阶段狂暴践踏技能（仅陆地重甲首领发动撼地践踏；空中蛾后专注毒粉狂暴）
+    if (this.phase >= 2 && !this.activeBoss.isFlying) {
       this.stompCooldown -= dt;
       if (this.stompCooldown <= 0) {
         this.stompCooldown = 7.5;
@@ -14791,6 +14791,35 @@ class ForestContraptions {
     return false;
   }
 
+  /**
+   * 绘制地形机关状态微胶囊（清晰提示花费或剩余冷却，不遮挡原生立绘）
+   */
+  drawContraptionBadge(ctx, cx, cy, text, borderColor, textColor) {
+    ctx.save();
+    const w = 52;
+    const h = 14;
+    const x = Math.round(cx - w * 0.5);
+    const y = Math.round(cy);
+    ctx.fillStyle = 'rgba(16, 12, 8, 0.86)';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(x, y, w, h, 7);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 9.5px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, y + h * 0.5);
+    ctx.restore();
+  }
+
   render(ctx, time) {
     // 1. 绘制食虫巨猪笼草 (100% 纯 AI 手绘高精美术资产)
     if (this.pitcher) {
@@ -14828,6 +14857,11 @@ class ForestContraptions {
         ctx.fill();
       }
 
+      const pLabel = isDigesting ? '消化中' : (p.cd > 0 ? `${Math.ceil(p.cd)}s` : `吞噬 ${p.cost}`);
+      const pBorder = isReady ? 'rgba(115, 209, 61, 0.85)' : 'rgba(140, 110, 75, 0.50)';
+      const pCol = isReady ? '#D9F7BE' : '#B8A88A';
+      this.drawContraptionBadge(ctx, p.x, p.y + 13, pLabel, pBorder, pCol);
+
       ctx.restore();
     }
 
@@ -14863,6 +14897,11 @@ class ForestContraptions {
         ctx.arc(t.x, t.y - 10, 20 + pulse, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      const tLabel = isReady ? `天雷 ${t.cost}` : `${Math.ceil(t.cd)}s`;
+      const tBorder = isReady ? 'rgba(64, 169, 255, 0.85)' : 'rgba(140, 110, 75, 0.50)';
+      const tCol = isReady ? '#BAE7FF' : '#B8A88A';
+      this.drawContraptionBadge(ctx, t.x, t.y + 13, tLabel, tBorder, tCol);
 
       ctx.restore();
     }
@@ -17129,6 +17168,40 @@ class WaveManager {
   }
 
   /**
+   * 提炼即将到来波次的简明战术预警文本（防空/侧翼/潜地/吐网/首领）
+   */
+  getUpcomingThreatSummaryText() {
+    const waveDef = this.waveList[Math.min(this.totalWaves, this.currentWaveIndex) - 1];
+    if (!waveDef || !waveDef.groups) {
+      return `第 ${this.currentWaveIndex} 波 · 深渊强袭`;
+    }
+    const tags = [];
+    const seen = new Set();
+    const pushTag = (t) => {
+      if (!seen.has(t) && tags.length < 3) {
+        seen.add(t);
+        tags.push(t);
+      }
+    };
+    let hasFlank = false;
+    for (let i = 0; i < waveDef.groups.length; i++) {
+      const g = waveDef.groups[i];
+      if (!g) continue;
+      if (g.routeIndex === 1) hasFlank = true;
+      const def = ENEMIES[g.type];
+      if (def && def.isBoss) pushTag('首领降临');
+      else if (def && def.isFlying) pushTag('防空警报');
+      else if (g.type === 'burrower') pushTag('潜地突袭');
+      else if (g.type === 'weaver') pushTag('蛛网封塔');
+      else if (g.type === 'leaper') pushTag('后排跃击');
+      else if (g.type === 'armored' || g.type === 'siege_beetle') pushTag('重甲护卫');
+    }
+    if (hasFlank) pushTag('侧翼来袭');
+    if (tags.length === 0) pushTag('前锋虫群');
+    return `第 ${this.currentWaveIndex} 波 · ${tags.join(' · ')}`;
+  }
+
+  /**
    * 进入无尽深渊模式
    */
   startEndlessMode(economy, fx) {
@@ -18166,21 +18239,49 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
-    // 顶部木质横幅
-    this.drawAiFrame(ctx, 'top_bar', 270, 10, 420, 56, 0.98);
+    // 顶部木质横幅（窄巧居中，为右侧无尽徽章与设置键留足安全区）
+    this.drawAiFrame(ctx, 'top_bar', 284, 10, 292, 56, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = 'bold 22px ' + CN_FONT;
+    ctx.font = 'bold 21px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 480, 38);
+    ctx.fillText(i18n.t('btn_level_select'), 430, 38);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 112, 40, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 108, 40, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 15px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       scene.enterTitle();
     });
+
+    this.drawPixelButton(ctx, 'lvl_codex', 140, 18, 118, 40, '林地秘典', {
+      skin: 'btn_wood',
+      iconKey: 'guide',
+      font: `bold 14px ${CN_FONT}`
+    }, () => {
+      platform.playSfx('sfx_click');
+      this.showGuideModal = true;
+    });
+
+    const save = storage.getSave();
+    if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
+      ctx.save();
+      roundRectPath(ctx, 582, 22, 110, 32, 8);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 637, 38, {
+        style: 'gold',
+        size: 10.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+      ctx.restore();
+    }
 
     this.drawPixelButton(ctx, 'lvl_settings', 700, 18, 112, 40, i18n.t('btn_settings'), {
       skin: 'btn_wood',
@@ -18190,8 +18291,6 @@ class UiManager {
       platform.playSfx('sfx_click');
       this.showSettingsModal = true;
     });
-
-    const save = storage.getSave();
 
     for (let i = 0; i < MAP_ORDER.length; i++) {
       const mapId = MAP_ORDER[i];
@@ -18301,6 +18400,8 @@ class UiManager {
 
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx, scene);
+    } else if (this.showGuideModal) {
+      this.renderGuideModal(ctx, scene);
     }
   }
 
@@ -21548,6 +21649,27 @@ class UiManager {
     const barH = 42; // 高度 42px，按键舒适，大字号完全舒展
 
     if (waveMgr.isPrepPhase()) {
+      // 上方紧凑来袭兵种侦察情报条（防空 / 潜地 / 侧翼 / 首领提示）
+      if (typeof waveMgr.getUpcomingThreatSummaryText === 'function') {
+        const threatStr = waveMgr.getUpcomingThreatSummaryText();
+        const isHighAlert = threatStr.includes('首领') || threatStr.includes('侧翼') || threatStr.includes('防空');
+        ctx.save();
+        roundRectPath(ctx, barX, barY - 22, barW, 18, 9);
+        ctx.fillStyle = isHighAlert ? 'rgba(54, 22, 16, 0.90)' : 'rgba(18, 28, 20, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = isHighAlert ? 'rgba(255, 120, 117, 0.78)' : 'rgba(149, 222, 100, 0.65)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        drawArtText(ctx, threatStr, barX + barW * 0.5, barY - 13, {
+          style: isHighAlert ? 'gold' : 'emerald',
+          size: 10.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0.7
+        });
+        ctx.restore();
+      }
+
       const earlyBonus = Math.min(
         CONFIG.ECONOMY.EARLY_CALL_MAX,
         Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
@@ -21559,7 +21681,7 @@ class UiManager {
         barY,
         barW,
         barH,
-        '📢 提前迎战 +' + earlyBonus + ' 🪙',
+        '提前迎战 +' + earlyBonus + ' 孢',
         {
           skin: 'btn_green',
           font: 'bold 15px ' + CN_FONT

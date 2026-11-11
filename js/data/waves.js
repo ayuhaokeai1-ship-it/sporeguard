@@ -250,7 +250,7 @@ const WAVES = {
       groups: [
         { type: 'boss_m2', count: 1, interval: 1.0, start: 0 },
         { type: 'moth', count: 7, interval: 2.0, start: 6 },
-        { type: 'leaper', count: 4, interval: 1.4, start: 10, routeIndex: 1 },
+        { type: 'leaper', count: 3, interval: 1.6, start: 10, routeIndex: 1 },
         { type: 'armored', count: 3, interval: 3.5, start: 18 },
         { type: 'burrower', count: 3, interval: 1.8, start: 24, routeIndex: 1 },
         { type: 'splitter', count: 4, interval: 2.8, start: 30 },

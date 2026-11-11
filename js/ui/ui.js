@@ -796,21 +796,49 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
-    // 顶部木质横幅
-    this.drawAiFrame(ctx, 'top_bar', 270, 10, 420, 56, 0.98);
+    // 顶部木质横幅（窄巧居中，为右侧无尽徽章与设置键留足安全区）
+    this.drawAiFrame(ctx, 'top_bar', 284, 10, 292, 56, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = 'bold 22px ' + CN_FONT;
+    ctx.font = 'bold 21px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 480, 38);
+    ctx.fillText(i18n.t('btn_level_select'), 430, 38);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 112, 40, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 108, 40, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 15px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       scene.enterTitle();
     });
+
+    this.drawPixelButton(ctx, 'lvl_codex', 140, 18, 118, 40, '林地秘典', {
+      skin: 'btn_wood',
+      iconKey: 'guide',
+      font: `bold 14px ${CN_FONT}`
+    }, () => {
+      platform.playSfx('sfx_click');
+      this.showGuideModal = true;
+    });
+
+    const save = storage.getSave();
+    if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
+      ctx.save();
+      roundRectPath(ctx, 582, 22, 110, 32, 8);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 637, 38, {
+        style: 'gold',
+        size: 10.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+      ctx.restore();
+    }
 
     this.drawPixelButton(ctx, 'lvl_settings', 700, 18, 112, 40, i18n.t('btn_settings'), {
       skin: 'btn_wood',
@@ -820,8 +848,6 @@ class UiManager {
       platform.playSfx('sfx_click');
       this.showSettingsModal = true;
     });
-
-    const save = storage.getSave();
 
     for (let i = 0; i < MAP_ORDER.length; i++) {
       const mapId = MAP_ORDER[i];
@@ -931,6 +957,8 @@ class UiManager {
 
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx, scene);
+    } else if (this.showGuideModal) {
+      this.renderGuideModal(ctx, scene);
     }
   }
 
@@ -4178,6 +4206,27 @@ class UiManager {
     const barH = 42; // 高度 42px，按键舒适，大字号完全舒展
 
     if (waveMgr.isPrepPhase()) {
+      // 上方紧凑来袭兵种侦察情报条（防空 / 潜地 / 侧翼 / 首领提示）
+      if (typeof waveMgr.getUpcomingThreatSummaryText === 'function') {
+        const threatStr = waveMgr.getUpcomingThreatSummaryText();
+        const isHighAlert = threatStr.includes('首领') || threatStr.includes('侧翼') || threatStr.includes('防空');
+        ctx.save();
+        roundRectPath(ctx, barX, barY - 22, barW, 18, 9);
+        ctx.fillStyle = isHighAlert ? 'rgba(54, 22, 16, 0.90)' : 'rgba(18, 28, 20, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = isHighAlert ? 'rgba(255, 120, 117, 0.78)' : 'rgba(149, 222, 100, 0.65)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        drawArtText(ctx, threatStr, barX + barW * 0.5, barY - 13, {
+          style: isHighAlert ? 'gold' : 'emerald',
+          size: 10.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0.7
+        });
+        ctx.restore();
+      }
+
       const earlyBonus = Math.min(
         CONFIG.ECONOMY.EARLY_CALL_MAX,
         Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
@@ -4189,7 +4238,7 @@ class UiManager {
         barY,
         barW,
         barH,
-        '📢 提前迎战 +' + earlyBonus + ' 🪙',
+        '提前迎战 +' + earlyBonus + ' 孢',
         {
           skin: 'btn_green',
           font: 'bold 15px ' + CN_FONT
