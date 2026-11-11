@@ -205,22 +205,28 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=76..114 安全带)
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=58..106 安全带，内外留白饱满)
     const barW = 360;
     const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 78;
+    const barY = 82;
     const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
     const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
     const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
 
-    // 血条底座背框
-    ctx.fillStyle = 'rgba(18, 12, 8, 0.94)';
-    ctx.strokeStyle = '#D4B106';
+    // 血条底座背框（双层暗木嵌金倒角框，标题与血槽均舒展留白于框内）
+    ctx.fillStyle = 'rgba(20, 14, 9, 0.95)';
+    ctx.strokeStyle = '#C68F45';
     ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(barX - 4, barY - 18, barW + 8, barH + 24, 8) : ctx.rect(barX - 4, barY - 18, barW + 8, barH + 24);
+    ctx.roundRect ? ctx.roundRect(barX - 12, barY - 24, barW + 24, barH + 32, 9) : ctx.rect(barX - 12, barY - 24, barW + 24, barH + 32);
     ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.25)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(barX - 9, barY - 21, barW + 18, barH + 26, 7) : ctx.rect(barX - 9, barY - 21, barW + 18, barH + 26);
     ctx.stroke();
 
     // 首领名称与阶段标识（自动本地化读取腐化蛀王 / 剧毒幽蛾后 / 万巢裂殖母体）
@@ -230,13 +236,14 @@ class BossOverdriveEngine {
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
     ctx.font = `bold 12px ${UI_FONT}`;
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = auraColor;
     ctx.textAlign = 'left';
-    ctx.fillText(`${bossName} ${phaseLabel}`, barX + 6, barY - 4);
+    ctx.fillText(`${bossName} ${phaseLabel}`, barX, barY - 11, barW - 108);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
-    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW - 6, barY - 4);
+    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW, barY - 11, 104);
 
     // 内部血条充能槽
     ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';

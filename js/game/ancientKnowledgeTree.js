@@ -408,15 +408,15 @@ class AncientKnowledgeTree {
       }
     }
 
-    // 2. 当前分支下的 4 个阶梯天赋卡片
+    // 2. 当前分支下的 4 个阶梯天赋卡片（严密契合羊皮纸安全内容高度）
     const currentTalents = Object.values(TALENT_DEFS).filter(t => t.branch === this.activeTab);
-    const cardW = (w - 60) / 4;
-    const cardH = 260;
-    const startY = y + 55;
+    const cardW = (w - 56) / 4;
+    const cardH = Math.max(250, Math.min(266, h - 66));
+    const startY = y + 52;
 
     for (let i = 0; i < currentTalents.length; i++) {
       const t = currentTalents[i];
-      const cx = x + 20 + i * (cardW + 8);
+      const cx = x + 16 + i * (cardW + 8);
       const cy = startY;
       const curRank = this.getRank(t.id);
       const isMax = curRank >= t.maxRank;

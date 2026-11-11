@@ -637,7 +637,7 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（动态避让首领血条）
+    // 顶部横幅（连锁！/超载！/波次提示）：文字 100% 居于丝带中央打印带 [y+0.35h .. y+0.67h] 内（动态避让首领血条）
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
@@ -645,23 +645,26 @@ class FxSystem {
       const bx = (960 - bw) * 0.5;
       const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
       const by = hasBossHud ? 116 : 64;
+      const bandCenterY = by + (b.subText ? 26 : 18);
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
 
       ctx.save();
       if (ribImg && ribImg.width) {
-        const rw = bw + 64;
-        const rh = bh + 34;
-        ctx.drawImage(ribImg, Math.round(bx - 32), Math.round(by - 15), rw, rh);
+        const rw = 600;
+        const rh = b.subText ? 116 : 96;
+        const rxImg = Math.round((960 - rw) * 0.5);
+        const ryImg = Math.round(bandCenterY - rh * 0.51);
+        ctx.drawImage(ribImg, rxImg, ryImg, rw, rh);
         ctx.fillStyle = isAlertBanner ? '#FFF5E8' : '#2C1406';
-        ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.font = 'bold 14.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
+        ctx.fillText(b.text, 480, b.subText ? (bandCenterY - 7) : bandCenterY, 300);
         if (b.subText) {
           ctx.fillStyle = isAlertBanner ? '#FFD591' : '#542A0E';
-          ctx.font = 'bold 11.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-          ctx.fillText(b.subText, bx + bw * 0.5, by + 35);
+          ctx.font = 'bold 11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+          ctx.fillText(b.subText, 480, bandCenterY + 9, 300);
         }
       } else {
         ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';

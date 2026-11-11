@@ -2524,7 +2524,7 @@ module.exports = {
   map1_desc: '双线晨雾林地与南部暗穴汇流，宜在转角布阵尖刺与爆裂。',
   map2_name: '地图 2：苔藓溪谷',
   map2_subtitle: '湿润溪流 · 12 波',
-  map2_desc: '双回环溪谷地形兼有东南暗道偷袭，空中航线横跨溪面，需提前部署防空火力。',
+  map2_desc: '双回环溪谷兼有东南暗道偷袭，空中航线横跨溪面，需提前部署防空火力。',
   map3_name: '地图 3：夜光蕈林',
   map3_subtitle: '荧光暗夜 · 15 波',
   map3_desc: '上下双层夜光峡谷同时来袭，随波次夜光增强，考验五菇协同布阵！',
@@ -5406,7 +5406,7 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（动态避让首领血条）
+    // 顶部横幅（连锁！/超载！/波次提示）：文字 100% 居于丝带中央打印带 [y+0.35h .. y+0.67h] 内（动态避让首领血条）
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
@@ -5414,23 +5414,26 @@ class FxSystem {
       const bx = (960 - bw) * 0.5;
       const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
       const by = hasBossHud ? 116 : 64;
+      const bandCenterY = by + (b.subText ? 26 : 18);
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
 
       ctx.save();
       if (ribImg && ribImg.width) {
-        const rw = bw + 64;
-        const rh = bh + 34;
-        ctx.drawImage(ribImg, Math.round(bx - 32), Math.round(by - 15), rw, rh);
+        const rw = 600;
+        const rh = b.subText ? 116 : 96;
+        const rxImg = Math.round((960 - rw) * 0.5);
+        const ryImg = Math.round(bandCenterY - rh * 0.51);
+        ctx.drawImage(ribImg, rxImg, ryImg, rw, rh);
         ctx.fillStyle = isAlertBanner ? '#FFF5E8' : '#2C1406';
-        ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.font = 'bold 14.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
+        ctx.fillText(b.text, 480, b.subText ? (bandCenterY - 7) : bandCenterY, 300);
         if (b.subText) {
           ctx.fillStyle = isAlertBanner ? '#FFD591' : '#542A0E';
-          ctx.font = 'bold 11.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-          ctx.fillText(b.subText, bx + bw * 0.5, by + 35);
+          ctx.font = 'bold 11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+          ctx.fillText(b.subText, 480, bandCenterY + 9, 300);
         }
       } else {
         ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
@@ -11291,8 +11294,8 @@ class CombatAnalyticsSystem {
   renderAnalyticsDashboard(ctx) {
     if (!this.isOpen) return;
 
-    const pw = 440;
-    const ph = 328;
+    const pw = 476;
+    const ph = 336;
     const px = Math.round((960 - pw) * 0.5);
     const py = Math.round((540 - ph) * 0.5);
 
@@ -11311,12 +11314,12 @@ class CombatAnalyticsSystem {
     ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    // 右上角关闭按钮 [×]
-    const closeX = px + pw - 34;
-    const closeY = py + 12;
+    // 右上角关闭按钮 [×]（严密内收 14px 安全边距）
+    const closeX = px + pw - 38;
+    const closeY = py + 14;
     ctx.fillStyle = 'rgba(64, 38, 20, 0.92)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(closeX, closeY, 22, 22, 5) : ctx.rect(closeX, closeY, 22, 22);
+    ctx.roundRect ? ctx.roundRect(closeX, closeY, 24, 24, 5) : ctx.rect(closeX, closeY, 24, 24);
     ctx.fill();
     ctx.strokeStyle = '#E6BB60';
     ctx.lineWidth = 1.2;
@@ -11325,19 +11328,19 @@ class CombatAnalyticsSystem {
     ctx.font = 'bold 14px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('×', closeX + 11, closeY + 11);
+    ctx.fillText('×', closeX + 12, closeY + 12);
 
     // 3. 标题与总览（纯中文无英文混杂）
     ctx.fillStyle = '#FFE58F';
     ctx.font = 'bold 15px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('实时战况与输出统计', px + 18, py + 24);
+    ctx.fillText('实时战况与输出统计', px + 22, py + 26);
 
     const dps = this.combatDuration > 0 ? Math.round(this.totalDamageDealt / this.combatDuration) : 0;
     ctx.fillStyle = '#E8D8B8';
     ctx.font = '11.5px "Microsoft YaHei UI", sans-serif';
-    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 18, py + 47);
+    ctx.fillText(`总伤：${this.totalDamageDealt.toLocaleString()}   |   全队秒伤：${dps}/秒   |   最高单击：${this.highestSingleHit.damage}`, px + 22, py + 49);
 
     // 4. 各单元伤害占比横向柱状图
     const sorted = Object.entries(this.categoryStats)
@@ -11345,9 +11348,9 @@ class CombatAnalyticsSystem {
       .sort((a, b) => b.damage - a.damage);
 
     const maxDmg = Math.max(1, sorted[0].damage);
-    const startY = py + 68;
+    const startY = py + 72;
     const rowH = 29;
-    const barMaxW = 175;
+    const barMaxW = 172;
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
@@ -11357,10 +11360,10 @@ class CombatAnalyticsSystem {
       ctx.fillStyle = item.color;
       ctx.font = 'bold 12px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${i + 1}. ${item.name}`, px + 18, ry + 13);
+      ctx.fillText(`${i + 1}. ${item.name}`, px + 22, ry + 13);
 
       // 槽位底色
-      const barX = px + 132;
+      const barX = px + 138;
       const barY = ry + 6;
       const barW = Math.max(3, Math.round((item.damage / maxDmg) * barMaxW));
       const pct = this.totalDamageDealt > 0 ? ((item.damage / this.totalDamageDealt) * 100).toFixed(1) : '0.0';
@@ -11376,18 +11379,18 @@ class CombatAnalyticsSystem {
       ctx.roundRect ? ctx.roundRect(barX, barY, barW, 13, 4) : ctx.rect(barX, barY, barW, 13);
       ctx.fill();
 
-      // 数值文本 (伤害 + 占比%)
+      // 数值文本 (伤害 + 占比% + 击杀，右侧留足呼吸边距)
       ctx.fillStyle = '#FFFDF5';
       ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 8, ry + 13);
+      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 10, ry + 13, pw - 22 - (barX + barMaxW + 10 - px));
     }
 
     // 5. 底部关闭说明
     ctx.fillStyle = '#B8A88A';
     ctx.font = '11px "Microsoft YaHei UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 14);
+    ctx.fillText('点击任意区域关闭战报面板', px + pw * 0.5, py + ph - 16);
 
     ctx.restore();
   }
@@ -14199,15 +14202,15 @@ class AncientKnowledgeTree {
       }
     }
 
-    // 2. 当前分支下的 4 个阶梯天赋卡片
+    // 2. 当前分支下的 4 个阶梯天赋卡片（严密契合羊皮纸安全内容高度）
     const currentTalents = Object.values(TALENT_DEFS).filter(t => t.branch === this.activeTab);
-    const cardW = (w - 60) / 4;
-    const cardH = 260;
-    const startY = y + 55;
+    const cardW = (w - 56) / 4;
+    const cardH = Math.max(250, Math.min(266, h - 66));
+    const startY = y + 52;
 
     for (let i = 0; i < currentTalents.length; i++) {
       const t = currentTalents[i];
-      const cx = x + 20 + i * (cardW + 8);
+      const cx = x + 16 + i * (cardW + 8);
       const cy = startY;
       const curRank = this.getRank(t.id);
       const isMax = curRank >= t.maxRank;
@@ -14868,22 +14871,28 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=76..114 安全带)
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=58..106 安全带，内外留白饱满)
     const barW = 360;
     const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 78;
+    const barY = 82;
     const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
     const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
     const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
 
-    // 血条底座背框
-    ctx.fillStyle = 'rgba(18, 12, 8, 0.94)';
-    ctx.strokeStyle = '#D4B106';
+    // 血条底座背框（双层暗木嵌金倒角框，标题与血槽均舒展留白于框内）
+    ctx.fillStyle = 'rgba(20, 14, 9, 0.95)';
+    ctx.strokeStyle = '#C68F45';
     ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(barX - 4, barY - 18, barW + 8, barH + 24, 8) : ctx.rect(barX - 4, barY - 18, barW + 8, barH + 24);
+    ctx.roundRect ? ctx.roundRect(barX - 12, barY - 24, barW + 24, barH + 32, 9) : ctx.rect(barX - 12, barY - 24, barW + 24, barH + 32);
     ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.25)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(barX - 9, barY - 21, barW + 18, barH + 26, 7) : ctx.rect(barX - 9, barY - 21, barW + 18, barH + 26);
     ctx.stroke();
 
     // 首领名称与阶段标识（自动本地化读取腐化蛀王 / 剧毒幽蛾后 / 万巢裂殖母体）
@@ -14893,13 +14902,14 @@ class BossOverdriveEngine {
     const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
 
     ctx.font = `bold 12px ${UI_FONT}`;
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = auraColor;
     ctx.textAlign = 'left';
-    ctx.fillText(`${bossName} ${phaseLabel}`, barX + 6, barY - 4);
+    ctx.fillText(`${bossName} ${phaseLabel}`, barX, barY - 11, barW - 108);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
-    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW - 6, barY - 4);
+    ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW, barY - 11, 104);
 
     // 内部血条充能槽
     ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';
@@ -18561,21 +18571,57 @@ class UiManager {
       const sw = rect.w * k;
       const sh = rect.h * k;
 
-      // 按钮类元素采用成熟的 3-Slice 水平切片：
-      // 两端精致的金属包角固定在 16~18px 比例，绝不拉伸变形；
-      // 中间平滑延展，为内部文本与图标留出宽阔舒适的放置空间！
+      // 1. 按钮类元素采用 3-Slice 水平切片：保护两端金属端头
       if (frameKey.startsWith('btn_')) {
         const srcCapW = Math.round(sw * 0.25);
         const dstCapW = Math.min(18, Math.max(12, Math.round(h * 0.45)));
-        // 1. 左侧金属端头
         ctx.drawImage(uiImg, sx, sy, srcCapW, sh, Math.round(x), Math.round(y), dstCapW, Math.round(h));
-        // 2. 中间平展底色
         const midDstW = Math.max(0, Math.round(w) - dstCapW * 2);
         if (midDstW > 0) {
           ctx.drawImage(uiImg, sx + srcCapW, sy, sw - srcCapW * 2, sh, Math.round(x + dstCapW), Math.round(y), midDstW, Math.round(h));
         }
-        // 3. 右侧金属端头
         ctx.drawImage(uiImg, sx + sw - srcCapW, sy, srcCapW, sh, Math.round(x + w - dstCapW), Math.round(y), dstCapW, Math.round(h));
+      } else if (frameKey === 'inspector_board' && w >= 72 && h >= 64) {
+        // 2. 木质羊皮纸框采用真 9-Slice 九宫格切片：
+        // 四角黄铜 L 型铁件与木棱保持锐利固定像素宽度，无论宽弹窗还是竖卡片都不拉伸挤压！
+        const sl = Math.round(sw * 0.16875);
+        const sr = sl;
+        const st = Math.round(sh * 0.171875);
+        const sb = st;
+        const dl = Math.min(28, Math.max(16, Math.round(Math.min(w, h) * 0.14)));
+        const dr = dl;
+        const dt = Math.min(24, Math.max(16, Math.round(Math.min(w, h) * 0.13)));
+        const db = dt;
+        const dx0 = Math.round(x), dy0 = Math.round(y), dw = Math.round(w), dh = Math.round(h);
+        const srcXs = [sx, sx + sl, sx + sw - sr, sx + sw];
+        const srcYs = [sy, sy + st, sy + sh - sb, sy + sh];
+        const dstXs = [dx0, dx0 + dl, dx0 + dw - dr, dx0 + dw];
+        const dstYs = [dy0, dy0 + dt, dy0 + dh - db, dy0 + dh];
+        for (let r = 0; r < 3; r++) {
+          const shPatch = srcYs[r + 1] - srcYs[r];
+          const dhPatch = dstYs[r + 1] - dstYs[r];
+          if (shPatch <= 0 || dhPatch <= 0) continue;
+          for (let c = 0; c < 3; c++) {
+            const swPatch = srcXs[c + 1] - srcXs[c];
+            const dwPatch = dstXs[c + 1] - dstXs[c];
+            if (swPatch <= 0 || dwPatch <= 0) continue;
+            ctx.drawImage(uiImg, srcXs[c], srcYs[r], swPatch, shPatch, dstXs[c], dstYs[r], dwPatch, dhPatch);
+          }
+        }
+      } else if (frameKey === 'top_bar' && w >= h * 2.2) {
+        // 3. 橡木牌匾采用叶片安全的水平 3-Slice：两端包铜与藤叶绝不随面板拉宽变形
+        const sl = Math.round(sw * 0.31);
+        const sr = Math.round(sw * 0.25);
+        const dl = Math.min(44, Math.max(18, Math.round(Math.min(h * 1.1, w * 0.26))));
+        const dr = Math.min(36, Math.max(16, Math.round(Math.min(h * 0.9, w * 0.22))));
+        const midW = Math.round(w) - dl - dr;
+        if (midW > 6) {
+          ctx.drawImage(uiImg, sx, sy, sl, sh, Math.round(x), Math.round(y), dl, Math.round(h));
+          ctx.drawImage(uiImg, sx + sl, sy, sw - sl - sr, sh, Math.round(x + dl), Math.round(y), midW, Math.round(h));
+          ctx.drawImage(uiImg, sx + sw - sr, sy, sr, sh, Math.round(x + dl + midW), Math.round(y), dr, Math.round(h));
+        } else {
+          ctx.drawImage(uiImg, sx, sy, sw, sh, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+        }
       } else {
         ctx.drawImage(uiImg, sx, sy, sw, sh, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
       }
@@ -18799,23 +18845,23 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
-    // 顶部木质横幅（窄巧居中，为右侧无尽徽章与设置键留足安全区）
-    this.drawAiFrame(ctx, 'top_bar', 284, 10, 292, 56, 0.98);
+    // 顶部木质横幅与两侧导航等高同心对齐（centerY = 36）
+    this.drawAiFrame(ctx, 'top_bar', 268, 12, 292, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = 'bold 21px ' + CN_FONT;
+    ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 430, 38);
+    ctx.fillText(i18n.t('btn_level_select'), 414, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 108, 40, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 104, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
-      font: `bold 15px ${CN_FONT}`
+      font: `bold 14.5px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 140, 18, 118, 40, '林地秘典', {
+    this.drawPixelButton(ctx, 'lvl_codex', 136, 18, 118, 36, '林地秘典', {
       skin: 'btn_wood',
       iconKey: 'guide',
       font: `bold 14px ${CN_FONT}`
@@ -18827,26 +18873,26 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 580, 20, 114, 36, 0.96)) {
-        roundRectPath(ctx, 580, 20, 114, 36, 8);
+      if (!this.drawAiFrame(ctx, 'top_bar', 574, 18, 134, 36, 0.96)) {
+        roundRectPath(ctx, 574, 18, 134, 36, 8);
         ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 637, 38, {
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 641, 36, {
         style: 'gold',
-        size: 11,
+        size: 11.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0,
-        maxWidth: 100
+        maxWidth: 112
       });
       ctx.restore();
     }
 
-    this.drawPixelButton(ctx, 'lvl_settings', 700, 18, 112, 40, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'lvl_settings', 716, 18, 114, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
       font: `bold 14px ${CN_FONT}`
@@ -18866,16 +18912,16 @@ class UiManager {
       const mData = MAPS[mapId];
       const rec = (save.maps && save.maps[mapId]) || { unlocked: i === 0, stars: 0, bestTime: null, bestSeeds: 0 };
       const cardX = startCardX + i * (cardW + cardGap);
-      const cardY = 80;
-      const cardH = 430;
+      const cardY = 76;
+      const cardH = 442;
 
-      // 使用 AI 手绘木框羊皮纸大卡片
+      // 使用 AI 9-Slice 手绘木框羊皮纸大卡片（边框厚度固定锐利，内容完全放进羊皮纸框内）
       this.drawWoodlandPanel(ctx, cardX, cardY, cardW, cardH, rec.unlocked ? THEME.BRONZE_MID : '#5A554C', 0.98, 14, true);
 
-      const prevX = cardX + (compact ? 16 : 24);
-      const prevY = cardY + (compact ? 20 : 24);
-      const prevW = cardW - (compact ? 32 : 48);
-      const prevH = compact ? 104 : 132;
+      const prevX = cardX + (compact ? 22 : 28);
+      const prevY = cardY + (compact ? 28 : 30);
+      const prevW = cardW - (compact ? 44 : 56);
+      const prevH = compact ? 96 : 124;
       const mAtlas = platform.getImage(mData.atlasPath);
       if (mAtlas && MAP_ATLAS_LAYOUT.sceneBg) {
         const sb = MAP_ATLAS_LAYOUT.sceneBg;
@@ -18908,55 +18954,55 @@ class UiManager {
       drawLandmarkDot(mData.spawnTile2, '#B37FEB', 'rgba(20, 12, 18, 0.85)', compact ? 2.2 : 2.8);
       drawLandmarkDot(mData.warehouseTile, '#FFD666', 'rgba(42, 24, 10, 0.90)', compact ? 2.9 : 3.6);
 
-      ctx.strokeStyle = THEME.WOOD_DARK;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(72, 46, 22, 0.85)';
+      ctx.lineWidth = 2;
       ctx.strokeRect(prevX, prevY, prevW, prevH);
 
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold ${compact ? 15 : 19}px ${CN_FONT}`;
       ctx.textAlign = 'center';
-      ctx.fillText(i18n.t(mData.nameKey), cardX + cardW * 0.5, cardY + (compact ? 148 : 178), cardW - 22);
+      ctx.fillText(i18n.t(mData.nameKey), cardX + cardW * 0.5, cardY + (compact ? 144 : 174), cardW - 40);
 
       ctx.fillStyle = THEME.ENAMEL_GREEN;
       ctx.font = `bold ${compact ? 11.5 : 13}px ${CN_FONT}`;
-      ctx.fillText(i18n.t(mData.subtitleKey), cardX + cardW * 0.5, cardY + (compact ? 168 : 201), cardW - 22);
+      ctx.fillText(i18n.t(mData.subtitleKey), cardX + cardW * 0.5, cardY + (compact ? 164 : 197), cardW - 40);
 
       const starSz = compact ? 24 : 28;
       const starGap = compact ? 30 : 34;
       const starX0 = Math.round(cardX + (cardW - (starSz + starGap * 2)) * 0.5);
-      const starY = cardY + (compact ? 182 : 216);
+      const starY = cardY + (compact ? 178 : 212);
       for (let s = 0; s < 3; s++) {
         const starKey = s < rec.stars ? 'star_full' : 'star_empty';
         drawUiIcon(ctx, 16, starKey, starX0 + s * starGap, starY, starSz);
       }
 
-      const descPad = compact ? 18 : 26;
-      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 216 : 258), cardW - descPad * 2, compact ? 16 : 18, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+      const descPad = compact ? 22 : 28;
+      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 214 : 254), cardW - descPad * 2, compact ? 16 : 18, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
 
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold ${compact ? 11 : 12}px ${CN_FONT}`;
       ctx.textAlign = 'left';
       const timeStr = rec.bestTime !== null ? (rec.bestTime + 's') : i18n.t('record_none');
       const seedStr = rec.bestSeeds > 0 ? (rec.bestSeeds + ' / 20') : i18n.t('record_none');
-      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 316 : 322));
-      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 335 : 342));
+      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 320 : 326));
+      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 340 : 346));
 
-      const btnY = cardY + 360;
+      const btnY = cardY + 368;
       if (rec.unlocked) {
         const hasCleared = rec.stars > 0;
-        const sidePad = compact ? 16 : 24;
-        const endlessW = compact ? 74 : 92;
+        const sidePad = compact ? 22 : 26;
+        const endlessW = compact ? 72 : 90;
         const startW = hasCleared ? (cardW - sidePad * 2 - endlessW - 6) : (cardW - sidePad * 2);
-        this.drawPixelButton(ctx, 'play_' + mapId, cardX + sidePad, btnY, startW, 44, i18n.t('btn_start'), {
+        this.drawPixelButton(ctx, 'play_' + mapId, cardX + sidePad, btnY, startW, 40, i18n.t('btn_start'), {
           skin: 'btn_green',
-          font: `bold ${compact ? (hasCleared ? 12.5 : 14) : (hasCleared ? 14 : 16)}px ${CN_FONT}`,
+          font: `bold ${compact ? (hasCleared ? 12 : 14) : (hasCleared ? 14 : 16)}px ${CN_FONT}`,
           iconKey: 'play'
         }, () => {
           platform.playSfx('sfx_click');
           scene.startLevel(mapId);
         });
         if (hasCleared) {
-          this.drawPixelButton(ctx, 'endless_' + mapId, cardX + sidePad + startW + 6, btnY, endlessW, 44, '无尽模式', {
+          this.drawPixelButton(ctx, 'endless_' + mapId, cardX + sidePad + startW + 6, btnY, endlessW, 40, '无尽模式', {
             skin: 'btn_wood',
             font: `bold ${compact ? 11 : 12}px ${CN_FONT}`
           }, () => {
@@ -18965,8 +19011,8 @@ class UiManager {
           });
         }
       } else {
-        const lPad = compact ? 18 : 28;
-        this.drawPixelButton(ctx, 'locked_' + mapId, cardX + lPad, btnY, cardW - lPad * 2, 44, i18n.t('map_locked'), {
+        const lPad = compact ? 22 : 28;
+        this.drawPixelButton(ctx, 'locked_' + mapId, cardX + lPad, btnY, cardW - lPad * 2, 40, i18n.t('map_locked'), {
           skin: 'btn_wood',
           disabled: true,
           font: `bold ${compact ? 11.5 : 13}px ${CN_FONT}`,
@@ -20378,12 +20424,12 @@ class UiManager {
       return;
     }
 
-    const pw = 328;
-    const ph = existingTower ? 264 : 224;
+    const pw = 344;
+    const ph = existingTower ? 276 : 232;
     // 智能停靠：停靠在屏幕边缘，确保地面的 360 度攻击范围完整无遮挡展示
     let px = tileScreenX < 480 ? Math.min(Math.round(tileScreenX + 32), 960 - pw - 14) : Math.max(14, Math.round(tileScreenX - pw - 32));
     px = Math.max(14, Math.min(960 - pw - 14, px));
-    let py = Math.max(26, Math.min(526 - ph, Math.round(tileScreenY - ph * 0.5)));
+    let py = Math.max(24, Math.min(526 - ph, Math.round(tileScreenY - ph * 0.5)));
 
     this.inspectorRect = { x: px, y: py, w: pw, h: ph };
 
@@ -20408,11 +20454,11 @@ class UiManager {
     ctx.stroke();
     ctx.restore();
 
-    // 绘制主面板木框+羊皮纸
+    // 绘制主面板 9-Slice 木框+羊皮纸
     this.drawWoodlandPanel(ctx, px, py, pw, ph, THEME.BRONZE_MID, 0.98, 14, true);
 
-    // 右上角关闭按钮 [×]（规范尺寸 22x22，距右边框 14px，距顶 12px）
-    this.drawPixelButton(ctx, 'insp_close', px + pw - 36, py + 12, 22, 22, '×', {
+    // 右上角关闭按钮 [×]（严密收进羊皮纸安全内角，绝不踩上右上铜角铁件）
+    this.drawPixelButton(ctx, 'insp_close', px + pw - 46, py + 24, 22, 22, '×', {
       skin: 'btn_wood',
       font: `bold 14px ${UI_FONT}`
     }, () => {
@@ -20442,40 +20488,41 @@ class UiManager {
     const def = tower.def;
     const node = tower.node;
     const cov = scene.map.getRangeCoverage(tower.col, tower.row, node.range, def.canHitGround, def.canHitAir);
+    const bx = x + 28;
+    const btnW = w - 56; // 288px 对称铺满安全羊皮纸内框
 
-    // 1. 头像框（42x42，内边距左 26px，距顶 30px，完全在羊皮纸安全区内）
+    // 1. 头像框（42x42，完全在羊皮纸安全区内）
     ctx.save();
-    roundRectPath(ctx, x + 26, y + 30, 42, 42, 10);
+    roundRectPath(ctx, bx, y + 28, 42, 42, 10);
     ctx.fillStyle = 'rgba(72, 48, 28, 0.18)';
     ctx.fill();
     ctx.strokeStyle = THEME.BRONZE_MID;
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    drawUiIcon(ctx, 24, tower.typeId, x + 27, y + 31, 40);
+    drawUiIcon(ctx, 24, tower.typeId, bx + 1, y + 29, 40);
 
-    // 标题：守卫名字 · 节点名字（上移 3px 与下方等级徽章留出舒展行距）
+    // 标题：守卫名字 · 节点名字（右侧留足关闭按钮安全距）
     ctx.fillStyle = THEME.INK_DARK;
     ctx.font = `bold 15px ${UI_FONT}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const fullName = `${i18n.t(def.nameKey)} · ${i18n.t(node.nameKey)}`;
-    ctx.fillText(fullName, x + 76, y + 36, Math.max(80, w - 118));
+    ctx.fillText(fullName, bx + 50, y + 35, Math.max(80, w - 134));
 
-    // 等级阶级徽章（胶囊型，y+55）
+    // 等级阶级徽章（胶囊型，y+54）
     const lvMap = { base: '基础 1阶', lv1: '强化 2阶', a2: '甲线 3阶', a3: '甲线 顶阶', b2: '乙线 3阶', b3: '乙线 顶阶' };
     const lvBadgeW = 62;
-    roundRectPath(ctx, x + 76, y + 55, lvBadgeW, 18, 9);
+    roundRectPath(ctx, bx + 50, y + 54, lvBadgeW, 18, 9);
     ctx.fillStyle = tower.branch === 'A' ? '#1D6373' : (tower.branch === 'B' ? '#8C4D18' : '#33612E');
     ctx.fill();
     ctx.fillStyle = '#FFFDF5';
     ctx.font = `bold 11px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(lvMap[tower.nodeId] || '1阶', x + 76 + lvBadgeW * 0.5, y + 63);
+    ctx.fillText(lvMap[tower.nodeId] || '1阶', bx + 50 + lvBadgeW * 0.5, y + 63);
 
-    // 战术定位微胶囊（规范放进边框内部，绝不横向溢出，y+54）
+    // 战术定位微胶囊与菌丝共振羁绊微标
     const roleStr = i18n.t(def.roleKey) || '林地守卫';
-    // 菌丝共振羁绊微标
     let synName = '';
     let synBg = '#389E0D';
     if (tower.synergies) {
@@ -20493,21 +20540,21 @@ class UiManager {
         synBg = '#237804';
       }
     }
+    const roleTagX = bx + 50 + lvBadgeW + 8;
+    const roleTagW = 84;
     if (synName) {
-      const synTagX = x + 76 + lvBadgeW + 8 + 88;
-      roundRectPath(ctx, synTagX, y + 55, 58, 18, 9);
+      const synTagX = roleTagX + roleTagW + 6;
+      roundRectPath(ctx, synTagX, y + 54, 58, 18, 9);
       ctx.fillStyle = synBg;
       ctx.fill();
       ctx.fillStyle = '#FFFDF5';
       ctx.font = `bold 10px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(synName, synTagX + 29, y + 64);
+      ctx.fillText(synName, synTagX + 29, y + 63);
     }
 
-    const roleTagX = x + 76 + lvBadgeW + 8;
-    const roleTagW = 84;
-    roundRectPath(ctx, roleTagX, y + 55, roleTagW, 18, 9);
+    roundRectPath(ctx, roleTagX, y + 54, roleTagW, 18, 9);
     ctx.fillStyle = 'rgba(92, 64, 40, 0.10)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
@@ -20518,12 +20565,12 @@ class UiManager {
     ctx.font = `bold 10px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(roleStr, roleTagX + roleTagW * 0.5, y + 64);
+    ctx.fillText(roleStr, roleTagX + roleTagW * 0.5, y + 63);
     ctx.restore();
 
-    // 2. 核心战斗属性药丸胶囊（攻击 / 间隔 / 射程，三等分铺满 276px 可用内宽，y+78）
-    const statsY = y + 78;
-    const pillW = 86;
+    // 2. 核心战斗属性药丸胶囊（三等分铺满 288px 可用内宽，y+79）
+    const statsY = y + 79;
+    const pillW = 90;
     const pillGap = 9;
     let dmgVal = `${node.damage}`;
     let dmgLabel = '攻击';
@@ -20551,7 +20598,7 @@ class UiManager {
     ];
     for (let i = 0; i < 3; i++) {
       const st = statItems[i];
-      const sx = x + 26 + i * (pillW + pillGap);
+      const sx = bx + i * (pillW + pillGap);
       ctx.save();
       roundRectPath(ctx, sx, statsY, pillW, 32, 8);
       ctx.fillStyle = 'rgba(84, 56, 32, 0.10)';
@@ -20560,39 +20607,37 @@ class UiManager {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      drawUiIcon(ctx, st.cat, st.icon, sx + 5, statsY + 6, 20);
+      drawUiIcon(ctx, st.cat, st.icon, sx + 6, statsY + 6, 20);
       ctx.fillStyle = '#855F38';
       ctx.font = `9.5px ${UI_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(st.label, sx + 27, statsY + 9);
+      ctx.fillText(st.label, sx + 28, statsY + 9);
 
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold 11.5px ${UI_FONT}`;
-      ctx.fillText(st.val, sx + 27, statsY + 23);
+      ctx.fillText(st.val, sx + 28, statsY + 23);
       ctx.restore();
     }
 
     // 3. 升级卡片或双分支选择
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
-    const btnW = 276;
-    const bx = x + 26;
 
     if (upgrades.length === 0) {
       // 已升至顶级
       ctx.save();
-      roundRectPath(ctx, bx, y + 114, btnW, 76, 10);
+      roundRectPath(ctx, bx, y + 118, btnW, 78, 10);
       ctx.fillStyle = 'rgba(62, 107, 56, 0.14)';
       ctx.fill();
       ctx.strokeStyle = THEME.BRONZE_MID;
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      drawUiIcon(ctx, 24, 'crown', x + w * 0.5 - 18, y + 120, 36);
+      drawUiIcon(ctx, 24, 'crown', x + w * 0.5 - 18, y + 124, 36);
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`已升至最高阶 · 覆盖道路 ${cov.coveredTiles} 格`, x + w * 0.5, y + 170);
+      ctx.fillText(`已升至最高阶 · 覆盖道路 ${cov.coveredTiles} 格`, x + w * 0.5, y + 174);
       ctx.restore();
     } else if (upgrades.length === 1) {
       // 单分支升级 (Base -> LV1)
@@ -20601,14 +20646,14 @@ class UiManager {
       const upIcon = up.branch === 'A' ? 'branch_a' : (up.branch === 'B' ? 'branch_b' : 'upgrade');
       const upCat = (up.branch === 'A' || up.branch === 'B') ? 24 : 16;
 
-      if (this.isPointHovered(bx, y + 114, btnW, 38)) {
+      if (this.isPointHovered(bx, y + 118, btnW, 38)) {
         this.hoveredUpgradeNodeId = up.nodeId;
       }
       this.drawPixelButton(
         ctx,
         'btn_upgrade_single',
         bx,
-        y + 114,
+        y + 118,
         btnW,
         38,
         `强化: ${i18n.t(up.nameKey)}`,
@@ -20629,7 +20674,7 @@ class UiManager {
 
       // 升级效果预览胶囊
       ctx.save();
-      roundRectPath(ctx, bx, y + 158, btnW, 28, 6);
+      roundRectPath(ctx, bx, y + 162, btnW, 28, 6);
       ctx.fillStyle = 'rgba(92, 64, 40, 0.08)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(140, 94, 42, 0.25)';
@@ -20640,14 +20685,14 @@ class UiManager {
       ctx.font = `11px ${UI_FONT}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`效果: ${i18n.t(up.descKey)}`, bx + 10, y + 172, btnW - 20);
+      ctx.fillText(`效果: ${i18n.t(up.descKey)}`, bx + 10, y + 176, btnW - 20);
       ctx.restore();
     } else if (upgrades.length === 2) {
       // 双分支路线选择（甲线 vs 乙线）
       for (let i = 0; i < 2; i++) {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
-        const by = y + 114 + i * 42;
+        const by = y + 118 + i * 42;
         if (this.isPointHovered(bx, by, btnW, 36)) {
           this.hoveredUpgradeNodeId = up.nodeId;
         }
@@ -20676,15 +20721,15 @@ class UiManager {
       }
     }
 
-    // 4. 底部动作栏：全宽战术索敌优先级切换按钮 (276px 铺满，y+202)
+    // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 30px 下边距，不贴木框）
     const prioKey = 'prio_' + tower.priority;
     const canCyclePrio = (def.priorities && def.priorities.length > 1);
     this.drawPixelButton(
       ctx,
       'btn_tower_prio',
       bx,
-      y + 202,
-      276,
+      y + 208,
+      btnW,
       36,
       `切换索敌策略：${i18n.t(prioKey)}`,
       {
@@ -20898,8 +20943,8 @@ class UiManager {
     const cov = scene.map.getRangeCoverage(col, row, baseNode.range, def.canHitGround, def.canHitAir);
     const tile = scene.map.getTile(col, row);
     const isMoss = tile && tile.type === 'moss';
-    const bx = x + 26;
-    const btnW = 276;
+    const bx = x + 28;
+    const btnW = w - 56;
 
     // 头像与定位
     drawUiIcon(ctx, 24, tId, bx, y + 30, 42);
@@ -20907,14 +20952,14 @@ class UiManager {
     ctx.font = `bold 15px ${UI_FONT}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${i18n.t(def.nameKey)} · ${i18n.t(def.roleKey)}`, x + 76, y + 40);
+    ctx.fillText(`${i18n.t(def.nameKey)} · ${i18n.t(def.roleKey)}`, bx + 50, y + 40, Math.max(80, w - 134));
 
     ctx.fillStyle = isMoss ? THEME.ENAMEL_GREEN : THEME.INK_MID;
     ctx.font = `bold 11px ${UI_FONT}`;
-    ctx.fillText(isMoss ? `◆ 雕石地基 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, x + 76, y + 56);
+    ctx.fillText(isMoss ? `◆ 雕石地基 · 覆盖道路 ${cov.coveredTiles} 格` : `草地建造位 · 覆盖道路 ${cov.coveredTiles} 格`, bx + 50, y + 58);
 
     // 描述与属性
-    this.drawWrappedText(ctx, i18n.t(def.descKey), bx, y + 78, btnW, 16, THEME.INK_MID, `11px ${UI_FONT}`);
+    this.drawWrappedText(ctx, i18n.t(def.descKey), bx, y + 80, btnW, 16, THEME.INK_MID, `11px ${UI_FONT}`);
 
     const isLumina = tId === 'lumina';
     const dmgVal = isLumina ? `+${baseNode.sporeGen || 8}/次` : (tId === 'mist' ? `${baseNode.dps}/秒` : `${baseNode.damage}`);
@@ -20922,14 +20967,14 @@ class UiManager {
     ctx.fillStyle = THEME.INK_DARK;
     ctx.font = `bold 12px ${UI_FONT}`;
     ctx.textAlign = 'left';
-    ctx.fillText(`${statLabel1}: ${dmgVal}   间隔: ${baseNode.interval}s   射程: ${baseNode.range}格`, bx, y + 122);
+    ctx.fillText(`${statLabel1}: ${dmgVal}   间隔: ${baseNode.interval}s   射程: ${baseNode.range}格`, bx, y + 128);
 
     // 种植按钮
     this.drawPixelButton(
       ctx,
       'btn_confirm_build',
       bx,
-      y + 160,
+      y + 166,
       btnW,
       40,
       `种植 ${i18n.t(def.nameKey)}`,
@@ -21157,19 +21202,19 @@ class UiManager {
     ctx.fillStyle = 'rgba(6, 12, 8, 0.80)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 360;
-    const mh = 314;
+    const mw = 376;
+    const mh = 330;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
-    // 顶部典雅手绘木牌标题 (保持原垂直居中坐标与大小)
-    const headW = 180;
-    const headH = 34;
+    // 顶部手绘木牌标题（完全置入 9-Slice 羊皮纸安全内框，不压框不触顶角）
+    const headW = 216;
+    const headH = 38;
     const headX = mx + (mw - headW) * 0.5;
-    const headY = my + 26;
-    if (!this.drawAiFrame(ctx, 'top_bar', headX - 18, headY - 4, 216, 42, 0.98)) {
+    const headY = my + 28;
+    if (!this.drawAiFrame(ctx, 'top_bar', headX, headY, headW, headH, 0.98)) {
       roundRectPath(ctx, headX, headY, headW, headH, 8);
       ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
       ctx.fill();
@@ -21183,22 +21228,22 @@ class UiManager {
       size: 16,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.2
+      strokeWidth: 1.0
     });
 
     // 优雅内敛的羊皮纸装饰分割线
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.28)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 50, my + 72);
-    ctx.lineTo(mx + mw - 50, my + 72);
+    ctx.moveTo(mx + 46, my + 78);
+    ctx.lineTo(mx + mw - 46, my + 78);
     ctx.stroke();
 
-    const bx = mx + 50;
-    const bw = mw - 100;
+    const bx = mx + 46;
+    const bw = mw - 92;
     const btnH = 40;
 
-    this.drawPixelButton(ctx, 'pause_resume', bx, my + 86, bw, btnH, i18n.t('btn_resume'), {
+    this.drawPixelButton(ctx, 'pause_resume', bx, my + 90, bw, btnH, i18n.t('btn_resume'), {
       skin: 'btn_green',
       iconKey: 'play'
     }, () => {
@@ -21206,14 +21251,14 @@ class UiManager {
       scene.resumeGame();
     });
 
-    this.drawPixelButton(ctx, 'pause_restart', bx, my + 138, bw, btnH, i18n.t('btn_restart'), {
+    this.drawPixelButton(ctx, 'pause_restart', bx, my + 142, bw, btnH, i18n.t('btn_restart'), {
       skin: 'btn_wood'
     }, () => {
       platform.playSfx('sfx_click');
       scene.restartLevel();
     });
 
-    this.drawPixelButton(ctx, 'pause_settings', bx, my + 190, bw, btnH, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'pause_settings', bx, my + 194, bw, btnH, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings'
     }, () => {
@@ -21221,7 +21266,7 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
-    this.drawPixelButton(ctx, 'pause_exit', bx, my + 242, bw, btnH, i18n.t('btn_exit_title'), {
+    this.drawPixelButton(ctx, 'pause_exit', bx, my + 246, bw, btnH, i18n.t('btn_exit_title'), {
       skin: 'btn_red'
     }, () => {
       platform.playSfx('sfx_click');
@@ -21239,8 +21284,8 @@ class UiManager {
     const save = storage.getSave();
     const bestEndless = (save && save.endlessRecord) ? save.endlessRecord.bestWave : 0;
 
-    const mw = 440;
-    const mh = isEndless ? 340 : (isWin ? (scene.hasNextMap() ? 404 : 358) : 344);
+    const mw = 446;
+    const mh = isEndless ? 336 : (isWin ? (scene.hasNextMap() ? 404 : 362) : 348);
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -21249,7 +21294,7 @@ class UiManager {
     ctx.save();
     ctx.textAlign = 'center';
     if (isEndless) {
-      drawArtText(ctx, '无尽深渊试炼报告', mx + mw * 0.5, my + 48, {
+      drawArtText(ctx, '无尽深渊试炼报告', mx + mw * 0.5, my + 52, {
         style: 'ink',
         color: '#8C1D18',
         size: 22,
@@ -21259,7 +21304,7 @@ class UiManager {
       });
 
       const currentWave = scene.waveManager ? scene.waveManager.currentWaveIndex : 1;
-      drawArtText(ctx, `本次坚持至：第 ${currentWave} 波`, mx + mw * 0.5, my + 84, {
+      drawArtText(ctx, `本次坚持至：第 ${currentWave} 波`, mx + mw * 0.5, my + 88, {
         style: 'ink',
         color: '#8C4D00',
         size: 17,
@@ -21267,7 +21312,7 @@ class UiManager {
         baseline: 'middle',
         strokeWidth: 0
       });
-      drawArtText(ctx, `历史最高纪录：第 ${Math.max(currentWave, bestEndless)} 波`, mx + mw * 0.5, my + 118, {
+      drawArtText(ctx, `历史最高纪录：第 ${Math.max(currentWave, bestEndless)} 波`, mx + mw * 0.5, my + 122, {
         style: 'ink',
         color: '#237804',
         size: 15,
@@ -21275,7 +21320,7 @@ class UiManager {
         baseline: 'middle',
         strokeWidth: 0
       });
-      drawArtText(ctx, '深渊虫群无休止涌现，林地英魂永垂不朽！', mx + mw * 0.5, my + 152, {
+      drawArtText(ctx, '深渊虫群无休止涌现，林地英魂永垂不朽！', mx + mw * 0.5, my + 156, {
         style: 'ink',
         color: '#543820',
         size: 13,
@@ -21284,40 +21329,45 @@ class UiManager {
         strokeWidth: 0
       });
 
-      const bx = mx + 65;
-      const bw = mw - 130;
+      const bx = mx + 56;
+      const bw = mw - 112;
 
-      this.drawPixelButton(ctx, 'settle_endless_retry', bx, my + 192, bw, 42, '🔥 再次挑战深渊', {
+      this.drawPixelButton(ctx, 'settle_endless_retry', bx, my + 194, bw, 42, '🔥 再次挑战深渊', {
         skin: 'btn_green'
       }, () => {
         platform.playSfx('sfx_click');
         scene.startEndlessMode();
       });
 
-      this.drawPixelButton(ctx, 'settle_levels', bx, my + 246, bw, 42, i18n.t('btn_level_select'), {
+      this.drawPixelButton(ctx, 'settle_levels', bx, my + 248, bw, 42, i18n.t('btn_level_select'), {
         skin: 'btn_wood'
       }, () => {
         platform.playSfx('sfx_click');
         scene.enterLevelSelect();
       });
     } else {
+      // 丝带严格置入羊皮纸安全内区（主丝带腰部 Y = imgY + 0.51*rh = my + 56）
       const settleRib = platform.getImage(isWin ? 'assets/ui/frames/banner_ribbon_gold.png' : 'assets/ui/frames/banner_ribbon_crimson.png');
       if (settleRib && settleRib.width) {
-        ctx.drawImage(settleRib, Math.round(mx + 46), Math.round(my + 16), 348, 72);
+        const ribW = 356;
+        const ribH = 88;
+        const ribX = mx + Math.round((mw - ribW) * 0.5);
+        const ribY = my + 12;
+        ctx.drawImage(settleRib, ribX, ribY, ribW, ribH);
         ctx.fillStyle = isWin ? '#2C1406' : '#FFF5E8';
-        ctx.font = 'bold 20px ' + CN_FONT;
+        ctx.font = 'bold 19px ' + CN_FONT;
         ctx.textBaseline = 'middle';
-        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 48);
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, ribY + Math.round(ribH * 0.51));
       } else {
         ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
         ctx.font = 'bold 21px ' + CN_FONT;
         ctx.textBaseline = 'middle';
-        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 58);
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 56);
       }
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 82, 34);
+        drawUiIcon(ctx, 16, sKey, mx + Math.round(mw * 0.5) - 63 + s * 46, my + 84, 34);
       }
 
       // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
@@ -21339,9 +21389,9 @@ class UiManager {
         }
       }
 
-      const cardX = mx + 36;
-      const cardY = my + 124;
-      const cardW = mw - 72;
+      const cardX = mx + 44;
+      const cardY = my + 126;
+      const cardW = mw - 88;
       const cardH = 78;
       roundRectPath(ctx, cardX, cardY, cardW, cardH, 10);
       ctx.fillStyle = 'rgba(255, 248, 228, 0.45)';
@@ -21381,8 +21431,8 @@ class UiManager {
         ctx.fillText(cells[ci].v, cx, cy + 16, cardW * 0.5 - 24);
       }
 
-      const bx = mx + 65;
-      const bw = mw - 130;
+      const bx = mx + 56;
+      const bw = mw - 112;
 
       if (isWin) {
         let curBtnY = my + 216;
@@ -21420,7 +21470,7 @@ class UiManager {
           scene.restartLevel();
         });
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, my + 268, bw, 40, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, my + 270, bw, 40, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
@@ -21437,8 +21487,8 @@ class UiManager {
     ctx.fillStyle = 'rgba(10, 16, 12, 0.82)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 380;
-    const mh = inBattle ? 360 : 276;
+    const mw = 396;
+    const mh = inBattle ? 386 : 300;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -21446,24 +21496,24 @@ class UiManager {
 
     ctx.save();
     ctx.fillStyle = THEME.INK_DARK;
-    ctx.font = 'bold 20px ' + CN_FONT;
+    ctx.font = 'bold 19px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('森林守卫 · 系统设置', mx + mw * 0.5, my + 48);
+    ctx.fillText('森林守卫 · 系统设置', mx + mw * 0.5, my + 44);
 
     ctx.strokeStyle = 'rgba(110, 74, 38, 0.26)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx + 50, my + 64);
-    ctx.lineTo(mx + mw - 50, my + 64);
+    ctx.moveTo(mx + 46, my + 62);
+    ctx.lineTo(mx + mw - 46, my + 62);
     ctx.stroke();
     ctx.restore();
 
     const audioCfg = platform.getAudioConfig();
-    const bx = mx + 40;
-    const bw = mw - 80;
-    const btnH = 34;
-    const gap = 8;
+    const bx = mx + 46;
+    const bw = mw - 92;
+    const btnH = 36;
+    const gap = 9;
     let curY = my + 76;
 
     // 1. 音效开关
@@ -21597,27 +21647,27 @@ class UiManager {
     ctx.fillStyle = 'rgba(6, 12, 8, 0.88)';
     ctx.fillRect(0, 0, 960, 540);
 
-    const mw = 800;
-    const mh = 480;
-    const mx = (960 - mw) * 0.5; // 80
-    const my = (540 - mh) * 0.5; // 30
+    const mw = 844;
+    const mh = 496;
+    const mx = (960 - mw) * 0.5; // 58
+    const my = (540 - mh) * 0.5; // 22
 
-    // 绘制古典林地木纹雕花边框与羊皮纸底盘
+    // 绘制古典林地 9-Slice 木纹雕花边框与羊皮纸底盘
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 18, true);
 
-    // 1. 秘典大标题与顶部手绘木牌横幅
-    this.drawAiFrame(ctx, 'top_bar', mx + 166, my + 3, 468, 36, 0.98);
-    drawArtText(ctx, '林地秘典 · 全景手绘图鉴与战术殿堂', mx + mw * 0.5, my + 21, {
+    // 1. 秘典大标题与顶部手绘木牌横幅（居中跨在顶框中央，完全避开两侧铜角）
+    this.drawAiFrame(ctx, 'top_bar', mx + 207, my - 4, 430, 36, 0.98);
+    drawArtText(ctx, '林地秘典 · 全景手绘图鉴与战术殿堂', mx + mw * 0.5, my + 14, {
       style: 'gold',
-      size: 18,
+      size: 17,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.3
+      strokeWidth: 1.0
     });
 
-    // 右上角关闭按钮 [×]
-    const cx = mx + mw - 38;
-    const cy = my + 10;
+    // 右上角关闭按钮 [×]（严密收进羊皮纸安全内角，绝不骑边框或盖住铆钉）
+    const cx = mx + mw - 60;
+    const cy = my + 39;
     this.drawPixelButton(ctx, 'codex_close_btn', cx, cy, 28, 28, '×', {
       skin: 'btn_wood',
       font: `bold 16px ${CN_FONT}`
@@ -21627,37 +21677,37 @@ class UiManager {
       platform.playSfx('sfx_click');
     });
 
-    // 2. 顶部三大篇章分页标签 (Tabs)
+    // 2. 顶部四大篇章分页标签 (Tabs) — 完全放在木框内安全羊皮纸上
     const tabs = [
       { id: 0, label: '🍄 蘑菇守卫 (5/5)' },
       { id: 1, label: '🐛 林区害虫 (17/17)' },
       { id: 2, label: '🌿 远古真菌知识之树' },
       { id: 3, label: '🏆 王国成就 (20)' }
     ];
-    const tabY = my + 40;
-    const tabW = 180;
-    const tabH = 32;
-    const tabStartX = mx + (mw - tabs.length * tabW - (tabs.length - 1) * 12) * 0.5;
+    const tabY = my + 38;
+    const tabW = 176;
+    const tabH = 30;
+    const tabStartX = mx + 28;
 
     for (let i = 0; i < tabs.length; i++) {
       const tb = tabs[i];
-      const tbx = tabStartX + i * (tabW + 12);
+      const tbx = tabStartX + i * (tabW + 8);
       const isCur = this.codexTab === tb.id;
 
       ctx.save();
       roundRectPath(ctx, tbx, tabY, tabW, tabH, 8);
-      ctx.fillStyle = isCur ? 'rgba(88, 56, 32, 0.98)' : 'rgba(30, 20, 12, 0.70)';
+      ctx.fillStyle = isCur ? 'rgba(88, 56, 32, 0.98)' : 'rgba(30, 20, 12, 0.72)';
       ctx.fill();
       ctx.strokeStyle = isCur ? '#FFD700' : 'rgba(196, 143, 69, 0.5)';
-      ctx.lineWidth = isCur ? 2.2 : 1.2;
+      ctx.lineWidth = isCur ? 2.0 : 1.2;
       ctx.stroke();
 
       drawArtText(ctx, tb.label, tbx + tabW * 0.5, tabY + tabH * 0.5, {
         style: isCur ? 'gold' : 'parchment',
-        size: 13,
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: isCur ? 1.0 : 0.8
+        strokeWidth: 0
       });
       ctx.restore();
 
@@ -21667,33 +21717,35 @@ class UiManager {
       });
     }
 
-    // 3. 篇章具体内容渲染
-    const bodyY = my + 78;
-    const bodyH = mh - 144;
+    // 3. 篇章具体内容渲染（严密置入安全内容带 y = my+76 .. my+416, x = mx+28 .. mx+mw-28）
+    const bodyX = mx + 28;
+    const bodyW = mw - 56;
+    const bodyY = my + 76;
+    const bodyH = mh - 156;
 
     if (this.codexTab === 0) {
-      this.renderCodexGuardiansTab(ctx, mx + 24, bodyY, mw - 48, bodyH);
+      this.renderCodexGuardiansTab(ctx, bodyX, bodyY, bodyW, bodyH);
     } else if (this.codexTab === 1) {
-      this.renderCodexBestiaryTab(ctx, mx + 24, bodyY, mw - 48, bodyH);
+      this.renderCodexBestiaryTab(ctx, bodyX, bodyY, bodyW, bodyH);
     } else if (this.codexTab === 2) {
       if (curScene && curScene.ancientKnowledgeTree) {
-        curScene.ancientKnowledgeTree.renderKnowledgePanel(ctx, mx + 24, bodyY, mw - 48, bodyH, this);
+        curScene.ancientKnowledgeTree.renderKnowledgePanel(ctx, bodyX, bodyY, bodyW, bodyH, this);
       } else {
-        this.renderCodexTacticsTab(ctx, mx + 24, bodyY, mw - 48, bodyH);
+        this.renderCodexTacticsTab(ctx, bodyX, bodyY, bodyW, bodyH);
       }
     } else {
-      this.renderCodexAchievementsTab(ctx, mx + 24, bodyY, mw - 48, bodyH);
+      this.renderCodexAchievementsTab(ctx, bodyX, bodyY, bodyW, bodyH);
     }
 
-    // 4. 底部右下角核心主交互按钮：进入林地·开启保卫战
-    const playBtnW = 220;
-    const playBtnH = 38;
-    const playBtnX = mx + mw - playBtnW - 24;
-    const playBtnY = my + mh - playBtnH - 12;
+    // 4. 底部提示条与核心主交互按钮：完全置入羊皮纸安全底区（bottom = my+mh-34，绝不压到底部木框和角钉！）
+    const playBtnW = 242;
+    const playBtnH = 36;
+    const playBtnX = mx + mw - playBtnW - 30;
+    const playBtnY = my + mh - playBtnH - 34;
 
     this.drawPixelButton(ctx, 'codex_play_btn', playBtnX, playBtnY, playBtnW, playBtnH, '⚔️ 开启保卫战 · 进入战场', {
       skin: 'btn_green',
-      font: `bold 14px ${CN_FONT}`,
+      font: `bold 13.5px ${CN_FONT}`,
       iconKey: 'play'
     }, () => {
       this.showGuideModal = false;
@@ -21701,20 +21753,21 @@ class UiManager {
       platform.playSfx('sfx_upgrade');
     });
 
-    // 底部左下角提示文案（绘制于深色木边框安全区内，明亮羊皮纸字体清晰可读）
-    roundRectPath(ctx, mx + 52, playBtnY + 7, 456, 24, 12);
+    // 底部左下角提示文案（对齐按钮水平安全区）
+    const hintW = playBtnX - (mx + 30) - 14;
+    roundRectPath(ctx, mx + 30, playBtnY + 4, hintW, 28, 12);
     ctx.fillStyle = 'rgba(20, 13, 8, 0.85)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(196, 143, 69, 0.45)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawArtText(ctx, '💡 点击任意空白区域或右上角 [×] 即可关闭秘典继续游玩', mx + 280, playBtnY + playBtnH * 0.5, {
+    drawArtText(ctx, '💡 点击任意空白区域或右上角 [×] 即可关闭秘典继续游玩', mx + 30 + hintW * 0.5, playBtnY + playBtnH * 0.5, {
       style: 'parchment',
       size: 11.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.9
+      strokeWidth: 0
     });
 
     ctx.restore();
@@ -21734,16 +21787,16 @@ class UiManager {
 
     const curTowerId = this.codexSelectedTower || 'watch';
     const curDef = TOWERS[curTowerId] || TOWERS.watch;
-    const leftW = 205;
+    const leftW = 216;
 
-    // 左侧：5 大蘑菇精致木牌卡片
+    // 左侧：5 大蘑菇精致木牌卡片（stride 68px × 4 + 62 = 334 <= bodyH 340，底部不压线）
     for (let i = 0; i < towers.length; i++) {
       const t = towers[i];
-      const cy = y + i * 66;
+      const cy = y + i * 68;
       const isSel = t.id === curTowerId;
 
       ctx.save();
-      roundRectPath(ctx, x, cy, leftW, 60, 10);
+      roundRectPath(ctx, x, cy, leftW, 62, 10);
       ctx.fillStyle = isSel ? 'rgba(84, 52, 28, 0.98)' : 'rgba(32, 20, 12, 0.72)';
       ctx.fill();
       ctx.strokeStyle = isSel ? '#FFD700' : 'rgba(196, 143, 69, 0.45)';
@@ -21758,43 +21811,43 @@ class UiManager {
           const sc = Math.min(38 / lImg.width, 40 / lImg.height);
           const lw = lImg.width * sc;
           const lh = lImg.height * sc;
-          ctx.drawImage(lImg, x + 38 - lw * 0.5, cy + 31 - lh * 0.5, lw, lh);
+          ctx.drawImage(lImg, x + 36 - lw * 0.5, cy + 31 - lh * 0.5, lw, lh);
         }
       } else {
         drawTowerSprite(ctx, t.id, 'lv1', 'idle', demoFrame, x + 30, cy + 31);
       }
 
       // 名称
-      drawArtText(ctx, t.name, x + 66, cy + 20, {
+      drawArtText(ctx, t.name, x + 66, cy + 21, {
         style: isSel ? 'gold' : 'parchment',
         size: 14,
         align: 'left',
         baseline: 'middle',
-        strokeWidth: 1.0
+        strokeWidth: 0
       });
 
-      // 战术定位胶囊标
-      roundRectPath(ctx, x + 66, cy + 35, 62, 18, 9);
+      // 战术定位胶囊标（加宽至 68px 确保汉字舒展）
+      roundRectPath(ctx, x + 66, cy + 36, 68, 18, 9);
       ctx.fillStyle = 'rgba(62, 107, 56, 0.85)';
       ctx.fill();
       ctx.strokeStyle = '#73D13D';
       ctx.lineWidth = 0.8;
       ctx.stroke();
-      drawArtText(ctx, t.role, x + 97, cy + 44, {
+      drawArtText(ctx, t.role, x + 100, cy + 45, {
         style: 'gold',
-        size: 10,
+        size: 10.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 0.6
+        strokeWidth: 0
       });
 
       // 造价
-      drawArtText(ctx, `${t.cost} 孢子`, x + leftW - 12, cy + 20, {
+      drawArtText(ctx, `${t.cost} 孢子`, x + leftW - 12, cy + 21, {
         style: 'gold',
         size: 11,
         align: 'right',
         baseline: 'middle',
-        strokeWidth: 0.8
+        strokeWidth: 0
       });
       ctx.restore();
 
@@ -21918,9 +21971,10 @@ class UiManager {
     });
     this.drawWrappedText(ctx, bDesc, sideCard2X + 10, branchY + 32, sideCardW - 20, 18, '#593815', `11px ${CN_FONT}`);
 
-    // 【灵能超载全屏觉醒大招】皇室紫金神圣展台
+    // 【灵能超载全屏觉醒大招】皇室紫金神圣展台（收紧 4px 内边距确保底部留白充足）
     const ultY = y + 200;
-    roundRectPath(ctx, rx + 16, ultY, rw - 32, 124, 12);
+    const ultH = Math.max(114, h - 210);
+    roundRectPath(ctx, rx + 16, ultY, rw - 32, ultH, 12);
     ctx.fillStyle = 'rgba(38, 16, 52, 0.95)';
     ctx.fill();
     ctx.strokeStyle = '#D3ADF7';
@@ -21938,25 +21992,25 @@ class UiManager {
     // 绘制灵能觉醒种子高清图标
     const uSeed = platform.getImage('assets/vfx/item_awakening_seed.png');
     if (uSeed && uSeed.width) {
-      ctx.drawImage(uSeed, rx + 28, ultY + 16, 44, 48);
+      ctx.drawImage(uSeed, rx + 28, ultY + 14, 44, 48);
     }
 
-    drawArtText(ctx, `灵能觉醒超载大招：${ultInfo.title}`, rx + 84, ultY + 28, {
+    drawArtText(ctx, `灵能觉醒超载大招：${ultInfo.title}`, rx + 84, ultY + 26, {
       style: 'gold',
-      size: 16,
+      size: 15.5,
       align: 'left',
       baseline: 'middle',
-      strokeWidth: 1.2
+      strokeWidth: 0.9
     });
-    drawArtText(ctx, '击溃高危精英或首领获取觉醒种子，点击战场蘑菇瞬间释放！', rx + 84, ultY + 50, {
+    drawArtText(ctx, '击溃高危精英或首领获取觉醒种子，点击战场蘑菇瞬间释放！', rx + 84, ultY + 47, {
       style: 'parchment',
       size: 12,
       align: 'left',
       baseline: 'middle',
-      strokeWidth: 0.8
+      strokeWidth: 0
     });
 
-    this.drawWrappedText(ctx, ultInfo.desc, rx + 28, ultY + 76, rw - 56, 20, '#F5EBFF', `bold 12px ${CN_FONT}`);
+    this.drawWrappedText(ctx, ultInfo.desc, rx + 28, ultY + 71, rw - 56, 19, '#F5EBFF', `bold 12px ${CN_FONT}`);
     ctx.restore();
   }
 
@@ -21985,16 +22039,15 @@ class UiManager {
     ];
 
     const curEnemyId = this.codexSelectedEnemy || 'beetle';
-    const leftW = 244; // 双列展示 17 只怪物，加宽留白防6字长名挤压
-
-    // 左侧双列 2x9 布局：直接容纳 17 只怪物，无需翻页
-    const colW = 119;
+    // 左侧双列 2x9 布局：9行×37.5px 收进 bodyH=340 内，底部留足呼吸感
+    const leftW = 248;
+    const colW = 121;
     for (let i = 0; i < allEnemies.length; i++) {
       const e = allEnemies[i];
       const ci = i % 2;
       const ri = Math.floor(i / 2);
       const ex = x + ci * (colW + 6);
-      const ey = y + Math.round(ri * 36.5);
+      const ey = y + Math.round(ri * 37.5);
       const isSel = e.id === curEnemyId;
 
       ctx.save();
@@ -22174,9 +22227,10 @@ class UiManager {
     });
     this.drawWrappedText(ctx, counterTactics.behavior, rx + 26, behY + 36, rw - 52, 20, '#431418', `12px ${CN_FONT}`);
 
-    // 克制弱点与领袖战术框
+    // 克制弱点与领袖战术框（自适配剩余高度，底部留足羊皮纸安全边距）
     const couY = y + 190;
-    roundRectPath(ctx, rx + 16, couY, rw - 32, 134, 10);
+    const couH = Math.max(120, h - 200);
+    roundRectPath(ctx, rx + 16, couY, rw - 32, couH, 10);
     ctx.fillStyle = 'rgba(246, 255, 237, 0.90)';
     ctx.fill();
     ctx.strokeStyle = '#B7EB8F';
@@ -22389,19 +22443,18 @@ class UiManager {
   // =========================================================================
   renderPvZTopSeedBank(ctx, scene) {
     const bankX = 10;
-    const bankY = 478;
-    const bankH = 58; // 贴底安放，让行 0~13 战场完全无遮挡！
+    const bankY = 476;
 
-    // 1. 金孢阳光存储槽 (Spore Bank Oval Plaque: 90x56px 舒展大气)
-    const sporeW = 90;
-    const sporeH = 56;
-    const sporeX = bankX + 2;
-    const sporeY = bankY + 2;
+    // 1. 金孢阳光存储槽 (严格内嵌于 filigree 框内安全深棕暗底 x=21..93, y=486..526)
+    const sporeW = 94;
+    const sporeH = 60;
+    const sporeX = bankX;
+    const sporeY = bankY;
 
     ctx.save();
     const seedPlaqueImg = platform.getImage('assets/ui/frames/hud_seed_plaque.png');
     if (seedPlaqueImg && seedPlaqueImg.width) {
-      ctx.drawImage(seedPlaqueImg, sporeX - 2, sporeY - 1, sporeW + 4, sporeH + 2);
+      ctx.drawImage(seedPlaqueImg, sporeX - 2, sporeY, sporeW + 4, sporeH);
       platform.recordDrawCall(1);
     } else {
       roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 12);
@@ -22412,41 +22465,40 @@ class UiManager {
       ctx.stroke();
     }
 
-    // 阳光金孢大珍珠图标 (25x25 避让右侧四位以上孢子大数字)
-    const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
-    if (sporeImg && sporeImg.width) {
-      ctx.drawImage(sporeImg, sporeX + 8, sporeY + 21, 25, 25);
-    } else {
-      drawUiIcon(ctx, 16, 'spore', sporeX + 8, sporeY + 22, 24);
-    }
-
-    // 金黄粗体孢子数字 (居中嵌于右侧宽敞区域，杜绝四位数触碰金币)
-    const spores = scene.economy.spores;
-    drawArtText(ctx, String(spores), sporeX + 61, sporeY + 37, {
-      style: 'gold',
-      size: 16,
-      align: 'center',
-      baseline: 'middle',
-      strokeWidth: 0.9,
-      maxWidth: 44
-    });
-
-    // 顶部生命守护值
+    // 顶部生命守护值（严密置于框内顶部安全带）
     const seeds = scene.economy.seeds;
-    drawArtText(ctx, '❤️ ' + seeds, sporeX + 56, sporeY + 13, {
+    drawArtText(ctx, '❤️ ' + seeds, sporeX + sporeW * 0.5, sporeY + 17.5, {
       style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 12,
+      size: 11,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0
     });
+
+    // 阳光金孢图标 + 四位数金黄计数（严密置于框内中下暗木区）
+    const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
+    if (sporeImg && sporeImg.width) {
+      ctx.drawImage(sporeImg, sporeX + 13, sporeY + 28, 20, 20);
+    } else {
+      drawUiIcon(ctx, 16, 'spore', sporeX + 13, sporeY + 28, 20);
+    }
+
+    const spores = scene.economy.spores;
+    drawArtText(ctx, String(spores), sporeX + 58, sporeY + 38.5, {
+      style: 'gold',
+      size: 15,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.7,
+      maxWidth: 44
+    });
     ctx.restore();
 
-    // 2. 5大蘑菇植物卡牌栏 (PvZ 经典纵向饱满卡槽: 54x56px)
+    // 2. 5大蘑菇植物卡牌栏 (PvZ 经典纵向卡槽: 54x56px，严密契合上下分格)
     const towerOrder = ['watch', 'mist', 'thorn', 'burst', 'lumina'];
     const cardW = 54;
     const cardH = 56;
-    const startX = sporeX + sporeW + 8;
+    const startX = sporeX + sporeW + 7;
 
     for (let i = 0; i < towerOrder.length; i++) {
       const tId = towerOrder[i];
@@ -22460,7 +22512,6 @@ class UiManager {
       const isSelected = scene.selectedBuildTowerId === tId;
 
       ctx.save();
-      // 卡牌手绘 AI 框底板（保留完全一致的 cx, cy, cardW=54, cardH=56 布局位置与触控区）
       if (!this.drawAiFrame(ctx, 'tower_card', cx, cy, cardW, cardH, isSelected ? 1.0 : (affordable ? 0.96 : 0.62))) {
         roundRectPath(ctx, cx, cy, cardW, cardH, 7);
         ctx.fillStyle = isSelected
@@ -22474,39 +22525,38 @@ class UiManager {
         ctx.stroke();
       }
 
-      // 手绘蘑菇大原画 (严格嵌在卡牌上层羊皮纸区内)
+      // 手绘蘑菇大原画 (严格嵌在卡牌上层羊皮纸内框 cy+5 .. cy+36)
       const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
       if (cardArtImg && cardArtImg.width) {
         ctx.save();
         if (!affordable) ctx.globalAlpha = 0.48;
-        ctx.drawImage(cardArtImg, cx + 6, cy + 3, cardW - 12, 36);
+        ctx.drawImage(cardArtImg, cx + 6, cy + 5, cardW - 12, 31);
         ctx.restore();
       } else {
-        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 22);
+        drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 21);
       }
 
-      // 底部标价数字（置于手绘牌面下方深绿铭牌槽中）
-      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 9.5, {
+      // 底部标价数字（严格居中于下层绿底铭牌槽中心 cy+45.5）
+      drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + 45.5, {
         style: affordable ? 'gold' : 'crimson',
-        size: 12,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 1.2
-      });
-
-      // 快捷键角标 [1..5]
-      roundRectPath(ctx, cx + 2, cy + 2, 13, 12, 3);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      ctx.fill();
-      drawArtText(ctx, String(i + 1), cx + 8.5, cy + 8, {
-        style: 'gold',
-        size: 9.5,
+        size: 11.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.7
       });
 
-      // 选中卡牌圆角流金脉冲外框（与圆角卡底完全贴合，无尖角突出）
+      // 快捷键角标 [1..5]（收进羊皮纸框内左上角 cx+5, cy+5，不再压住外框）
+      roundRectPath(ctx, cx + 5, cy + 5, 11, 11, 3);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.76)';
+      ctx.fill();
+      drawArtText(ctx, String(i + 1), cx + 10.5, cy + 10.5, {
+        style: 'gold',
+        size: 9,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0
+      });
+
       if (isSelected) {
         roundRectPath(ctx, cx + 1, cy + 1, cardW - 2, cardH - 2, 7);
         ctx.strokeStyle = '#FFE58F';
@@ -22522,8 +22572,8 @@ class UiManager {
       }, { towerId: tId });
     }
 
-    // 3. 远古灵能觉醒槽 (Awakening Plant Food: 68x60px 紧邻卡槽)
-    const awkX = startX + towerOrder.length * (cardW + 5) + 6;
+    // 3. 远古灵能觉醒槽 (68x56px 严密对齐卡槽内区)
+    const awkX = startX + towerOrder.length * (cardW + 5) + 5;
     const awkY = bankY + 2;
     const awkW = 68;
     const awkH = cardH;
@@ -22546,24 +22596,24 @@ class UiManager {
 
     const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
     if (seedImg && seedImg.width) {
-      ctx.drawImage(seedImg, awkX + (awkW - 28) * 0.5, awkY + 6, 28, 28);
+      ctx.drawImage(seedImg, awkX + (awkW - 26) * 0.5, awkY + 6, 26, 26);
     } else {
-      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 18, {
+      drawArtText(ctx, '🍃', awkX + awkW * 0.5, awkY + 19, {
         style: 'emerald',
         size: 16,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 1.0
+        strokeWidth: 0
       });
     }
 
     const awkCount = scene.awakeningSeeds || 0;
-    drawArtText(ctx, '觉醒 ×' + awkCount, awkX + awkW * 0.5, awkY + awkH - 11, {
-      style: awkCount > 0 ? 'emerald' : 'dim',
-      size: 11,
+    drawArtText(ctx, '觉醒 ×' + awkCount, awkX + awkW * 0.5, awkY + 45.5, {
+      style: awkCount > 0 ? 'gold' : 'dim',
+      size: 10.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.9
+      strokeWidth: 0
     });
     ctx.restore();
 
@@ -22575,117 +22625,131 @@ class UiManager {
   }
 
   // =========================================================================
-  // 【顶部波次推进旗舰进度槽 PvZ Wave Flag】(放大按键与清晰粗体，彻底告别微缩字体)
+  // 【底部波次推进旗舰槽 PvZ Wave Flag】(所有情报与进度严格内置框内，不再悬浮突出草地)
   // =========================================================================
   renderPvZTopWaveBar(ctx, scene) {
     const waveMgr = scene.waveManager;
     const barX = 492;
-    const barY = 486;
+    const barY = 478;
     const barW = 200;
-    const barH = 42; // 高度 42px，按键舒适，大字号完全舒展
+    const barH = 56; // 与植物卡槽齐平 (478..534)
 
     if (waveMgr.isPrepPhase()) {
-      // 上方紧凑来袭兵种侦察情报条（防空 / 潜地 / 侧翼 / 首领提示）
-      if (typeof waveMgr.getUpcomingThreatSummaryText === 'function') {
-        const threatStr = waveMgr.getUpcomingThreatSummaryText();
-        const isHighAlert = threatStr.includes('首领') || threatStr.includes('侧翼') || threatStr.includes('防空');
-        ctx.save();
-        if (!this.drawAiFrame(ctx, isHighAlert ? 'btn_red' : 'btn_wood', barX, barY - 22, barW, 18, 0.96)) {
-          roundRectPath(ctx, barX, barY - 22, barW, 18, 9);
-          ctx.fillStyle = isHighAlert ? 'rgba(54, 22, 16, 0.90)' : 'rgba(18, 28, 20, 0.88)';
-          ctx.fill();
-          ctx.strokeStyle = isHighAlert ? 'rgba(255, 120, 117, 0.78)' : 'rgba(149, 222, 100, 0.65)';
-          ctx.lineWidth = 1.1;
-          ctx.stroke();
-        }
-        drawArtText(ctx, threatStr, barX + barW * 0.5, barY - 13, {
-          style: isHighAlert ? 'gold' : 'emerald',
-          size: 10.5,
-          align: 'center',
-          baseline: 'middle',
-          strokeWidth: 0.8
-        });
-        ctx.restore();
-      }
-
+      const threatStr = typeof waveMgr.getUpcomingThreatSummaryText === 'function'
+        ? waveMgr.getUpcomingThreatSummaryText()
+        : `第 ${waveMgr.currentWaveIndex + 1} 波准备中`;
+      const isHighAlert = threatStr.includes('首领') || threatStr.includes('侧翼') || threatStr.includes('防空');
       const earlyBonus = Math.min(
         CONFIG.ECONOMY.EARLY_CALL_MAX,
         Math.floor(waveMgr.prepTimerSec * CONFIG.ECONOMY.EARLY_CALL_PER_SEC)
       );
-      this.drawPixelButton(
-        ctx,
-        'pvz_call_wave',
-        barX,
-        barY,
-        barW,
-        barH,
-        '提前迎战 +' + earlyBonus + ' 孢',
-        {
-          skin: 'btn_green',
-          font: 'bold 15px ' + CN_FONT
-        },
-        () => {
-          scene.callWaveEarly();
-        }
-      );
+
+      const hovered = this.isPointHovered(barX, barY, barW, barH);
+      const drawY = hovered ? barY - 1 : barY;
+      ctx.save();
+      if (!this.drawAiFrame(ctx, 'btn_green', barX, drawY, barW, barH, 1.0)) {
+        roundRectPath(ctx, barX, drawY, barW, barH, 9);
+        ctx.fillStyle = THEME.ENAMEL_GREEN;
+        ctx.fill();
+        ctx.strokeStyle = THEME.BRONZE_BRIGHT;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      if (hovered) {
+        roundRectPath(ctx, barX + 2, drawY + 2, barW - 4, barH - 4, 7);
+        ctx.strokeStyle = 'rgba(255, 238, 170, 0.80)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+
+      // 上行来袭情报内嵌于绿钮内部上槽
+      roundRectPath(ctx, barX + 16, drawY + 7, barW - 32, 16, 6);
+      ctx.fillStyle = isHighAlert ? 'rgba(92, 22, 16, 0.88)' : 'rgba(12, 34, 16, 0.68)';
+      ctx.fill();
+      drawArtText(ctx, threatStr, barX + barW * 0.5, drawY + 15, {
+        style: isHighAlert ? 'gold' : 'parchment',
+        size: 10,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0,
+        maxWidth: barW - 40
+      });
+
+      // 下行提前迎战主文案
+      drawArtText(ctx, '▶ 提前迎战 (+' + earlyBonus + '孢)', barX + barW * 0.5, drawY + 38.5, {
+        style: 'emerald',
+        size: 13.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.7,
+        maxWidth: barW - 24
+      });
+      ctx.restore();
+
+      this.registerButton('pvz_call_wave', barX, barY, barW, barH, () => {
+        scene.callWaveEarly();
+      });
       return;
     }
 
     ctx.save();
-    const waveFrameImg = platform.getImage('assets/ui/frames/hud_wave_frame.png');
     const currentW = waveMgr.currentWaveIndex;
     const totalW = waveMgr.totalWaves;
     const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
 
-    if (waveFrameImg && waveFrameImg.width) {
-      ctx.drawImage(waveFrameImg, barX - 4, barY - 3, barW + 8, barH + 6);
-      const slotX = barX + 36;
-      const slotY = barY + 12;
-      const slotW = barW - 72;
-      const slotH = barH - 24;
-      if (ratio > 0) {
-        roundRectPath(ctx, slotX, slotY, slotW * ratio, slotH, 4);
-        const barGrad = ctx.createLinearGradient(slotX, slotY, slotX, slotY + slotH);
-        if (currentW >= totalW) {
-          barGrad.addColorStop(0, '#FF7875');
-          barGrad.addColorStop(1, '#A8071A');
-        } else {
-          barGrad.addColorStop(0, '#95DE64');
-          barGrad.addColorStop(1, '#237804');
-        }
-        ctx.fillStyle = barGrad;
-        ctx.fill();
-      }
-      platform.recordDrawCall(1);
-    } else {
+    // 外围使用叶片安全的 3-Slice 橡木牌匾框
+    if (!this.drawAiFrame(ctx, 'top_bar', barX, barY, barW, barH, 0.98)) {
       roundRectPath(ctx, barX, barY, barW, barH, 9);
-      ctx.fillStyle = 'rgba(18, 12, 8, 0.92)';
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(198, 143, 69, 0.80)';
-      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(198, 143, 69, 0.85)';
+      ctx.lineWidth = 1.6;
       ctx.stroke();
+    }
 
-      roundRectPath(ctx, barX + 3, barY + 3, (barW - 6) * ratio, barH - 6, 7);
-      ctx.fillStyle = 'rgba(82, 196, 26, 0.65)';
+    // 内部深嵌进度槽（严格放在木牌匾中心橡木区 barX+18..barX+182, barY+13..barY+43）
+    const slotX = barX + 18;
+    const slotY = barY + 13;
+    const slotW = barW - 36;
+    const slotH = 30;
+    roundRectPath(ctx, slotX, slotY, slotW, slotH, 6);
+    ctx.fillStyle = 'rgba(16, 11, 7, 0.88)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    if (ratio > 0) {
+      const fillW = Math.max(8, Math.round((slotW - 4) * ratio));
+      roundRectPath(ctx, slotX + 2, slotY + 2, fillW, slotH - 4, 4);
+      const barGrad = ctx.createLinearGradient(slotX, slotY, slotX, slotY + slotH);
+      if (currentW >= totalW) {
+        barGrad.addColorStop(0, '#FF7875');
+        barGrad.addColorStop(1, '#A8071A');
+      } else {
+        barGrad.addColorStop(0, '#95DE64');
+        barGrad.addColorStop(1, '#237804');
+      }
+      ctx.fillStyle = barGrad;
       ctx.fill();
     }
 
     drawArtText(ctx, '第 ' + currentW + ' / ' + totalW + ' 波', barX + barW * 0.5, barY + barH * 0.5, {
       style: currentW >= totalW ? 'crimson' : 'gold',
-      size: 14,
+      size: 13.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.4
+      strokeWidth: 0.7
     });
     ctx.restore();
   }
 
   // =========================================================================
-  // 【右上角极简大字号功能键 PvZ Top Right Menu】(尺寸 42px 高度，字号 15px 醒目易触)
+  // 【底栏右侧功能控制键 PvZ Top Right Menu】(垂直与波次槽对齐居中，清晰易点)
   // =========================================================================
   renderPvZTopRightMenu(ctx, scene) {
-    const btnH = 42;
-    const btnY = 486;
+    const btnH = 48;
+    const btnY = 482;
 
     this.drawPixelButton(
       ctx,
@@ -22697,7 +22761,7 @@ class UiManager {
       scene.speedMultiplier + '×速',
       {
         skin: scene.speedMultiplier > 1 ? 'btn_blue' : 'btn_wood',
-        font: 'bold 15px ' + CN_FONT
+        font: 'bold 14.5px ' + CN_FONT
       },
       () => {
         scene.cycleSpeed();
@@ -22714,7 +22778,7 @@ class UiManager {
       '⏸ 暂停',
       {
         skin: 'btn_wood',
-        font: 'bold 15px ' + CN_FONT
+        font: 'bold 14.5px ' + CN_FONT
       },
       () => {
         scene.pauseGame();
@@ -22731,7 +22795,7 @@ class UiManager {
       '⚙️ 菜单',
       {
         skin: 'btn_wood',
-        font: 'bold 15px ' + CN_FONT
+        font: 'bold 14.5px ' + CN_FONT
       },
       () => {
         platform.playSfx('sfx_click');
@@ -22741,21 +22805,21 @@ class UiManager {
   }
 
   // =========================================================================
-  // 【左下角极简圆盘英雄徽章与神术法球 PvZ Hero Emblem & Spell Orbs】
+  // 【左下角极简圆盘英雄徽章与神术法球】(全部控件 100% 坐落在暗橡木底座安全内框 [25..166, 394..452] 中！)
   // =========================================================================
   renderPvZBottomLeftHeroAndSpells(ctx, scene) {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 统一质感底托：采用 AI 手绘暗橡木藤蔓铜框底托 (X: 8..186, Y: 384..466)，严格保留原尺寸位置
+    // 统一质感底托：X: 4..188（左齐且完全避让地基 (1,12)），Y: 374..472（不触底栏 476）
     ctx.save();
     const heroPlaqueImg = platform.getImage('assets/ui/frames/hud_hero_plaque.png');
     if (heroPlaqueImg && heroPlaqueImg.width) {
-      ctx.drawImage(heroPlaqueImg, 6, 381, 182, 88);
+      ctx.drawImage(heroPlaqueImg, 4, 374, 184, 98);
       platform.recordDrawCall(1);
     } else {
-      roundRectPath(ctx, 8, 384, 178, 82, 10);
-      const panelGrad = ctx.createLinearGradient(8, 384, 8, 466);
+      roundRectPath(ctx, 6, 376, 180, 94, 10);
+      const panelGrad = ctx.createLinearGradient(6, 376, 6, 470);
       panelGrad.addColorStop(0, 'rgba(28, 21, 14, 0.90)');
       panelGrad.addColorStop(1, 'rgba(16, 12, 8, 0.94)');
       ctx.fillStyle = panelGrad;
@@ -22766,28 +22830,32 @@ class UiManager {
     }
     ctx.restore();
 
-    // 1. 左侧边缘英雄统御竖栏（紧凑整合于统筹盘内）
-    const hx = 34;
-    const hy = 434;
-    const hr = 19;
+    // 1. 左侧英雄头像盘与等级微章（严格居中于左安全列 [25..59, 396..450]）
+    const hx = 42;
+    const hy = 417;
+    const hr = 14;
 
-    // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=390)
+    // 1.1 上排右侧双按钮（姿态 [Z] + 大招 [F]）：y = 395..412，严格落于顶框内边下方且热区 100% 吻合
     const stanceMeta = {
-      guardian: { label: '🛡️ 守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
-      aggressive: { label: '⚔️ 狂暴', skin: 'btn_red', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
-      scout: { label: '🏹 游侠', skin: 'btn_green', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
-    }[hero.stance || 'guardian'] || { label: '🛡️ 守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
+      guardian: { label: '🛡️守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
+      aggressive: { label: '⚔️狂暴', skin: 'btn_red', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
+      scout: { label: '🏹游侠', skin: 'btn_green', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
+    }[hero.stance || 'guardian'] || { label: '🛡️守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
 
+    const stX = 61;
+    const stY = 395;
+    const stW = 49;
+    const stH = 17;
     ctx.save();
-    if (!this.drawAiFrame(ctx, stanceMeta.skin, 13, hy - hr - 24, 68, 18, 0.98)) {
-      roundRectPath(ctx, 13, hy - hr - 24, 68, 18, 9);
+    if (!this.drawAiFrame(ctx, stanceMeta.skin, stX, stY, stW, stH, 0.98)) {
+      roundRectPath(ctx, stX, stY, stW, stH, 8);
       ctx.fillStyle = stanceMeta.bg;
       ctx.fill();
       ctx.strokeStyle = stanceMeta.bd;
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.1;
       ctx.stroke();
     }
-    drawArtText(ctx, stanceMeta.label, 47, hy - hr - 15, {
+    drawArtText(ctx, stanceMeta.label, stX + stW * 0.5, stY + stH * 0.5, {
       style: 'parchment',
       color: stanceMeta.col,
       size: 9.5,
@@ -22797,35 +22865,40 @@ class UiManager {
     });
     ctx.restore();
 
-    this.registerButton('pvz_hero_stance', 13, hy - hr - 24, 68, 18, () => {
+    this.registerButton('pvz_hero_stance', stX, stY, stW, stH, () => {
       hero.cycleStance(scene.fx);
       if (hero.stanceSwitchedCount >= 3 && scene.achievements) {
         scene.achievements.unlock('tactical_stances', scene.fx);
       }
     });
 
-    // 1.2 英雄大招 [F] 触发微章（舒展铺齐底托上排右半区）
+    // 1.2 英雄大招 [F]（右侧紧邻姿态，绝不撞右边木框与角钉）
     const ultCd = hero.skillCooldown || 0;
     const ultReady = ultCd <= 0 && hero.state !== 'dead';
+    const ultX = 113;
+    const ultY = 395;
+    const ultW = 53;
+    const ultH = 17;
     ctx.save();
-    if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', 85, hy - hr - 24, 88, 18, ultReady ? 1.0 : 0.78)) {
-      roundRectPath(ctx, 85, hy - hr - 24, 88, 18, 9);
+    if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', ultX, ultY, ultW, ultH, ultReady ? 1.0 : 0.78)) {
+      roundRectPath(ctx, ultX, ultY, ultW, ultH, 8);
       ctx.fillStyle = ultReady ? 'rgba(62, 42, 10, 0.94)' : 'rgba(24, 18, 12, 0.88)';
       ctx.fill();
       ctx.strokeStyle = ultReady ? '#FFD700' : 'rgba(140, 110, 70, 0.45)';
-      ctx.lineWidth = ultReady ? 1.5 : 1.0;
+      ctx.lineWidth = ultReady ? 1.4 : 1.0;
       ctx.stroke();
     }
-    drawArtText(ctx, ultReady ? '⚡裂地斩[F]' : `奥义 ${Math.ceil(ultCd)}s`, 129, hy - hr - 15, {
+    drawArtText(ctx, ultReady ? '裂地[F]' : `奥义 ${Math.ceil(ultCd)}s`, ultX + ultW * 0.5, ultY + ultH * 0.5, {
       style: ultReady ? 'gold' : 'dim',
       size: 9.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0
+      strokeWidth: 0,
+      maxWidth: ultW - 6
     });
     ctx.restore();
 
-    this.registerButton('pvz_hero_ult', 74, hy - hr - 24, 72, 18, () => {
+    this.registerButton('pvz_hero_ult', ultX, ultY, ultW, ultH, () => {
       if (ultReady && typeof hero.castUltimateSkill === 'function') {
         hero.castUltimateSkill(scene.enemyManager, scene.fx);
         platform.playSfx('sfx_thunder');
@@ -22834,48 +22907,48 @@ class UiManager {
       }
     });
 
-    // 1.3 英雄圆形头像盘（点击选中并调遣英雄站位）
+    // 1.3 英雄圆形头像盘（严密位于内框中左安全区）
     ctx.save();
     ctx.beginPath();
     ctx.arc(hx, hy, hr, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(20, 14, 8, 0.94)';
     ctx.fill();
     ctx.strokeStyle = (scene.activeHeroRally || hero.isSelected) ? '#FFD700' : '#C68F45';
-    ctx.lineWidth = (scene.activeHeroRally || hero.isSelected) ? 2.2 : 1.6;
+    ctx.lineWidth = (scene.activeHeroRally || hero.isSelected) ? 2.2 : 1.5;
     ctx.stroke();
 
     const hpRatio = Math.max(0, Math.min(1.0, hero.hp / (hero.maxHp || 1)));
     ctx.beginPath();
     ctx.arc(hx, hy, hr + 2, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio);
     ctx.strokeStyle = hpRatio > 0.35 ? '#52C41A' : '#FF4D4F';
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 2.6;
     ctx.stroke();
 
     const heroImg = platform.getImage('assets/vfx/hero_oak.png');
     if (heroImg && heroImg.width) {
-      ctx.drawImage(heroImg, hx - 18, hy - 18, 36, 36);
+      ctx.drawImage(heroImg, hx - 13, hy - 13, 26, 26);
     } else {
-      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 17, align: 'center', baseline: 'middle' });
+      drawArtText(ctx, '🌲', hx, hy, { style: 'emerald', size: 15, align: 'center', baseline: 'middle' });
     }
 
     if (ultReady) {
-      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.10;
+      const uPulse = 1.0 + Math.sin(this.uiAnimTime * 8) * 0.08;
       ctx.strokeStyle = 'rgba(255, 215, 0, ' + (0.65 + Math.sin(this.uiAnimTime * 8) * 0.25) + ')';
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.arc(hx, hy, (hr + 4) * uPulse, 0, Math.PI * 2);
+      ctx.arc(hx, hy, (hr + 3.5) * uPulse, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    roundRectPath(ctx, hx - 14, hy + hr - 8, 28, 12, 4);
+    roundRectPath(ctx, hx - 13, 437.5, 26, 11, 4);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
     ctx.fill();
-    drawArtText(ctx, 'Lv.' + (hero.level || 1), hx, hy + hr - 2, {
+    drawArtText(ctx, 'Lv.' + (hero.level || 1), hx, 443, {
       style: 'gold',
-      size: 9.5,
+      size: 9,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.7
+      strokeWidth: 0
     });
     ctx.restore();
 
@@ -22888,7 +22961,7 @@ class UiManager {
       }
     });
 
-    // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]菇精卫集结0) 紧凑对齐于左侧栏
+    // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]集结0) — 严密收进右下安全区 [62..164, 417..450]
     const spellList = [
       { id: 'rain', name: '甘霖', key: 'Q', cost: 45, icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
       { id: 'shock', name: '天雷', key: 'W', cost: 75, icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
@@ -22896,8 +22969,9 @@ class UiManager {
       { id: 'rally', name: '集结', key: 'R', cost: 0, icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
-    const orbR = 13;
-    const orbStartX = hx + hr + 16;
+    const orbR = 10.5;
+    const orbStartX = 74;
+    const orbStride = 26;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
       const spItem = spellList[sIdx];
@@ -22905,8 +22979,8 @@ class UiManager {
       const spCd = (sp && sp.timer) || 0;
       const spMaxCd = (sp && sp.cd) || 15;
       const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
-      const ox = orbStartX + sIdx * (orbR * 2 + 4);
-      const oy = hy;
+      const ox = orbStartX + sIdx * orbStride;
+      const oy = 428;
 
       ctx.save();
       ctx.beginPath();
@@ -22916,31 +22990,32 @@ class UiManager {
       ctx.strokeStyle = (spItem.id === 'rally' && scene.activeRallyTargeting)
         ? '#FFD700'
         : (canCast ? '#73D13D' : 'rgba(150, 120, 80, 0.45)');
-      ctx.lineWidth = (spItem.id === 'rally' && scene.activeRallyTargeting) ? 2.0 : 1.3;
+      ctx.lineWidth = (spItem.id === 'rally' && scene.activeRallyTargeting) ? 2.0 : 1.2;
       ctx.stroke();
 
       const spImg = platform.getImage(spItem.icon) || platform.getImage(spItem.vfx);
       if (spImg && spImg.width) {
         if (!canCast) ctx.globalAlpha = 0.45;
-        ctx.drawImage(spImg, ox - 10, oy - 10, 20, 20);
+        ctx.drawImage(spImg, ox - 8.5, oy - 8.5, 17, 17);
       } else {
-        drawArtText(ctx, spItem.name[0], ox, oy - 1, {
+        drawArtText(ctx, spItem.name[0], ox, oy - 0.5, {
           style: canCast ? 'emerald' : 'dim',
-          size: 12,
+          size: 11,
           align: 'center',
-          baseline: 'middle'
+          baseline: 'middle',
+          strokeWidth: 0
         });
       }
 
-      roundRectPath(ctx, ox - 13, oy + orbR - 7, 26, 11, 3);
+      roundRectPath(ctx, ox - 11, 438.5, 22, 10, 3);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
       ctx.fill();
-      drawArtText(ctx, spItem.cost > 0 ? (spItem.cost + '') : spItem.key, ox, oy + orbR - 1.5, {
+      drawArtText(ctx, spItem.cost > 0 ? (spItem.cost + '') : spItem.key, ox, 443.5, {
         style: canCast ? 'gold' : 'dim',
         size: 8.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 0.5
+        strokeWidth: 0
       });
 
       if (spCd > 0) {
