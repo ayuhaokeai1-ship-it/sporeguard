@@ -45,8 +45,12 @@ class CombatJuiceEngine {
     this.maxStreak = 0;
     this.battleScore = 0;
     this.currentRank = 'D';
-    this.critSparks.length = 0;
-    this.shockwaves.length = 0;
+    for (let i = 0; i < this.critSparks.length; i++) {
+      this.critSparks[i].active = false;
+    }
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      this.shockwaves[i].active = false;
+    }
   }
 
   /**

@@ -234,8 +234,8 @@ class TacticalFeatsSystem {
   /**
    * 绘制战功达成弹窗与狂暴滤镜
    */
-  render(ctx) {
-    // 1. BOSS 狂暴暗红震慑滤镜
+  render(ctx, hasBoss = false) {
+    // 1. BOSS 狂暴暗红震慑滤镜 (全屏 960x540)
     if (this.bossEnrageFlashTimer > 0) {
       ctx.save();
       const alpha = Math.sin((this.bossEnrageFlashTimer / 1.2) * Math.PI) * 0.22;
@@ -244,12 +244,12 @@ class TacticalFeatsSystem {
       ctx.restore();
     }
 
-    // 2. 战功横幅勋章
+    // 2. 战功横幅勋章 (置于屏幕安全带，避开顶部资源栏及 Boss 血条)
     if (this.activeBanner && this.bannerTimer > 0) {
       const bannerW = 380;
       const bannerH = 46;
       const bx = 480 - bannerW * 0.5;
-      const by = 86;
+      const by = hasBoss ? 124 : 58;
 
       ctx.save();
       ctx.fillStyle = 'rgba(25, 20, 14, 0.94)';

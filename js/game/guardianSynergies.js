@@ -174,7 +174,7 @@ class GuardianSynergiesSystem {
     if (!scene) return;
     if (scene.fx) {
       scene.fx.showBanner('🌿 始源盖亚之怒·全域震颤！', '#B37FEB', '森罗万象共鸣激荡，全图地面怪物遭受太古神木冲击', 2.0);
-      scene.fx.spawnShockwave(480, 270, 480, '#D3ADF7', 0.85);
+      scene.fx.spawnShockwave(320, 240, 340, '#D3ADF7', 0.85);
     }
     if (scene.combatJuice) {
       scene.combatJuice.addTrauma(0.45);
@@ -186,7 +186,11 @@ class GuardianSynergiesSystem {
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
         if (!e.isFlying) {
-          e.takeDamage(160, scene.fx, 'nature');
+          if (typeof scene.enemyManager.applyDamage === 'function') {
+            scene.enemyManager.applyDamage(e, 160, false, 'nature', scene.fx, 'reactions');
+          } else {
+            e.takeDamage(160, scene.fx, 'nature', 'reactions');
+          }
           e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
           if (scene.fx) {
             scene.fx.spawnParticles(e.x, e.y, 8, ['#B37FEB', '#D3ADF7', '#52C41A'], 15, 35, 0.2, 0.45, 2.5);

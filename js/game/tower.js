@@ -96,6 +96,7 @@ class TowerManager {
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
       superchargeTimer: 0, // 能量肥料超频大招倒计时
+      celestialBuffTimer: 0, // 圣光照耀共鸣攻速光环计时器
       totalDamage: 0,
       kills: 0
     };
@@ -403,7 +404,11 @@ class TowerManager {
     // 反击荆棘
     if (tower.typeId === 'thorn' && attacker && attacker.state !== 'death') {
       const reflect = Math.round(dmg * 1.5);
-      attacker.hp -= reflect;
+      if (this.scene && this.scene.enemyManager && typeof this.scene.enemyManager.applyDamage === 'function') {
+        this.scene.enemyManager.applyDamage(attacker, reflect, false, 'nature', fx, tower);
+      } else {
+        attacker.hp -= reflect;
+      }
       if (fx) {
         fx.spawnFloatingText(attacker.x, attacker.y - 12, `⚡ -${reflect}`, PALETTE.BRANCH_B, 1.0);
         fx.spawnParticles(attacker.x, attacker.y, 6, [PALETTE.BRANCH_B, '#FFE58F'], 30, 80, 0.2, 0.35, 4);
@@ -624,6 +629,9 @@ class TowerManager {
       if (t.buffTimer > 0) {
         t.buffTimer = Math.max(0, t.buffTimer - dt);
       }
+      if (t.celestialBuffTimer > 0) {
+        t.celestialBuffTimer = Math.max(0, t.celestialBuffTimer - dt);
+      }
       if (t.stunTimer > 0) {
         t.stunTimer = Math.max(0, t.stunTimer - dt);
         t.animState = 'idle';
@@ -637,8 +645,11 @@ class TowerManager {
         continue; // 处于枯萎休眠状态，暂停攻击
       }
 
-      // 冷却递减（狂暴加速，中毒减速，灵光光环，超频射速）
+      // 冷却递减（狂暴加速，中毒减速，灵光光环，圣光共鸣，超频射速）
       let speedCoeff = (t.superchargeTimer > 0 ? 2.2 : (t.buffTimer > 0 ? 1.6 : 1.0)) * (t.poisonTimer > 0 ? 0.65 : 1.0);
+      if (t.celestialBuffTimer > 0) {
+        speedCoeff *= 1.40;
+      }
       if (t.luminaAspdBonus > 0) {
         speedCoeff *= (1 + t.luminaAspdBonus);
       }
@@ -828,7 +839,7 @@ class TowerManager {
     if (tower.typeId === 'watch') {
       const watchNode = Object.assign({}, node);
       if (tower.synergies && tower.synergies.hasTwinWatch) {
-        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+        watchNode.critRate = (watchNode.critRate || 0) + 0.20;
       }
       bulletManager.spawnWatchBullet(tower.x, tower.y - 10, null, obs.x, obs.y, watchNode, baseDmg, obs);
       platform.playSfx('sfx_shoot');
@@ -861,7 +872,7 @@ class TowerManager {
       const pred = enemyManager.predictEnemyPosition(target, travelSec, map);
       const watchNode = Object.assign({}, node);
       if (tower.synergies && tower.synergies.hasTwinWatch) {
-        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+        watchNode.critRate = (watchNode.critRate || 0) + 0.20;
       }
       const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
       if (wb) wb.sourceTower = tower;

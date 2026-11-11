@@ -111,7 +111,7 @@ class RelicDropManager {
 
     if (fx && typeof fx.spawnHomingMotes === 'function') {
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-      fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 0.85), mv.OFFSET_Y + ry * (mv.SCALE || 0.85), 4, '#FFD700');
+      fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 1.0), mv.OFFSET_Y + ry * (mv.SCALE || 1.0), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {
       scene.economy.addSpores(relic.value || 60);
@@ -121,7 +121,10 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_upgrade');
     } else if (relic.kind === 'shield') {
-      scene.economy.lives = Math.min(20, scene.economy.lives + 1);
+      if (scene.economy) {
+        const maxSeeds = scene.economy.maxSeeds || 20;
+        scene.economy.seeds = Math.min(maxSeeds, (scene.economy.seeds || 0) + 1);
+      }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '+1 守护生命!', '#52C41A', 1.4);
         fx.spawnParticles(relic.x, ry, 18, ['#52C41A', '#B7EB8F', '#FFFFFF'], 30, 80, 0.3, 0.6, 3);
@@ -130,7 +133,7 @@ class RelicDropManager {
     } else if (relic.kind === 'lightning') {
       // 快速恢复所有法术冷却并赋予全场守卫狂暴
       for (let sKey in scene.spells) {
-        scene.spells[sKey].cooldown = 0;
+        scene.spells[sKey].timer = 0;
       }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '法术充能瞬间拉满!', '#40A9FF', 1.4);
@@ -138,9 +141,16 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_laser');
     } else if (relic.kind === 'clover') {
-      // 四叶草神种：立即提供 60 孢子能量 + 1 远古种子能量豆 + 全场狂暴！
-      scene.economy.addSpores(60);
-      scene.economy.seeds = Math.min(5, (scene.economy.seeds || 0) + 1);
+      // 四叶草神种：立即提供 60 孢子能量 + 1 觉醒神种 + 全场狂暴！
+      if (scene.economy) {
+        scene.economy.addSpores(60);
+      }
+      scene.awakeningSeeds = Math.min(5, (scene.awakeningSeeds || 0) + 1);
+      if (scene.towerManager && scene.towerManager.towers) {
+        for (let ti = 0; ti < scene.towerManager.towers.length; ti++) {
+          scene.towerManager.towers[ti].superchargeTimer = Math.max(scene.towerManager.towers[ti].superchargeTimer || 0, 4.0);
+        }
+      }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '+60 能量 & +1 觉醒神种!', '#73D13D', 1.45);
         fx.spawnParticles(relic.x, ry, 22, ['#73D13D', '#D9F7BE', '#FFD700', '#52C41A'], 35, 95, 0.3, 0.6, 4);

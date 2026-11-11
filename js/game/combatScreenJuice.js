@@ -31,12 +31,13 @@ class CombatScreenJuice {
 
   reset() {
     this.trauma = 0;
-    this.shakeX = 0;
-    this.shakeY = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
     this.shakeAngle = 0;
     this.comboCount = 0;
     this.comboTimer = 0;
     this.floatingTexts = [];
+    this.ambientMotes = [];
     this.initAmbientMotes();
   }
 
@@ -162,7 +163,7 @@ class CombatScreenJuice {
   /**
    * 渲染环境粒子与击杀连击 UI 徽章
    */
-  renderJuiceOverlays(ctx) {
+  renderJuiceOverlays(ctx, rank = '') {
     ctx.save();
 
     // 1. 绘制灵动林间微粒
@@ -241,7 +242,8 @@ class CombatScreenJuice {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const title = this.comboCount >= 20 ? '狂暴超神' : (this.comboCount >= 10 ? '势如破竹' : '连续斩获');
-      ctx.fillText(`${title} ${this.comboCount} 连杀`, 0, 0);
+      const rankTag = rank ? ` [${rank}]` : '';
+      ctx.fillText(`${title} ${this.comboCount} 连杀${rankTag}`, 0, 0);
       ctx.restore();
     }
 

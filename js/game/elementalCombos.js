@@ -154,14 +154,23 @@ class ElementalComboEngine {
 
     // 范围溅射
     const alive = enemyManager.getAliveEnemies();
+    let affected = 0;
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
       if (Math.hypot(e.x - enemy.x, e.y - enemy.y) <= 85) {
-        e.hp -= splashDmg;
         e.residualSlowTimer = Math.max(e.residualSlowTimer || 0, 3.0);
         e.residualSlowValue = Math.max(e.residualSlowValue || 0, 0.40);
-        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        if (typeof enemyManager.applyDamage === 'function') {
+          enemyManager.applyDamage(e, splashDmg, false, 'nature', fx, 'reactions');
+        } else {
+          e.hp -= splashDmg;
+          if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        }
+        affected++;
       }
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -193,17 +202,26 @@ class ElementalComboEngine {
 
     // 强力击退
     const alive = enemyManager.getAliveEnemies();
+    let affected = 0;
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
       const d = Math.hypot(e.x - cx, e.y - cy);
       if (d <= 110) {
-        e.hp -= shockDmg;
         // 若非大型 Boss，施加 35px 沿路径后退
         if (!e.isBoss) {
           e.distPx = Math.max(0, e.distPx - 35);
         }
-        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        if (typeof enemyManager.applyDamage === 'function') {
+          enemyManager.applyDamage(e, shockDmg, false, 'fire', fx, 'reactions');
+        } else {
+          e.hp -= shockDmg;
+          if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        }
+        affected++;
       }
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -299,15 +317,24 @@ class ElementalComboEngine {
     const cy = primaryEnemy ? primaryEnemy.y : 240;
     const grandDmg = 155;
 
+    let affected = 0;
     for (let i = 0; i < allAlive.length; i++) {
       const e = allAlive[i];
       if (Math.hypot(e.x - cx, e.y - cy) > 140) continue;
-      e.hp -= grandDmg;
       e.isRooted = true;
       e.rootTimer = 1.6;
       e.residualSlowTimer = 2.0;
       e.residualSlowValue = 0.65;
-      if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      if (typeof enemyManager.applyDamage === 'function') {
+        enemyManager.applyDamage(e, grandDmg, false, 'nature', fx, 'reactions');
+      } else {
+        e.hp -= grandDmg;
+        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      }
+      affected++;
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -334,10 +361,14 @@ class ElementalComboEngine {
           for (let e = 0; e < alive.length; e++) {
             const tgt = alive[e];
             if (!tgt.isFlying && Math.hypot(tgt.x - b.x, tgt.y - b.y) <= b.radius) {
-              tgt.hp -= 35;
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.0);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.60);
-              if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
+              if (typeof enemyManager.applyDamage === 'function') {
+                enemyManager.applyDamage(tgt, 35, false, 'fire', null, 'reactions');
+              } else {
+                tgt.hp -= 35;
+                if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
+              }
             }
           }
         }

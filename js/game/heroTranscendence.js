@@ -72,6 +72,23 @@ class HeroTranscendence {
     if (this.commandCooldowns.battlecry > 0) this.commandCooldowns.battlecry -= dt;
     if (this.commandCooldowns.leylineSurge > 0) this.commandCooldowns.leylineSurge -= dt;
 
+    // 暂停安全 & 倍速安全的战吼护卫增益计时器递减
+    if (sporelingPatrol && sporelingPatrol.guards) {
+      for (let gi = 0; gi < sporelingPatrol.guards.length; gi++) {
+        const g = sporelingPatrol.guards[gi];
+        if (g._battlecryTimer > 0) {
+          g._battlecryTimer -= dt;
+          if (g._battlecryTimer <= 0) {
+            g._battlecryTimer = 0;
+            g.armor = Math.max(0, (g.armor || 0) - (g._battlecryArmorBonus || 0));
+            g.attackDmg = Math.max(1, (g.attackDmg || 1) - (g._battlecryAtkBonus || 0));
+            g._battlecryArmorBonus = 0;
+            g._battlecryAtkBonus = 0;
+          }
+        }
+      }
+    }
+
     // 荒野圣域持续效果
     if (this.sanctuaryActiveTimer > 0) {
       this.sanctuaryActiveTimer -= dt;
@@ -108,14 +125,18 @@ class HeroTranscendence {
           for (let e = 0; e < alive.length; e++) {
             const tgt = alive[e];
             if (!tgt.isFlying && Math.hypot(tgt.x - fis.x, tgt.y - fis.y) <= fis.radius) {
-              tgt.hp -= 26;
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.2);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.65);
               if (fx) {
                 fx.spawnParticles(tgt.x, tgt.y, 3, ['#FF4D4F', '#FFA940', '#5C4028'], 15, 35, 0.15, 0.3, 2);
               }
-              if (tgt.hp <= 0) {
-                enemyManager.killEnemy(tgt, fx);
+              if (typeof enemyManager.applyDamage === 'function') {
+                enemyManager.applyDamage(tgt, 26, false, 'fire', null, 'hero');
+              } else {
+                tgt.hp -= 26;
+                if (tgt.hp <= 0) {
+                  enemyManager.killEnemy(tgt, fx);
+                }
               }
             }
           }
@@ -187,12 +208,16 @@ class HeroTranscendence {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (!e.isFlying && Math.hypot(e.x - hx, e.y - hy) <= 90) {
-            e.hp -= reflectDmg;
+            if (typeof enemyManager.applyDamage === 'function') {
+              enemyManager.applyDamage(e, reflectDmg, false, 'nature', null, 'hero');
+            } else {
+              e.hp -= reflectDmg;
+              if (e.hp <= 0) {
+                enemyManager.killEnemy(e, fx);
+              }
+            }
             if (fx) {
               fx.spawnParticles(e.x, e.y, 2, ['#8C6842', '#D48806'], 12, 30, 0.15, 0.25, 2);
-            }
-            if (e.hp <= 0) {
-              enemyManager.killEnemy(e, fx);
             }
           }
         }
@@ -246,12 +271,14 @@ class HeroTranscendence {
         if (g.state !== 'dead') {
           g.x = hx + (i === 0 ? -22 : 22);
           g.y = hy + 8;
-          g.armor += 8;
-          g.attackDmg = Math.round(g.attackDmg * 1.6);
-          setTimeout(() => {
-            g.armor = Math.max(0, g.armor - 8);
-            g.attackDmg = Math.round(g.attackDmg / 1.6);
-          }, 8000);
+          if (!g._battlecryTimer || g._battlecryTimer <= 0) {
+            const addAtk = Math.max(4, Math.round((g.attackDmg || 12) * 0.6));
+            g._battlecryArmorBonus = 8;
+            g._battlecryAtkBonus = addAtk;
+            g.armor = (g.armor || 0) + 8;
+            g.attackDmg = (g.attackDmg || 12) + addAtk;
+          }
+          g._battlecryTimer = 8.0;
         }
       }
     }
@@ -266,7 +293,7 @@ class HeroTranscendence {
   }
 
   /**
-   * [V] 主动战术号令：灵脉过载灌注 (Leyline Overload)
+   * [B] 主动战术号令：灵脉过载灌注 (Leyline Overload)
    */
   castLeylineSurge(towerManager, fx = null) {
     if (this.commandCooldowns.leylineSurge > 0 || !this.hero || this.hero.state === 'dead') return false;

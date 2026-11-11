@@ -7139,8 +7139,14 @@ class EnemyManager {
     e.burnDps = 0;
     e.poisonTimer = 0;
     e.poisonDps = 0;
+    e.bleedTimer = 0;
+    e.bleedDps = 0;
+    e.isBlind = false;
+    e.blindTimer = 0;
     e.freezeTimer = 0;
+    e.isFrozen = false;
     e.isDeepFrozen = false;
+    e.isRooted = false;
     e.rootTimer = 0;
     e.stunTimer = 0;
     e._reactCd = 0;
@@ -7538,12 +7544,36 @@ class EnemyManager {
       }
     }
 
+    const effFx = fx || this.fx || (this.scene ? this.scene.fx : null);
     if (this.scene && typeof this.scene.onEnemyKilled === 'function') {
       this.scene.onEnemyKilled(enemy);
+    }
+    if (this.scene && this.scene.tacticalFeats) {
+      if (enemy.type === 'siege_beetle') {
+        this.scene.tacticalFeats.recordEvent('kill_siege', 1, this.scene);
+      }
+      if (enemy.isLeaper && enemy.isLeaping) {
+        this.scene.tacticalFeats.recordEvent('kill_leaper_air', 1, this.scene);
+      }
     }
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
       this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+    } else if (!enemy.isElite && this.relicManager && this.scene && this.scene.towerManager && this.scene.towerManager.towers) {
+      // 灵光菇 B3「聚宝金蟾圣堂」relicDropBonus：击杀附近敌怪额外提高战利品遗物掉率
+      let hasB3 = false;
+      const tws = this.scene.towerManager.towers;
+      for (let ti = 0; ti < tws.length; ti++) {
+        const lt = tws[ti];
+        if (lt.typeId === 'lumina' && lt.node && lt.node.relicDropBonus && Math.hypot(lt.x - enemy.x, lt.y - enemy.y) <= 192) {
+          hasB3 = true;
+          break;
+        }
+      }
+      if (hasB3 && Math.random() < 0.14) {
+        const rKind = ['coin', 'coin', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
+        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 50);
+      }
     }
     if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
       if (Math.random() < this.scene.eliteDoubleSporeChance) {
@@ -7555,13 +7585,13 @@ class EnemyManager {
       if (enemy.isElite || enemy.isBoss) {
         if (Math.random() < 0.65 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
-          if (this.fx) this.fx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');
         }
       }
       if (this.scene.hero && this.scene.hero.state !== 'dead') {
         const xpGain = enemy.isBoss ? 80 : (enemy.isElite ? 35 : (enemy.def.baseHp >= 100 ? 15 : 8));
-        this.scene.hero.gainXp(xpGain, this.fx);
+        this.scene.hero.gainXp(xpGain, effFx);
       }
     }
     if (enemy.def.splitOnDeath) {
@@ -7655,8 +7685,32 @@ class EnemyManager {
       if (e.residualSlowTimer > 0) {
         e.residualSlowTimer = Math.max(0, e.residualSlowTimer - dt);
       }
+      if (e.stunTimer > 0) {
+        e.stunTimer = Math.max(0, e.stunTimer - dt);
+      }
+      if (e.rootTimer > 0) {
+        e.rootTimer = Math.max(0, e.rootTimer - dt);
+        if (e.rootTimer <= 0) e.isRooted = false;
+      } else if (e.isRooted) {
+        e.isRooted = false;
+      }
+      if (e.freezeTimer > 0) {
+        e.freezeTimer = Math.max(0, e.freezeTimer - dt);
+        if (e.freezeTimer <= 0) {
+          e.isFrozen = false;
+          e.isDeepFrozen = false;
+        }
+      } else if (e.isFrozen) {
+        e.isFrozen = false;
+      }
+      if (e.blindTimer > 0) {
+        e.blindTimer = Math.max(0, e.blindTimer - dt);
+        if (e.blindTimer <= 0) e.isBlind = false;
+      } else if (e.isBlind) {
+        e.isBlind = false;
+      }
 
-      // 递减火焰灼烧与酸液毒素持续伤害计步，注入统一 DoT 结算管线
+      // 递减火焰灼烧、酸液毒素与流血持续伤害计步，注入统一 DoT 结算管线
       if (e.burnTimer > 0) {
         e.burnTimer = Math.max(0, e.burnTimer - dt);
         e.dotSources.push({ dps: e.burnDps || 18, sourceTower: null, kind: 'reactions' });
@@ -7664,6 +7718,10 @@ class EnemyManager {
       if (e.poisonTimer > 0) {
         e.poisonTimer = Math.max(0, e.poisonTimer - dt);
         e.dotSources.push({ dps: e.poisonDps || 24, sourceTower: null, kind: 'reactions' });
+      }
+      if (e.bleedTimer > 0) {
+        e.bleedTimer = Math.max(0, e.bleedTimer - dt);
+        e.dotSources.push({ dps: e.bleedDps || 28, sourceTower: null, kind: 'hero' });
       }
 
       // 5.4 & 5.5 结算持续伤害（雾团、灼烧区、元素酸毒）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
@@ -7690,7 +7748,7 @@ class EnemyManager {
 
           const sTower = entry && typeof entry === 'object' ? entry.sourceTower : null;
           const kind = entry && typeof entry === 'object' ? entry.kind : 'mist';
-          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : 'reactions');
+          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : (kind === 'hero' ? 'hero' : 'reactions'));
 
           if (sTower) {
             sTower.totalDamage = (sTower.totalDamage || 0) + tickDmg;
@@ -7746,10 +7804,12 @@ class EnemyManager {
         }
       }
 
-      // 计算当前实际移动速度
+      // 计算当前实际移动速度与控制状态判定
+      const isIncapacitated = e.stunTimer > 0 || e.freezeTimer > 0 || e.isFrozen || e.isDeepFrozen;
+      const isRootedHold = !e.isFlying && (e.rootTimer > 0 || e.isRooted);
       const effSlow = this.getEffectiveSlow(e);
       const speedTilesPerSec = e.baseSpeedTiles * e.speedMultiplier * (1 - effSlow);
-      const speedPxPerSec = speedTilesPerSec * TILE_SIZE;
+      const speedPxPerSec = (isIncapacitated || isRootedHold) ? 0 : speedTilesPerSec * TILE_SIZE;
 
       // 敌人主动攻击附近的蘑菇防御塔（近战撕咬 / 远程喷毒）
       if (!e.atkCooldown) e.atkCooldown = 0.5 + Math.random() * 0.5;
@@ -7757,7 +7817,7 @@ class EnemyManager {
 
       let attackingTower = null;
       const isBreaker = e.type === 'armored' || e.type === 'siege_beetle' || e.type === 'skeletal_husk' || e.isBoss;
-      if (towerManager && towerManager.towers && towerManager.towers.length > 0) {
+      if (!isIncapacitated && towerManager && towerManager.towers && towerManager.towers.length > 0) {
         const isMoth = e.type === 'moth';
         const atkRange = isMoth ? 120 : 38; // 飞蛾远程 120px 喷毒，地面甲虫近身 38px 啃噬
         const atkInterval = isMoth ? 2.4 : (isBreaker ? 1.4 : 1.8);
@@ -7793,20 +7853,24 @@ class EnemyManager {
           attackingTower = bestTower;
           if (e.atkCooldown <= 0) {
             e.atkCooldown = atkInterval;
-            towerManager.damageTower(bestTower, atkDamage, e, fx);
-            if (isMoth) {
-              bestTower.poisonTimer = 2.6;
-            }
-            if (fx) {
-              fx.spawnParticles(bestTower.x, bestTower.y - 6, 4, [e.tintColor, '#FF7875'], 20, 50, 0.15, 0.25, 3);
+            if (e.isBlind && Math.random() < 0.50) {
+              if (fx) fx.spawnFloatingText(bestTower.x, bestTower.y - 16, '失明落空!', '#FFE58F', 0.8);
+            } else {
+              towerManager.damageTower(bestTower, atkDamage, e, fx);
+              if (isMoth) {
+                bestTower.poisonTimer = 2.6;
+              }
+              if (fx) {
+                fx.spawnParticles(bestTower.x, bestTower.y - 6, 4, [e.tintColor, '#FF7875'], 20, 50, 0.15, 0.25, 3);
+              }
             }
           }
         }
       }
 
       // 如果正在近战啃食，敌人停下移动；如果是远程飞蛾，减速 50% 移动
-      // Leaper leaping jump mechanics (跳跃刺客飞跃阻挡)
-      if (e.isLeaper && e.state === 'walk') {
+      // Leaper leaping jump mechanics (跳跃刺客飞跃阻挡，受控制时禁止起跳)
+      if (e.isLeaper && e.state === 'walk' && !isIncapacitated && !isRootedHold) {
         if (e.isLeaping) {
           e.leapProgress += dt / 0.42; // 0.42s flight time
           // Advance rapidly forward along path during leap
@@ -7848,8 +7912,8 @@ class EnemyManager {
       const moveSlow = isBlockedByGuard ? 0 : (isMeleeAttacking ? (isBreaker ? 0.25 : 0.6) : (attackingTower ? 0.55 : 1.0));
       e.distPx += speedPxPerSec * dt * moveSlow;
 
-      // 特种敌人（织网蛛 / 毒蛾）吐丝技能
-      if (e.def.webCooldown && towerManager && towerManager.towers && towerManager.towers.length > 0) {
+      // 特种敌人（织网蛛 / 毒蛾）吐丝技能（受眩晕/冰冻/失明影响）
+      if (!isIncapacitated && e.def.webCooldown && towerManager && towerManager.towers && towerManager.towers.length > 0) {
         if (!e.webCooldownTimer) e.webCooldownTimer = e.def.webCooldown * (0.3 + Math.random() * 0.4);
         e.webCooldownTimer -= dt;
         if (e.webCooldownTimer <= 0) {
@@ -8616,8 +8680,13 @@ class ForestHero {
 
     platform.playSfx('sfx_thunder');
     const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
-    const baseRadius = 125 * resonanceBonus;
+    const ruptureBonus = (this.transcendence && this.transcendence.perks && this.transcendence.perks.cataclysmicRupture && this.transcendence.perks.cataclysmicRupture.unlocked) ? 1.45 : 1.0;
+    const baseRadius = 125 * resonanceBonus * ruptureBonus;
     const stunDuration = 2.2 * (this.talents.leylineResonance ? 1.3 : 1.0);
+
+    if (this.transcendence && typeof this.transcendence.onCastEarthshaker === 'function') {
+      this.transcendence.onCastEarthshaker(this.x, this.y, fx);
+    }
 
     if (fx) {
       fx.triggerScreenShake(6.5, 0.48);
@@ -10160,7 +10229,7 @@ class RelicDropManager {
 
     if (fx && typeof fx.spawnHomingMotes === 'function') {
       const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-      fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 0.85), mv.OFFSET_Y + ry * (mv.SCALE || 0.85), 4, '#FFD700');
+      fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 1.0), mv.OFFSET_Y + ry * (mv.SCALE || 1.0), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {
       scene.economy.addSpores(relic.value || 60);
@@ -10170,7 +10239,10 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_upgrade');
     } else if (relic.kind === 'shield') {
-      scene.economy.lives = Math.min(20, scene.economy.lives + 1);
+      if (scene.economy) {
+        const maxSeeds = scene.economy.maxSeeds || 20;
+        scene.economy.seeds = Math.min(maxSeeds, (scene.economy.seeds || 0) + 1);
+      }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '+1 守护生命!', '#52C41A', 1.4);
         fx.spawnParticles(relic.x, ry, 18, ['#52C41A', '#B7EB8F', '#FFFFFF'], 30, 80, 0.3, 0.6, 3);
@@ -10179,7 +10251,7 @@ class RelicDropManager {
     } else if (relic.kind === 'lightning') {
       // 快速恢复所有法术冷却并赋予全场守卫狂暴
       for (let sKey in scene.spells) {
-        scene.spells[sKey].cooldown = 0;
+        scene.spells[sKey].timer = 0;
       }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '法术充能瞬间拉满!', '#40A9FF', 1.4);
@@ -10187,9 +10259,16 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_laser');
     } else if (relic.kind === 'clover') {
-      // 四叶草神种：立即提供 60 孢子能量 + 1 远古种子能量豆 + 全场狂暴！
-      scene.economy.addSpores(60);
-      scene.economy.seeds = Math.min(5, (scene.economy.seeds || 0) + 1);
+      // 四叶草神种：立即提供 60 孢子能量 + 1 觉醒神种 + 全场狂暴！
+      if (scene.economy) {
+        scene.economy.addSpores(60);
+      }
+      scene.awakeningSeeds = Math.min(5, (scene.awakeningSeeds || 0) + 1);
+      if (scene.towerManager && scene.towerManager.towers) {
+        for (let ti = 0; ti < scene.towerManager.towers.length; ti++) {
+          scene.towerManager.towers[ti].superchargeTimer = Math.max(scene.towerManager.towers[ti].superchargeTimer || 0, 4.0);
+        }
+      }
       if (fx) {
         fx.spawnFloatingText(relic.x, ry - 18, '+60 能量 & +1 觉醒神种!', '#73D13D', 1.45);
         fx.spawnParticles(relic.x, ry, 22, ['#73D13D', '#D9F7BE', '#FFD700', '#52C41A'], 35, 95, 0.3, 0.6, 4);
@@ -11893,8 +11972,12 @@ class CombatJuiceEngine {
     this.maxStreak = 0;
     this.battleScore = 0;
     this.currentRank = 'D';
-    this.critSparks.length = 0;
-    this.shockwaves.length = 0;
+    for (let i = 0; i < this.critSparks.length; i++) {
+      this.critSparks[i].active = false;
+    }
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      this.shockwaves[i].active = false;
+    }
   }
 
   /**
@@ -12414,6 +12497,23 @@ class HeroTranscendence {
     if (this.commandCooldowns.battlecry > 0) this.commandCooldowns.battlecry -= dt;
     if (this.commandCooldowns.leylineSurge > 0) this.commandCooldowns.leylineSurge -= dt;
 
+    // 暂停安全 & 倍速安全的战吼护卫增益计时器递减
+    if (sporelingPatrol && sporelingPatrol.guards) {
+      for (let gi = 0; gi < sporelingPatrol.guards.length; gi++) {
+        const g = sporelingPatrol.guards[gi];
+        if (g._battlecryTimer > 0) {
+          g._battlecryTimer -= dt;
+          if (g._battlecryTimer <= 0) {
+            g._battlecryTimer = 0;
+            g.armor = Math.max(0, (g.armor || 0) - (g._battlecryArmorBonus || 0));
+            g.attackDmg = Math.max(1, (g.attackDmg || 1) - (g._battlecryAtkBonus || 0));
+            g._battlecryArmorBonus = 0;
+            g._battlecryAtkBonus = 0;
+          }
+        }
+      }
+    }
+
     // 荒野圣域持续效果
     if (this.sanctuaryActiveTimer > 0) {
       this.sanctuaryActiveTimer -= dt;
@@ -12450,14 +12550,18 @@ class HeroTranscendence {
           for (let e = 0; e < alive.length; e++) {
             const tgt = alive[e];
             if (!tgt.isFlying && Math.hypot(tgt.x - fis.x, tgt.y - fis.y) <= fis.radius) {
-              tgt.hp -= 26;
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.2);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.65);
               if (fx) {
                 fx.spawnParticles(tgt.x, tgt.y, 3, ['#FF4D4F', '#FFA940', '#5C4028'], 15, 35, 0.15, 0.3, 2);
               }
-              if (tgt.hp <= 0) {
-                enemyManager.killEnemy(tgt, fx);
+              if (typeof enemyManager.applyDamage === 'function') {
+                enemyManager.applyDamage(tgt, 26, false, 'fire', null, 'hero');
+              } else {
+                tgt.hp -= 26;
+                if (tgt.hp <= 0) {
+                  enemyManager.killEnemy(tgt, fx);
+                }
               }
             }
           }
@@ -12529,12 +12633,16 @@ class HeroTranscendence {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (!e.isFlying && Math.hypot(e.x - hx, e.y - hy) <= 90) {
-            e.hp -= reflectDmg;
+            if (typeof enemyManager.applyDamage === 'function') {
+              enemyManager.applyDamage(e, reflectDmg, false, 'nature', null, 'hero');
+            } else {
+              e.hp -= reflectDmg;
+              if (e.hp <= 0) {
+                enemyManager.killEnemy(e, fx);
+              }
+            }
             if (fx) {
               fx.spawnParticles(e.x, e.y, 2, ['#8C6842', '#D48806'], 12, 30, 0.15, 0.25, 2);
-            }
-            if (e.hp <= 0) {
-              enemyManager.killEnemy(e, fx);
             }
           }
         }
@@ -12588,12 +12696,14 @@ class HeroTranscendence {
         if (g.state !== 'dead') {
           g.x = hx + (i === 0 ? -22 : 22);
           g.y = hy + 8;
-          g.armor += 8;
-          g.attackDmg = Math.round(g.attackDmg * 1.6);
-          setTimeout(() => {
-            g.armor = Math.max(0, g.armor - 8);
-            g.attackDmg = Math.round(g.attackDmg / 1.6);
-          }, 8000);
+          if (!g._battlecryTimer || g._battlecryTimer <= 0) {
+            const addAtk = Math.max(4, Math.round((g.attackDmg || 12) * 0.6));
+            g._battlecryArmorBonus = 8;
+            g._battlecryAtkBonus = addAtk;
+            g.armor = (g.armor || 0) + 8;
+            g.attackDmg = (g.attackDmg || 12) + addAtk;
+          }
+          g._battlecryTimer = 8.0;
         }
       }
     }
@@ -12608,7 +12718,7 @@ class HeroTranscendence {
   }
 
   /**
-   * [V] 主动战术号令：灵脉过载灌注 (Leyline Overload)
+   * [B] 主动战术号令：灵脉过载灌注 (Leyline Overload)
    */
   castLeylineSurge(towerManager, fx = null) {
     if (this.commandCooldowns.leylineSurge > 0 || !this.hero || this.hero.state === 'dead') return false;
@@ -12860,14 +12970,23 @@ class ElementalComboEngine {
 
     // 范围溅射
     const alive = enemyManager.getAliveEnemies();
+    let affected = 0;
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
       if (Math.hypot(e.x - enemy.x, e.y - enemy.y) <= 85) {
-        e.hp -= splashDmg;
         e.residualSlowTimer = Math.max(e.residualSlowTimer || 0, 3.0);
         e.residualSlowValue = Math.max(e.residualSlowValue || 0, 0.40);
-        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        if (typeof enemyManager.applyDamage === 'function') {
+          enemyManager.applyDamage(e, splashDmg, false, 'nature', fx, 'reactions');
+        } else {
+          e.hp -= splashDmg;
+          if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        }
+        affected++;
       }
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -12899,17 +13018,26 @@ class ElementalComboEngine {
 
     // 强力击退
     const alive = enemyManager.getAliveEnemies();
+    let affected = 0;
     for (let i = 0; i < alive.length; i++) {
       const e = alive[i];
       const d = Math.hypot(e.x - cx, e.y - cy);
       if (d <= 110) {
-        e.hp -= shockDmg;
         // 若非大型 Boss，施加 35px 沿路径后退
         if (!e.isBoss) {
           e.distPx = Math.max(0, e.distPx - 35);
         }
-        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        if (typeof enemyManager.applyDamage === 'function') {
+          enemyManager.applyDamage(e, shockDmg, false, 'fire', fx, 'reactions');
+        } else {
+          e.hp -= shockDmg;
+          if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+        }
+        affected++;
       }
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -13005,15 +13133,24 @@ class ElementalComboEngine {
     const cy = primaryEnemy ? primaryEnemy.y : 240;
     const grandDmg = 155;
 
+    let affected = 0;
     for (let i = 0; i < allAlive.length; i++) {
       const e = allAlive[i];
       if (Math.hypot(e.x - cx, e.y - cy) > 140) continue;
-      e.hp -= grandDmg;
       e.isRooted = true;
       e.rootTimer = 1.6;
       e.residualSlowTimer = 2.0;
       e.residualSlowValue = 0.65;
-      if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      if (typeof enemyManager.applyDamage === 'function') {
+        enemyManager.applyDamage(e, grandDmg, false, 'nature', fx, 'reactions');
+      } else {
+        e.hp -= grandDmg;
+        if (e.hp <= 0) enemyManager.killEnemy(e, fx);
+      }
+      affected++;
+    }
+    if (enemyManager.scene && enemyManager.scene.tacticalFeats && affected >= 6) {
+      enemyManager.scene.tacticalFeats.recordEvent('superconduct_burst', affected, enemyManager.scene);
     }
 
     if (fx) {
@@ -13040,10 +13177,14 @@ class ElementalComboEngine {
           for (let e = 0; e < alive.length; e++) {
             const tgt = alive[e];
             if (!tgt.isFlying && Math.hypot(tgt.x - b.x, tgt.y - b.y) <= b.radius) {
-              tgt.hp -= 35;
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.0);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.60);
-              if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
+              if (typeof enemyManager.applyDamage === 'function') {
+                enemyManager.applyDamage(tgt, 35, false, 'fire', null, 'reactions');
+              } else {
+                tgt.hp -= 35;
+                if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
+              }
             }
           }
         }
@@ -13312,7 +13453,7 @@ class GuardianSynergiesSystem {
     if (!scene) return;
     if (scene.fx) {
       scene.fx.showBanner('🌿 始源盖亚之怒·全域震颤！', '#B37FEB', '森罗万象共鸣激荡，全图地面怪物遭受太古神木冲击', 2.0);
-      scene.fx.spawnShockwave(480, 270, 480, '#D3ADF7', 0.85);
+      scene.fx.spawnShockwave(320, 240, 340, '#D3ADF7', 0.85);
     }
     if (scene.combatJuice) {
       scene.combatJuice.addTrauma(0.45);
@@ -13324,7 +13465,11 @@ class GuardianSynergiesSystem {
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
         if (!e.isFlying) {
-          e.takeDamage(160, scene.fx, 'nature');
+          if (typeof scene.enemyManager.applyDamage === 'function') {
+            scene.enemyManager.applyDamage(e, 160, false, 'nature', scene.fx, 'reactions');
+          } else {
+            e.takeDamage(160, scene.fx, 'nature', 'reactions');
+          }
           e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
           if (scene.fx) {
             scene.fx.spawnParticles(e.x, e.y, 8, ['#B37FEB', '#D3ADF7', '#52C41A'], 15, 35, 0.2, 0.45, 2.5);
@@ -13979,8 +14124,8 @@ class TacticalFeatsSystem {
   /**
    * 绘制战功达成弹窗与狂暴滤镜
    */
-  render(ctx) {
-    // 1. BOSS 狂暴暗红震慑滤镜
+  render(ctx, hasBoss = false) {
+    // 1. BOSS 狂暴暗红震慑滤镜 (全屏 960x540)
     if (this.bossEnrageFlashTimer > 0) {
       ctx.save();
       const alpha = Math.sin((this.bossEnrageFlashTimer / 1.2) * Math.PI) * 0.22;
@@ -13989,12 +14134,12 @@ class TacticalFeatsSystem {
       ctx.restore();
     }
 
-    // 2. 战功横幅勋章
+    // 2. 战功横幅勋章 (置于屏幕安全带，避开顶部资源栏及 Boss 血条)
     if (this.activeBanner && this.bannerTimer > 0) {
       const bannerW = 380;
       const bannerH = 46;
       const bx = 480 - bannerW * 0.5;
-      const by = 86;
+      const by = hasBoss ? 124 : 58;
 
       ctx.save();
       ctx.fillStyle = 'rgba(25, 20, 14, 0.94)';
@@ -14783,12 +14928,13 @@ class CombatScreenJuice {
 
   reset() {
     this.trauma = 0;
-    this.shakeX = 0;
-    this.shakeY = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
     this.shakeAngle = 0;
     this.comboCount = 0;
     this.comboTimer = 0;
     this.floatingTexts = [];
+    this.ambientMotes = [];
     this.initAmbientMotes();
   }
 
@@ -14914,7 +15060,7 @@ class CombatScreenJuice {
   /**
    * 渲染环境粒子与击杀连击 UI 徽章
    */
-  renderJuiceOverlays(ctx) {
+  renderJuiceOverlays(ctx, rank = '') {
     ctx.save();
 
     // 1. 绘制灵动林间微粒
@@ -14993,7 +15139,8 @@ class CombatScreenJuice {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const title = this.comboCount >= 20 ? '狂暴超神' : (this.comboCount >= 10 ? '势如破竹' : '连续斩获');
-      ctx.fillText(`${title} ${this.comboCount} 连杀`, 0, 0);
+      const rankTag = rank ? ` [${rank}]` : '';
+      ctx.fillText(`${title} ${this.comboCount} 连杀${rankTag}`, 0, 0);
       ctx.restore();
     }
 
@@ -16856,6 +17003,7 @@ class TowerManager {
       webHealth: 0,        // 蛛丝血量（需点击3次解救）
       webMaxHealth: 3,
       superchargeTimer: 0, // 能量肥料超频大招倒计时
+      celestialBuffTimer: 0, // 圣光照耀共鸣攻速光环计时器
       totalDamage: 0,
       kills: 0
     };
@@ -17163,7 +17311,11 @@ class TowerManager {
     // 反击荆棘
     if (tower.typeId === 'thorn' && attacker && attacker.state !== 'death') {
       const reflect = Math.round(dmg * 1.5);
-      attacker.hp -= reflect;
+      if (this.scene && this.scene.enemyManager && typeof this.scene.enemyManager.applyDamage === 'function') {
+        this.scene.enemyManager.applyDamage(attacker, reflect, false, 'nature', fx, tower);
+      } else {
+        attacker.hp -= reflect;
+      }
       if (fx) {
         fx.spawnFloatingText(attacker.x, attacker.y - 12, `⚡ -${reflect}`, PALETTE.BRANCH_B, 1.0);
         fx.spawnParticles(attacker.x, attacker.y, 6, [PALETTE.BRANCH_B, '#FFE58F'], 30, 80, 0.2, 0.35, 4);
@@ -17384,6 +17536,9 @@ class TowerManager {
       if (t.buffTimer > 0) {
         t.buffTimer = Math.max(0, t.buffTimer - dt);
       }
+      if (t.celestialBuffTimer > 0) {
+        t.celestialBuffTimer = Math.max(0, t.celestialBuffTimer - dt);
+      }
       if (t.stunTimer > 0) {
         t.stunTimer = Math.max(0, t.stunTimer - dt);
         t.animState = 'idle';
@@ -17397,8 +17552,11 @@ class TowerManager {
         continue; // 处于枯萎休眠状态，暂停攻击
       }
 
-      // 冷却递减（狂暴加速，中毒减速，灵光光环，超频射速）
+      // 冷却递减（狂暴加速，中毒减速，灵光光环，圣光共鸣，超频射速）
       let speedCoeff = (t.superchargeTimer > 0 ? 2.2 : (t.buffTimer > 0 ? 1.6 : 1.0)) * (t.poisonTimer > 0 ? 0.65 : 1.0);
+      if (t.celestialBuffTimer > 0) {
+        speedCoeff *= 1.40;
+      }
       if (t.luminaAspdBonus > 0) {
         speedCoeff *= (1 + t.luminaAspdBonus);
       }
@@ -17588,7 +17746,7 @@ class TowerManager {
     if (tower.typeId === 'watch') {
       const watchNode = Object.assign({}, node);
       if (tower.synergies && tower.synergies.hasTwinWatch) {
-        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+        watchNode.critRate = (watchNode.critRate || 0) + 0.20;
       }
       bulletManager.spawnWatchBullet(tower.x, tower.y - 10, null, obs.x, obs.y, watchNode, baseDmg, obs);
       platform.playSfx('sfx_shoot');
@@ -17621,7 +17779,7 @@ class TowerManager {
       const pred = enemyManager.predictEnemyPosition(target, travelSec, map);
       const watchNode = Object.assign({}, node);
       if (tower.synergies && tower.synergies.hasTwinWatch) {
-        watchNode.critChance = (watchNode.critChance || 0) + 0.20;
+        watchNode.critRate = (watchNode.critRate || 0) + 0.20;
       }
       const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
       if (wb) wb.sourceTower = tower;
@@ -18298,8 +18456,8 @@ class WaveManager {
     const bonus = economy.grantEarlyCallBonus(this.prepTimerSec);
     if (fx) {
       if (bonus > 0) {
-        fx.spawnFloatingText(480, 260, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
-        fx.spawnParticles(480, 260, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
+        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
+        fx.spawnParticles(320, 220, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
       }
       fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
       fx.triggerScreenShake(2.5, 0.15);
@@ -20639,10 +20797,11 @@ class UiManager {
     // =========================================================================
     // [分区 2] 指挥官四大战术神术舱 (X: 144..296)
     // =========================================================================
+    const harvestGain = (scene && scene.spells && scene.spells.harvest ? scene.spells.harvest.gain : 100) + ((scene && scene.extraHarvestSpores) || 0);
     const spellList = [
       { id: 'rain', hotkey: 'Q', name: '甘霖', cost: 45, vfx: 'assets/vfx/relic_clover.png', tip: '复苏' },
       { id: 'shock', hotkey: 'W', name: '天雷', cost: 75, vfx: 'assets/vfx/relic_lightning.png', tip: '眩晕' },
-      { id: 'harvest', hotkey: 'E', name: '丰饶', cost: 0, vfx: 'assets/vfx/item_golden_spore.png', tip: '+120' },
+      { id: 'harvest', hotkey: 'E', name: '丰饶', cost: 0, vfx: 'assets/vfx/item_golden_spore.png', tip: '+' + harvestGain },
       { id: 'rally', hotkey: 'R', name: '集结', cost: 0, vfx: 'assets/vfx/sporeling_guard.png', tip: '布防' }
     ];
 
@@ -22552,7 +22711,7 @@ class UiManager {
       baseline: 'middle',
       maxWidth: footW - 12
     });
-    drawArtText(ctx, '操控: [右键 / Esc]取消瞄准·关窗  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
+    drawArtText(ctx, '操控: [右键 / Esc]取消·关窗  [M]知识树  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
       style: 'parchment',
       size: 9.5,
       align: 'center',
@@ -24031,10 +24190,11 @@ class UiManager {
     });
 
     // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]集结0) — 严密收进右下安全区 [62..164, 417..450]
+    const pvzHarvestGain = (scene && scene.spells && scene.spells.harvest ? scene.spells.harvest.gain : 100) + ((scene && scene.extraHarvestSpores) || 0);
     const spellList = [
       { id: 'rain', name: '自然甘霖', key: 'Q', cost: 45, tip: '全场友军恢复生命并攻速翻倍 6s', icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
       { id: 'shock', name: '雷霆震爆', key: 'W', cost: 75, tip: '区域落雷轰击并眩晕敌军 3s', icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
-      { id: 'harvest', name: '大地丰收', key: 'E', cost: 0, tip: '立刻凝结 +120 黄金孢子', icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
+      { id: 'harvest', name: '大地丰收', key: 'E', cost: 0, tip: '立刻凝结 +' + pvzHarvestGain + ' 黄金孢子', icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
       { id: 'rally', name: '菇精卫集结', key: 'R', cost: 0, tip: '点击巡逻道路派遣双哨菇精卫近战拦截', icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
@@ -24247,6 +24407,8 @@ class SceneController {
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
+    this.enemyManager.fx = this.fx;
+    this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
@@ -24372,6 +24534,8 @@ class SceneController {
     this.bulletManager.mushroomMastery = this.mushroomMastery;
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
+    this.enemyManager.fx = this.fx;
+    this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
@@ -24690,7 +24854,7 @@ class SceneController {
       const totalHarvest = sp.gain + (this.extraHarvestSpores || 0);
       this.economy.addSpores(totalHarvest);
       this.fx.showBanner('大地丰收！+' + totalHarvest + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
-      this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
+      this.fx.spawnParticles(320, 240, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
     }
@@ -25109,8 +25273,15 @@ class SceneController {
           this.ui.toggleZenMode(this.fx);
         }
       } else if (act.type === 'toggle_mastery') {
-        if (this.mushroomMastery) {
-          this.mushroomMastery.togglePanel();
+        if (this.ui) {
+          if (this.ui.showGuideModal && this.ui.codexTab === 2) {
+            this.ui.showGuideModal = false;
+            storage.markGuideSeen();
+          } else {
+            this.ui.codexTab = 2;
+            this.ui.showGuideModal = true;
+          }
+          platform.playSfx('sfx_click');
         }
       } else if (act.type === 'cancel_action') {
         this.handleCancelAction(false);
@@ -25408,8 +25579,8 @@ class SceneController {
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);
     ctx.clip();
-    const jx = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0;
-    const jy = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0;
+    const jx = (this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0) + (this.combatJuice ? this.combatJuice.shakeOffsetX * 0.45 : 0);
+    const jy = (this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0) + (this.combatJuice ? this.combatJuice.shakeOffsetY * 0.45 : 0);
     ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX + jx, mv.OFFSET_Y + this.fx.shakeOffsetY + jy);
     ctx.scale(mv.SCALE, mv.SCALE);
 
@@ -25494,9 +25665,6 @@ class SceneController {
     if (this.combatVfx) {
       this.combatVfx.renderCombatVfx(ctx);
     }
-    if (this.tacticalFeats) {
-      this.tacticalFeats.render(ctx);
-    }
     if (this.heroTranscendence) {
       this.heroTranscendence.render(ctx);
     }
@@ -25507,7 +25675,6 @@ class SceneController {
     this.sporeDropManager.render(ctx);
     if (this.combatJuice) {
       this.combatJuice.renderFx(ctx);
-      this.combatJuice.renderStreakWidget(ctx);
     }
     // 以下元素使用地图坐标，必须在地图变换内绘制
     if (this.bossOverdriveEngine) {
@@ -25528,11 +25695,16 @@ class SceneController {
       this.weather.renderWeatherOverlay(ctx);
     }
     if (!this.ui.uiZenMode && this.state === 'BATTLE') {
+      const hasActiveBossHud = Boolean(this.bossOverdriveEngine && this.bossOverdriveEngine.activeBoss &&
+        this.bossOverdriveEngine.activeBoss.state !== 'death' && this.bossOverdriveEngine.activeBoss.hp > 0);
       if (this.bossOverdriveEngine) {
         this.bossOverdriveEngine.renderBossHud(ctx);
       }
       if (this.combatScreenJuice) {
-        this.combatScreenJuice.renderJuiceOverlays(ctx);
+        this.combatScreenJuice.renderJuiceOverlays(ctx, this.combatJuice ? this.combatJuice.currentRank : '');
+      }
+      if (this.tacticalFeats) {
+        this.tacticalFeats.render(ctx, hasActiveBossHud);
       }
     }
 

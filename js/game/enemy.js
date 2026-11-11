@@ -191,8 +191,14 @@ class EnemyManager {
     e.burnDps = 0;
     e.poisonTimer = 0;
     e.poisonDps = 0;
+    e.bleedTimer = 0;
+    e.bleedDps = 0;
+    e.isBlind = false;
+    e.blindTimer = 0;
     e.freezeTimer = 0;
+    e.isFrozen = false;
     e.isDeepFrozen = false;
+    e.isRooted = false;
     e.rootTimer = 0;
     e.stunTimer = 0;
     e._reactCd = 0;
@@ -590,12 +596,36 @@ class EnemyManager {
       }
     }
 
+    const effFx = fx || this.fx || (this.scene ? this.scene.fx : null);
     if (this.scene && typeof this.scene.onEnemyKilled === 'function') {
       this.scene.onEnemyKilled(enemy);
+    }
+    if (this.scene && this.scene.tacticalFeats) {
+      if (enemy.type === 'siege_beetle') {
+        this.scene.tacticalFeats.recordEvent('kill_siege', 1, this.scene);
+      }
+      if (enemy.isLeaper && enemy.isLeaping) {
+        this.scene.tacticalFeats.recordEvent('kill_leaper_air', 1, this.scene);
+      }
     }
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
       this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+    } else if (!enemy.isElite && this.relicManager && this.scene && this.scene.towerManager && this.scene.towerManager.towers) {
+      // 灵光菇 B3「聚宝金蟾圣堂」relicDropBonus：击杀附近敌怪额外提高战利品遗物掉率
+      let hasB3 = false;
+      const tws = this.scene.towerManager.towers;
+      for (let ti = 0; ti < tws.length; ti++) {
+        const lt = tws[ti];
+        if (lt.typeId === 'lumina' && lt.node && lt.node.relicDropBonus && Math.hypot(lt.x - enemy.x, lt.y - enemy.y) <= 192) {
+          hasB3 = true;
+          break;
+        }
+      }
+      if (hasB3 && Math.random() < 0.14) {
+        const rKind = ['coin', 'coin', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
+        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 50);
+      }
     }
     if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
       if (Math.random() < this.scene.eliteDoubleSporeChance) {
@@ -607,13 +637,13 @@ class EnemyManager {
       if (enemy.isElite || enemy.isBoss) {
         if (Math.random() < 0.65 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
-          if (this.fx) this.fx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');
         }
       }
       if (this.scene.hero && this.scene.hero.state !== 'dead') {
         const xpGain = enemy.isBoss ? 80 : (enemy.isElite ? 35 : (enemy.def.baseHp >= 100 ? 15 : 8));
-        this.scene.hero.gainXp(xpGain, this.fx);
+        this.scene.hero.gainXp(xpGain, effFx);
       }
     }
     if (enemy.def.splitOnDeath) {
@@ -707,8 +737,32 @@ class EnemyManager {
       if (e.residualSlowTimer > 0) {
         e.residualSlowTimer = Math.max(0, e.residualSlowTimer - dt);
       }
+      if (e.stunTimer > 0) {
+        e.stunTimer = Math.max(0, e.stunTimer - dt);
+      }
+      if (e.rootTimer > 0) {
+        e.rootTimer = Math.max(0, e.rootTimer - dt);
+        if (e.rootTimer <= 0) e.isRooted = false;
+      } else if (e.isRooted) {
+        e.isRooted = false;
+      }
+      if (e.freezeTimer > 0) {
+        e.freezeTimer = Math.max(0, e.freezeTimer - dt);
+        if (e.freezeTimer <= 0) {
+          e.isFrozen = false;
+          e.isDeepFrozen = false;
+        }
+      } else if (e.isFrozen) {
+        e.isFrozen = false;
+      }
+      if (e.blindTimer > 0) {
+        e.blindTimer = Math.max(0, e.blindTimer - dt);
+        if (e.blindTimer <= 0) e.isBlind = false;
+      } else if (e.isBlind) {
+        e.isBlind = false;
+      }
 
-      // 递减火焰灼烧与酸液毒素持续伤害计步，注入统一 DoT 结算管线
+      // 递减火焰灼烧、酸液毒素与流血持续伤害计步，注入统一 DoT 结算管线
       if (e.burnTimer > 0) {
         e.burnTimer = Math.max(0, e.burnTimer - dt);
         e.dotSources.push({ dps: e.burnDps || 18, sourceTower: null, kind: 'reactions' });
@@ -716,6 +770,10 @@ class EnemyManager {
       if (e.poisonTimer > 0) {
         e.poisonTimer = Math.max(0, e.poisonTimer - dt);
         e.dotSources.push({ dps: e.poisonDps || 24, sourceTower: null, kind: 'reactions' });
+      }
+      if (e.bleedTimer > 0) {
+        e.bleedTimer = Math.max(0, e.bleedTimer - dt);
+        e.dotSources.push({ dps: e.bleedDps || 28, sourceTower: null, kind: 'hero' });
       }
 
       // 5.4 & 5.5 结算持续伤害（雾团、灼烧区、元素酸毒）：不暴击、不吃标记，受护甲影响，最多叠加 3 个来源
@@ -742,7 +800,7 @@ class EnemyManager {
 
           const sTower = entry && typeof entry === 'object' ? entry.sourceTower : null;
           const kind = entry && typeof entry === 'object' ? entry.kind : 'mist';
-          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : 'reactions');
+          const cat = kind === 'mist' ? 'mist' : (kind === 'burn' ? 'burst' : (kind === 'hero' ? 'hero' : 'reactions'));
 
           if (sTower) {
             sTower.totalDamage = (sTower.totalDamage || 0) + tickDmg;
@@ -798,10 +856,12 @@ class EnemyManager {
         }
       }
 
-      // 计算当前实际移动速度
+      // 计算当前实际移动速度与控制状态判定
+      const isIncapacitated = e.stunTimer > 0 || e.freezeTimer > 0 || e.isFrozen || e.isDeepFrozen;
+      const isRootedHold = !e.isFlying && (e.rootTimer > 0 || e.isRooted);
       const effSlow = this.getEffectiveSlow(e);
       const speedTilesPerSec = e.baseSpeedTiles * e.speedMultiplier * (1 - effSlow);
-      const speedPxPerSec = speedTilesPerSec * TILE_SIZE;
+      const speedPxPerSec = (isIncapacitated || isRootedHold) ? 0 : speedTilesPerSec * TILE_SIZE;
 
       // 敌人主动攻击附近的蘑菇防御塔（近战撕咬 / 远程喷毒）
       if (!e.atkCooldown) e.atkCooldown = 0.5 + Math.random() * 0.5;
@@ -809,7 +869,7 @@ class EnemyManager {
 
       let attackingTower = null;
       const isBreaker = e.type === 'armored' || e.type === 'siege_beetle' || e.type === 'skeletal_husk' || e.isBoss;
-      if (towerManager && towerManager.towers && towerManager.towers.length > 0) {
+      if (!isIncapacitated && towerManager && towerManager.towers && towerManager.towers.length > 0) {
         const isMoth = e.type === 'moth';
         const atkRange = isMoth ? 120 : 38; // 飞蛾远程 120px 喷毒，地面甲虫近身 38px 啃噬
         const atkInterval = isMoth ? 2.4 : (isBreaker ? 1.4 : 1.8);
@@ -845,20 +905,24 @@ class EnemyManager {
           attackingTower = bestTower;
           if (e.atkCooldown <= 0) {
             e.atkCooldown = atkInterval;
-            towerManager.damageTower(bestTower, atkDamage, e, fx);
-            if (isMoth) {
-              bestTower.poisonTimer = 2.6;
-            }
-            if (fx) {
-              fx.spawnParticles(bestTower.x, bestTower.y - 6, 4, [e.tintColor, '#FF7875'], 20, 50, 0.15, 0.25, 3);
+            if (e.isBlind && Math.random() < 0.50) {
+              if (fx) fx.spawnFloatingText(bestTower.x, bestTower.y - 16, '失明落空!', '#FFE58F', 0.8);
+            } else {
+              towerManager.damageTower(bestTower, atkDamage, e, fx);
+              if (isMoth) {
+                bestTower.poisonTimer = 2.6;
+              }
+              if (fx) {
+                fx.spawnParticles(bestTower.x, bestTower.y - 6, 4, [e.tintColor, '#FF7875'], 20, 50, 0.15, 0.25, 3);
+              }
             }
           }
         }
       }
 
       // 如果正在近战啃食，敌人停下移动；如果是远程飞蛾，减速 50% 移动
-      // Leaper leaping jump mechanics (跳跃刺客飞跃阻挡)
-      if (e.isLeaper && e.state === 'walk') {
+      // Leaper leaping jump mechanics (跳跃刺客飞跃阻挡，受控制时禁止起跳)
+      if (e.isLeaper && e.state === 'walk' && !isIncapacitated && !isRootedHold) {
         if (e.isLeaping) {
           e.leapProgress += dt / 0.42; // 0.42s flight time
           // Advance rapidly forward along path during leap
@@ -900,8 +964,8 @@ class EnemyManager {
       const moveSlow = isBlockedByGuard ? 0 : (isMeleeAttacking ? (isBreaker ? 0.25 : 0.6) : (attackingTower ? 0.55 : 1.0));
       e.distPx += speedPxPerSec * dt * moveSlow;
 
-      // 特种敌人（织网蛛 / 毒蛾）吐丝技能
-      if (e.def.webCooldown && towerManager && towerManager.towers && towerManager.towers.length > 0) {
+      // 特种敌人（织网蛛 / 毒蛾）吐丝技能（受眩晕/冰冻/失明影响）
+      if (!isIncapacitated && e.def.webCooldown && towerManager && towerManager.towers && towerManager.towers.length > 0) {
         if (!e.webCooldownTimer) e.webCooldownTimer = e.def.webCooldown * (0.3 + Math.random() * 0.4);
         e.webCooldownTimer -= dt;
         if (e.webCooldownTimer <= 0) {

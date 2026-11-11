@@ -334,8 +334,13 @@ class ForestHero {
 
     platform.playSfx('sfx_thunder');
     const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
-    const baseRadius = 125 * resonanceBonus;
+    const ruptureBonus = (this.transcendence && this.transcendence.perks && this.transcendence.perks.cataclysmicRupture && this.transcendence.perks.cataclysmicRupture.unlocked) ? 1.45 : 1.0;
+    const baseRadius = 125 * resonanceBonus * ruptureBonus;
     const stunDuration = 2.2 * (this.talents.leylineResonance ? 1.3 : 1.0);
+
+    if (this.transcendence && typeof this.transcendence.onCastEarthshaker === 'function') {
+      this.transcendence.onCastEarthshaker(this.x, this.y, fx);
+    }
 
     if (fx) {
       fx.triggerScreenShake(6.5, 0.48);

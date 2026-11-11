@@ -113,6 +113,8 @@ class SceneController {
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
+    this.enemyManager.fx = this.fx;
+    this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     this.earlyCallsCount = 0;
     this.activeHeroRally = false;
@@ -238,6 +240,8 @@ class SceneController {
     this.bulletManager.mushroomMastery = this.mushroomMastery;
     this.enemyManager.combatJuice = this.combatJuice;
     this.enemyManager.scene = this;
+    this.enemyManager.fx = this.fx;
+    this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
@@ -556,7 +560,7 @@ class SceneController {
       const totalHarvest = sp.gain + (this.extraHarvestSpores || 0);
       this.economy.addSpores(totalHarvest);
       this.fx.showBanner('大地丰收！+' + totalHarvest + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
-      this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
+      this.fx.spawnParticles(320, 240, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
     }
@@ -975,8 +979,15 @@ class SceneController {
           this.ui.toggleZenMode(this.fx);
         }
       } else if (act.type === 'toggle_mastery') {
-        if (this.mushroomMastery) {
-          this.mushroomMastery.togglePanel();
+        if (this.ui) {
+          if (this.ui.showGuideModal && this.ui.codexTab === 2) {
+            this.ui.showGuideModal = false;
+            storage.markGuideSeen();
+          } else {
+            this.ui.codexTab = 2;
+            this.ui.showGuideModal = true;
+          }
+          platform.playSfx('sfx_click');
         }
       } else if (act.type === 'cancel_action') {
         this.handleCancelAction(false);
@@ -1274,8 +1285,8 @@ class SceneController {
     ctx.beginPath();
     ctx.rect(0, 0, CONFIG.RESOLUTION.LOGICAL_WIDTH, CONFIG.RESOLUTION.LOGICAL_HEIGHT);
     ctx.clip();
-    const jx = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0;
-    const jy = this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0;
+    const jx = (this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetX : 0) + (this.combatJuice ? this.combatJuice.shakeOffsetX * 0.45 : 0);
+    const jy = (this.combatScreenJuice ? this.combatScreenJuice.shakeOffsetY : 0) + (this.combatJuice ? this.combatJuice.shakeOffsetY * 0.45 : 0);
     ctx.translate(mv.OFFSET_X + this.fx.shakeOffsetX + jx, mv.OFFSET_Y + this.fx.shakeOffsetY + jy);
     ctx.scale(mv.SCALE, mv.SCALE);
 
@@ -1360,9 +1371,6 @@ class SceneController {
     if (this.combatVfx) {
       this.combatVfx.renderCombatVfx(ctx);
     }
-    if (this.tacticalFeats) {
-      this.tacticalFeats.render(ctx);
-    }
     if (this.heroTranscendence) {
       this.heroTranscendence.render(ctx);
     }
@@ -1373,7 +1381,6 @@ class SceneController {
     this.sporeDropManager.render(ctx);
     if (this.combatJuice) {
       this.combatJuice.renderFx(ctx);
-      this.combatJuice.renderStreakWidget(ctx);
     }
     // 以下元素使用地图坐标，必须在地图变换内绘制
     if (this.bossOverdriveEngine) {
@@ -1394,11 +1401,16 @@ class SceneController {
       this.weather.renderWeatherOverlay(ctx);
     }
     if (!this.ui.uiZenMode && this.state === 'BATTLE') {
+      const hasActiveBossHud = Boolean(this.bossOverdriveEngine && this.bossOverdriveEngine.activeBoss &&
+        this.bossOverdriveEngine.activeBoss.state !== 'death' && this.bossOverdriveEngine.activeBoss.hp > 0);
       if (this.bossOverdriveEngine) {
         this.bossOverdriveEngine.renderBossHud(ctx);
       }
       if (this.combatScreenJuice) {
-        this.combatScreenJuice.renderJuiceOverlays(ctx);
+        this.combatScreenJuice.renderJuiceOverlays(ctx, this.combatJuice ? this.combatJuice.currentRank : '');
+      }
+      if (this.tacticalFeats) {
+        this.tacticalFeats.render(ctx, hasActiveBossHud);
       }
     }
 

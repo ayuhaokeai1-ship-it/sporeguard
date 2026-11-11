@@ -2119,10 +2119,11 @@ class UiManager {
     // =========================================================================
     // [分区 2] 指挥官四大战术神术舱 (X: 144..296)
     // =========================================================================
+    const harvestGain = (scene && scene.spells && scene.spells.harvest ? scene.spells.harvest.gain : 100) + ((scene && scene.extraHarvestSpores) || 0);
     const spellList = [
       { id: 'rain', hotkey: 'Q', name: '甘霖', cost: 45, vfx: 'assets/vfx/relic_clover.png', tip: '复苏' },
       { id: 'shock', hotkey: 'W', name: '天雷', cost: 75, vfx: 'assets/vfx/relic_lightning.png', tip: '眩晕' },
-      { id: 'harvest', hotkey: 'E', name: '丰饶', cost: 0, vfx: 'assets/vfx/item_golden_spore.png', tip: '+120' },
+      { id: 'harvest', hotkey: 'E', name: '丰饶', cost: 0, vfx: 'assets/vfx/item_golden_spore.png', tip: '+' + harvestGain },
       { id: 'rally', hotkey: 'R', name: '集结', cost: 0, vfx: 'assets/vfx/sporeling_guard.png', tip: '布防' }
     ];
 
@@ -4032,7 +4033,7 @@ class UiManager {
       baseline: 'middle',
       maxWidth: footW - 12
     });
-    drawArtText(ctx, '操控: [右键 / Esc]取消瞄准·关窗  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
+    drawArtText(ctx, '操控: [右键 / Esc]取消·关窗  [M]知识树  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
       style: 'parchment',
       size: 9.5,
       align: 'center',
@@ -5511,10 +5512,11 @@ class UiManager {
     });
 
     // 2. 四大自然战术法球 ([Q]甘霖45, [W]天雷75, [E]丰饶0, [R]集结0) — 严密收进右下安全区 [62..164, 417..450]
+    const pvzHarvestGain = (scene && scene.spells && scene.spells.harvest ? scene.spells.harvest.gain : 100) + ((scene && scene.extraHarvestSpores) || 0);
     const spellList = [
       { id: 'rain', name: '自然甘霖', key: 'Q', cost: 45, tip: '全场友军恢复生命并攻速翻倍 6s', icon: 'assets/ui/icons/spell_rain.png', vfx: 'assets/vfx/relic_clover.png' },
       { id: 'shock', name: '雷霆震爆', key: 'W', cost: 75, tip: '区域落雷轰击并眩晕敌军 3s', icon: 'assets/ui/icons/spell_shock.png', vfx: 'assets/vfx/relic_lightning.png' },
-      { id: 'harvest', name: '大地丰收', key: 'E', cost: 0, tip: '立刻凝结 +120 黄金孢子', icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
+      { id: 'harvest', name: '大地丰收', key: 'E', cost: 0, tip: '立刻凝结 +' + pvzHarvestGain + ' 黄金孢子', icon: 'assets/ui/icons/spell_harvest.png', vfx: 'assets/vfx/relic_amber.png' },
       { id: 'rally', name: '菇精卫集结', key: 'R', cost: 0, tip: '点击巡逻道路派遣双哨菇精卫近战拦截', icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 

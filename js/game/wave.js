@@ -163,8 +163,8 @@ class WaveManager {
     const bonus = economy.grantEarlyCallBonus(this.prepTimerSec);
     if (fx) {
       if (bonus > 0) {
-        fx.spawnFloatingText(480, 260, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
-        fx.spawnParticles(480, 260, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
+        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
+        fx.spawnParticles(320, 220, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
       }
       fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
       fx.triggerScreenShake(2.5, 0.15);
