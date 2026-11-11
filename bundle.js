@@ -19478,9 +19478,25 @@ class UiManager {
       return;
     }
 
+    this.bottomHoverTip = null;
+
     // 0. 顶部极简天候微章 & 实时战报快速切换双胶囊（左上角工整并排）
     if (scene.weather) {
       scene.weather.renderWeatherHudBadge(ctx, 16, 14);
+      if (this.isPointHovered(16, 14, 96, 24)) {
+        const wTips = {
+          sunny: '☀️ 初晴日暖：林地光合充沛，全员产孢与资源收益 +25%',
+          night: '🌙 幽夜荧光：菌丝攻速 +15%，虫群略微躁动',
+          rain: '🌧️ 暴雨雷霆：水系与感电联动强化，湿润增伤',
+          mist: '🌫️ 林间浓雾：护盾稳固且减速控制效果 +15%',
+          blood_moon: '🩸 血月狂潮：虫群狂暴加速，但击杀战利品翻倍!'
+        };
+        this.bottomHoverTip = {
+          x: 164,
+          y: 44,
+          text: wTips[scene.weather.currentWeather] || wTips.sunny
+        };
+      }
       this.registerButton('pvz_weather_badge', 16, 14, 96, 24, () => {
         platform.playSfx('sfx_click');
         scene.weather.cycleWeather(scene);
@@ -19488,9 +19504,32 @@ class UiManager {
     }
     if (scene.combatAnalytics && typeof scene.combatAnalytics.renderToggleButton === 'function') {
       scene.combatAnalytics.renderToggleButton(ctx, 118, 14);
+      if (this.isPointHovered(118, 14, 64, 24)) {
+        this.bottomHoverTip = {
+          x: 176,
+          y: 44,
+          text: scene.combatAnalytics.isOpen ? '点击关闭实时战况面板' : '点击查看实时输出伤害占比、秒伤与击杀统计'
+        };
+      }
     }
 
-    this.bottomHoverTip = null;
+    // 备战期鼠标悬停入怪口时，同步浮现下一波精确兵力构成（Kingdom Rush 式出怪预览）
+    if (scene.waveManager && scene.waveManager.isPrepPhase() && scene.map && scene.map.mapData && this.hoverX >= 0) {
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const portals = [scene.map.mapData.spawnTile, scene.map.mapData.spawnTile2].filter(Boolean);
+      for (let pi = 0; pi < portals.length; pi++) {
+        const sx = mv.OFFSET_X + (portals[pi][0] + 0.5) * TILE_SIZE * mv.SCALE;
+        const sy = mv.OFFSET_Y + (portals[pi][1] + 0.5) * TILE_SIZE * mv.SCALE;
+        if (Math.hypot(this.hoverX - sx, this.hoverY - sy) <= 28) {
+          this.bottomHoverTip = {
+            x: 592,
+            y: 446,
+            text: scene.waveManager.getUpcomingWaveDetailText()
+          };
+          break;
+        }
+      }
+    }
 
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 觉醒豆)
     this.renderPvZTopSeedBank(ctx, scene);
@@ -19526,31 +19565,9 @@ class UiManager {
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
 
-    // 6.8 底栏英雄 / 神术 / 卡牌悬停轻量说明条
+    // 6.8 底栏英雄 / 神术 / 顶栏与传送门悬停轻量说明条
     if (this.bottomHoverTip && !this.inspectorOpen && !this.isDragging && !this.showSettingsModal && !this.showGuideModal && !(scene.combatAnalytics && scene.combatAnalytics.isOpen)) {
-      const tip = this.bottomHoverTip;
-      ctx.save();
-      ctx.font = `bold 11px ${CN_FONT}`;
-      const tw = Math.ceil(ctx.measureText(tip.text).width);
-      const pw = Math.min(460, tw + 22);
-      const ph = 24;
-      const px = Math.max(10, Math.min(950 - pw, Math.round(tip.x - pw * 0.5)));
-      const py = Math.round(tip.y);
-      roundRectPath(ctx, px, py, pw, ph, 7);
-      ctx.fillStyle = 'rgba(20, 14, 9, 0.94)';
-      ctx.fill();
-      ctx.strokeStyle = '#C68F45';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      drawArtText(ctx, tip.text, px + pw * 0.5, py + ph * 0.5, {
-        style: 'gold',
-        size: 11,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0,
-        maxWidth: pw - 16
-      });
-      ctx.restore();
+      this.drawFloatingTooltipPill(ctx, this.bottomHoverTip.x, this.bottomHoverTip.y, this.bottomHoverTip.text, 460);
     }
 
     // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让首领血条）
@@ -20630,6 +20647,35 @@ class UiManager {
     ctx.restore();
   }
   /**
+   * 通用深橡木鎏金悬浮提示胶囊（底栏/快捷环/天气共通复用，自动左右贴边防裁切）
+   */
+  drawFloatingTooltipPill(ctx, centerX, y, text, maxW = 420) {
+    if (!text) return;
+    ctx.save();
+    ctx.font = `bold 11px ${CN_FONT}`;
+    const tw = Math.ceil(ctx.measureText(text).width);
+    const pw = Math.min(maxW, tw + 22);
+    const ph = 24;
+    const px = Math.max(10, Math.min(950 - pw, Math.round(centerX - pw * 0.5)));
+    const py = Math.round(y);
+    roundRectPath(ctx, px, py, pw, ph, 7);
+    ctx.fillStyle = 'rgba(20, 14, 9, 0.94)';
+    ctx.fill();
+    ctx.strokeStyle = '#C68F45';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    drawArtText(ctx, text, px + pw * 0.5, py + ph * 0.5, {
+      style: 'gold',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0,
+      maxWidth: pw - 16
+    });
+    ctx.restore();
+  }
+
+  /**
    * 战地即时灵动快捷环（Tower Tactical Micro Quick-Actions）
    * 专为手机端触控优化：点击防御塔后，在塔身周围直接浮现「A线升级」「B线升级」「索敌」「详情」微胶囊
    * 拇指一键触达，无需将视线与手指大幅移动至屏幕侧板
@@ -20637,6 +20683,7 @@ class UiManager {
   renderTowerTacticalQuickRing(ctx, scene, tower, tileScreenX, tileScreenY) {
     if (!tower) return;
     this.hoveredUpgradeNodeId = null;
+    let quickHoverText = null;
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const priStr = i18n.t('prio_' + (tower.priority || 'first'));
     // 安全钳制边界：绝不让边缘/底行守卫的快捷环被底部卡槽栏(Y>=474)或屏幕左右边框裁切遮挡
@@ -20656,7 +20703,10 @@ class UiManager {
       const ux = Math.round(anchorX - uw * 0.5);
       const uy = Math.round(topY);
       const isHov = this.isPointHovered(ux, uy, uw, uh);
-      if (isHov) this.hoveredUpgradeNodeId = up.nodeId;
+      if (isHov) {
+        this.hoveredUpgradeNodeId = up.nodeId;
+        quickHoverText = `强化效果：${i18n.t(up.descKey)}`;
+      }
 
       if (!this.drawAiFrame(ctx, canAfford ? 'btn_green' : 'btn_wood', ux, uy, uw, uh, canAfford ? 1.0 : 0.72)) {
         roundRectPath(ctx, ux, uy, uw, uh, 14);
@@ -20694,7 +20744,10 @@ class UiManager {
         const ux = Math.round(i === 0 ? anchorX - uw - 4 : anchorX + 4);
         const uy = Math.round(topY);
         const isHov = this.isPointHovered(ux, uy, uw, uh);
-        if (isHov) this.hoveredUpgradeNodeId = up.nodeId;
+        if (isHov) {
+          this.hoveredUpgradeNodeId = up.nodeId;
+          quickHoverText = `${i === 0 ? '甲线' : '乙线'}特性：${i18n.t(up.descKey)}`;
+        }
         const skin = canAfford ? (i === 0 ? 'btn_blue' : 'btn_green') : 'btn_wood';
 
         if (!this.drawAiFrame(ctx, skin, ux, uy, uw, uh, canAfford ? 1.0 : 0.72)) {
@@ -20773,6 +20826,9 @@ class UiManager {
       strokeWidth: 0.9
     });
 
+    if (this.isPointHovered(px1, py, 70, ph)) {
+      quickHoverText = `索敌偏好：${priStr}（点击切换：最前 / 强敌 / 最近 / 密集）`;
+    }
     this.registerButton('quick_pri_btn', px1, py, 70, ph, () => {
       if (scene.towerManager) {
         scene.towerManager.cyclePriority(tower);
@@ -20800,10 +20856,18 @@ class UiManager {
       strokeWidth: 0.9
     });
 
+    if (this.isPointHovered(px2, py, 70, ph)) {
+      quickHoverText = '展开详情木框：查看分支数值对比与单塔战功统计';
+    }
     this.registerButton('quick_detail_btn', px2, py, 70, ph, () => {
       this.showTowerDetailBoard = !this.showTowerDetailBoard;
       platform.playSfx('sfx_click');
     });
+
+    if (quickHoverText && !this.showTowerDetailBoard) {
+      const qTipY = botY > 400 ? Math.max(10, topY - 30) : Math.min(444, botY + 34);
+      this.drawFloatingTooltipPill(ctx, anchorX, qTipY, quickHoverText, 380);
+    }
 
     ctx.restore();
   }
@@ -21359,11 +21423,12 @@ class UiManager {
       const hBase = hDef.nodes.base;
       const cov = scene.map.getRangeCoverage(col, row, hBase.range, hDef.canHitGround, hDef.canHitAir);
       const infoText = `${i18n.t(hDef.nameKey)} · ${i18n.t(hDef.roleKey)} · 覆路${cov.coveredTiles}格`;
-      const pillW = Math.max(158, infoText.length * 10 + 18);
+      ctx.save();
+      ctx.font = `bold 11px ${CN_FONT}`;
+      const pillW = Math.max(148, Math.ceil(ctx.measureText(infoText).width) + 28);
       const pillX = Math.max(14, Math.min(946 - pillW, Math.round(ax - pillW * 0.5)));
       const pillY = ay > 280 ? Math.max(12, ay - wheelR - 46) : Math.min(444, ay + wheelR + 30);
 
-      ctx.save();
       if (!this.drawAiFrame(ctx, 'top_bar', pillX, pillY, pillW, 24, 0.96)) {
         roundRectPath(ctx, pillX, pillY, pillW, 22, 8);
         ctx.fillStyle = 'rgba(20, 14, 10, 0.94)';
@@ -22728,15 +22793,15 @@ class UiManager {
         counter: '【战法】派遣森林英雄在前线坚守阻击，后排全员开启灵能觉醒全力歼灭！'
       },
       boss_m1: {
-        behavior: '第一关首领【巨角天牛王】：高血量冲锋首领，具备硬化甲壳与震地狂暴。',
+        behavior: '第一关首领【腐化蛀王】：高血量冲锋首领，具备硬化甲壳与震地狂暴。',
         counter: '【战术】英雄前置抗住接怪，施放【W 雷霆震爆】打断其冲锋，爆裂菇重炮全力轰击！'
       },
       boss_m2: {
-        behavior: '第二关首领【剧毒飞蛾后】：盘旋空中的飞天巨兽，散播全屏毒粉减缓我方攻速。',
+        behavior: '第二关首领【剧毒幽蛾后】：盘旋空中的飞天巨兽，散播全屏毒粉减缓我方攻速。',
         counter: '【战术】使用【Q 自然甘霖】驱散毒粉并翻倍攻速，瞭望菇开启【千里巡林·万矢齐发】集火射落！'
       },
       boss_m3: {
-        behavior: '第三关首领【万虫巢母】：拥有三重狂暴阶段，召唤无尽飞虫与分裂幼虫！',
+        behavior: '第三关首领【万巢裂殖母体】：拥有三重狂暴阶段，召唤无尽飞虫与分裂幼虫！',
         counter: '【终极战术】英雄持续肉搏阻挡核心，全员使用灵能超载大招连环轰击，灵光菇觉醒万木逢春保持战力！'
       },
       boss_m4: {
@@ -22745,9 +22810,40 @@ class UiManager {
       }
     }[curEnemyId] || { behavior: '普通敌军虫潮。', counter: '合理搭配防御塔进行击退。' };
 
+    // 特性微徽章带（实时从 ENEMIES 属性解析出空军/护盾/潜地/分裂/首领标签，让档案信息饱满紧凑）
+    const traitChips = [];
+    traitChips.push({ text: eData.isFlying ? '高空飞行' : '地面推进', bg: eData.isFlying ? '#E6F7FF' : '#F6FFED', bd: eData.isFlying ? '#91D5FF' : '#B7EB8F', col: eData.isFlying ? '#096DD9' : '#237804' });
+    if (realArmor > 0) traitChips.push({ text: `护甲 ${realArmor}`, bg: '#FFF7E6', bd: '#FFD591', col: '#AD6800' });
+    if (eData.hasFrontShield) traitChips.push({ text: '正面硬盾 -60%', bg: '#FFF1F0', bd: '#FFA39E', col: '#CF1322' });
+    if (eData.isBurrower) traitChips.push({ text: '潜地免弹道', bg: '#FFF7E6', bd: '#FFC069', col: '#873800' });
+    if (eData.slowImmune) traitChips.push({ text: '免疫减速', bg: '#F9F0FF', bd: '#D3ADF7', col: '#531DAB' });
+    if (eData.splitOnDeath) traitChips.push({ text: '亡语分裂', bg: '#FFF0F6', bd: '#FFADD2', col: '#9E1068' });
+    if (eData.webCooldown) traitChips.push({ text: '吐网封塔', bg: '#F9F0FF', bd: '#D3ADF7', col: '#531DAB' });
+    if (eData.isBoss) traitChips.push({ text: '三阶首领', bg: '#FFF1F0', bd: '#FF7875', col: '#A8071A' });
+
+    let chipX = rx + 98;
+    const chipY = y + 66;
+    for (let ci = 0; ci < Math.min(4, traitChips.length); ci++) {
+      const ch = traitChips[ci];
+      ctx.font = `bold 9.5px ${CN_FONT}`;
+      const cw = Math.ceil(ctx.measureText(ch.text).width) + 12;
+      if (chipX + cw > rx + rw - 16) break;
+      roundRectPath(ctx, chipX, chipY, cw, 18, 9);
+      ctx.fillStyle = ch.bg;
+      ctx.fill();
+      ctx.strokeStyle = ch.bd;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = ch.col;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch.text, chipX + cw * 0.5, chipY + 9);
+      chipX += cw + 5;
+    }
+
     // 习性与威胁分析框
-    const behY = y + 84;
-    roundRectPath(ctx, rx + 16, behY, rw - 32, 98, 8);
+    const behY = y + 92;
+    roundRectPath(ctx, rx + 16, behY, rw - 32, 86, 8);
     ctx.fillStyle = 'rgba(255, 245, 245, 0.85)';
     ctx.fill();
     ctx.strokeStyle = '#FFA39E';
@@ -22762,11 +22858,11 @@ class UiManager {
       baseline: 'middle',
       strokeWidth: 0
     });
-    this.drawWrappedText(ctx, counterTactics.behavior, rx + 26, behY + 36, rw - 52, 20, '#431418', `12px ${CN_FONT}`);
+    this.drawWrappedText(ctx, counterTactics.behavior, rx + 26, behY + 34, rw - 52, 19, '#431418', `12px ${CN_FONT}`);
 
     // 克制弱点与领袖战术框（自适配剩余高度，底部留足羊皮纸安全边距）
-    const couY = y + 190;
-    const couH = Math.max(120, h - 200);
+    const couY = y + 186;
+    const couH = Math.max(120, h - 196);
     roundRectPath(ctx, rx + 16, couY, rw - 32, couH, 10);
     ctx.fillStyle = 'rgba(246, 255, 237, 0.90)';
     ctx.fill();
@@ -22962,9 +23058,10 @@ class UiManager {
       ctx.fillText(a.icon, cx + 15, cy + 13);
       ctx.restore();
 
-      // 标题
+      // 标题（已解锁使用高对比深琥珀铜色，避免淡黄字浮在浅米白底上）
       drawArtText(ctx, a.title, cx + 30, cy + 8.5, {
         style: a.unlocked ? 'ink' : 'gold',
+        color: a.unlocked ? '#8C5300' : undefined,
         size: 10.5,
         align: 'left',
         baseline: 'middle',
@@ -22972,7 +23069,7 @@ class UiManager {
       });
 
       // 描述简述
-      ctx.fillStyle = a.unlocked ? '#5E3E26' : '#F2E5C6';
+      ctx.fillStyle = a.unlocked ? '#4A321C' : '#F2E5C6';
       ctx.font = '9.8px ' + CN_FONT;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -23659,8 +23756,15 @@ class UiManager {
         ctx.moveTo(ox, oy);
         ctx.arc(ox, oy, orbR, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * sweepRatio);
         ctx.closePath();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
         ctx.fill();
+        drawArtText(ctx, `${Math.ceil(spCd)}`, ox, oy, {
+          style: 'gold',
+          size: 8.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0
+        });
       }
 
       ctx.restore();
