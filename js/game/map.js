@@ -401,17 +401,50 @@ class GameMap {
    * 动态层：柔和环境微粒光晕、空中航线流动虚线、仙女环自然夜光
    */
   renderDynamic(ctx, animTimeSec, currentWaveIndex, atlasImg) {
-    // 渲染全屏环境自然流淌光粒子（彻底避免矩形贴图接缝与边缘线）
+    // 全图独特生态光粒氛围（晨露花粉 / 苔溪流光 / 夜光蕈粉 / 古殿蚀日余烬）
+    const mid = this.mapData ? this.mapData.id : 'map1';
     ctx.save();
     for (let i = 0; i < 16; i++) {
-      const px = ((i * 67 + Math.floor(animTimeSec * 14)) % 920) - 140;
-      const py = ((i * 43 - Math.floor(animTimeSec * 8)) % 500 + 500) % 500 - 20;
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 238, 160, 0.35)' : 'rgba(120, 255, 175, 0.28)';
+      let px = ((i * 67 + Math.floor(animTimeSec * 14)) % 920) - 140;
+      let py = ((i * 43 - Math.floor(animTimeSec * 8)) % 500 + 500) % 500 - 20;
+      if (mid === 'map2') {
+        px += Math.sin(animTimeSec * 1.8 + i) * 8;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(140, 245, 235, 0.36)' : 'rgba(210, 255, 245, 0.28)';
+      } else if (mid === 'map3') {
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(120, 225, 255, 0.38)' : 'rgba(211, 173, 247, 0.34)';
+      } else if (mid === 'map4') {
+        px = ((i * 63 - Math.floor(animTimeSec * 12)) % 920 + 920) % 920 - 140;
+        py = ((i * 41 + Math.floor(animTimeSec * 10)) % 500);
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 215, 110, 0.42)' : 'rgba(255, 155, 70, 0.30)';
+      } else {
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 238, 160, 0.35)' : 'rgba(120, 255, 175, 0.28)';
+      }
       ctx.beginPath();
       ctx.arc(px, py, i % 3 === 0 ? 3.0 : 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
+
+    // 守护小屋圣坛生机结界（生命充沛呈暖金呼吸，危急<=8颗时轻度红脉冲警示）
+    if (this.mapData && this.mapData.warehouseTile) {
+      const [wc, wr] = this.mapData.warehouseTile;
+      const hx = (wc + 0.5) * TILE_SIZE;
+      const hy = (wr + 0.5) * TILE_SIZE + 6;
+      const curSeeds = (this.scene && this.scene.economy) ? this.scene.economy.seeds : 20;
+      const isDanger = curSeeds <= 8;
+      const pulse = 0.85 + Math.sin(animTimeSec * (isDanger ? 6.5 : 2.6)) * 0.15;
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.scale(1.0, 0.65);
+      ctx.strokeStyle = isDanger
+        ? `rgba(255, 77, 79, ${(0.55 * pulse).toFixed(2)})`
+        : `rgba(255, 229, 143, ${(0.35 * pulse).toFixed(2)})`;
+      ctx.lineWidth = isDanger ? 2.0 : 1.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     this.renderRouteGuides(ctx, animTimeSec);
 

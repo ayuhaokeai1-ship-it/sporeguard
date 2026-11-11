@@ -385,13 +385,19 @@ class WeatherManager {
     const bw = 96;
     const bh = 24;
 
-    ctx.fillStyle = 'rgba(18, 12, 6, 0.88)';
+    ctx.fillStyle = 'rgba(28, 20, 12, 0.92)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 12) : ctx.rect(x, y, bw, bh);
     ctx.fill();
 
     ctx.strokeStyle = b.border;
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, bw - 4, bh - 4, 10) : ctx.rect(x + 2, y + 2, bw - 4, bh - 4);
     ctx.stroke();
 
     ctx.fillStyle = '#FFFFFF';

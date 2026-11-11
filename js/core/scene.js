@@ -679,9 +679,16 @@ class SceneController {
                 }
               }
               if (hitSpawn) {
+                const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
                 this.callWaveEarly();
                 if (this.fx) {
                   this.fx.spawnParticles(portalX, portalY, 16, ['#FFD700', '#FFE58F', '#FFFFFF'], 35, 95, 0.25, 0.55, 3.5);
+                  if (typeof this.fx.spawnShockwave === 'function') {
+                    this.fx.spawnShockwave(portalX, portalY, 44, '#FFD700');
+                  }
+                  if (typeof this.fx.spawnHomingMotes === 'function') {
+                    this.fx.spawnHomingMotes(mv.OFFSET_X + portalX * mv.SCALE, mv.OFFSET_Y + portalY * mv.SCALE, 5, '#FFD700');
+                  }
                 }
                 continue;
               }

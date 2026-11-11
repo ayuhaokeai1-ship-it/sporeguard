@@ -984,25 +984,35 @@ class EnemyManager {
     const list = this.pool.getActiveList();
     if (list.length === 0) return;
 
-    // 1. 地面敌人
-    for (let i = 0; i < list.length; i++) {
-      const e = list[i];
-      if (!e.isFlying) {
-        this.renderSingleEnemy(ctx, e);
-      }
-    }
-
-    // 2. 飞行敌人（先绘制独立影子，再绘制空中本体）
+    if (!this._groundRenderBuf) this._groundRenderBuf = [];
+    if (!this._airRenderBuf) this._airRenderBuf = [];
+    this._groundRenderBuf.length = 0;
+    this._airRenderBuf.length = 0;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (e.isFlying) {
-        const shadowOffset = e.def.shadowOffsetPx || 14;
-        if (!drawEnemyShadow(ctx, e.type, e.x, e.y, shadowOffset)) {
-          ctx.fillStyle = 'rgba(20, 33, 61, 0.45)';
-          ctx.fillRect(Math.round(e.x - 8), Math.round(e.y + shadowOffset - 3), 16, 6);
-        }
-        this.renderSingleEnemy(ctx, e);
+        this._airRenderBuf.push(e);
+      } else {
+        this._groundRenderBuf.push(e);
       }
+    }
+    this._groundRenderBuf.sort((a, b) => a.y - b.y);
+    this._airRenderBuf.sort((a, b) => a.y - b.y);
+
+    // 1. 地面敌人（按 Y 坐标近大远小深度排序，消除虫潮穿插）
+    for (let i = 0; i < this._groundRenderBuf.length; i++) {
+      this.renderSingleEnemy(ctx, this._groundRenderBuf[i]);
+    }
+
+    // 2. 飞行敌人（先绘制独立影子，再绘制空中本体）
+    for (let i = 0; i < this._airRenderBuf.length; i++) {
+      const e = this._airRenderBuf[i];
+      const shadowOffset = e.def.shadowOffsetPx || 14;
+      if (!drawEnemyShadow(ctx, e.type, e.x, e.y, shadowOffset)) {
+        ctx.fillStyle = 'rgba(20, 33, 61, 0.45)';
+        ctx.fillRect(Math.round(e.x - 8), Math.round(e.y + shadowOffset - 3), 16, 6);
+      }
+      this.renderSingleEnemy(ctx, e);
     }
   }
 

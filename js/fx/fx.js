@@ -637,33 +637,51 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：居中显示在成就吐司与顶部状态栏下方，避免彼此挤压重叠
+    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（精确维持原坐标与居中定位）
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
       const by = 86;
+      const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
+      const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
 
       ctx.save();
-      ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 10) : ctx.rect(bx, by, bw, bh);
-      ctx.fill();
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = 2.0;
-      ctx.stroke();
+      if (ribImg && ribImg.width) {
+        const rw = bw + 64;
+        const rh = bh + 34;
+        ctx.drawImage(ribImg, Math.round(bx - 32), Math.round(by - 15), rw, rh);
+        ctx.fillStyle = isAlertBanner ? '#FFF5E8' : '#2C1406';
+        ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
+        if (b.subText) {
+          ctx.fillStyle = isAlertBanner ? '#FFD591' : '#542A0E';
+          ctx.font = 'bold 11.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+          ctx.fillText(b.subText, bx + bw * 0.5, by + 35);
+        }
+      } else {
+        ctx.fillStyle = 'rgba(28, 18, 10, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 10) : ctx.rect(bx, by, bw, bh);
+        ctx.fill();
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
 
-      ctx.fillStyle = b.color;
-      ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
+        ctx.fillStyle = b.color;
+        ctx.font = 'bold 15px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(b.text, bx + bw * 0.5, by + (b.subText ? 18 : bh * 0.5));
 
-      if (b.subText) {
-        ctx.fillStyle = PALETTE.UI_TEXT || '#F0F0F0';
-        ctx.font = '12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-        ctx.fillText(b.subText, bx + bw * 0.5, by + 36);
+        if (b.subText) {
+          ctx.fillStyle = PALETTE.UI_TEXT || '#F0F0F0';
+          ctx.font = '12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+          ctx.fillText(b.subText, bx + bw * 0.5, by + 36);
+        }
       }
       ctx.restore();
       platform.recordDrawCall(2);

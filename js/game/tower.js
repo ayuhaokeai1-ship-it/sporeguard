@@ -150,11 +150,14 @@ class TowerManager {
     }
     tower.totalInvested += nextNode.cost;
 
-    // 播放 6 帧升级过渡动画
+    // 播放 6 帧升级过渡动画 + 弹性缩放反馈
     tower.animState = 'upgrade';
     tower.animFrame = 0;
     tower.animTimer = 0;
     tower.upgradeAnimTimer = 0.42;
+    tower.squashScaleX = 1.32;
+    tower.squashScaleY = 0.72;
+    tower.squashTimer = 0.28;
 
     if (fx) {
       const bColor = tower.branch === 'A'
@@ -963,6 +966,20 @@ class TowerManager {
         ctx.translate(t.x, tileY + 24);
         ctx.scale(t.squashScaleX, t.squashScaleY);
         ctx.translate(-t.x, -(tileY + 24));
+      }
+
+      // 升级瞬间的神圣升阶光柱
+      if (t.upgradeAnimTimer > 0) {
+        const upAlpha = Math.min(1, t.upgradeAnimTimer / 0.42) * 0.55;
+        const beamCol = t.branch === 'A' ? 'rgba(111, 232, 255,' : (t.branch === 'B' ? 'rgba(255, 192, 105,' : 'rgba(255, 229, 143,');
+        ctx.save();
+        const beamGrad = ctx.createLinearGradient(t.x, tileY - 36, t.x, tileY + 24);
+        beamGrad.addColorStop(0, beamCol + ' 0)');
+        beamGrad.addColorStop(0.5, beamCol + ` ${upAlpha.toFixed(2)})`);
+        beamGrad.addColorStop(1, beamCol + ' 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.fillRect(Math.round(t.x - 14), Math.round(tileY - 36), 28, 60);
+        ctx.restore();
       }
 
       // 超频大招彩虹金色光芒

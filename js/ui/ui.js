@@ -186,6 +186,7 @@ class UiManager {
     this.inspectorRect = null;
     this.showTowerDetailBoard = false;
     this.hoveredRadialTowerId = null;
+    this.hoveredUpgradeNodeId = null;
 
     // 顶部资源变化缩放反馈与建造冷却动画
     this.lastSeeds = null;
@@ -2169,6 +2170,7 @@ class UiManager {
    */
   renderTowerTacticalQuickRing(ctx, scene, tower, tileScreenX, tileScreenY) {
     if (!tower) return;
+    this.hoveredUpgradeNodeId = null;
     const upgrades = scene.towerManager.getAvailableUpgrades(tower);
     const priStr = i18n.t('prio_' + (tower.priority || 'first'));
     // 安全钳制边界：绝不让边缘/底行守卫的快捷环被底部卡槽栏(Y>=474)或屏幕左右边框裁切遮挡
@@ -2179,7 +2181,7 @@ class UiManager {
 
     ctx.save();
 
-    // 1. 顶部：升级选项胶囊
+    // 1. 顶部：升级选项（使用 AI 手绘按钮皮肤并保留原尺寸位置）
     if (upgrades.length === 1) {
       const up = upgrades[0];
       const canAfford = scene.economy.canAfford(up.cost);
@@ -2187,19 +2189,31 @@ class UiManager {
       const uh = 28;
       const ux = Math.round(anchorX - uw * 0.5);
       const uy = Math.round(topY);
+      const isHov = this.isPointHovered(ux, uy, uw, uh);
+      if (isHov) this.hoveredUpgradeNodeId = up.nodeId;
 
-      roundRectPath(ctx, ux, uy, uw, uh, 14);
-      ctx.fillStyle = canAfford ? 'rgba(16, 42, 28, 0.94)' : 'rgba(28, 20, 16, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = canAfford ? 'rgba(82, 196, 26, 0.85)' : 'rgba(140, 100, 70, 0.55)';
-      ctx.lineWidth = canAfford ? 1.6 : 1.0;
-      ctx.stroke();
+      if (!this.drawAiFrame(ctx, canAfford ? 'btn_green' : 'btn_wood', ux, uy, uw, uh, canAfford ? 1.0 : 0.72)) {
+        roundRectPath(ctx, ux, uy, uw, uh, 14);
+        ctx.fillStyle = canAfford ? 'rgba(16, 42, 28, 0.94)' : 'rgba(28, 20, 16, 0.92)';
+        ctx.fill();
+        ctx.strokeStyle = canAfford ? 'rgba(82, 196, 26, 0.85)' : 'rgba(140, 100, 70, 0.55)';
+        ctx.lineWidth = canAfford ? 1.6 : 1.0;
+        ctx.stroke();
+      }
+      if (isHov) {
+        roundRectPath(ctx, ux + 1, uy + 1, uw - 2, uh - 2, 7);
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
 
-      ctx.fillStyle = canAfford ? '#FFE58F' : '#D9D9D9';
-      ctx.font = `bold 11px ${UI_FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`强化 · ${up.cost}孢`, ux + uw * 0.5, uy + 14);
+      drawArtText(ctx, `强化 · ${up.cost}孢`, ux + uw * 0.5, uy + 14, {
+        style: canAfford ? 'gold' : 'parchment',
+        size: 11,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.9
+      });
 
       this.registerButton('quick_up_single', ux, uy, uw, uh, () => {
         scene.tryUpgradeSelectedTower(up.nodeId);
@@ -2213,19 +2227,32 @@ class UiManager {
         const uh = 28;
         const ux = Math.round(i === 0 ? anchorX - uw - 4 : anchorX + 4);
         const uy = Math.round(topY);
+        const isHov = this.isPointHovered(ux, uy, uw, uh);
+        if (isHov) this.hoveredUpgradeNodeId = up.nodeId;
+        const skin = canAfford ? (i === 0 ? 'btn_blue' : 'btn_green') : 'btn_wood';
 
-        roundRectPath(ctx, ux, uy, uw, uh, 14);
-        ctx.fillStyle = canAfford ? (i === 0 ? 'rgba(12, 36, 56, 0.94)' : 'rgba(16, 44, 28, 0.94)') : 'rgba(28, 20, 16, 0.92)';
-        ctx.fill();
-        ctx.strokeStyle = canAfford ? (i === 0 ? 'rgba(64, 169, 255, 0.85)' : 'rgba(82, 196, 26, 0.85)') : 'rgba(140, 100, 70, 0.55)';
-        ctx.lineWidth = canAfford ? 1.6 : 1.0;
-        ctx.stroke();
+        if (!this.drawAiFrame(ctx, skin, ux, uy, uw, uh, canAfford ? 1.0 : 0.72)) {
+          roundRectPath(ctx, ux, uy, uw, uh, 14);
+          ctx.fillStyle = canAfford ? (i === 0 ? 'rgba(12, 36, 56, 0.94)' : 'rgba(16, 44, 28, 0.94)') : 'rgba(28, 20, 16, 0.92)';
+          ctx.fill();
+          ctx.strokeStyle = canAfford ? (i === 0 ? 'rgba(64, 169, 255, 0.85)' : 'rgba(82, 196, 26, 0.85)') : 'rgba(140, 100, 70, 0.55)';
+          ctx.lineWidth = canAfford ? 1.6 : 1.0;
+          ctx.stroke();
+        }
+        if (isHov) {
+          roundRectPath(ctx, ux + 1, uy + 1, uw - 2, uh - 2, 7);
+          ctx.strokeStyle = '#FFD700';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+        }
 
-        ctx.fillStyle = canAfford ? '#FFE58F' : '#D9D9D9';
-        ctx.font = `bold 10.5px ${UI_FONT}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`${i === 0 ? '甲线' : '乙线'} · ${up.cost}`, ux + uw * 0.5, uy + 14);
+        drawArtText(ctx, `${i === 0 ? '甲线' : '乙线'} · ${up.cost}`, ux + uw * 0.5, uy + 14, {
+          style: canAfford ? 'gold' : 'parchment',
+          size: 10.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0.9
+        });
 
         this.registerButton('quick_up_branch_' + up.nodeId, ux, uy, uw, uh, () => {
           scene.tryUpgradeSelectedTower(up.nodeId);
@@ -2238,39 +2265,47 @@ class UiManager {
       const ux = Math.round(anchorX - uw * 0.5);
       const uy = Math.round(topY + 2);
 
-      roundRectPath(ctx, ux, uy, uw, uh, 12);
-      ctx.fillStyle = 'rgba(28, 24, 12, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.75)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
+      if (!this.drawAiFrame(ctx, 'top_bar', ux, uy, uw, uh, 0.96)) {
+        roundRectPath(ctx, ux, uy, uw, uh, 12);
+        ctx.fillStyle = 'rgba(28, 24, 12, 0.92)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.75)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
 
-      ctx.fillStyle = '#FFD700';
-      ctx.font = `bold 10.5px ${UI_FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('宗师满阶', ux + uw * 0.5, uy + 12);
+      drawArtText(ctx, '宗师满阶', ux + uw * 0.5, uy + 12, {
+        style: 'gold',
+        size: 10.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.9
+      });
     }
 
-    // 2. 底部：战术微操双胶囊（索敌 + 属性详情）
+    // 2. 底部：战术微操双按钮（索敌 + 属性详情）
     const ph = 28;
     const py = Math.round(botY);
     const px1 = Math.round(anchorX - 74); // 索敌
     const px2 = Math.round(anchorX + 4);  // 详情属性
 
-    // (1) 索敌胶囊
-    roundRectPath(ctx, px1, py, 70, ph, 14);
-    ctx.fillStyle = 'rgba(20, 24, 28, 0.94)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(100, 140, 180, 0.65)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    // (1) 索敌按钮
+    if (!this.drawAiFrame(ctx, 'btn_blue', px1, py, 70, ph, 0.98)) {
+      roundRectPath(ctx, px1, py, 70, ph, 14);
+      ctx.fillStyle = 'rgba(20, 24, 28, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(100, 140, 180, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
 
-    ctx.fillStyle = '#BAE7FF';
-    ctx.font = `bold 11px ${UI_FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`索敌 · ${priStr}`, px1 + 35, py + 14);
+    drawArtText(ctx, `索敌 · ${priStr}`, px1 + 35, py + 14, {
+      style: 'azure',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.9
+    });
 
     this.registerButton('quick_pri_btn', px1, py, 70, ph, () => {
       if (scene.towerManager) {
@@ -2281,19 +2316,23 @@ class UiManager {
       if (scene.fx) scene.fx.spawnFloatingText(tower.x, tower.y - 18, `索敌: ${nextPrio}`, '#FFE58F', 1.0);
     });
 
-    // (2) 详情面板轻量开关胶囊
-    roundRectPath(ctx, px2, py, 70, ph, 14);
-    ctx.fillStyle = this.showTowerDetailBoard ? 'rgba(56, 38, 18, 0.96)' : 'rgba(22, 28, 36, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = this.showTowerDetailBoard ? 'rgba(255, 215, 0, 0.85)' : 'rgba(120, 160, 200, 0.60)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    // (2) 详情面板轻量开关
+    if (!this.drawAiFrame(ctx, this.showTowerDetailBoard ? 'btn_green' : 'btn_wood', px2, py, 70, ph, 0.98)) {
+      roundRectPath(ctx, px2, py, 70, ph, 14);
+      ctx.fillStyle = this.showTowerDetailBoard ? 'rgba(56, 38, 18, 0.96)' : 'rgba(22, 28, 36, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = this.showTowerDetailBoard ? 'rgba(255, 215, 0, 0.85)' : 'rgba(120, 160, 200, 0.60)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
 
-    ctx.fillStyle = this.showTowerDetailBoard ? '#FFD700' : '#E6F7FF';
-    ctx.font = `bold 11px ${UI_FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('详细属性', px2 + 35, py + 14);
+    drawArtText(ctx, '详细属性', px2 + 35, py + 14, {
+      style: this.showTowerDetailBoard ? 'gold' : 'parchment',
+      size: 11,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.9
+    });
 
     this.registerButton('quick_detail_btn', px2, py, 70, ph, () => {
       this.showTowerDetailBoard = !this.showTowerDetailBoard;
@@ -2387,6 +2426,9 @@ class UiManager {
     });
 
     if (existingTower) {
+      if (this.showTowerDetailBoard) {
+        this.hoveredUpgradeNodeId = null;
+      }
       this.renderSelectedTowerPopupBody(ctx, scene, existingTower, px, py, pw, ph);
     } else {
       this.renderBuildSlotPopupBody(ctx, scene, col, row, px, py, pw, ph);
@@ -2560,6 +2602,9 @@ class UiManager {
       const upIcon = up.branch === 'A' ? 'branch_a' : (up.branch === 'B' ? 'branch_b' : 'upgrade');
       const upCat = (up.branch === 'A' || up.branch === 'B') ? 24 : 16;
 
+      if (this.isPointHovered(bx, y + 114, btnW, 38)) {
+        this.hoveredUpgradeNodeId = up.nodeId;
+      }
       this.drawPixelButton(
         ctx,
         'btn_upgrade_single',
@@ -2604,6 +2649,9 @@ class UiManager {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
         const by = y + 114 + i * 42;
+        if (this.isPointHovered(bx, by, btnW, 36)) {
+          this.hoveredUpgradeNodeId = up.nodeId;
+        }
         this.drawPixelButton(
           ctx,
           'btn_upgrade_branch_' + up.nodeId,
@@ -2682,20 +2730,27 @@ class UiManager {
     }
 
     ctx.save();
-    // 轮盘主铭文木铜双环
-    ctx.beginPath();
-    ctx.arc(ax, ay, wheelR + 12, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(22, 16, 10, 0.55)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.85)';
-    ctx.lineWidth = 2.2;
-    ctx.stroke();
+    // 轮盘主铭文青铜石环（优先使用 AI 手绘德鲁伊青铜罗盘环）
+    const wheelBgImg = platform.getImage('assets/ui/frames/radial_wheel_bg.png');
+    if (wheelBgImg && wheelBgImg.width) {
+      const sz = Math.round(154 * (0.76 + 0.24 * Math.sin(pop * Math.PI * 0.5)));
+      ctx.drawImage(wheelBgImg, Math.round(ax - sz * 0.5), Math.round(ay - sz * 0.5), sz, sz);
+      platform.recordDrawCall(1);
+    } else {
+      ctx.beginPath();
+      ctx.arc(ax, ay, wheelR + 12, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(22, 16, 10, 0.55)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(198, 143, 69, 0.85)';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(ax, ay, wheelR - 14, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(ax, ay, wheelR - 14, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
 
     // 中心关闭徽章 [×]
     const closeHover = Math.hypot(this.hoverX - ax, this.hoverY - ay) <= 16;
@@ -2806,13 +2861,15 @@ class UiManager {
       const pillY = ay > 280 ? Math.max(12, ay - wheelR - 46) : Math.min(444, ay + wheelR + 30);
 
       ctx.save();
-      roundRectPath(ctx, pillX, pillY, pillW, 22, 8);
-      ctx.fillStyle = 'rgba(20, 14, 10, 0.94)';
-      ctx.fill();
-      ctx.strokeStyle = '#C68F45';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      drawArtText(ctx, infoText, pillX + pillW * 0.5, pillY + 11, {
+      if (!this.drawAiFrame(ctx, 'top_bar', pillX, pillY, pillW, 24, 0.96)) {
+        roundRectPath(ctx, pillX, pillY, pillW, 22, 8);
+        ctx.fillStyle = 'rgba(20, 14, 10, 0.94)';
+        ctx.fill();
+        ctx.strokeStyle = '#C68F45';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      drawArtText(ctx, infoText, pillX + pillW * 0.5, pillY + 12, {
         style: 'parchment',
         size: 11,
         align: 'center',
@@ -3004,6 +3061,25 @@ class UiManager {
             affordable: true,
             drawGhost: false
           });
+          // 悬停升级按钮时预览进阶后的额外射程增益光环 (BTD6/KR 升级射程预览)
+          if (this.hoveredUpgradeNodeId && existingTower.def && existingTower.def.nodes) {
+            const upNode = existingTower.def.nodes[this.hoveredUpgradeNodeId];
+            if (upNode && upNode.range > existingTower.node.range) {
+              const upCov = map.getRangeCoverage(selCol, selRow, upNode.range, existingTower.def.canHitGround, existingTower.def.canHitAir);
+              ctx.save();
+              ctx.fillStyle = 'rgba(111, 232, 255, 0.06)';
+              ctx.beginPath();
+              ctx.ellipse(upCov.centerX, upCov.centerY, upCov.radiusPx, upCov.radiusPx * 0.78, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = 'rgba(111, 232, 255, 0.85)';
+              ctx.lineWidth = 1.6;
+              ctx.setLineDash([6, 4]);
+              ctx.lineDashOffset = -Math.round((this.uiAnimTime * 22) % 10);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.restore();
+            }
+          }
           return;
         }
         // 2. 若空地雕石轮盘已展开：高亮当前石座，悬停某张轮盘图标时即时投射真实射程与虚影
@@ -3089,17 +3165,19 @@ class UiManager {
 
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 16, true);
 
-    // 顶部典雅铜边木牌标题 (垂直居中于羊皮纸内层顶部，绝不压在边框外缘)
+    // 顶部典雅手绘木牌标题 (保持原垂直居中坐标与大小)
     const headW = 180;
     const headH = 34;
     const headX = mx + (mw - headW) * 0.5;
     const headY = my + 26;
-    roundRectPath(ctx, headX, headY, headW, headH, 8);
-    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
-    ctx.fill();
-    ctx.strokeStyle = THEME.BRONZE_MID;
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
+    if (!this.drawAiFrame(ctx, 'top_bar', headX - 18, headY - 4, 216, 42, 0.98)) {
+      roundRectPath(ctx, headX, headY, headW, headH, 8);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
+      ctx.fill();
+      ctx.strokeStyle = THEME.BRONZE_MID;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
 
     drawArtText(ctx, i18n.t('state_paused'), mx + mw * 0.5, headY + headH * 0.5, {
       style: 'gold',
@@ -3224,14 +3302,23 @@ class UiManager {
         scene.enterLevelSelect();
       });
     } else {
-      ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
-      ctx.font = 'bold 21px ' + CN_FONT;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 58);
+      const settleRib = platform.getImage(isWin ? 'assets/ui/frames/banner_ribbon_gold.png' : 'assets/ui/frames/banner_ribbon_crimson.png');
+      if (settleRib && settleRib.width) {
+        ctx.drawImage(settleRib, Math.round(mx + 46), Math.round(my + 16), 348, 72);
+        ctx.fillStyle = isWin ? '#2C1406' : '#FFF5E8';
+        ctx.font = 'bold 20px ' + CN_FONT;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 48);
+      } else {
+        ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
+        ctx.font = 'bold 21px ' + CN_FONT;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 58);
+      }
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 78, 34);
+        drawUiIcon(ctx, 16, sKey, mx + 156 + s * 46, my + 82, 34);
       }
 
       // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
@@ -3508,13 +3595,14 @@ class UiManager {
     // 绘制古典林地木纹雕花边框与羊皮纸底盘
     this.drawWoodlandPanel(ctx, mx, my, mw, mh, THEME.BRONZE_MID, 0.98, 18, true);
 
-    // 1. 秘典大标题与顶部华丽徽章
-    drawArtText(ctx, '林地秘典 · 全景手绘图鉴与战术殿堂', mx + mw * 0.5, my + 22, {
+    // 1. 秘典大标题与顶部手绘木牌横幅
+    this.drawAiFrame(ctx, 'top_bar', mx + 166, my + 3, 468, 36, 0.98);
+    drawArtText(ctx, '林地秘典 · 全景手绘图鉴与战术殿堂', mx + mw * 0.5, my + 21, {
       style: 'gold',
-      size: 19,
+      size: 18,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.4
+      strokeWidth: 1.3
     });
 
     // 右上角关闭按钮 [×]
@@ -4300,12 +4388,18 @@ class UiManager {
     const sporeY = bankY + 2;
 
     ctx.save();
-    roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 12);
-    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(230, 187, 96, 0.85)';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
+    const seedPlaqueImg = platform.getImage('assets/ui/frames/hud_seed_plaque.png');
+    if (seedPlaqueImg && seedPlaqueImg.width) {
+      ctx.drawImage(seedPlaqueImg, sporeX - 2, sporeY - 1, sporeW + 4, sporeH + 2);
+      platform.recordDrawCall(1);
+    } else {
+      roundRectPath(ctx, sporeX, sporeY, sporeW, sporeH, 12);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230, 187, 96, 0.85)';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+    }
 
     // 阳光金孢大珍珠图标 (32x32)
     const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
@@ -4354,43 +4448,38 @@ class UiManager {
       const isSelected = scene.selectedBuildTowerId === tId;
 
       ctx.save();
-      // 卡牌木质底板
-      roundRectPath(ctx, cx, cy, cardW, cardH, 7);
-      ctx.fillStyle = isSelected
-        ? 'rgba(60, 44, 22, 0.98)'
-        : (affordable ? 'rgba(32, 22, 14, 0.95)' : 'rgba(22, 16, 12, 0.88)');
-      ctx.fill();
-      ctx.strokeStyle = isSelected
-        ? '#FFD700'
-        : (affordable ? 'rgba(198, 143, 69, 0.80)' : 'rgba(95, 70, 45, 0.45)');
-      ctx.lineWidth = isSelected ? 2.2 : 1.2;
-      ctx.stroke();
+      // 卡牌手绘 AI 框底板（保留完全一致的 cx, cy, cardW=54, cardH=56 布局位置与触控区）
+      if (!this.drawAiFrame(ctx, 'tower_card', cx, cy, cardW, cardH, isSelected ? 1.0 : (affordable ? 0.96 : 0.62))) {
+        roundRectPath(ctx, cx, cy, cardW, cardH, 7);
+        ctx.fillStyle = isSelected
+          ? 'rgba(60, 44, 22, 0.98)'
+          : (affordable ? 'rgba(32, 22, 14, 0.95)' : 'rgba(22, 16, 12, 0.88)');
+        ctx.fill();
+        ctx.strokeStyle = isSelected
+          ? '#FFD700'
+          : (affordable ? 'rgba(198, 143, 69, 0.80)' : 'rgba(95, 70, 45, 0.45)');
+        ctx.lineWidth = isSelected ? 2.2 : 1.2;
+        ctx.stroke();
+      }
 
-      // 手绘蘑菇大原画 (42x40)
+      // 手绘蘑菇大原画 (严格嵌在卡牌上层羊皮纸区内)
       const cardArtImg = platform.getImage('assets/ui/cards/card_' + tId + '.png');
       if (cardArtImg && cardArtImg.width) {
         ctx.save();
-        if (!affordable) ctx.globalAlpha = 0.46;
-        ctx.drawImage(cardArtImg, cx + 6, cy + 3, cardW - 12, 40);
+        if (!affordable) ctx.globalAlpha = 0.48;
+        ctx.drawImage(cardArtImg, cx + 6, cy + 3, cardW - 12, 36);
         ctx.restore();
       } else {
         drawTowerSprite(ctx, tId, 'base', 'idle', 0, cx + 11, cy + 22);
       }
 
-      // 底部金黄色标价药丸胶囊 (大字号 12px 标价清晰醒目)
-      roundRectPath(ctx, cx + 3, cy + cardH - 17, cardW - 6, 15, 5);
-      ctx.fillStyle = 'rgba(12, 7, 4, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = affordable ? 'rgba(255, 215, 0, 0.50)' : 'rgba(255, 77, 79, 0.45)';
-      ctx.lineWidth = 0.9;
-      ctx.stroke();
-
+      // 底部标价数字（置于手绘牌面下方深绿铭牌槽中）
       drawArtText(ctx, String(cost), cx + cardW * 0.5, cy + cardH - 9.5, {
         style: affordable ? 'gold' : 'crimson',
         size: 12,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 1.1
+        strokeWidth: 1.2
       });
 
       // 快捷键角标 [1..5]
@@ -4429,12 +4518,19 @@ class UiManager {
     const isAwk = Boolean(scene.activeAwakeningTargeting);
 
     ctx.save();
-    roundRectPath(ctx, awkX, awkY, awkW, awkH, 7);
-    ctx.fillStyle = isAwk ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.94)';
-    ctx.fill();
-    ctx.strokeStyle = isAwk ? '#D3F261' : 'rgba(115, 209, 61, 0.65)';
-    ctx.lineWidth = isAwk ? 2.2 : 1.2;
-    ctx.stroke();
+    if (!this.drawAiFrame(ctx, isAwk ? 'btn_green' : 'tower_card', awkX, awkY, awkW, awkH, 0.98)) {
+      roundRectPath(ctx, awkX, awkY, awkW, awkH, 7);
+      ctx.fillStyle = isAwk ? 'rgba(38, 92, 18, 0.95)' : 'rgba(24, 20, 14, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = isAwk ? '#D3F261' : 'rgba(115, 209, 61, 0.65)';
+      ctx.lineWidth = isAwk ? 2.2 : 1.2;
+      ctx.stroke();
+    } else if (isAwk) {
+      roundRectPath(ctx, awkX + 1, awkY + 1, awkW - 2, awkH - 2, 7);
+      ctx.strokeStyle = '#D3F261';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+    }
 
     const seedImg = platform.getImage('assets/vfx/item_awakening_seed.png') || platform.getImage('assets/ui/icons/icon_seed.png');
     if (seedImg && seedImg.width) {
@@ -4482,18 +4578,20 @@ class UiManager {
         const threatStr = waveMgr.getUpcomingThreatSummaryText();
         const isHighAlert = threatStr.includes('首领') || threatStr.includes('侧翼') || threatStr.includes('防空');
         ctx.save();
-        roundRectPath(ctx, barX, barY - 22, barW, 18, 9);
-        ctx.fillStyle = isHighAlert ? 'rgba(54, 22, 16, 0.90)' : 'rgba(18, 28, 20, 0.88)';
-        ctx.fill();
-        ctx.strokeStyle = isHighAlert ? 'rgba(255, 120, 117, 0.78)' : 'rgba(149, 222, 100, 0.65)';
-        ctx.lineWidth = 1.1;
-        ctx.stroke();
+        if (!this.drawAiFrame(ctx, isHighAlert ? 'btn_red' : 'btn_wood', barX, barY - 22, barW, 18, 0.96)) {
+          roundRectPath(ctx, barX, barY - 22, barW, 18, 9);
+          ctx.fillStyle = isHighAlert ? 'rgba(54, 22, 16, 0.90)' : 'rgba(18, 28, 20, 0.88)';
+          ctx.fill();
+          ctx.strokeStyle = isHighAlert ? 'rgba(255, 120, 117, 0.78)' : 'rgba(149, 222, 100, 0.65)';
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+        }
         drawArtText(ctx, threatStr, barX + barW * 0.5, barY - 13, {
           style: isHighAlert ? 'gold' : 'emerald',
           size: 10.5,
           align: 'center',
           baseline: 'middle',
-          strokeWidth: 0.7
+          strokeWidth: 0.8
         });
         ctx.restore();
       }
@@ -4522,27 +4620,50 @@ class UiManager {
     }
 
     ctx.save();
-    roundRectPath(ctx, barX, barY, barW, barH, 9);
-    ctx.fillStyle = 'rgba(18, 12, 8, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.80)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
+    const waveFrameImg = platform.getImage('assets/ui/frames/hud_wave_frame.png');
     const currentW = waveMgr.currentWaveIndex;
     const totalW = waveMgr.totalWaves;
     const ratio = Math.max(0, Math.min(1.0, currentW / totalW));
 
-    roundRectPath(ctx, barX + 3, barY + 3, (barW - 6) * ratio, barH - 6, 7);
-    ctx.fillStyle = 'rgba(82, 196, 26, 0.65)';
-    ctx.fill();
+    if (waveFrameImg && waveFrameImg.width) {
+      ctx.drawImage(waveFrameImg, barX - 4, barY - 3, barW + 8, barH + 6);
+      const slotX = barX + 36;
+      const slotY = barY + 12;
+      const slotW = barW - 72;
+      const slotH = barH - 24;
+      if (ratio > 0) {
+        roundRectPath(ctx, slotX, slotY, slotW * ratio, slotH, 4);
+        const barGrad = ctx.createLinearGradient(slotX, slotY, slotX, slotY + slotH);
+        if (currentW >= totalW) {
+          barGrad.addColorStop(0, '#FF7875');
+          barGrad.addColorStop(1, '#A8071A');
+        } else {
+          barGrad.addColorStop(0, '#95DE64');
+          barGrad.addColorStop(1, '#237804');
+        }
+        ctx.fillStyle = barGrad;
+        ctx.fill();
+      }
+      platform.recordDrawCall(1);
+    } else {
+      roundRectPath(ctx, barX, barY, barW, barH, 9);
+      ctx.fillStyle = 'rgba(18, 12, 8, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(198, 143, 69, 0.80)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      roundRectPath(ctx, barX + 3, barY + 3, (barW - 6) * ratio, barH - 6, 7);
+      ctx.fillStyle = 'rgba(82, 196, 26, 0.65)';
+      ctx.fill();
+    }
 
     drawArtText(ctx, '第 ' + currentW + ' / ' + totalW + ' 波', barX + barW * 0.5, barY + barH * 0.5, {
       style: currentW >= totalW ? 'crimson' : 'gold',
-      size: 15,
+      size: 14,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.2
+      strokeWidth: 1.4
     });
     ctx.restore();
   }
@@ -4614,17 +4735,23 @@ class UiManager {
     const hero = scene.hero;
     if (!hero) return;
 
-    // 统一质感底托：精致暗木黄铜英雄与神术统筹盘（X: 8..190, Y: 384..464），告别松散悬空图标
+    // 统一质感底托：采用 AI 手绘暗橡木藤蔓铜框底托 (X: 8..186, Y: 384..466)，严格保留原尺寸位置
     ctx.save();
-    roundRectPath(ctx, 8, 384, 178, 82, 10);
-    const panelGrad = ctx.createLinearGradient(8, 384, 8, 466);
-    panelGrad.addColorStop(0, 'rgba(28, 21, 14, 0.90)');
-    panelGrad.addColorStop(1, 'rgba(16, 12, 8, 0.94)');
-    ctx.fillStyle = panelGrad;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198, 143, 69, 0.65)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
+    const heroPlaqueImg = platform.getImage('assets/ui/frames/hud_hero_plaque.png');
+    if (heroPlaqueImg && heroPlaqueImg.width) {
+      ctx.drawImage(heroPlaqueImg, 6, 381, 182, 88);
+      platform.recordDrawCall(1);
+    } else {
+      roundRectPath(ctx, 8, 384, 178, 82, 10);
+      const panelGrad = ctx.createLinearGradient(8, 384, 8, 466);
+      panelGrad.addColorStop(0, 'rgba(28, 21, 14, 0.90)');
+      panelGrad.addColorStop(1, 'rgba(16, 12, 8, 0.94)');
+      ctx.fillStyle = panelGrad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(198, 143, 69, 0.65)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
     ctx.restore();
 
     // 1. 左侧边缘英雄统御竖栏（紧凑整合于统筹盘内）
@@ -4634,18 +4761,20 @@ class UiManager {
 
     // 1.1 英雄战术姿态快速切换微章 [Z] (位于头像正上方 y=390)
     const stanceMeta = {
-      guardian: { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
-      aggressive: { label: '⚔️ 狂暴', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
-      scout: { label: '🏹 游侠', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
-    }[hero.stance || 'guardian'] || { label: '🛡️ 守卫', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
+      guardian: { label: '🛡️ 守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
+      aggressive: { label: '⚔️ 狂暴', skin: 'btn_red', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
+      scout: { label: '🏹 游侠', skin: 'btn_green', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
+    }[hero.stance || 'guardian'] || { label: '🛡️ 守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
 
     ctx.save();
-    roundRectPath(ctx, 12, hy - hr - 24, 58, 18, 9);
-    ctx.fillStyle = stanceMeta.bg;
-    ctx.fill();
-    ctx.strokeStyle = stanceMeta.bd;
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    if (!this.drawAiFrame(ctx, stanceMeta.skin, 12, hy - hr - 24, 58, 18, 0.98)) {
+      roundRectPath(ctx, 12, hy - hr - 24, 58, 18, 9);
+      ctx.fillStyle = stanceMeta.bg;
+      ctx.fill();
+      ctx.strokeStyle = stanceMeta.bd;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
     drawArtText(ctx, stanceMeta.label, 41, hy - hr - 15, {
       style: 'parchment',
       color: stanceMeta.col,
@@ -4663,16 +4792,18 @@ class UiManager {
       }
     });
 
-    // 1.2 英雄大招 [F] 触发胶囊（位于头像右侧 y=hy-hr-24）
+    // 1.2 英雄大招 [F] 触发微章（位于头像右侧 y=hy-hr-24）
     const ultCd = hero.skillCooldown || 0;
     const ultReady = ultCd <= 0 && hero.state !== 'dead';
     ctx.save();
-    roundRectPath(ctx, 74, hy - hr - 24, 72, 18, 9);
-    ctx.fillStyle = ultReady ? 'rgba(62, 42, 10, 0.94)' : 'rgba(24, 18, 12, 0.88)';
-    ctx.fill();
-    ctx.strokeStyle = ultReady ? '#FFD700' : 'rgba(140, 110, 70, 0.45)';
-    ctx.lineWidth = ultReady ? 1.5 : 1.0;
-    ctx.stroke();
+    if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', 74, hy - hr - 24, 72, 18, ultReady ? 1.0 : 0.75)) {
+      roundRectPath(ctx, 74, hy - hr - 24, 72, 18, 9);
+      ctx.fillStyle = ultReady ? 'rgba(62, 42, 10, 0.94)' : 'rgba(24, 18, 12, 0.88)';
+      ctx.fill();
+      ctx.strokeStyle = ultReady ? '#FFD700' : 'rgba(140, 110, 70, 0.45)';
+      ctx.lineWidth = ultReady ? 1.5 : 1.0;
+      ctx.stroke();
+    }
     drawArtText(ctx, ultReady ? '⚡裂地斩[F]' : `奥义 ${Math.ceil(ultCd)}s`, 110, hy - hr - 15, {
       style: ultReady ? 'gold' : 'dim',
       size: 9.5,

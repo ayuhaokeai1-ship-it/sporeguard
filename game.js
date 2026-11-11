@@ -95,7 +95,13 @@ function bootstrapGame() {
     'assets/vfx/obs_moss_stump.png',
     'assets/ui/icons/spell_rain.png',
     'assets/ui/icons/spell_shock.png',
-    'assets/ui/icons/spell_harvest.png'
+    'assets/ui/icons/spell_harvest.png',
+    'assets/ui/frames/hud_hero_plaque.png',
+    'assets/ui/frames/hud_seed_plaque.png',
+    'assets/ui/frames/hud_wave_frame.png',
+    'assets/ui/frames/radial_wheel_bg.png',
+    'assets/ui/frames/banner_ribbon_gold.png',
+    'assets/ui/frames/banner_ribbon_crimson.png'
   ];
 
   Promise.all([
