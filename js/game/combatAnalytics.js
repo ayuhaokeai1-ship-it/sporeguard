@@ -23,7 +23,7 @@ class CombatAnalyticsSystem {
       reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#FF4D4F', icon: 'assets/vfx/vfx_hit_spark.png' }
     };
 
-    this.toggleBtnRect = { x: 598, y: 12, w: 58, h: 32 };
+    this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
   }
 
   reset() {
@@ -71,22 +71,30 @@ class CombatAnalyticsSystem {
   renderToggleButton(ctx, x, y) {
     this.toggleBtnRect.x = x;
     this.toggleBtnRect.y = y;
+    const w = this.toggleBtnRect.w;
+    const h = this.toggleBtnRect.h;
 
     ctx.save();
-    ctx.fillStyle = this.isOpen ? 'rgba(82, 196, 26, 0.88)' : 'rgba(25, 36, 28, 0.88)';
+    ctx.fillStyle = this.isOpen ? 'rgba(38, 92, 18, 0.94)' : 'rgba(28, 20, 12, 0.92)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h, 6) : ctx.rect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h);
+    ctx.roundRect ? ctx.roundRect(x, y, w, h, 12) : ctx.rect(x, y, w, h);
     ctx.fill();
 
-    ctx.strokeStyle = this.isOpen ? '#B7EB8F' : '#875C39';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = this.isOpen ? '#95DE64' : 'rgba(198, 143, 69, 0.78)';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, w - 4, h - 4, 10) : ctx.rect(x + 2, y + 2, w - 4, h - 4);
+    ctx.stroke();
+
+    ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
+    ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.isOpen ? '✖ 关闭' : '📊 战报', x + this.toggleBtnRect.w * 0.5, y + this.toggleBtnRect.h * 0.5);
+    ctx.fillText(this.isOpen ? '✖ 战报' : '📊 战报', x + w * 0.5, y + h * 0.5);
     ctx.restore();
   }
 

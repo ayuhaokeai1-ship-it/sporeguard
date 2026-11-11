@@ -495,6 +495,70 @@ class ForestContraptions {
       ctx.restore();
     }
   }
+
+  /**
+   * 被动悬停射程环与用法提示（只读渲染，不消费孢子或触发冷却）
+   */
+  renderHoverTooltip(ctx, mapX, mapY, time) {
+    if (mapX < 0 || mapY < 0) return;
+
+    const drawHoverRingAndPill = (cx, cy, radiusPx, ringCol, titleStr) => {
+      ctx.save();
+      ctx.fillStyle = ringCol.fill;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radiusPx, radiusPx * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = ringCol.stroke;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([6, 4]);
+      ctx.lineDashOffset = -Math.round(((time || 0) * 18) % 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      const tw = Math.ceil(ctx.measureText(titleStr).width);
+      const pw = tw + 20;
+      const ph = 22;
+      const px = Math.max(8, Math.min(640 - pw - 8, Math.round(cx - pw * 0.5)));
+      const py = Math.max(8, Math.round(cy - 44));
+
+      ctx.fillStyle = 'rgba(18, 13, 8, 0.93)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 6) : ctx.rect(px, py, pw, ph);
+      ctx.fill();
+      ctx.strokeStyle = ringCol.border;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFF9DB';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(titleStr, px + pw * 0.5, py + ph * 0.5);
+      ctx.restore();
+    };
+
+    if (this.pitcher && Math.hypot(mapX - this.pitcher.x, mapY - this.pitcher.y) <= 26) {
+      const p = this.pitcher;
+      const status = p.digestTimer > 0 ? '消化产孢中...' : (p.cd > 0 ? `冷却中 ${Math.ceil(p.cd)}s` : `吞噬 (${p.cost}孢) · 瞬杀地面敌+45孢`);
+      drawHoverRingAndPill(
+        p.x, p.y, 75,
+        { fill: 'rgba(149, 222, 100, 0.10)', stroke: 'rgba(149, 222, 100, 0.78)', border: '#73D13D' },
+        `🌿 巨型猪笼草 · ${status}`
+      );
+      return;
+    }
+
+    if (this.thunderTree && Math.hypot(mapX - this.thunderTree.x, mapY - this.thunderTree.y) <= 26) {
+      const t = this.thunderTree;
+      const status = t.cd > 0 ? `充能中 ${Math.ceil(t.cd)}s` : `天雷 (${t.cost}孢) · 震击4敌眩晕2.2s`;
+      drawHoverRingAndPill(
+        t.x, t.y, 140,
+        { fill: 'rgba(64, 169, 255, 0.08)', stroke: 'rgba(105, 192, 255, 0.78)', border: '#69C0FF' },
+        `⚡ 雷击古木 · ${status}`
+      );
+    }
+  }
 }
 
 module.exports = ForestContraptions;

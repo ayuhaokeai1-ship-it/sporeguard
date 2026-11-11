@@ -1226,6 +1226,11 @@ class SceneController {
     }
     this.relicManager.render(ctx);
     this.contraptions.render(ctx, this.animTimeSec);
+    if (this.state === 'BATTLE' && !this.ui.inspectorOpen && !this.activeSpellCasting && !this.activeRallyTargeting && this.ui.hoverX >= 0) {
+      const hmX = (this.ui.hoverX - mv.OFFSET_X) / mv.SCALE;
+      const hmY = (this.ui.hoverY - mv.OFFSET_Y) / mv.SCALE;
+      this.contraptions.renderHoverTooltip(ctx, hmX, hmY, this.animTimeSec);
+    }
 
     // 绘制圣树古根逆袭：贴合地表的翠玉金藤脉冲光环与自然曲根
     if (this.elderRootActiveTimer > 0 && this.map && this.map.mapData) {

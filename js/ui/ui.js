@@ -1118,13 +1118,16 @@ class UiManager {
       return;
     }
 
-    // 0. 顶部极简天候微章 (可随时轻触自由切换晨曦晴空、幽夜微光、林地迷雾等沉浸天候)
+    // 0. 顶部极简天候微章 & 实时战报快速切换双胶囊（左上角工整并排）
     if (scene.weather) {
       scene.weather.renderWeatherHudBadge(ctx, 16, 14);
-      this.registerButton('pvz_weather_badge', 16, 14, 100, 26, () => {
+      this.registerButton('pvz_weather_badge', 16, 14, 96, 24, () => {
         platform.playSfx('sfx_click');
         scene.weather.cycleWeather(scene);
       });
+    }
+    if (scene.combatAnalytics && typeof scene.combatAnalytics.renderToggleButton === 'function') {
+      scene.combatAnalytics.renderToggleButton(ctx, 118, 14);
     }
 
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 觉醒豆)
@@ -1161,16 +1164,28 @@ class UiManager {
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
 
-    // 7. 轻量化提示气泡
+    // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让首领血条）
     if (this.toastTimer > 0 && this.toastText) {
+      const hasBossHud = Boolean(scene.bossOverdriveEngine && scene.bossOverdriveEngine.activeBoss && scene.bossOverdriveEngine.activeBoss.hp > 0);
+      const ty = hasBossHud ? 116 : 64;
+      const tw = 316;
+      const tx = (960 - tw) * 0.5;
       ctx.save();
-      this.drawAiFrame(ctx, 'btn_wood', 330, 74, 300, 38, 0.95);
-      drawArtText(ctx, this.toastText, 480, 93, {
-        style: 'parchment',
-        size: 13,
+      if (!this.drawAiFrame(ctx, 'top_bar', tx, ty, tw, 36, 0.96)) {
+        roundRectPath(ctx, tx, ty, tw, 36, 9);
+        ctx.fillStyle = 'rgba(24, 16, 10, 0.94)';
+        ctx.fill();
+        ctx.strokeStyle = '#C68F45';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      drawArtText(ctx, this.toastText, 480, ty + 18, {
+        style: 'gold',
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 1.5
+        strokeWidth: 0,
+        maxWidth: tw - 36
       });
       ctx.restore();
     }
@@ -3090,6 +3105,63 @@ class UiManager {
     ctx.fill();
     ctx.stroke();
 
+    // BTD6/KR 式局部菌丝共鸣链路预览：仅展示与当前预览/选中守卫邻近(<=135px)发生羁绊的伙伴连线
+    const partners = [];
+    const comboLabels = [];
+    const curTowers = scene.towerManager ? scene.towerManager.towers : [];
+    const clusterTypes = new Set([typeId]);
+    let twinPartner = null;
+    for (let i = 0; i < curTowers.length; i++) {
+      const pt = curTowers[i];
+      if (!pt || (pt.col === col && pt.row === row)) continue;
+      if (Math.hypot(pt.x - cov.centerX, pt.y - cov.centerY) <= 135) {
+        clusterTypes.add(pt.typeId);
+        const matchWatch = (typeId === 'watch' && pt.typeId === 'watch');
+        const matchToxic = ((typeId === 'burst' && pt.typeId === 'mist') || (typeId === 'mist' && pt.typeId === 'burst'));
+        const matchThorn = ((typeId === 'thorn' && pt.typeId === 'mist') || (typeId === 'mist' && pt.typeId === 'thorn'));
+        const matchLumina = (typeId === 'lumina' || pt.typeId === 'lumina');
+        if (matchWatch || matchToxic || matchThorn || matchLumina) {
+          partners.push({
+            tower: pt,
+            color: matchWatch ? '#69C0FF' : (matchToxic ? '#52C41A' : (matchThorn ? '#95DE64' : '#FFD666'))
+          });
+          if (matchWatch) twinPartner = true;
+        }
+      }
+    }
+    if (twinPartner) comboLabels.push('双哨暴击');
+    if (clusterTypes.has('mist') && clusterTypes.has('burst')) comboLabels.push('剧毒爆轰');
+    if (clusterTypes.has('mist') && clusterTypes.has('thorn')) comboLabels.push('荆棘毒刺');
+    if (clusterTypes.size >= 4) comboLabels.push('大共振');
+
+    for (let pi = 0; pi < partners.length; pi++) {
+      const pInfo = partners[pi];
+      const pt = pInfo.tower;
+      const mx = (cov.centerX + pt.x) * 0.5;
+      const my = (cov.centerY + pt.y) * 0.5 - 12;
+      ctx.save();
+      ctx.strokeStyle = pInfo.color;
+      ctx.globalAlpha = 0.72 * enterProg;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -Math.round((this.uiAnimTime * 18) % 8);
+      ctx.beginPath();
+      ctx.moveTo(cov.centerX, cov.centerY + 6);
+      ctx.quadraticCurveTo(mx, my, pt.x, pt.y + 6);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const beadT = (this.uiAnimTime * 0.9 + pi * 0.35) % 1.0;
+      const invB = 1.0 - beadT;
+      const bx = invB * invB * cov.centerX + 2 * invB * beadT * mx + beadT * beadT * pt.x;
+      const by = invB * invB * (cov.centerY + 6) + 2 * invB * beadT * my + beadT * beadT * (pt.y + 6);
+      ctx.fillStyle = '#FFF9DB';
+      ctx.beginPath();
+      ctx.arc(bx, by, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // BTD6 式半透明虚影预览（悬停造塔/轮盘瞄准时）
     if (opts.drawGhost) {
       ctx.globalAlpha = 0.62;
@@ -3098,6 +3170,25 @@ class UiManager {
         if (fallbackImg && fallbackImg.width) {
           ctx.drawImage(fallbackImg, tileX - 4, tileY - 14, 40, 44);
         }
+      }
+      if (comboLabels.length > 0) {
+        const tagTxt = '✦ ' + comboLabels.slice(0, 2).join(' + ');
+        ctx.globalAlpha = 1.0;
+        ctx.font = `bold 10px ${CN_FONT}`;
+        const tw = Math.ceil(ctx.measureText(tagTxt).width);
+        const pw = tw + 14;
+        const px = Math.round(cov.centerX - pw * 0.5);
+        const py = Math.round(tileY + TILE_SIZE + 4);
+        roundRectPath(ctx, px, py, pw, 16, 6);
+        ctx.fillStyle = 'rgba(18, 28, 16, 0.92)';
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        ctx.fillStyle = '#FFE58F';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tagTxt, px + pw * 0.5, py + 8);
       }
     }
     ctx.restore();
@@ -4329,28 +4420,46 @@ class UiManager {
   }
   drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, color, font) {
     if (text === null || text === undefined || text === '') return;
-    text = String(text);
+    const paragraphs = String(text).split('\n');
+    const noLineStart = '，。！？、；：）】》」』·,.!?;:)]}%';
     ctx.save();
     ctx.fillStyle = color;
     ctx.font = font;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    let line = '';
     let curY = y;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      const testLine = line + ch;
-      if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
-        ctx.fillText(line, x, curY);
-        line = ch;
-        curY += lineHeight;
-      } else {
-        line = testLine;
+    for (let p = 0; p < paragraphs.length; p++) {
+      const para = paragraphs[p];
+      let line = '';
+      for (let i = 0; i < para.length; i++) {
+        const ch = para[i];
+        const testLine = line + ch;
+        if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+          if (noLineStart.indexOf(ch) !== -1) {
+            if (ctx.measureText(testLine).width <= maxWidth + 8) {
+              line = testLine;
+              continue;
+            }
+            if (line.length > 1) {
+              const carry = line.slice(-1);
+              ctx.fillText(line.slice(0, -1), x, curY);
+              line = carry + ch;
+              curY += lineHeight;
+              continue;
+            }
+          }
+          ctx.fillText(line, x, curY);
+          line = ch;
+          curY += lineHeight;
+        } else {
+          line = testLine;
+        }
       }
-    }
-    if (line.length > 0) {
-      ctx.fillText(line, x, curY);
+      if (line.length > 0) {
+        ctx.fillText(line, x, curY);
+      }
+      curY += lineHeight;
     }
     ctx.restore();
     platform.recordDrawCall(1);

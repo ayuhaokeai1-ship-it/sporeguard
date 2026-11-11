@@ -172,10 +172,10 @@ class FxSystem {
       return;
     }
     const staggerSide = (active.length % 2 === 0) ? 1 : -1;
-    let baseX = x + staggerSide * 8 + (Math.random() - 0.5) * 6;
+    let baseX = x + staggerSide * 10 + (Math.random() - 0.5) * 4;
     let baseY = y - 10;
 
-    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与相邻伤害数字重叠
+    // 防止同名提示文字与相邻伤害数字重叠（近邻自动纵向阶梯错位）
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
@@ -186,9 +186,9 @@ class FxSystem {
           return;
         }
       }
-      if (dx <= 46 && dy <= 18) {
-        yShift += 17;
-        if (yShift >= 34) break;
+      if (dx <= 52 && dy <= 20) {
+        yShift += 18;
+        if (yShift >= 54) break;
       }
     }
 

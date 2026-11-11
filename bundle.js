@@ -4941,10 +4941,10 @@ class FxSystem {
       return;
     }
     const staggerSide = (active.length % 2 === 0) ? 1 : -1;
-    let baseX = x + staggerSide * 8 + (Math.random() - 0.5) * 6;
+    let baseX = x + staggerSide * 10 + (Math.random() - 0.5) * 4;
     let baseY = y - 10;
 
-    // 防止同名提示文字（如 破甲! / 圣光! / 毒爆!）与相邻伤害数字重叠
+    // 防止同名提示文字与相邻伤害数字重叠（近邻自动纵向阶梯错位）
     let yShift = 0;
     for (let i = active.length - 1; i >= 0; i--) {
       const ex = active[i];
@@ -4955,9 +4955,9 @@ class FxSystem {
           return;
         }
       }
-      if (dx <= 46 && dy <= 18) {
-        yShift += 17;
-        if (yShift >= 34) break;
+      if (dx <= 52 && dy <= 20) {
+        yShift += 18;
+        if (yShift >= 54) break;
       }
     }
 
@@ -11221,7 +11221,7 @@ class CombatAnalyticsSystem {
       reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#FF4D4F', icon: 'assets/vfx/vfx_hit_spark.png' }
     };
 
-    this.toggleBtnRect = { x: 598, y: 12, w: 58, h: 32 };
+    this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
   }
 
   reset() {
@@ -11269,22 +11269,30 @@ class CombatAnalyticsSystem {
   renderToggleButton(ctx, x, y) {
     this.toggleBtnRect.x = x;
     this.toggleBtnRect.y = y;
+    const w = this.toggleBtnRect.w;
+    const h = this.toggleBtnRect.h;
 
     ctx.save();
-    ctx.fillStyle = this.isOpen ? 'rgba(82, 196, 26, 0.88)' : 'rgba(25, 36, 28, 0.88)';
+    ctx.fillStyle = this.isOpen ? 'rgba(38, 92, 18, 0.94)' : 'rgba(28, 20, 12, 0.92)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h, 6) : ctx.rect(x, y, this.toggleBtnRect.w, this.toggleBtnRect.h);
+    ctx.roundRect ? ctx.roundRect(x, y, w, h, 12) : ctx.rect(x, y, w, h);
     ctx.fill();
 
-    ctx.strokeStyle = this.isOpen ? '#B7EB8F' : '#875C39';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = this.isOpen ? '#95DE64' : 'rgba(198, 143, 69, 0.78)';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 11px "Microsoft YaHei UI", sans-serif';
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, w - 4, h - 4, 10) : ctx.rect(x + 2, y + 2, w - 4, h - 4);
+    ctx.stroke();
+
+    ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
+    ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.isOpen ? '✖ 关闭' : '📊 战报', x + this.toggleBtnRect.w * 0.5, y + this.toggleBtnRect.h * 0.5);
+    ctx.fillText(this.isOpen ? '✖ 战报' : '📊 战报', x + w * 0.5, y + h * 0.5);
     ctx.restore();
   }
 
@@ -14182,17 +14190,18 @@ class AncientKnowledgeTree {
       const ty = y + 10;
       const isCur = this.activeTab === b.id;
 
-      ctx.fillStyle = isCur ? 'rgba(82, 196, 26, 0.85)' : 'rgba(30, 24, 18, 0.75)';
-      ctx.strokeStyle = isCur ? '#FFE58F' : 'rgba(140, 94, 42, 0.45)';
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = isCur ? 'rgba(42, 82, 34, 0.96)' : 'rgba(34, 24, 16, 0.84)';
+      ctx.strokeStyle = isCur ? '#FFD700' : 'rgba(196, 143, 69, 0.55)';
+      ctx.lineWidth = isCur ? 2.0 : 1.2;
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(tx, ty, tabW, tabH, 6) : ctx.rect(tx, ty, tabW, tabH);
+      ctx.roundRect ? ctx.roundRect(tx, ty, tabW, tabH, 7) : ctx.rect(tx, ty, tabW, tabH);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = isCur ? '#FFFFFF' : '#D9D9D9';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = isCur ? '#FFE58F' : '#E8D8B8';
+      ctx.font = 'bold 12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(b.name, tx + tabW * 0.5, ty + tabH * 0.5);
 
       if (ui) {
@@ -14268,45 +14277,53 @@ class AncientKnowledgeTree {
       }
       ctx.restore();
 
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillStyle = isMax ? '#FFE58F' : '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 14px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = isMax ? '#FFE58F' : '#FFFDF5';
       ctx.fillText(t.name, cx + cardW * 0.5, cy + 72);
 
       // 等级角标
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = isMax ? '#FFD700' : '#85A5FF';
+      ctx.font = 'bold 11.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = isMax ? '#FFD700' : '#91D5FF';
       ctx.fillText(`等级: ${curRank} / ${t.maxRank}`, cx + cardW * 0.5, cy + 92);
 
       // 天赋描述
-      ctx.font = '11px sans-serif';
-      ctx.fillStyle = '#CCCCCC';
+      ctx.font = '11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = '#E8DEC8';
       ctx.textAlign = 'left';
-      this.wrapText(ctx, t.desc, cx + 12, cy + 115, cardW - 24, 16);
+      ctx.textBaseline = 'top';
+      this.wrapText(ctx, t.desc, cx + 12, cy + 114, cardW - 24, 17);
 
-      // 升级按钮
+      // 升级按钮（统一采用秘典手绘翡翠/木质按钮皮肤）
       const btnW = cardW - 24;
-      const btnH = 30;
+      const btnH = 32;
       const btnX = cx + 12;
-      const btnY = cy + cardH - 42;
+      const btnY = cy + cardH - 44;
+      const btnLabel = isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : '点数不足');
 
-      ctx.fillStyle = isMax ? 'rgba(60, 60, 60, 0.6)' : (canUp ? 'rgba(82, 196, 26, 0.9)' : 'rgba(100, 30, 30, 0.5)');
-      ctx.strokeStyle = canUp ? '#D9F7BE' : 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(btnX, btnY, btnW, btnH, 6) : ctx.rect(btnX, btnY, btnW, btnH);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : `点数不足`), btnX + btnW * 0.5, btnY + btnH * 0.5);
-
-      if (ui && canUp && !isMax) {
-        ui.registerButton('tal_up_' + t.id, btnX, btnY, btnW, btnH, () => {
+      if (ui && typeof ui.drawPixelButton === 'function') {
+        ui.drawPixelButton(ctx, 'tal_up_' + t.id, btnX, btnY, btnW, btnH, btnLabel, {
+          skin: canUp && !isMax ? 'btn_green' : 'btn_wood',
+          disabled: isMax || !canUp,
+          font: 'bold 12px "Microsoft YaHei UI", "PingFang SC", sans-serif'
+        }, () => {
           this.upgradeTalent(t.id);
         });
+      } else {
+        ctx.fillStyle = isMax ? 'rgba(60, 60, 60, 0.6)' : (canUp ? 'rgba(42, 112, 34, 0.94)' : 'rgba(100, 30, 30, 0.5)');
+        ctx.strokeStyle = canUp ? '#95DE64' : 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(btnX, btnY, btnW, btnH, 6) : ctx.rect(btnX, btnY, btnW, btnH);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFDF5';
+        ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(btnLabel, btnX + btnW * 0.5, btnY + btnH * 0.5);
       }
     }
 
@@ -14314,21 +14331,41 @@ class AncientKnowledgeTree {
   }
 
   wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const chars = text.split('');
-    let line = '';
+    const paragraphs = String(text || '').split('\n');
+    const noLineStart = '，。！？、；：）】》」』·,.!?;:)]}%';
     let curY = y;
-    for (let n = 0; n < chars.length; n++) {
-      const testLine = line + chars[n];
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
-        ctx.fillText(line, x, curY);
-        line = chars[n];
-        curY += lineHeight;
-      } else {
-        line = testLine;
+    for (let p = 0; p < paragraphs.length; p++) {
+      const chars = paragraphs[p].split('');
+      let line = '';
+      for (let n = 0; n < chars.length; n++) {
+        const ch = chars[n];
+        const testLine = line + ch;
+        if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+          if (noLineStart.indexOf(ch) !== -1) {
+            if (ctx.measureText(testLine).width <= maxWidth + 8) {
+              line = testLine;
+              continue;
+            }
+            if (line.length > 1) {
+              const carry = line.slice(-1);
+              ctx.fillText(line.slice(0, -1), x, curY);
+              line = carry + ch;
+              curY += lineHeight;
+              continue;
+            }
+          }
+          ctx.fillText(line, x, curY);
+          line = ch;
+          curY += lineHeight;
+        } else {
+          line = testLine;
+        }
       }
+      if (line.length > 0) {
+        ctx.fillText(line, x, curY);
+      }
+      curY += lineHeight;
     }
-    ctx.fillText(line, x, curY);
   }
 }
 
@@ -15446,6 +15483,70 @@ class ForestContraptions {
         ctx.drawImage(dewImg, dx - dw * 0.5, dy - dh * 0.5, dw, dh);
       }
       ctx.restore();
+    }
+  }
+
+  /**
+   * 被动悬停射程环与用法提示（只读渲染，不消费孢子或触发冷却）
+   */
+  renderHoverTooltip(ctx, mapX, mapY, time) {
+    if (mapX < 0 || mapY < 0) return;
+
+    const drawHoverRingAndPill = (cx, cy, radiusPx, ringCol, titleStr) => {
+      ctx.save();
+      ctx.fillStyle = ringCol.fill;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radiusPx, radiusPx * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = ringCol.stroke;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([6, 4]);
+      ctx.lineDashOffset = -Math.round(((time || 0) * 18) % 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      const tw = Math.ceil(ctx.measureText(titleStr).width);
+      const pw = tw + 20;
+      const ph = 22;
+      const px = Math.max(8, Math.min(640 - pw - 8, Math.round(cx - pw * 0.5)));
+      const py = Math.max(8, Math.round(cy - 44));
+
+      ctx.fillStyle = 'rgba(18, 13, 8, 0.93)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 6) : ctx.rect(px, py, pw, ph);
+      ctx.fill();
+      ctx.strokeStyle = ringCol.border;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFF9DB';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(titleStr, px + pw * 0.5, py + ph * 0.5);
+      ctx.restore();
+    };
+
+    if (this.pitcher && Math.hypot(mapX - this.pitcher.x, mapY - this.pitcher.y) <= 26) {
+      const p = this.pitcher;
+      const status = p.digestTimer > 0 ? '消化产孢中...' : (p.cd > 0 ? `冷却中 ${Math.ceil(p.cd)}s` : `吞噬 (${p.cost}孢) · 瞬杀地面敌+45孢`);
+      drawHoverRingAndPill(
+        p.x, p.y, 75,
+        { fill: 'rgba(149, 222, 100, 0.10)', stroke: 'rgba(149, 222, 100, 0.78)', border: '#73D13D' },
+        `🌿 巨型猪笼草 · ${status}`
+      );
+      return;
+    }
+
+    if (this.thunderTree && Math.hypot(mapX - this.thunderTree.x, mapY - this.thunderTree.y) <= 26) {
+      const t = this.thunderTree;
+      const status = t.cd > 0 ? `充能中 ${Math.ceil(t.cd)}s` : `天雷 (${t.cost}孢) · 震击4敌眩晕2.2s`;
+      drawHoverRingAndPill(
+        t.x, t.y, 140,
+        { fill: 'rgba(64, 169, 255, 0.08)', stroke: 'rgba(105, 192, 255, 0.78)', border: '#69C0FF' },
+        `⚡ 雷击古木 · ${status}`
+      );
     }
   }
 }
@@ -19101,13 +19202,16 @@ class UiManager {
       return;
     }
 
-    // 0. 顶部极简天候微章 (可随时轻触自由切换晨曦晴空、幽夜微光、林地迷雾等沉浸天候)
+    // 0. 顶部极简天候微章 & 实时战报快速切换双胶囊（左上角工整并排）
     if (scene.weather) {
       scene.weather.renderWeatherHudBadge(ctx, 16, 14);
-      this.registerButton('pvz_weather_badge', 16, 14, 100, 26, () => {
+      this.registerButton('pvz_weather_badge', 16, 14, 96, 24, () => {
         platform.playSfx('sfx_click');
         scene.weather.cycleWeather(scene);
       });
+    }
+    if (scene.combatAnalytics && typeof scene.combatAnalytics.renderToggleButton === 'function') {
+      scene.combatAnalytics.renderToggleButton(ctx, 118, 14);
     }
 
     // 1. 【植物大战僵尸风格】顶部一体化经典木质卡槽栏 (PvZ Top Seed Bank: 阳光金孢 + 5蘑菇卡牌 + 觉醒豆)
@@ -19144,16 +19248,28 @@ class UiManager {
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
 
-    // 7. 轻量化提示气泡
+    // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让首领血条）
     if (this.toastTimer > 0 && this.toastText) {
+      const hasBossHud = Boolean(scene.bossOverdriveEngine && scene.bossOverdriveEngine.activeBoss && scene.bossOverdriveEngine.activeBoss.hp > 0);
+      const ty = hasBossHud ? 116 : 64;
+      const tw = 316;
+      const tx = (960 - tw) * 0.5;
       ctx.save();
-      this.drawAiFrame(ctx, 'btn_wood', 330, 74, 300, 38, 0.95);
-      drawArtText(ctx, this.toastText, 480, 93, {
-        style: 'parchment',
-        size: 13,
+      if (!this.drawAiFrame(ctx, 'top_bar', tx, ty, tw, 36, 0.96)) {
+        roundRectPath(ctx, tx, ty, tw, 36, 9);
+        ctx.fillStyle = 'rgba(24, 16, 10, 0.94)';
+        ctx.fill();
+        ctx.strokeStyle = '#C68F45';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      drawArtText(ctx, this.toastText, 480, ty + 18, {
+        style: 'gold',
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 1.5
+        strokeWidth: 0,
+        maxWidth: tw - 36
       });
       ctx.restore();
     }
@@ -21073,6 +21189,63 @@ class UiManager {
     ctx.fill();
     ctx.stroke();
 
+    // BTD6/KR 式局部菌丝共鸣链路预览：仅展示与当前预览/选中守卫邻近(<=135px)发生羁绊的伙伴连线
+    const partners = [];
+    const comboLabels = [];
+    const curTowers = scene.towerManager ? scene.towerManager.towers : [];
+    const clusterTypes = new Set([typeId]);
+    let twinPartner = null;
+    for (let i = 0; i < curTowers.length; i++) {
+      const pt = curTowers[i];
+      if (!pt || (pt.col === col && pt.row === row)) continue;
+      if (Math.hypot(pt.x - cov.centerX, pt.y - cov.centerY) <= 135) {
+        clusterTypes.add(pt.typeId);
+        const matchWatch = (typeId === 'watch' && pt.typeId === 'watch');
+        const matchToxic = ((typeId === 'burst' && pt.typeId === 'mist') || (typeId === 'mist' && pt.typeId === 'burst'));
+        const matchThorn = ((typeId === 'thorn' && pt.typeId === 'mist') || (typeId === 'mist' && pt.typeId === 'thorn'));
+        const matchLumina = (typeId === 'lumina' || pt.typeId === 'lumina');
+        if (matchWatch || matchToxic || matchThorn || matchLumina) {
+          partners.push({
+            tower: pt,
+            color: matchWatch ? '#69C0FF' : (matchToxic ? '#52C41A' : (matchThorn ? '#95DE64' : '#FFD666'))
+          });
+          if (matchWatch) twinPartner = true;
+        }
+      }
+    }
+    if (twinPartner) comboLabels.push('双哨暴击');
+    if (clusterTypes.has('mist') && clusterTypes.has('burst')) comboLabels.push('剧毒爆轰');
+    if (clusterTypes.has('mist') && clusterTypes.has('thorn')) comboLabels.push('荆棘毒刺');
+    if (clusterTypes.size >= 4) comboLabels.push('大共振');
+
+    for (let pi = 0; pi < partners.length; pi++) {
+      const pInfo = partners[pi];
+      const pt = pInfo.tower;
+      const mx = (cov.centerX + pt.x) * 0.5;
+      const my = (cov.centerY + pt.y) * 0.5 - 12;
+      ctx.save();
+      ctx.strokeStyle = pInfo.color;
+      ctx.globalAlpha = 0.72 * enterProg;
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -Math.round((this.uiAnimTime * 18) % 8);
+      ctx.beginPath();
+      ctx.moveTo(cov.centerX, cov.centerY + 6);
+      ctx.quadraticCurveTo(mx, my, pt.x, pt.y + 6);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const beadT = (this.uiAnimTime * 0.9 + pi * 0.35) % 1.0;
+      const invB = 1.0 - beadT;
+      const bx = invB * invB * cov.centerX + 2 * invB * beadT * mx + beadT * beadT * pt.x;
+      const by = invB * invB * (cov.centerY + 6) + 2 * invB * beadT * my + beadT * beadT * (pt.y + 6);
+      ctx.fillStyle = '#FFF9DB';
+      ctx.beginPath();
+      ctx.arc(bx, by, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // BTD6 式半透明虚影预览（悬停造塔/轮盘瞄准时）
     if (opts.drawGhost) {
       ctx.globalAlpha = 0.62;
@@ -21081,6 +21254,25 @@ class UiManager {
         if (fallbackImg && fallbackImg.width) {
           ctx.drawImage(fallbackImg, tileX - 4, tileY - 14, 40, 44);
         }
+      }
+      if (comboLabels.length > 0) {
+        const tagTxt = '✦ ' + comboLabels.slice(0, 2).join(' + ');
+        ctx.globalAlpha = 1.0;
+        ctx.font = `bold 10px ${CN_FONT}`;
+        const tw = Math.ceil(ctx.measureText(tagTxt).width);
+        const pw = tw + 14;
+        const px = Math.round(cov.centerX - pw * 0.5);
+        const py = Math.round(tileY + TILE_SIZE + 4);
+        roundRectPath(ctx, px, py, pw, 16, 6);
+        ctx.fillStyle = 'rgba(18, 28, 16, 0.92)';
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        ctx.fillStyle = '#FFE58F';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tagTxt, px + pw * 0.5, py + 8);
       }
     }
     ctx.restore();
@@ -22312,28 +22504,46 @@ class UiManager {
   }
   drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, color, font) {
     if (text === null || text === undefined || text === '') return;
-    text = String(text);
+    const paragraphs = String(text).split('\n');
+    const noLineStart = '，。！？、；：）】》」』·,.!?;:)]}%';
     ctx.save();
     ctx.fillStyle = color;
     ctx.font = font;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    let line = '';
     let curY = y;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      const testLine = line + ch;
-      if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
-        ctx.fillText(line, x, curY);
-        line = ch;
-        curY += lineHeight;
-      } else {
-        line = testLine;
+    for (let p = 0; p < paragraphs.length; p++) {
+      const para = paragraphs[p];
+      let line = '';
+      for (let i = 0; i < para.length; i++) {
+        const ch = para[i];
+        const testLine = line + ch;
+        if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+          if (noLineStart.indexOf(ch) !== -1) {
+            if (ctx.measureText(testLine).width <= maxWidth + 8) {
+              line = testLine;
+              continue;
+            }
+            if (line.length > 1) {
+              const carry = line.slice(-1);
+              ctx.fillText(line.slice(0, -1), x, curY);
+              line = carry + ch;
+              curY += lineHeight;
+              continue;
+            }
+          }
+          ctx.fillText(line, x, curY);
+          line = ch;
+          curY += lineHeight;
+        } else {
+          line = testLine;
+        }
       }
-    }
-    if (line.length > 0) {
-      ctx.fillText(line, x, curY);
+      if (line.length > 0) {
+        ctx.fillText(line, x, curY);
+      }
+      curY += lineHeight;
     }
     ctx.restore();
     platform.recordDrawCall(1);
@@ -24276,6 +24486,11 @@ class SceneController {
     }
     this.relicManager.render(ctx);
     this.contraptions.render(ctx, this.animTimeSec);
+    if (this.state === 'BATTLE' && !this.ui.inspectorOpen && !this.activeSpellCasting && !this.activeRallyTargeting && this.ui.hoverX >= 0) {
+      const hmX = (this.ui.hoverX - mv.OFFSET_X) / mv.SCALE;
+      const hmY = (this.ui.hoverY - mv.OFFSET_Y) / mv.SCALE;
+      this.contraptions.renderHoverTooltip(ctx, hmX, hmY, this.animTimeSec);
+    }
 
     // 绘制圣树古根逆袭：贴合地表的翠玉金藤脉冲光环与自然曲根
     if (this.elderRootActiveTimer > 0 && this.map && this.map.mapData) {

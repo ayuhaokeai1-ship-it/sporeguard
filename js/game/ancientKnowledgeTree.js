@@ -388,17 +388,18 @@ class AncientKnowledgeTree {
       const ty = y + 10;
       const isCur = this.activeTab === b.id;
 
-      ctx.fillStyle = isCur ? 'rgba(82, 196, 26, 0.85)' : 'rgba(30, 24, 18, 0.75)';
-      ctx.strokeStyle = isCur ? '#FFE58F' : 'rgba(140, 94, 42, 0.45)';
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = isCur ? 'rgba(42, 82, 34, 0.96)' : 'rgba(34, 24, 16, 0.84)';
+      ctx.strokeStyle = isCur ? '#FFD700' : 'rgba(196, 143, 69, 0.55)';
+      ctx.lineWidth = isCur ? 2.0 : 1.2;
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(tx, ty, tabW, tabH, 6) : ctx.rect(tx, ty, tabW, tabH);
+      ctx.roundRect ? ctx.roundRect(tx, ty, tabW, tabH, 7) : ctx.rect(tx, ty, tabW, tabH);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = isCur ? '#FFFFFF' : '#D9D9D9';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = isCur ? '#FFE58F' : '#E8D8B8';
+      ctx.font = 'bold 12px "Microsoft YaHei UI", "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(b.name, tx + tabW * 0.5, ty + tabH * 0.5);
 
       if (ui) {
@@ -474,45 +475,53 @@ class AncientKnowledgeTree {
       }
       ctx.restore();
 
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillStyle = isMax ? '#FFE58F' : '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 14px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = isMax ? '#FFE58F' : '#FFFDF5';
       ctx.fillText(t.name, cx + cardW * 0.5, cy + 72);
 
       // 等级角标
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = isMax ? '#FFD700' : '#85A5FF';
+      ctx.font = 'bold 11.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = isMax ? '#FFD700' : '#91D5FF';
       ctx.fillText(`等级: ${curRank} / ${t.maxRank}`, cx + cardW * 0.5, cy + 92);
 
       // 天赋描述
-      ctx.font = '11px sans-serif';
-      ctx.fillStyle = '#CCCCCC';
+      ctx.font = '11px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.fillStyle = '#E8DEC8';
       ctx.textAlign = 'left';
-      this.wrapText(ctx, t.desc, cx + 12, cy + 115, cardW - 24, 16);
+      ctx.textBaseline = 'top';
+      this.wrapText(ctx, t.desc, cx + 12, cy + 114, cardW - 24, 17);
 
-      // 升级按钮
+      // 升级按钮（统一采用秘典手绘翡翠/木质按钮皮肤）
       const btnW = cardW - 24;
-      const btnH = 30;
+      const btnH = 32;
       const btnX = cx + 12;
-      const btnY = cy + cardH - 42;
+      const btnY = cy + cardH - 44;
+      const btnLabel = isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : '点数不足');
 
-      ctx.fillStyle = isMax ? 'rgba(60, 60, 60, 0.6)' : (canUp ? 'rgba(82, 196, 26, 0.9)' : 'rgba(100, 30, 30, 0.5)');
-      ctx.strokeStyle = canUp ? '#D9F7BE' : 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(btnX, btnY, btnW, btnH, 6) : ctx.rect(btnX, btnY, btnW, btnH);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(isMax ? '已臻化境' : (canUp ? `参悟 (${t.costPerRank}点)` : `点数不足`), btnX + btnW * 0.5, btnY + btnH * 0.5);
-
-      if (ui && canUp && !isMax) {
-        ui.registerButton('tal_up_' + t.id, btnX, btnY, btnW, btnH, () => {
+      if (ui && typeof ui.drawPixelButton === 'function') {
+        ui.drawPixelButton(ctx, 'tal_up_' + t.id, btnX, btnY, btnW, btnH, btnLabel, {
+          skin: canUp && !isMax ? 'btn_green' : 'btn_wood',
+          disabled: isMax || !canUp,
+          font: 'bold 12px "Microsoft YaHei UI", "PingFang SC", sans-serif'
+        }, () => {
           this.upgradeTalent(t.id);
         });
+      } else {
+        ctx.fillStyle = isMax ? 'rgba(60, 60, 60, 0.6)' : (canUp ? 'rgba(42, 112, 34, 0.94)' : 'rgba(100, 30, 30, 0.5)');
+        ctx.strokeStyle = canUp ? '#95DE64' : 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(btnX, btnY, btnW, btnH, 6) : ctx.rect(btnX, btnY, btnW, btnH);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFDF5';
+        ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(btnLabel, btnX + btnW * 0.5, btnY + btnH * 0.5);
       }
     }
 
@@ -520,21 +529,41 @@ class AncientKnowledgeTree {
   }
 
   wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const chars = text.split('');
-    let line = '';
+    const paragraphs = String(text || '').split('\n');
+    const noLineStart = '，。！？、；：）】》」』·,.!?;:)]}%';
     let curY = y;
-    for (let n = 0; n < chars.length; n++) {
-      const testLine = line + chars[n];
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
-        ctx.fillText(line, x, curY);
-        line = chars[n];
-        curY += lineHeight;
-      } else {
-        line = testLine;
+    for (let p = 0; p < paragraphs.length; p++) {
+      const chars = paragraphs[p].split('');
+      let line = '';
+      for (let n = 0; n < chars.length; n++) {
+        const ch = chars[n];
+        const testLine = line + ch;
+        if (ctx.measureText(testLine).width > maxWidth && line.length > 0) {
+          if (noLineStart.indexOf(ch) !== -1) {
+            if (ctx.measureText(testLine).width <= maxWidth + 8) {
+              line = testLine;
+              continue;
+            }
+            if (line.length > 1) {
+              const carry = line.slice(-1);
+              ctx.fillText(line.slice(0, -1), x, curY);
+              line = carry + ch;
+              curY += lineHeight;
+              continue;
+            }
+          }
+          ctx.fillText(line, x, curY);
+          line = ch;
+          curY += lineHeight;
+        } else {
+          line = testLine;
+        }
       }
+      if (line.length > 0) {
+        ctx.fillText(line, x, curY);
+      }
+      curY += lineHeight;
     }
-    ctx.fillText(line, x, curY);
   }
 }
 
