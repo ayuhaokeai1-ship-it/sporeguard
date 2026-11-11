@@ -148,7 +148,7 @@ class WaveManager {
       const groups = [];
       for (let gi = 0; gi < gCount; gi++) {
         const eType = (gi === gCount - 1 && extraWaves % 5 === 0)
-          ? (extraWaves % 10 === 0 ? 'boss_m3' : 'boss_m1')
+          ? (extraWaves % 10 === 0 ? 'boss_m4' : (extraWaves % 5 === 0 ? 'boss_m3' : 'boss_m1'))
           : enemyPool[Math.floor(Math.random() * enemyPool.length)];
         groups.push({
           type: eType,

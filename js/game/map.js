@@ -414,6 +414,121 @@ class GameMap {
     ctx.restore();
 
     this.renderRouteGuides(ctx, animTimeSec);
+
+    // 地图2专属鲜活溪流：沿着 col ~6.35 曲折溪道南流的水面高光波纹
+    if (this.mapData && this.mapData.id === 'map2') {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (let w = 0; w < 6; w++) {
+        const flowPhase = ((animTimeSec * 28 + w * 76) % 440);
+        const wy = 20 + flowPhase;
+        const wx = 202 + Math.sin(wy * 0.025 + w) * 5;
+        const alpha = Math.sin((flowPhase / 440) * Math.PI) * 0.42;
+        ctx.strokeStyle = `rgba(210, 250, 255, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(wx, wy, 7 + (w % 2) * 3, 0.25 * Math.PI, 0.75 * Math.PI);
+        ctx.stroke();
+      }
+      ctx.restore();
+      platform.recordDrawCall(1);
+    }
+
+    // 终点守护小屋烟囱袅袅炊烟 (Living Map Hearth Smoke Wisps)
+    if (this.mapData && this.mapData.warehouseTile) {
+      const [wc, wr] = this.mapData.warehouseTile;
+      const baseX = (wc + 0.5) * TILE_SIZE - 4;
+      const baseY = (wr + 0.5) * TILE_SIZE - 22;
+      ctx.save();
+      for (let p = 0; p < 3; p++) {
+        const phase = (animTimeSec * 0.45 + p / 3) % 1.0;
+        const px = baseX + Math.sin(animTimeSec * 2.2 + p * 2.1) * 3.5 + phase * 6;
+        const py = baseY - phase * 22;
+        const pr = 2.4 + phase * 4.2;
+        const alpha = (1.0 - phase) * 0.34;
+        ctx.fillStyle = `rgba(255, 250, 236, ${alpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(px, py, pr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 次级地穴暗紫侵蚀孢子浮尘
+    if (this.mapData && this.mapData.spawnTile2) {
+      const [s2c, s2r] = this.mapData.spawnTile2;
+      const bx = (s2c + 0.5) * TILE_SIZE;
+      const by = (s2r + 0.5) * TILE_SIZE - 4;
+      ctx.save();
+      for (let q = 0; q < 3; q++) {
+        const phase = (animTimeSec * 0.65 + q / 3) % 1.0;
+        const px = bx + Math.cos(animTimeSec * 2.8 + q * 2.3) * 8;
+        const py = by - phase * 18;
+        ctx.fillStyle = `rgba(211, 173, 247, ${((1.0 - phase) * 0.46).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 备战期 Kingdom Rush 入口召唤波次环 (点击出怪口即可提前召敌拿赏金)
+    if (this.scene && this.scene.waveManager && this.scene.waveManager.isPrepPhase()) {
+      const waveMgr = this.scene.waveManager;
+      const maxPrep = waveMgr.currentWaveIndex === 1
+        ? CONFIG.ECONOMY.PREP_TIME_FIRST_WAVE
+        : CONFIG.ECONOMY.PREP_TIME_BETWEEN_WAVES;
+      const prog = Math.max(0, Math.min(1, waveMgr.prepTimerSec / Math.max(1, maxPrep)));
+      const portals = [this.mapData.spawnTile];
+      if (this.mapData.spawnTile2) {
+        const nextWave = waveMgr.waveList && waveMgr.waveList[waveMgr.currentWaveIndex - 1];
+        if (nextWave && nextWave.groups && nextWave.groups.some((g) => g && g.routeIndex === 1)) {
+          portals.push(this.mapData.spawnTile2);
+        }
+      }
+      const pulse = 1.0 + Math.sin(animTimeSec * 5.2) * 0.1;
+      for (let pi = 0; pi < portals.length; pi++) {
+        const pt = portals[pi];
+        if (!pt) continue;
+        const px = (pt[0] + 0.5) * TILE_SIZE;
+        const py = (pt[1] + 0.5) * TILE_SIZE;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(px, py, 16 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(120, 18, 18, 0.42)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        // 备战倒计时外环进度弧
+        ctx.beginPath();
+        ctx.arc(px, py, 19.5, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * prog);
+        ctx.strokeStyle = '#FF4D4F';
+        ctx.lineWidth = 2.6;
+        ctx.stroke();
+
+        // 清晰提前迎战提示微标
+        const tagY = Math.max(12, py - 24);
+        const tagX = Math.max(26, Math.min(614, px));
+        ctx.fillStyle = 'rgba(28, 14, 8, 0.90)';
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(tagX - 22, tagY - 7, 44, 14, 5) : ctx.rect(tagX - 22, tagY - 7, 44, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFE58F';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('迎战!', tagX, tagY + 0.5);
+        ctx.restore();
+      }
+      platform.recordDrawCall(1);
+    }
+
     // 动态环境光：由天气和微风系统统一柔和过渡渲染，无需额外程序化几何圈
 
     // 幽夜微光专属：终点蘑菇小屋温馨壁炉与窗棂烛光 (Cottage Window Candle Glow)

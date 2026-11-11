@@ -24,7 +24,8 @@ const ENEMY_TINTS = {
   weaver: '#B37FEB',
   boss_m1: PALETTE.ENEMY_EYE,
   boss_m2: PALETTE.BRANCH_A,
-  boss_m3: PALETTE.ENEMY_SPLITTER
+  boss_m3: PALETTE.ENEMY_SPLITTER,
+  boss_m4: '#FA8C16'
 };
 
 class EnemyManager {

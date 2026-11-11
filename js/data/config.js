@@ -50,12 +50,14 @@ const CONFIG = {
     INITIAL_SPORES: {
       map1: 210,               // PvZ 经典战术开局：210 孢子正好支持 1 守望菇(115) + 1 灵光菇(95) 开局
       map2: 200,
-      map3: 220
+      map3: 220,
+      map4: 240
     },
     TARGET_TOTAL_BUDGET: {
       map1: 1800,
       map2: 2400,
-      map3: 3200
+      map3: 3200,
+      map4: 3800
     },
     WAVE_CLEAR_BASE: 25,       // 波次完成奖励 = 25 + 5 * 波次序号
     WAVE_CLEAR_PER_WAVE: 5,
@@ -86,7 +88,8 @@ const CONFIG = {
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
       map2: 1.15,
-      map3: 1.30
+      map3: 1.30,
+      map4: 1.42
     }
   },
 

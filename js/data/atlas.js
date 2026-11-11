@@ -114,6 +114,13 @@ const SPRITE_ATLAS = {
       phaseStartCol: 6, phaseFrames: 4,
       deathStartCol: 10, deathFrames: 4,
       flashStartCol: 14
+    },
+    boss_m4: {
+      rowY: 736, cellW: 32, cellH: 32, artW: 32, artH: 32,
+      walkStartCol: 0, walkFrames: 6,
+      phaseStartCol: 6, phaseFrames: 4,
+      deathStartCol: 10, deathFrames: 4,
+      flashStartCol: 14
     }
   },
   projectiles: {

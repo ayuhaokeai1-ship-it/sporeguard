@@ -66,7 +66,7 @@ class WeatherManager {
   }
 
   initForMap(mapId) {
-    if (mapId === 'map1') {
+    if (mapId === 'map1' || mapId === 'map4') {
       this.currentWeather = 'sunny';
     } else if (mapId === 'map2') {
       this.currentWeather = 'mist';

@@ -113,6 +113,7 @@ class SceneController {
     this.activeAwakeningTargeting = false; // 1 | 2 | 3
     this.selectedBuildTowerId = 'watch';
     this.selectedTile = { col: 5, row: 3 };
+    this.hoverTile = { col: -1, row: -1 };
     this.logicalCombatTimeSec = 0;
     this.animTimeSec = 0;
 
@@ -242,7 +243,11 @@ class SceneController {
     this.activeSpellCasting = null;
     this.selectedBuildTowerId = null;
     this.selectedTile = { col: -1, row: -1 };
-    this.ui.inspectorOpen = false;
+    this.hoverTile = { col: -1, row: -1 };
+    if (this.ui) {
+      this.ui.inspectorOpen = false;
+      this.ui.hoveredRadialTowerId = null;
+    }
     input.setGridCursor(this.selectedTile.col, this.selectedTile.row, false);
 
     this.logicalCombatTimeSec = 0;
@@ -646,6 +651,41 @@ class SceneController {
             continue;
           }
           if (mx >= 0 && mx < CONFIG.LAYOUT.MAP.WIDTH && my >= 0 && my < CONFIG.LAYOUT.MAP.HEIGHT) {
+            // 备战期间点击出怪传送门入口光环，直接触发提前迎敌号角并获额外孢子奖励 (Kingdom Rush 经典波次召唤)
+            if (this.waveManager && this.waveManager.isPrepPhase() && this.map && this.map.mapData) {
+              const s1 = this.map.mapData.spawnTile;
+              let portalX = 0;
+              let portalY = 0;
+              let hitSpawn = false;
+              if (s1) {
+                const sx1 = (s1[0] + 0.5) * TILE_SIZE;
+                const sy1 = (s1[1] + 0.5) * TILE_SIZE;
+                if (Math.hypot(mx - sx1, my - sy1) <= 26) {
+                  hitSpawn = true;
+                  portalX = sx1;
+                  portalY = sy1;
+                }
+              }
+              const s2 = this.map.mapData.spawnTile2;
+              if (!hitSpawn && s2) {
+                const nextWave = this.waveManager.waveList && this.waveManager.waveList[this.waveManager.currentWaveIndex - 1];
+                const hasFlank = nextWave && nextWave.groups && nextWave.groups.some((g) => g && g.routeIndex === 1);
+                const sx2 = (s2[0] + 0.5) * TILE_SIZE;
+                const sy2 = (s2[1] + 0.5) * TILE_SIZE;
+                if (hasFlank && Math.hypot(mx - sx2, my - sy2) <= 26) {
+                  hitSpawn = true;
+                  portalX = sx2;
+                  portalY = sy2;
+                }
+              }
+              if (hitSpawn) {
+                this.callWaveEarly();
+                if (this.fx) {
+                  this.fx.spawnParticles(portalX, portalY, 16, ['#FFD700', '#FFE58F', '#FFFFFF'], 35, 95, 0.25, 0.55, 3.5);
+                }
+                continue;
+              }
+            }
             const col = Math.floor(mx / TILE_SIZE);
             const row = Math.floor(my / TILE_SIZE);
             if (this.map.inBounds(col, row)) {
@@ -706,11 +746,15 @@ class SceneController {
                     this.ui.inspectorOpen = false;
                   }
                 } else {
-                  // 手中未选中建造卡牌时，点击战场空草地使所有面板与范围自动褪去（轻度UI，零视觉遮挡）
-                  this.selectedTile.col = -1;
-                  this.selectedTile.row = -1;
-                  this.ui.inspectorOpen = false;
+                  // 点击空雕刻石座：原地展开 Kingdom Rush 5向圆形建造轮盘
+                  this.selectedTile.col = targetCol;
+                  this.selectedTile.row = targetRow;
+                  this.selectedTileAgeSec = 0;
+                  this.ui.inspectorOpen = true;
                   this.ui.showTowerDetailBoard = false;
+                  this.ui.hoveredRadialTowerId = null;
+                  input.setGridCursor(col, row, false);
+                  platform.playSfx('sfx_click');
                 }
               } else {
                 const clickedObs = this.map.getObstacleAt(targetCol, targetRow);

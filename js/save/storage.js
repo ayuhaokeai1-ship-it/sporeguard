@@ -19,7 +19,8 @@ function createDefaultSave() {
     maps: {
       map1: { unlocked: true, stars: 0, bestTime: null, bestSeeds: 0 },
       map2: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 },
-      map3: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 }
+      map3: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 },
+      map4: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 }
     },
     endlessRecord: { bestWave: 0 }
   };
@@ -45,7 +46,8 @@ function migrateSave(raw) {
     maps: {
       map1: Object.assign({}, def.maps.map1, raw.maps && raw.maps.map1 ? raw.maps.map1 : {}),
       map2: Object.assign({}, def.maps.map2, raw.maps && raw.maps.map2 ? raw.maps.map2 : {}),
-      map3: Object.assign({}, def.maps.map3, raw.maps && raw.maps.map3 ? raw.maps.map3 : {})
+      map3: Object.assign({}, def.maps.map3, raw.maps && raw.maps.map3 ? raw.maps.map3 : {}),
+      map4: Object.assign({}, def.maps.map4, raw.maps && raw.maps.map4 ? raw.maps.map4 : {})
     },
     endlessRecord: raw.endlessRecord && typeof raw.endlessRecord.bestWave === 'number'
       ? { bestWave: raw.endlessRecord.bestWave }
@@ -59,6 +61,9 @@ function migrateSave(raw) {
   }
   if (migrated.maps.map2.stars >= 1) {
     migrated.maps.map3.unlocked = true;
+  }
+  if (migrated.maps.map3.stars >= 1) {
+    migrated.maps.map4.unlocked = true;
   }
 
   return migrated;
@@ -114,6 +119,8 @@ function recordMapVictory(mapId, stars, clearTimeSec, remainingSeeds) {
     save.maps.map2.unlocked = true;
   } else if (mapId === 'map2' && stars >= 1) {
     save.maps.map3.unlocked = true;
+  } else if (mapId === 'map3' && stars >= 1) {
+    save.maps.map4.unlocked = true;
   }
 
   saveNow();
@@ -137,6 +144,7 @@ function unlockAllMapsForTest() {
   save.maps.map1.unlocked = true;
   save.maps.map2.unlocked = true;
   save.maps.map3.unlocked = true;
+  save.maps.map4.unlocked = true;
   saveNow();
 }
 

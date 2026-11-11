@@ -427,6 +427,198 @@ const WAVES = {
         { type: 'swift', count: 12, interval: 0.8, start: 60 }
       ]
     }
+  ],
+
+  map4: [
+    // Wave 1: 南北圣道双线试探
+    {
+      wave: 1,
+      groups: [
+        { type: 'beetle', count: 7, interval: 1.4, start: 0 },
+        { type: 'beetle', count: 5, interval: 1.5, start: 4, routeIndex: 1 }
+      ]
+    },
+    // Wave 2: 疾风飞蛾与分裂潜流
+    {
+      wave: 2,
+      groups: [
+        { type: 'beetle', count: 7, interval: 1.3, start: 0 },
+        { type: 'swift', count: 6, interval: 0.9, start: 6, routeIndex: 1 },
+        { type: 'splitter', count: 2, interval: 2.2, start: 12 }
+      ]
+    },
+    // Wave 3: 古殿重甲伴随空袭初启
+    {
+      wave: 3,
+      groups: [
+        { type: 'armored', count: 2, interval: 2.8, start: 0 },
+        { type: 'beetle', count: 8, interval: 1.2, start: 5 },
+        { type: 'moth', count: 4, interval: 1.7, start: 12 },
+        { type: 'swift', count: 6, interval: 0.9, start: 18, routeIndex: 1 }
+      ]
+    },
+    // Wave 4: 潜地伏击与双翼疾袭
+    {
+      wave: 4,
+      groups: [
+        { type: 'burrower', count: 2, interval: 2.2, start: 0, routeIndex: 1 },
+        { type: 'splitter', count: 3, interval: 2.0, start: 5 },
+        { type: 'moth', count: 5, interval: 1.6, start: 12 },
+        { type: 'swift', count: 8, interval: 0.85, start: 20 }
+      ]
+    },
+    // Wave 5: 巫毒萨满统御重甲先遣军
+    {
+      wave: 5,
+      groups: [
+        { type: 'shaman', count: 1, interval: 1.0, start: 0 },
+        { type: 'armored', count: 3, interval: 2.6, start: 3 },
+        { type: 'beetle', count: 8, interval: 1.1, start: 8, routeIndex: 1 },
+        { type: 'moth', count: 6, interval: 1.5, start: 16 }
+      ]
+    },
+    // Wave 6: 织网古蛛封塔配合残骸冲锋
+    {
+      wave: 6,
+      groups: [
+        { type: 'weaver', count: 2, interval: 2.4, start: 0 },
+        { type: 'skeletal_husk', count: 4, interval: 1.8, start: 6 },
+        { type: 'leaper', count: 3, interval: 1.5, start: 12, routeIndex: 1 },
+        { type: 'swift', count: 8, interval: 0.8, start: 20 }
+      ]
+    },
+    // Wave 7: 攻城巨兜登场，天空魔蛾掩护
+    {
+      wave: 7,
+      groups: [
+        { type: 'siege_beetle', count: 1, interval: 1.0, start: 0 },
+        { type: 'armored', count: 3, interval: 2.6, start: 5 },
+        { type: 'moth', count: 7, interval: 1.4, start: 10 },
+        { type: 'burrower', count: 3, interval: 1.8, start: 18, routeIndex: 1 }
+      ]
+    },
+    // Wave 8: 自爆酸蝉突袭与多分裂集群
+    {
+      wave: 8,
+      groups: [
+        { type: 'volatile_pod', count: 2, interval: 1.8, start: 0, routeIndex: 1 },
+        { type: 'splitter', count: 5, interval: 2.0, start: 5 },
+        { type: 'shaman', count: 1, interval: 1.0, start: 12 },
+        { type: 'armored', count: 4, interval: 2.5, start: 16 }
+      ]
+    },
+    // Wave 9: 飞跃蝗翼侧翼斩首
+    {
+      wave: 9,
+      groups: [
+        { type: 'weaver', count: 2, interval: 2.2, start: 0 },
+        { type: 'leaper', count: 5, interval: 1.2, start: 6, routeIndex: 1 },
+        { type: 'moth', count: 8, interval: 1.35, start: 14 },
+        { type: 'swift', count: 10, interval: 0.75, start: 24 }
+      ]
+    },
+    // Wave 10: 半程祭坛铁卫阵线
+    {
+      wave: 10,
+      groups: [
+        { type: 'siege_beetle', count: 2, interval: 3.8, start: 0 },
+        { type: 'shaman', count: 2, interval: 3.0, start: 6 },
+        { type: 'armored', count: 4, interval: 2.5, start: 12 },
+        { type: 'splitter', count: 5, interval: 2.0, start: 20, routeIndex: 1 },
+        { type: 'moth', count: 8, interval: 1.4, start: 28 }
+      ]
+    },
+    // Wave 11: 地下暗流潜行狂潮
+    {
+      wave: 11,
+      groups: [
+        { type: 'burrower', count: 5, interval: 1.4, start: 0, routeIndex: 1 },
+        { type: 'skeletal_husk', count: 6, interval: 1.6, start: 6 },
+        { type: 'volatile_pod', count: 3, interval: 1.6, start: 14 },
+        { type: 'swift', count: 10, interval: 0.8, start: 24, routeIndex: 1 }
+      ]
+    },
+    // Wave 12: 萨满巫阵与魔蛾天幕
+    {
+      wave: 12,
+      groups: [
+        { type: 'shaman', count: 2, interval: 2.8, start: 0 },
+        { type: 'armored', count: 5, interval: 2.4, start: 6 },
+        { type: 'moth', count: 10, interval: 1.3, start: 14 },
+        { type: 'weaver', count: 3, interval: 2.0, start: 24, routeIndex: 1 }
+      ]
+    },
+    // Wave 13: 双线攻城铁锤强拆
+    {
+      wave: 13,
+      groups: [
+        { type: 'siege_beetle', count: 2, interval: 3.4, start: 0 },
+        { type: 'siege_beetle', count: 1, interval: 1.0, start: 10, routeIndex: 1 },
+        { type: 'leaper', count: 5, interval: 1.1, start: 16, routeIndex: 1 },
+        { type: 'splitter', count: 7, interval: 1.8, start: 24 },
+        { type: 'swift', count: 10, interval: 0.8, start: 34 }
+      ]
+    },
+    // Wave 14: 剧毒爆虫与织网封锁阵
+    {
+      wave: 14,
+      groups: [
+        { type: 'weaver', count: 3, interval: 1.9, start: 0 },
+        { type: 'volatile_pod', count: 4, interval: 1.5, start: 8, routeIndex: 1 },
+        { type: 'armored', count: 6, interval: 2.3, start: 16 },
+        { type: 'moth', count: 10, interval: 1.3, start: 26 },
+        { type: 'burrower', count: 4, interval: 1.5, start: 36, routeIndex: 1 }
+      ]
+    },
+    // Wave 15: 残骸复生潮与双翼绝杀
+    {
+      wave: 15,
+      groups: [
+        { type: 'skeletal_husk', count: 7, interval: 1.5, start: 0 },
+        { type: 'shaman', count: 2, interval: 2.8, start: 6 },
+        { type: 'leaper', count: 6, interval: 1.0, start: 14, routeIndex: 1 },
+        { type: 'splitter', count: 7, interval: 1.9, start: 24 },
+        { type: 'moth', count: 10, interval: 1.25, start: 34 }
+      ]
+    },
+    // Wave 16: 圣墟总攻前夕重甲洪流
+    {
+      wave: 16,
+      groups: [
+        { type: 'siege_beetle', count: 3, interval: 3.0, start: 0 },
+        { type: 'armored', count: 6, interval: 2.2, start: 8 },
+        { type: 'weaver', count: 3, interval: 1.8, start: 16 },
+        { type: 'volatile_pod', count: 4, interval: 1.4, start: 24, routeIndex: 1 },
+        { type: 'moth', count: 10, interval: 1.2, start: 34 }
+      ]
+    },
+    // Wave 17: 蚀日降临前哨全兵种合围
+    {
+      wave: 17,
+      groups: [
+        { type: 'shaman', count: 3, interval: 2.5, start: 0 },
+        { type: 'burrower', count: 5, interval: 1.3, start: 6, routeIndex: 1 },
+        { type: 'leaper', count: 6, interval: 1.0, start: 14, routeIndex: 1 },
+        { type: 'armored', count: 6, interval: 2.2, start: 22 },
+        { type: 'splitter', count: 8, interval: 1.8, start: 32 },
+        { type: 'moth', count: 12, interval: 1.2, start: 42 }
+      ]
+    },
+    // Wave 18: 最终决战 蚀日圣甲皇降临！
+    {
+      wave: 18,
+      groups: [
+        { type: 'boss_m4', count: 1, interval: 1.0, start: 0 },
+        { type: 'shaman', count: 2, interval: 2.8, start: 5 },
+        { type: 'siege_beetle', count: 2, interval: 3.4, start: 10 },
+        { type: 'leaper', count: 5, interval: 1.2, start: 16, routeIndex: 1 },
+        { type: 'armored', count: 5, interval: 2.4, start: 24 },
+        { type: 'burrower', count: 4, interval: 1.5, start: 32, routeIndex: 1 },
+        { type: 'splitter', count: 6, interval: 2.0, start: 40 },
+        { type: 'moth', count: 10, interval: 1.3, start: 48 },
+        { type: 'swift', count: 12, interval: 0.8, start: 58 }
+      ]
+    }
   ]
 };
 

@@ -119,6 +119,9 @@ module.exports = {
   map3_name: 'Map 3: Nightglow Fungi',
   map3_subtitle: 'Bioluminescent Night · 15 Waves',
   map3_desc: 'Twin upper & lower night corridors under surging glow. Ultimate synergy test of all 5 guardians!',
+  map4_name: 'Map 4: Eclipsed Temple',
+  map4_subtitle: 'Sunlit Ruins · 18 Waves',
+  map4_desc: 'Dual sacred causeways converge before the ancient altar across 18 relentless waves!',
   map_locked: 'Clear previous map to unlock',
   best_stars: 'Best Stars',
   best_time: 'Best Time',
@@ -212,6 +215,8 @@ module.exports = {
   enemy_boss_m2_tip: 'Flying Boss! 66% HP: spawns Moths; 33% HP: Slow Immune.',
   enemy_boss_m3_name: 'Brood Matrix',
   enemy_boss_m3_tip: '66% HP: spawns Larvae; splits into 3 Splitters on death!',
+  enemy_boss_m4_name: 'Eclipse Titan',
+  enemy_boss_m4_tip: '65% HP: summons Armored guards; splits into 3 Armored bugs on death!',
   enemy_type_boss: 'Boss',
 
   // Settings & Guide

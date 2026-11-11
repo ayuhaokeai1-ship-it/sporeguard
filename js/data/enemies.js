@@ -222,6 +222,42 @@ const ENEMIES = {
     }
   },
 
+  boss_m4: {
+    id: 'boss_m4',
+    nameKey: 'enemy_boss_m4_name', // 蚀日圣甲皇
+    typeKey: 'enemy_type_boss',
+    tipKey: 'enemy_boss_m4_tip',
+    baseHp: 3900,
+    speed: 0.74,
+    armor: 18,
+    threat: 5,
+    reward: 220,
+    isFlying: false,
+    slowFactor: 1.0,
+    artSize: { width: 32, height: 32 },
+    animFrames: { walk: 6, phase: 4, death: 4 },
+    splitOnDeath: null,
+    isBoss: true,
+    phases: {
+      phase2Threshold: 0.65,
+      phase2WebBarrage: 2,
+      phase2Summon: {
+        type: 'armored',
+        count: 2,
+        interval: 11.0
+      },
+      phase3Threshold: 0.35,
+      phase3SpeedMultiplier: 1.42,
+      phase3Earthquake: true,
+      phase3Armor: 16,
+      phase3SlowImmune: false,
+      phase3DeathSplit: {
+        type: 'armored',
+        count: 3
+      }
+    }
+  },
+
   burrower: {
     id: 'burrower',
     nameKey: 'enemy_burrower_name',

@@ -73,6 +73,29 @@ class ForestContraptions {
         arcTimer: 0,
         animTimer: 0
       };
+    } else if (mapId === 'map4') {
+      this.pitcher = {
+        col: 4,
+        row: 10,
+        x: (4 + 0.5) * TILE_SIZE,
+        y: (10 + 0.5) * TILE_SIZE,
+        cd: 0,
+        maxCd: 18.0,
+        cost: 35,
+        digestTimer: 0,
+        animTimer: 0
+      };
+      this.thunderTree = {
+        col: 11,
+        row: 8,
+        x: (11 + 0.5) * TILE_SIZE,
+        y: (8 + 0.5) * TILE_SIZE,
+        cd: 0,
+        maxCd: 24.0,
+        cost: 45,
+        arcTimer: 0,
+        animTimer: 0
+      };
     } else {
       this.pitcher = {
         col: 5,
@@ -192,7 +215,7 @@ class ForestContraptions {
     // 森林闲趣小生灵状态更新
   }
 
-  handlePointerDown(inputX, inputY, scene) {
+  handlePointerDown(inputX, inputY, scene, dewOnly = false) {
     if (!scene || scene.state !== 'BATTLE') return false;
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const scale = mv.SCALE || 0.85;
@@ -224,6 +247,8 @@ class ForestContraptions {
         return true;
       }
     }
+
+    if (dewOnly) return false;
 
     // 2. 点击食虫巨猪笼草
     if (this.pitcher) {

@@ -50,6 +50,7 @@ const AUDIO_PATHS = {
   boss_map1: 'subpackages/map1/boss.wav',
   boss_map2: 'subpackages/map2/boss.wav',
   boss_map3: 'subpackages/map3/boss.wav',
+  boss_map4: 'subpackages/map4/boss.wav',
   sfx_click: 'audio/sfx_click.wav',
   sfx_build: 'audio/sfx_build.wav',
   sfx_upgrade: 'audio/sfx_upgrade.wav',

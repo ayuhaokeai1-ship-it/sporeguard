@@ -35,6 +35,9 @@ class ForestHero {
     } else if (mapId === 'map3') {
       this.x = 208;
       this.y = 80;
+    } else if (mapId === 'map4') {
+      this.x = 464;
+      this.y = 240;
     } else {
       this.x = 208;
       this.y = 176;
