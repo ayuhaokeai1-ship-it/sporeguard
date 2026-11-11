@@ -185,7 +185,7 @@ class CombatAnalyticsSystem {
       ctx.fillStyle = '#FFFDF5';
       ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills}灭`, barX + barMaxW + 8, ry + 13);
+      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 8, ry + 13);
     }
 
     // 5. 底部关闭说明

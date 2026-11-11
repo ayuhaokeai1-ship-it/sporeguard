@@ -637,13 +637,14 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（精确维持原坐标与居中定位）
+    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（动态避让首领血条）
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
-      const by = 86;
+      const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
+      const by = hasBossHud ? 116 : 64;
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
 

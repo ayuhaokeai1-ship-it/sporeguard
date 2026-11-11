@@ -2521,7 +2521,7 @@ module.exports = {
   // 地图名称与描述
   map1_name: '地图 1：晨雾林地',
   map1_subtitle: '青绿晨雾 · 10 波',
-  map1_desc: '双线晨雾林地，南部暗穴与主道交错汇流，宜在转角布阵尖刺与爆裂清群。',
+  map1_desc: '双线晨雾林地与南部暗穴汇流，宜在转角布阵尖刺与爆裂。',
   map2_name: '地图 2：苔藓溪谷',
   map2_subtitle: '湿润溪流 · 12 波',
   map2_desc: '双回环溪谷地形兼有东南暗道偷袭，空中航线横跨溪面，需提前部署防空火力。',
@@ -4075,54 +4075,51 @@ class AchievementManager {
     ctx.save();
     const item = this.currentToast;
     const tw = 360;
-    const th = 48;
+    const th = 42;
     const tx = (960 - tw) * 0.5;
     
-    // 顶部平滑滑出动画
-    let ty = 24;
+    // 顶部紧凑滑出动画（位于 Boss 血条上方安全带 y=10..52，零重叠）
+    let ty = 10;
     if (this.toastTimer > 3.2) {
       const prog = (3.6 - this.toastTimer) / 0.4;
-      ty = -50 + prog * 74;
+      ty = -46 + prog * 56;
     } else if (this.toastTimer < 0.4) {
       const prog = this.toastTimer / 0.4;
-      ty = -50 + prog * 74;
+      ty = -46 + prog * 56;
     }
 
-    // 古典林地木纹与羊皮纸底框
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
+    // 古典林地木纹框
+    ctx.fillStyle = 'rgba(28, 18, 10, 0.94)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(tx, ty, tw, th, 10) : ctx.rect(tx, ty, tw, th);
     ctx.fill();
 
     ctx.strokeStyle = '#FFE58F';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     // 左侧徽章大图标
-    ctx.font = '22px sans-serif';
+    ctx.font = '20px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(item.icon, tx + 28, ty + 24);
+    ctx.fillText(item.icon, tx + 26, ty + 21);
 
     // 标题：成就解锁
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`成就达成 · ${item.title}`, tx + 56, ty + 16);
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 52, ty + 14);
 
     // 描述详情
-    ctx.fillStyle = '#D9D9D9';
+    ctx.fillStyle = '#E8DEC8';
     ctx.font = '10px "Microsoft YaHei", sans-serif';
-    ctx.fillText(item.desc, tx + 56, ty + 34);
+    ctx.fillText(item.desc, tx + 52, ty + 30);
 
     // 右侧奖励星级
     ctx.fillStyle = '#FFE58F';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 16, ty + 24);
+    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 14, ty + 21);
 
     ctx.restore();
   }
@@ -5409,13 +5406,14 @@ class FxSystem {
       platform.recordDrawCall(1);
     }
 
-    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（精确维持原坐标与居中定位）
+    // 顶部横幅（连锁！/超载！/波次提示）：优先采用 AI 黄金/绯红卷轴丝带（动态避让首领血条）
     if (this.banner.active) {
       const b = this.banner;
       const bw = 460;
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
-      const by = 86;
+      const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
+      const by = hasBossHud ? 116 : 64;
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');
 
@@ -11382,7 +11380,7 @@ class CombatAnalyticsSystem {
       ctx.fillStyle = '#FFFDF5';
       ctx.font = 'bold 10.5px "Microsoft YaHei UI", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills}灭`, barX + barMaxW + 8, ry + 13);
+      ctx.fillText(`${item.damage.toLocaleString()} (${pct}%) · ${item.kills} 击杀`, barX + barMaxW + 8, ry + 13);
     }
 
     // 5. 底部关闭说明
@@ -14870,11 +14868,11 @@ class BossOverdriveEngine {
     const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (位于成就横幅 24..72 下方安全区，永不重迭遮挡)
+    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=76..114 安全带)
     const barW = 360;
     const barH = 16;
     const barX = (960 - barW) * 0.5;
-    const barY = 92;
+    const barY = 78;
     const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
     const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
     const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
@@ -18082,6 +18080,9 @@ function drawArtText(ctx, text, x, y, options = {}) {
   } else if (style === 'parchment') {
     strokeColor = 'rgba(20, 14, 8, 0.75)';
     gradColors = ['#FFFDF5', '#F5ECD0', '#E5D3A6', '#C9B178'];
+  } else if (style === 'dim') {
+    strokeColor = 'rgba(14, 10, 6, 0.72)';
+    gradColors = ['#C4B79E', '#A89B84', '#8C7F6A', '#6B604E'];
   } else if (style === 'white') {
     strokeColor = 'rgba(0, 0, 0, 0.82)';
     gradColors = ['#FFFFFF', '#FFFFFF', '#F0F0F0', '#D9D9D9'];
@@ -18090,33 +18091,45 @@ function drawArtText(ctx, text, x, y, options = {}) {
   if (options.strokeColor) strokeColor = options.strokeColor;
   if (options.shadowColor) shadowColor = options.shadowColor;
 
-  // 描边宽度限制：小字严控在 0.8~1.0px，彻底告别笔画被黑边吞没
+  // 精细字体轮廓规范：<=13px 小字彻底免除粗重描边糊字，仅以 1px 清晰落影提亮；中大字收窄为发丝微边
   let effectiveStroke = 0;
   if (options.strokeWidth !== undefined) {
-    effectiveStroke = options.strokeWidth;
+    effectiveStroke = size <= 13 ? Math.min(0.65, options.strokeWidth) : Math.min(1.4, options.strokeWidth * 0.78);
   } else {
-    effectiveStroke = size <= 15 ? 0.8 : (size <= 18 ? 1.1 : Math.min(2.0, size * 0.10));
+    effectiveStroke = size <= 13 ? 0 : (size <= 17 ? 0.55 : Math.min(1.4, size * 0.065));
   }
 
   // 性能飞跃优化：用 1px 偏移轻投影彻底替换极其昂贵的 ctx.shadowBlur（消除每秒上千次高斯模糊软光栅化）
   if (shadowColor && shadowColor !== 'transparent') {
     ctx.fillStyle = shadowColor;
-    ctx.fillText(str, x, y + 1);
+    if (options.maxWidth) {
+      ctx.fillText(str, x, y + 1, options.maxWidth);
+    } else {
+      ctx.fillText(str, x, y + 1);
+    }
   }
 
   // 2. 发丝级描边（若开启）
   if (effectiveStroke > 0) {
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = effectiveStroke * 1.3;
+    ctx.lineWidth = effectiveStroke * 1.15;
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
-    ctx.strokeText(str, x, y);
+    if (options.maxWidth) {
+      ctx.strokeText(str, x, y, options.maxWidth);
+    } else {
+      ctx.strokeText(str, x, y);
+    }
   }
 
-  // 3. 字体字面（小字直接采用亮色常数，大字避免每帧频繁分配线性渐变对象）
-  if (size <= 15 || style !== 'gold') {
-    ctx.fillStyle = gradColors[0];
-    ctx.fillText(str, x, y);
+  // 3. 字体字面（小字直接采用高对比亮色或调用方指定的 options.color）
+  if (size <= 15 || style !== 'gold' || options.color) {
+    ctx.fillStyle = options.color || gradColors[0];
+    if (options.maxWidth) {
+      ctx.fillText(str, x, y, options.maxWidth);
+    } else {
+      ctx.fillText(str, x, y);
+    }
   } else {
     const h = size;
     const topY = baseline === 'middle' ? y - h * 0.5 : (baseline === 'top' ? y : y - h);
@@ -18125,15 +18138,23 @@ function drawArtText(ctx, text, x, y, options = {}) {
     grad.addColorStop(0.45, gradColors[1]);
     grad.addColorStop(1.0, gradColors[2]);
     ctx.fillStyle = grad;
-    ctx.fillText(str, x, y);
+    if (options.maxWidth) {
+      ctx.fillText(str, x, y, options.maxWidth);
+    } else {
+      ctx.fillText(str, x, y);
+    }
   }
 
   // 4. 大号黄金标题顶边微高光
-  if (size >= 16 && style === 'gold') {
+  if (size >= 16 && style === 'gold' && !options.color) {
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(str, x, y - 0.6);
+    if (options.maxWidth) {
+      ctx.fillText(str, x, y - 0.6, options.maxWidth);
+    } else {
+      ctx.fillText(str, x, y - 0.6);
+    }
     ctx.restore();
   }
 
@@ -18708,19 +18729,19 @@ class UiManager {
     const titleBannerX = (960 - titleBannerW) * 0.5;
     const titleBannerY = 34;
     this.drawAiFrame(ctx, 'top_bar', titleBannerX, titleBannerY, titleBannerW, titleBannerH, 0.94);
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', 480, titleBannerY + 32, {
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', 480, titleBannerY + 29, {
       style: 'gold',
-      size: 32,
+      size: 30,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 2.2
+      strokeWidth: 1.6
     });
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', 480, titleBannerY + 57, {
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', 480, titleBannerY + 52, {
       style: 'parchment',
-      size: 11,
+      size: 11.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.9
+      strokeWidth: 0
     });
 
     // 底部雕刻木质命令栏
@@ -18806,18 +18827,21 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      roundRectPath(ctx, 582, 22, 110, 32, 8);
-      ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
+      if (!this.drawAiFrame(ctx, 'top_bar', 580, 20, 114, 36, 0.96)) {
+        roundRectPath(ctx, 580, 20, 114, 36, 8);
+        ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
       drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 637, 38, {
         style: 'gold',
-        size: 10.5,
+        size: 11,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 0.8
+        strokeWidth: 0,
+        maxWidth: 100
       });
       ctx.restore();
     }
@@ -20182,12 +20206,12 @@ class UiManager {
         ctx.stroke();
       }
 
-      drawArtText(ctx, `强化 · ${up.cost}孢`, ux + uw * 0.5, uy + 14, {
+      drawArtText(ctx, `强化 · ${up.cost}`, ux + uw * 0.5, uy + 14, {
         style: canAfford ? 'gold' : 'parchment',
         size: 11,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: 0.9
+        strokeWidth: 0
       });
 
       this.registerButton('quick_up_single', ux, uy, uw, uh, () => {
@@ -20429,18 +20453,18 @@ class UiManager {
     ctx.stroke();
     drawUiIcon(ctx, 24, tower.typeId, x + 27, y + 31, 40);
 
-    // 标题：守卫名字 · 节点名字（下移至 y+40，完全避开顶部厚木框，绝无遮挡）
+    // 标题：守卫名字 · 节点名字（上移 3px 与下方等级徽章留出舒展行距）
     ctx.fillStyle = THEME.INK_DARK;
     ctx.font = `bold 15px ${UI_FONT}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const fullName = `${i18n.t(def.nameKey)} · ${i18n.t(node.nameKey)}`;
-    ctx.fillText(fullName, x + 76, y + 40, Math.max(80, w - 118));
+    ctx.fillText(fullName, x + 76, y + 36, Math.max(80, w - 118));
 
-    // 等级阶级徽章（胶囊型，y+54）
+    // 等级阶级徽章（胶囊型，y+55）
     const lvMap = { base: '基础 1阶', lv1: '强化 2阶', a2: '甲线 3阶', a3: '甲线 顶阶', b2: '乙线 3阶', b3: '乙线 顶阶' };
     const lvBadgeW = 62;
-    roundRectPath(ctx, x + 76, y + 54, lvBadgeW, 18, 9);
+    roundRectPath(ctx, x + 76, y + 55, lvBadgeW, 18, 9);
     ctx.fillStyle = tower.branch === 'A' ? '#1D6373' : (tower.branch === 'B' ? '#8C4D18' : '#33612E');
     ctx.fill();
     ctx.fillStyle = '#FFFDF5';
@@ -20471,19 +20495,19 @@ class UiManager {
     }
     if (synName) {
       const synTagX = x + 76 + lvBadgeW + 8 + 88;
-      roundRectPath(ctx, synTagX, y + 54, 58, 18, 9);
+      roundRectPath(ctx, synTagX, y + 55, 58, 18, 9);
       ctx.fillStyle = synBg;
       ctx.fill();
       ctx.fillStyle = '#FFFDF5';
       ctx.font = `bold 10px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(synName, synTagX + 29, y + 63);
+      ctx.fillText(synName, synTagX + 29, y + 64);
     }
 
     const roleTagX = x + 76 + lvBadgeW + 8;
     const roleTagW = 84;
-    roundRectPath(ctx, roleTagX, y + 54, roleTagW, 18, 9);
+    roundRectPath(ctx, roleTagX, y + 55, roleTagW, 18, 9);
     ctx.fillStyle = 'rgba(92, 64, 40, 0.10)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
@@ -20494,7 +20518,7 @@ class UiManager {
     ctx.font = `bold 10px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(roleStr, roleTagX + roleTagW * 0.5, y + 63);
+    ctx.fillText(roleStr, roleTagX + roleTagW * 0.5, y + 64);
     ctx.restore();
 
     // 2. 核心战斗属性药丸胶囊（攻击 / 间隔 / 射程，三等分铺满 276px 可用内宽，y+78）
@@ -21320,30 +21344,41 @@ class UiManager {
       const cardW = mw - 72;
       const cardH = 78;
       roundRectPath(ctx, cardX, cardY, cardW, cardH, 10);
-      ctx.fillStyle = 'rgba(88, 58, 28, 0.12)';
+      ctx.fillStyle = 'rgba(255, 248, 228, 0.45)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(140, 94, 42, 0.35)';
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.42)';
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
+      // 细腻内部十字分割线，使 2×2 战绩数据一目了然
+      ctx.beginPath();
+      ctx.moveTo(cardX + cardW * 0.5, cardY + 10);
+      ctx.lineTo(cardX + cardW * 0.5, cardY + cardH - 10);
+      ctx.moveTo(cardX + 14, cardY + cardH * 0.5);
+      ctx.lineTo(cardX + cardW - 14, cardY + cardH * 0.5);
+      ctx.strokeStyle = 'rgba(140, 94, 42, 0.18)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+
       const cells = [
-        { k: i18n.t('best_time'), v: `${timeSec}s` },
-        { k: i18n.t('seeds_label'), v: `${scene.settlementResult.remainingSeeds} / 20` },
+        { k: '通关用时', v: `${timeSec}s` },
+        { k: '剩余种子', v: `${scene.settlementResult.remainingSeeds} / 20` },
         { k: '累计歼灭', v: `${totalKills} 只` },
         { k: '全场核心', v: maxCatDmg > 0 ? `${mvpName} (${Math.round(totalDmg / 100) / 10}k)` : '稳固防线' }
       ];
       for (let ci = 0; ci < 4; ci++) {
         const colI = ci % 2;
         const rowI = Math.floor(ci / 2);
-        const cx = cardX + 14 + colI * (cardW * 0.5);
-        const cy = cardY + 20 + rowI * 36;
+        const cx = cardX + 16 + colI * (cardW * 0.5);
+        const cy = cardY + 14 + rowI * 36;
         ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = THEME.INK_MID;
         ctx.font = `11px ${CN_FONT}`;
         ctx.fillText(cells[ci].k, cx, cy);
         ctx.fillStyle = THEME.INK_DARK;
-        ctx.font = `bold 13.5px ${CN_FONT}`;
-        ctx.fillText(cells[ci].v, cx, cy + 16);
+        ctx.font = `bold 13px ${CN_FONT}`;
+        ctx.fillText(cells[ci].v, cx, cy + 16, cardW * 0.5 - 24);
       }
 
       const bx = mx + 65;
@@ -21478,7 +21513,7 @@ class UiManager {
       bw,
       btnH,
       '查阅森林图鉴与秘典',
-      { skin: 'btn_wood', iconKey: 'guide' },
+      { skin: 'btn_wood', iconCat: 24, iconKey: 'guide' },
       () => {
         platform.playSfx('sfx_click');
         this.guideStep = 0;
@@ -21950,10 +21985,10 @@ class UiManager {
     ];
 
     const curEnemyId = this.codexSelectedEnemy || 'beetle';
-    const leftW = 226; // 双列展示 17 只怪物
+    const leftW = 244; // 双列展示 17 只怪物，加宽留白防6字长名挤压
 
     // 左侧双列 2x9 布局：直接容纳 17 只怪物，无需翻页
-    const colW = 110;
+    const colW = 119;
     for (let i = 0; i < allEnemies.length; i++) {
       const e = allEnemies[i];
       const ci = i % 2;
@@ -21975,7 +22010,8 @@ class UiManager {
         size: 10.5,
         align: 'left',
         baseline: 'middle',
-        strokeWidth: 0.6
+        strokeWidth: 0,
+        maxWidth: colW - 36
       });
       // 小型怪物头像微章（匹配守卫图鉴视觉密度与手绘辨识度）
       const thumbImg = platform.getImage(`assets/vfx/enemy_${e.id}.png`) ||
@@ -22327,12 +22363,12 @@ class UiManager {
       });
 
       // 描述简述
-      ctx.fillStyle = a.unlocked ? '#5E3E26' : '#D9CBA8';
-      ctx.font = '9px ' + CN_FONT;
+      ctx.fillStyle = a.unlocked ? '#5E3E26' : '#F2E5C6';
+      ctx.font = '9.8px ' + CN_FONT;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      const shortDesc = a.desc.length > 26 ? a.desc.slice(0, 25) + '...' : a.desc;
-      ctx.fillText(shortDesc, cx + 30, cy + 19.5);
+      const shortDesc = a.desc.length > 24 ? a.desc.slice(0, 23) + '...' : a.desc;
+      ctx.fillText(shortDesc, cx + 30, cy + 19.5, cardW - 66);
 
       // 右侧星级与状态
       drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 13, {
@@ -22341,7 +22377,7 @@ class UiManager {
         size: 11,
         align: 'center',
         baseline: 'middle',
-        strokeWidth: a.unlocked ? 0 : 0.6
+        strokeWidth: 0
       });
     }
 
@@ -22376,32 +22412,33 @@ class UiManager {
       ctx.stroke();
     }
 
-    // 阳光金孢大珍珠图标 (32x32)
+    // 阳光金孢大珍珠图标 (25x25 避让右侧四位以上孢子大数字)
     const sporeImg = platform.getImage('assets/vfx/item_golden_spore.png') || platform.getImage('assets/ui/icons/icon_spore.png');
     if (sporeImg && sporeImg.width) {
-      ctx.drawImage(sporeImg, sporeX + 5, sporeY + 15, 32, 32);
+      ctx.drawImage(sporeImg, sporeX + 8, sporeY + 21, 25, 25);
     } else {
-      drawUiIcon(ctx, 16, 'spore', sporeX + 7, sporeY + 17, 28);
+      drawUiIcon(ctx, 16, 'spore', sporeX + 8, sporeY + 22, 24);
     }
 
-    // 金黄粗体孢子数字 (大号清晰 17px 粗体)
+    // 金黄粗体孢子数字 (居中嵌于右侧宽敞区域，杜绝四位数触碰金币)
     const spores = scene.economy.spores;
-    drawArtText(ctx, String(spores), sporeX + 56, sporeY + 36, {
+    drawArtText(ctx, String(spores), sporeX + 61, sporeY + 37, {
       style: 'gold',
-      size: 17,
+      size: 16,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.8
+      strokeWidth: 0.9,
+      maxWidth: 44
     });
 
-    // 顶部生命守护值 (❤️ 20，字号升级至 12px 大字)
+    // 顶部生命守护值
     const seeds = scene.economy.seeds;
     drawArtText(ctx, '❤️ ' + seeds, sporeX + 56, sporeY + 13, {
       style: seeds <= 5 ? 'crimson' : 'parchment',
       size: 12,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.0
+      strokeWidth: 0
     });
     ctx.restore();
 
@@ -22742,49 +22779,49 @@ class UiManager {
     }[hero.stance || 'guardian'] || { label: '🛡️ 守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
 
     ctx.save();
-    if (!this.drawAiFrame(ctx, stanceMeta.skin, 12, hy - hr - 24, 58, 18, 0.98)) {
-      roundRectPath(ctx, 12, hy - hr - 24, 58, 18, 9);
+    if (!this.drawAiFrame(ctx, stanceMeta.skin, 13, hy - hr - 24, 68, 18, 0.98)) {
+      roundRectPath(ctx, 13, hy - hr - 24, 68, 18, 9);
       ctx.fillStyle = stanceMeta.bg;
       ctx.fill();
       ctx.strokeStyle = stanceMeta.bd;
       ctx.lineWidth = 1.2;
       ctx.stroke();
     }
-    drawArtText(ctx, stanceMeta.label, 41, hy - hr - 15, {
+    drawArtText(ctx, stanceMeta.label, 47, hy - hr - 15, {
       style: 'parchment',
       color: stanceMeta.col,
       size: 9.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.7
+      strokeWidth: 0
     });
     ctx.restore();
 
-    this.registerButton('pvz_hero_stance', 12, hy - hr - 24, 58, 18, () => {
+    this.registerButton('pvz_hero_stance', 13, hy - hr - 24, 68, 18, () => {
       hero.cycleStance(scene.fx);
       if (hero.stanceSwitchedCount >= 3 && scene.achievements) {
         scene.achievements.unlock('tactical_stances', scene.fx);
       }
     });
 
-    // 1.2 英雄大招 [F] 触发微章（位于头像右侧 y=hy-hr-24）
+    // 1.2 英雄大招 [F] 触发微章（舒展铺齐底托上排右半区）
     const ultCd = hero.skillCooldown || 0;
     const ultReady = ultCd <= 0 && hero.state !== 'dead';
     ctx.save();
-    if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', 74, hy - hr - 24, 72, 18, ultReady ? 1.0 : 0.75)) {
-      roundRectPath(ctx, 74, hy - hr - 24, 72, 18, 9);
+    if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', 85, hy - hr - 24, 88, 18, ultReady ? 1.0 : 0.78)) {
+      roundRectPath(ctx, 85, hy - hr - 24, 88, 18, 9);
       ctx.fillStyle = ultReady ? 'rgba(62, 42, 10, 0.94)' : 'rgba(24, 18, 12, 0.88)';
       ctx.fill();
       ctx.strokeStyle = ultReady ? '#FFD700' : 'rgba(140, 110, 70, 0.45)';
       ctx.lineWidth = ultReady ? 1.5 : 1.0;
       ctx.stroke();
     }
-    drawArtText(ctx, ultReady ? '⚡裂地斩[F]' : `奥义 ${Math.ceil(ultCd)}s`, 110, hy - hr - 15, {
+    drawArtText(ctx, ultReady ? '⚡裂地斩[F]' : `奥义 ${Math.ceil(ultCd)}s`, 129, hy - hr - 15, {
       style: ultReady ? 'gold' : 'dim',
       size: 9.5,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0.7
+      strokeWidth: 0
     });
     ctx.restore();
 

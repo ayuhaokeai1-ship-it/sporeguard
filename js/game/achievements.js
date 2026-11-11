@@ -122,54 +122,51 @@ class AchievementManager {
     ctx.save();
     const item = this.currentToast;
     const tw = 360;
-    const th = 48;
+    const th = 42;
     const tx = (960 - tw) * 0.5;
     
-    // 顶部平滑滑出动画
-    let ty = 24;
+    // 顶部紧凑滑出动画（位于 Boss 血条上方安全带 y=10..52，零重叠）
+    let ty = 10;
     if (this.toastTimer > 3.2) {
       const prog = (3.6 - this.toastTimer) / 0.4;
-      ty = -50 + prog * 74;
+      ty = -46 + prog * 56;
     } else if (this.toastTimer < 0.4) {
       const prog = this.toastTimer / 0.4;
-      ty = -50 + prog * 74;
+      ty = -46 + prog * 56;
     }
 
-    // 古典林地木纹与羊皮纸底框
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = 'rgba(28, 18, 10, 0.95)';
+    // 古典林地木纹框
+    ctx.fillStyle = 'rgba(28, 18, 10, 0.94)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(tx, ty, tw, th, 10) : ctx.rect(tx, ty, tw, th);
     ctx.fill();
 
     ctx.strokeStyle = '#FFE58F';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     // 左侧徽章大图标
-    ctx.font = '22px sans-serif';
+    ctx.font = '20px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(item.icon, tx + 28, ty + 24);
+    ctx.fillText(item.icon, tx + 26, ty + 21);
 
     // 标题：成就解锁
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`成就达成 · ${item.title}`, tx + 56, ty + 16);
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 52, ty + 14);
 
     // 描述详情
-    ctx.fillStyle = '#D9D9D9';
+    ctx.fillStyle = '#E8DEC8';
     ctx.font = '10px "Microsoft YaHei", sans-serif';
-    ctx.fillText(item.desc, tx + 56, ty + 34);
+    ctx.fillText(item.desc, tx + 52, ty + 30);
 
     // 右侧奖励星级
     ctx.fillStyle = '#FFE58F';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 16, ty + 24);
+    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 14, ty + 21);
 
     ctx.restore();
   }
