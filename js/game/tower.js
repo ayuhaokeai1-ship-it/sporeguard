@@ -648,6 +648,9 @@ class TowerManager {
       if (this.scene && this.scene.photosyntheticSurgeBonus && this.towers.length >= 3) {
         speedCoeff *= (1.0 + this.scene.photosyntheticSurgeBonus);
       }
+      if (t.isAwakened && this.scene && this.scene.awakenedAtkSpeedMod > 1) {
+        speedCoeff *= this.scene.awakenedAtkSpeedMod;
+      }
       if (t.cooldown > 0) {
         t.cooldown = Math.max(0, t.cooldown - dt * speedCoeff);
       }
@@ -1239,6 +1242,7 @@ class TowerManager {
     tower.isWebbed = false;
     tower.poisonTimer = 0;
     tower.dormantTimer = 0;
+    tower.isAwakened = true;
     tower.superchargeTimer = 8.0;
     tower.animState = 'upgrade';
     tower.squashScaleX = 1.45;
@@ -1262,10 +1266,12 @@ class TowerManager {
       if (em && bm) {
         for (let i = 0; i < 30; i++) {
           setTimeout(() => {
+            if (!scene || scene.state !== 'BATTLE') return;
             const targets = em.getAliveEnemies();
             if (targets.length === 0) return;
             const target = targets[i % targets.length];
-            bm.spawnArrow(tower.x, tower.y - 14, target, tower.node, 55, true);
+            const wb = bm.spawnWatchBullet(tower.x, tower.y - 14, target, target.x, target.y, Object.assign({}, tower.node, { armorPierceRatio: 0.6 }), 55);
+            if (wb) wb.sourceTower = tower;
             if (i % 3 === 0) platform.playSfx('sfx_shoot');
           }, i * 85);
         }
@@ -1279,7 +1285,7 @@ class TowerManager {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (!e.isFlying && e.state !== 'death') {
-            em.applyDamage(e, 260, false, 'pierce', fx, null);
+            em.applyDamage(e, 260, false, 'pierce', fx, tower);
             e.activeSlow = 0.95;
             e.residualSlowValue = 0.90;
             e.residualSlowTimer = 4.0;
@@ -1296,9 +1302,11 @@ class TowerManager {
       platform.playSfx('sfx_bomb');
       if (em && bm) {
         const alive = em.getAliveEnemies();
-        const target = alive.length > 0 ? alive[0] : { x: 480, y: 270 };
-        bm.spawnCannonball(tower.x, tower.y - 16, target, tower.node, 450);
+        const target = alive.length > 0 ? alive[0] : { x: 320, y: 240 };
+        const bb = bm.spawnBurstShell(tower.x, tower.y - 16, target.x, target.y, Object.assign({}, tower.node, { splashRadius: 2.5 }), 450);
+        if (bb) bb.sourceTower = tower;
         setTimeout(() => {
+          if (!scene || scene.state !== 'BATTLE') return;
           if (fx) {
             fx.triggerScreenShake(8.0, 0.65);
             if (fx.spawnShockwave) fx.spawnShockwave(target.x, target.y, 160, '#FF4D4F');
@@ -1309,7 +1317,7 @@ class TowerManager {
             for (let i = 0; i < targets.length; i++) {
               const e = targets[i];
               if (Math.hypot(e.x - target.x, e.y - target.y) <= 180) {
-                em.applyDamage(e, 420, true, 'splash', fx, null);
+                em.applyDamage(e, 420, true, 'splash', fx, tower);
               }
             }
           }
@@ -1324,7 +1332,7 @@ class TowerManager {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (e.state !== 'death') {
-            em.applyDamage(e, 160, false, 'magic', fx, null);
+            em.applyDamage(e, 160, false, 'magic', fx, tower);
             e.baseArmor = 0;
             e.activeSlow = 0.85;
             e.residualSlowValue = 0.85;

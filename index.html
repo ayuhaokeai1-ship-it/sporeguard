@@ -388,6 +388,7 @@
       const touchMoveListeners = [];
       const touchEndListeners = [];
       const keyDownListeners = [];
+      const rightClickListeners = [];
       const resizeListeners = [];
       const hideListeners = [];
       const showListeners = [];
@@ -463,6 +464,9 @@
           },
           onKeyDown: function (cb) {
             if (typeof cb === 'function') keyDownListeners.push(cb);
+          },
+          onRightClick: function (cb) {
+            if (typeof cb === 'function') rightClickListeners.push(cb);
           },
           onHide: function (cb) {
             if (typeof cb === 'function') hideListeners.push(cb);
@@ -547,6 +551,10 @@
       let isMouseDown = false;
       let lastMouseMoveTime = 0;
       canvas.addEventListener('mousedown', function (e) {
+        if (e.button === 2) {
+          rightClickListeners.forEach(function (fn) { fn(); });
+          return;
+        }
         if (e.button !== 0) return;
         isMouseDown = true;
         const m = mapClientCoords(e.clientX, e.clientY);
@@ -554,6 +562,9 @@
         for (let i = 0; i < touchStartListeners.length; i++) {
           touchStartListeners[i](ev);
         }
+      });
+      canvas.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
       });
       window.addEventListener('mousemove', function (e) {
         const now = performance.now();

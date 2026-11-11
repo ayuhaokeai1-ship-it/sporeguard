@@ -331,6 +331,13 @@ class WaveManager {
       // 当本波所有组均已出完，且场上没有任何存活敌人时，本波完成
       if (allGroupsFinished && enemyManager.getAliveEnemies().length === 0) {
         const rewardInfo = economy.grantWaveClearReward(this.currentWaveIndex);
+        if (scene && scene.ancientKnowledgeTree && scene.ancientKnowledgeTree.getRank('elder_photosynthesis') > 0) {
+          const interest = Math.min(180, Math.round(economy.spores * 0.12));
+          if (interest > 0) {
+            economy.addSpores(interest);
+            if (fx) fx.spawnFloatingText(480, 220, `远古光合利息 +${interest} 孢子!`, '#FFE58F', 1.25);
+          }
+        }
 
         if (this.currentWaveIndex >= this.totalWaves) {
           if (scene && scene.isEndlessMode) {

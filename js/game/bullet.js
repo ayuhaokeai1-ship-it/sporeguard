@@ -261,7 +261,7 @@ class BulletManager {
     h.timer = 0;
     h.slow = node.slow || 0.30;
     h.residualSlowDuration = node.residualSlowDuration || 0;
-    h.armorReduction = node.armorReduction || 0;
+    h.armorReduction = (node.armorReduction || 0) + ((this.scene && this.scene.toxicMiasmaDebuff) ? this.scene.toxicMiasmaDebuff * 4 : 0);
     h.dps = node.dps || 4;
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -715,11 +715,12 @@ class BulletManager {
             fx.onBurstExplosion(b.targetX, b.targetY, b.splashRadiusPx, b.branchColor);
           }
 
-          // B3 熔金：爆心留下灼烧区（半径 1.0 格，持续 3 秒，每秒 8 点伤害）
-          if (b.burnZoneCfg) {
+          // B3 熔金或知识树「烈焰地裂」：爆心留下持续灼烧区
+          const burnSource = b.burnZoneCfg || (this.scene && this.scene.pyroFissureCfg);
+          if (burnSource) {
             const burnCfg = b.sourceTower
-              ? Object.assign({}, b.burnZoneCfg, { sourceTower: b.sourceTower })
-              : b.burnZoneCfg;
+              ? Object.assign({}, burnSource, { sourceTower: b.sourceTower })
+              : burnSource;
             this.spawnBurnZone(b.targetX, b.targetY, burnCfg);
           }
 

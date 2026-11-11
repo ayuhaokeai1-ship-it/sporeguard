@@ -110,6 +110,9 @@ class ForestHero {
     this.brambleShieldHp = 0;         // 石肤荆棘护盾当前吸收值
     this.brambleShieldMax = 320;      // 护盾上限
     this.stanceAbilityCooldown = 0;   // 姿态战术微操冷却
+    this.bonusHp = 0;                 // 远古知识树额外加成生命
+    this.thornReflectDmg = 0;         // 远古知识树荆棘反伤
+    this.scene = null;
   }
 
   /**
@@ -164,8 +167,10 @@ class ForestHero {
    */
   moveTo(x, y, fx = null) {
     if (this.state === 'dead') return;
-    this.targetX = Math.max(24, Math.min(936, x));
-    this.targetY = Math.max(24, Math.min(516, y));
+    const mapW = CONFIG.LAYOUT.MAP.WIDTH || 640;
+    const mapH = CONFIG.LAYOUT.MAP.HEIGHT || 480;
+    this.targetX = Math.max(24, Math.min(mapW - 24, x));
+    this.targetY = Math.max(24, Math.min(mapH - 24, y));
     this.state = 'walk';
     this.rallyMarkerTimer = 1.2;
     this.unblockAll();
@@ -202,9 +207,9 @@ class ForestHero {
     this.xp -= this.xpToNext;
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
-    // 属性飞跃成长
+    // 属性飞跃成长（保留远古知识之树生命加成）
     this.baseMaxHp = 560 + (this.level - 1) * 110;
-    this.maxHp = this.baseMaxHp;
+    this.maxHp = this.baseMaxHp + (this.bonusHp || 0);
     this.hp = this.maxHp; // 升级瞬间回满生命！
     this.baseAtk = 46 + (this.level - 1) * 18;
     this.atkDamage = this.baseAtk;
@@ -260,9 +265,10 @@ class ForestHero {
       finalDamage = Math.round(amount * 1.15);
     }
 
-    // 天赋 1：尖刺重甲近战创伤反弹 45%
-    if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
-      const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
+    // 天赋 1 & 知识树：尖刺重甲与远古树皮近战创伤反弹
+    const reflectExtra = this.thornReflectDmg || 0;
+    if ((this.talents.thornsArmor || reflectExtra > 0) && enemy && enemyManager && enemy.state !== 'death') {
+      const reflectDmg = (this.talents.thornsArmor ? Math.max(8, Math.round(finalDamage * 0.45)) : 0) + reflectExtra;
       enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, 'hero');
       if (fx) {
         fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
@@ -313,10 +319,18 @@ class ForestHero {
 
   castUltimateSkill(enemyManager, fx = null) {
     if (this.state === 'dead' || this.skillCooldown > 0) return false;
-    this.skillCooldown = this.maxSkillCooldown;
+    const ultCdr = (this.scene && this.scene.heroUltCdr) || 0;
+    this.skillCooldown = this.maxSkillCooldown * Math.max(0.4, 1.0 - ultCdr);
     this.isCastingSkill = true;
     this.skillCastTimer = 0.55;
     this.state = 'skill';
+
+    if (this.scene && this.scene.avatarFrenzyDuration > 0 && this.scene.towerManager && this.scene.towerManager.towers) {
+      const tws = this.scene.towerManager.towers;
+      for (let ti = 0; ti < tws.length; ti++) {
+        tws[ti].buffTimer = Math.max(tws[ti].buffTimer || 0, this.scene.avatarFrenzyDuration);
+      }
+    }
 
     platform.playSfx('sfx_thunder');
     const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
@@ -819,6 +833,18 @@ class ForestHero {
       ctx.save();
       const alpha = Math.min(1.0, Math.max(0.4, this.rallyMarkerTimer || (distToTarget > 6 ? 0.95 : 0)));
       ctx.globalAlpha = alpha;
+
+      // 从英雄脚下指向战旗的浅绿翠虚线行军轨迹
+      if (distToTarget > 8) {
+        ctx.strokeStyle = 'rgba(149, 222, 100, 0.52)';
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y + 8);
+        ctx.lineTo(this.targetX, this.targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
       // 旗帜底部柔和地面阴影
       ctx.fillStyle = 'rgba(10, 15, 12, 0.35)';

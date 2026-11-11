@@ -156,7 +156,8 @@ class ElementalReactionSystem {
    * 反应 2：超导电弧 (连锁闪电)
    */
   triggerSuperconduct(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.15 + 45);
+    const extraArmorMul = (enemy.baseArmor > 0 && scene && scene.superconductArmorBonus) ? (1.0 + scene.superconductArmorBonus) : 1.0;
+    const dmg = Math.round((baseDmg * 1.15 + 45) * extraArmorMul);
     this.recordReaction('superconduct', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
@@ -168,13 +169,14 @@ class ElementalReactionSystem {
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
-    // 寻找最多 3 个最近敌人连锁跳跃（O(N) 范围单次遍历，杜绝昂贵排序与内存开销）
+    // 寻找最多 3 + extra 个最近敌人连锁跳跃
+    const maxChainJumps = 3 + ((scene && scene.superconductExtraJumps) || 0);
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
       let jumps = 0;
       let lastX = enemy.x, lastY = enemy.y;
 
-      for (let j = 0; j < list.length && jumps < 3; j++) {
+      for (let j = 0; j < list.length && jumps < maxChainJumps; j++) {
         const next = list[j];
         if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);

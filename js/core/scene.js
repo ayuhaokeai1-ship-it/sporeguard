@@ -92,13 +92,19 @@ class SceneController {
     this.combatScreenJuice = new CombatScreenJuice();
     this.bossOverdriveEngine = new BossOverdriveEngine();
     this.ancientKnowledgeTree.applyToCombatScene(this);
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
     this.enemyManager.tacticalFeats = this.tacticalFeats;
     this.towerManager.guardianSynergies = this.guardianSynergies;
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
     this.towerManager.mushroomMastery = this.mushroomMastery;
@@ -216,7 +222,10 @@ class SceneController {
     this.guardianSynergies = new GuardianSynergies();
     this.combatVfx = new CombatVfxEngine();
     this.tacticalFeats = new TacticalFeats();
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
@@ -435,6 +444,12 @@ class SceneController {
       remainingSeeds: this.economy.seeds
     };
     storage.recordMapVictory(this.currentMapId, stars, this.logicalCombatTimeSec, this.economy.seeds);
+    if (this.ancientKnowledgeTree && typeof this.ancientKnowledgeTree.awardPointsForMapFirstClear === 'function') {
+      const gainedPts = this.ancientKnowledgeTree.awardPointsForMapFirstClear(this.currentMapId, stars);
+      if (gainedPts > 0 && this.fx) {
+        this.fx.spawnFloatingText(480, 180, `远古知识之树领悟 +${gainedPts} 点!`, '#95DE64', 1.4);
+      }
+    }
     platform.playSfx('sfx_win');
     if (this.achievements) {
       if (this.economy.seeds >= 20) this.achievements.unlock('flawless_defense', this.fx);
@@ -468,6 +483,50 @@ class SceneController {
   }
 
   /**
+   * 统一取消栈（右键点击 / Esc 键优先取消瞄准、选卡、详查框或关闭战报/设置弹窗）
+   */
+  handleCancelAction(fromEsc = false) {
+    if (this.ui && this.ui.showGuideModal) {
+      this.ui.showGuideModal = false;
+      storage.markGuideSeen();
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.ui && this.ui.showSettingsModal) {
+      this.ui.showSettingsModal = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.combatAnalytics && this.combatAnalytics.isOpen) {
+      this.combatAnalytics.isOpen = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.activeSpellCasting || this.activeRallyTargeting || this.activeHeroRally || this.activeAwakeningTargeting) {
+      this.activeSpellCasting = null;
+      this.activeRallyTargeting = false;
+      this.activeHeroRally = false;
+      this.activeAwakeningTargeting = false;
+      if (this.hero) this.hero.isSelected = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.selectedBuildTowerId) {
+      this.selectedBuildTowerId = null;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.ui && this.ui.inspectorOpen) {
+      this.ui.inspectorOpen = false;
+      this.ui.showTowerDetailBoard = false;
+      this.selectedTile = { col: -1, row: -1 };
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * 消费统一输入动作队列
    */
   triggerSpell(spellId) {
@@ -493,9 +552,10 @@ class SceneController {
       return;
     }
     if (spellId === 'harvest') {
-      sp.timer = sp.cd;
-      this.economy.spores += sp.gain;
-      this.fx.showBanner('大地丰收！+' + sp.gain + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
+      sp.timer = sp.cd * (this.spellCdrMultiplier || 1.0);
+      const totalHarvest = sp.gain + (this.extraHarvestSpores || 0);
+      this.economy.addSpores(totalHarvest);
+      this.fx.showBanner('大地丰收！+' + totalHarvest + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
       this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
@@ -522,7 +582,7 @@ class SceneController {
       return false;
     }
 
-    sp.timer = sp.cd;
+    sp.timer = sp.cd * (this.spellCdrMultiplier || 1.0);
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const mx = (lx - mv.OFFSET_X) / mv.SCALE;
     const my = (ly - mv.OFFSET_Y) / mv.SCALE;
@@ -542,21 +602,25 @@ class SceneController {
       this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', '滋养并净化 ' + affected + ' 座防御塔，攻速翻倍6秒', 1.5);
       platform.playSfx('sfx_upgrade');
     } else if (spellId === 'shock') {
+      const effRad = sp.radius * (this.tempestRadiusMod || 1.0);
       let enemiesHit = 0;
       const alive = this.enemyManager.getAliveEnemies();
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
-        if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
+        if (Math.hypot(e.x - mx, e.y - my) <= effRad) {
           const shockBase = 350;
           const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
           this.enemyManager.applyDamage(e, finalShockDmg, true, 'magic', this.fx, 'reactions');
           e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
+          if (this.tempestVortex && e.distPx > 32) {
+            e.distPx = Math.max(0, e.distPx - 28);
+          }
           enemiesHit++;
         }
       }
       this.fx.triggerShake(8, 350);
-      this.fx.spawnRing(mx, my, sp.radius, '#FFE58F', 0.45, false);
+      this.fx.spawnRing(mx, my, effRad, '#FFE58F', 0.45, false);
       this.fx.spawnParticles(mx, my, 32, ['#FFE58F', '#73D13D', '#FFFFFF', '#40A9FF'], 60, 200, 0.3, 0.65, 5);
       this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', '轰击 ' + enemiesHit + ' 名敌人（对空特攻），定身3.5秒', 1.5);
       platform.playSfx('sfx_boom');
@@ -914,14 +978,15 @@ class SceneController {
         if (this.mushroomMastery) {
           this.mushroomMastery.togglePanel();
         }
+      } else if (act.type === 'cancel_action') {
+        this.handleCancelAction(false);
       } else if (act.type === 'toggle_pause') {
-        if (this.ui.showSettingsModal || this.ui.showGuideModal) {
-          this.ui.showSettingsModal = false;
-          this.ui.showGuideModal = false;
-        } else if (this.state === 'BATTLE') {
-          this.pauseGame();
-        } else if (this.state === 'PAUSED') {
-          this.resumeGame();
+        if (!this.handleCancelAction(true)) {
+          if (this.state === 'BATTLE') {
+            this.pauseGame();
+          } else if (this.state === 'PAUSED') {
+            this.resumeGame();
+          }
         }
       }
       } catch (actionErr) {

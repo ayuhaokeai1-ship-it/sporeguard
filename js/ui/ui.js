@@ -1228,6 +1228,12 @@ class UiManager {
     if (scene.activeRallyTargeting) {
       this.renderRallyTargetingReticle(ctx, scene);
     }
+    if (scene.activeHeroRally && scene.hero) {
+      this.renderHeroRallyReticle(ctx, scene);
+    }
+    if (scene.activeAwakeningTargeting) {
+      this.renderAwakeningTargetingHint(ctx, scene);
+    }
 
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
@@ -1572,6 +1578,120 @@ class UiManager {
         strokeWidth: 1.8
       });
     }
+    ctx.restore();
+  }
+
+  renderHeroRallyReticle(ctx, scene) {
+    if (!scene || !scene.hero) return;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const scale = mv.SCALE || 1;
+    const mapW = CONFIG.LAYOUT.MAP ? CONFIG.LAYOUT.MAP.WIDTH : 640;
+    const mapH = CONFIG.LAYOUT.MAP ? CONFIG.LAYOUT.MAP.HEIGHT : 480;
+    const minX = mv.OFFSET_X + 24 * scale;
+    const maxX = mv.OFFSET_X + (mapW - 24) * scale;
+    const minY = mv.OFFSET_Y + 24 * scale;
+    const maxY = mv.OFFSET_Y + (mapH - 24) * scale;
+
+    const hx = mv.OFFSET_X + scene.hero.x * scale;
+    const hy = mv.OFFSET_Y + scene.hero.y * scale;
+    const hasHover = this.hoverX >= mv.OFFSET_X && this.hoverX <= mv.OFFSET_X + mapW * scale &&
+      this.hoverY >= mv.OFFSET_Y && this.hoverY <= mv.OFFSET_Y + mapH * scale;
+    const tx = hasHover ? Math.max(minX, Math.min(maxX, this.hoverX)) : hx;
+    const ty = hasHover ? Math.max(minY, Math.min(maxY, this.hoverY)) : hy;
+
+    ctx.save();
+    const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 7.0);
+
+    // 英雄行军指挥轨迹预览虚线
+    ctx.beginPath();
+    ctx.setLineDash([6, 5]);
+    ctx.lineDashOffset = -this.uiAnimTime * 28;
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(tx, ty);
+    ctx.strokeStyle = 'rgba(134, 239, 172, 0.85)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 集结目标光标准星
+    ctx.beginPath();
+    ctx.arc(tx, ty, 18 + pulse * 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.14)';
+    ctx.fill();
+    ctx.strokeStyle = '#86EFAC';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#DCFCE7';
+    ctx.fill();
+
+    for (let a = 0; a < 4; a++) {
+      const ang = a * Math.PI * 0.5 + this.uiAnimTime * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(tx + Math.cos(ang) * 12, ty + Math.sin(ang) * 12);
+      ctx.lineTo(tx + Math.cos(ang) * 24, ty + Math.sin(ang) * 24);
+      ctx.strokeStyle = '#4ADE80';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    const pillW = 204;
+    const pillH = 22;
+    const px = Math.max(12, Math.min(960 - pillW - 12, tx - pillW * 0.5));
+    const py = ty > 72 ? ty - 48 : ty + 30;
+    roundRectPath(ctx, px, py, pillW, pillH, 11);
+    ctx.fillStyle = 'rgba(14, 34, 22, 0.90)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(134, 239, 172, 0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    drawArtText(ctx, '点击地面调遣奥克 · 右键/Esc取消', px + pillW * 0.5, py + pillH * 0.5, {
+      style: 'emerald',
+      size: 10.5,
+      align: 'center',
+      baseline: 'middle'
+    });
+    ctx.restore();
+  }
+
+  renderAwakeningTargetingHint(ctx, scene) {
+    if (!scene || !scene.towerManager) return;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const scale = mv.SCALE || 1;
+    const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 6.5);
+
+    ctx.save();
+    for (let i = 0; i < scene.towerManager.towers.length; i++) {
+      const t = scene.towerManager.towers[i];
+      if (!t || t.isAwakened) continue;
+      const sx = mv.OFFSET_X + (t.col + 0.5) * TILE_SIZE * scale;
+      const sy = mv.OFFSET_Y + (t.row + 0.5) * TILE_SIZE * scale;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 20 + pulse * 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(250, 204, 21, ' + (0.45 + pulse * 0.4) + ')';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+
+    const pillW = 248;
+    const pillH = 24;
+    const hasHover = this.hoverX > 0 && this.hoverY > 0;
+    const px = hasHover ? Math.max(12, Math.min(960 - pillW - 12, this.hoverX - pillW * 0.5)) : (960 - pillW) * 0.5;
+    const py = hasHover ? (this.hoverY > 82 ? this.hoverY - 40 : this.hoverY + 26) : 408;
+    roundRectPath(ctx, px, py, pillW, pillH, 12);
+    ctx.fillStyle = 'rgba(24, 38, 16, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.88)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    drawArtText(ctx, '点击任意蘑菇释放灵能觉醒超载 · 右键/Esc取消', px + pillW * 0.5, py + pillH * 0.5, {
+      style: 'gold',
+      size: 10.5,
+      align: 'center',
+      baseline: 'middle'
+    });
     ctx.restore();
   }
 
@@ -3757,7 +3877,7 @@ class UiManager {
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 396;
-    const mh = inBattle ? 386 : 300;
+    const mh = inBattle ? 446 : 360;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -3892,6 +4012,34 @@ class UiManager {
       platform.playSfx('sfx_click');
       this.showSettingsModal = false;
     });
+
+    // 7. 底部紧凑快捷键速查卡
+    const footX = mx + 18;
+    const footY = curY + btnH + 8;
+    const footW = mw - 36;
+    const footH = 34;
+    ctx.save();
+    roundRectPath(ctx, footX, footY, footW, footH, 6);
+    ctx.fillStyle = 'rgba(22, 14, 9, 0.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196, 166, 117, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, '快捷键: [1-5]选塔  [Q/W/E/R]神术  [F]大招  [Z]姿态  [空格]觉醒', mx + mw * 0.5, footY + 11, {
+      style: 'gold',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      maxWidth: footW - 12
+    });
+    drawArtText(ctx, '操控: [右键 / Esc]取消瞄准·关窗  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
+      style: 'parchment',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      maxWidth: footW - 12
+    });
+    ctx.restore();
   }
 
   /**
@@ -4784,11 +4932,13 @@ class UiManager {
       ctx.stroke();
     }
 
-    // 顶部生命守护值（严密置于框内顶部安全带）
+    // 顶部生命守护值（严密置于框内顶部安全带，含圣盾层数）
     const seeds = scene.economy.seeds;
-    drawArtText(ctx, '❤️ ' + seeds, sporeX + sporeW * 0.5, sporeY + 17.5, {
-      style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 11,
+    const shields = scene.holyShieldCharges || 0;
+    const seedLabel = shields > 0 ? (`❤️ ${seeds} 🛡️${shields}`) : (`❤️ ${seeds}`);
+    drawArtText(ctx, seedLabel, sporeX + sporeW * 0.5, sporeY + 17.5, {
+      style: seeds <= 5 ? 'crimson' : (shields > 0 ? 'emerald' : 'parchment'),
+      size: shields > 0 ? 10 : 11,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0

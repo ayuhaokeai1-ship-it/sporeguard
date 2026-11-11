@@ -4539,6 +4539,12 @@ function initInput() {
         handleKeyDown(res.code || res.key || '');
       });
     }
+
+    if (typeof wx.onRightClick === 'function') {
+      wx.onRightClick(() => {
+        emitAction('cancel_action');
+      });
+    }
   }
 }
 
@@ -7213,8 +7219,10 @@ class EnemyManager {
   getEffectiveSlow(e) {
     if (e.slowImmune) return 0;
     const rawSlow = Math.max(e.activeSlow || 0, e.residualSlowTimer > 0 ? e.residualSlowValue : 0);
+    const isAgile = e.type === 'swift' || e.type === 'leaper' || e.type === 'larva';
+    const extraEntangle = (rawSlow > 0 && isAgile && this.scene && this.scene.deepEntanglementBonus) ? this.scene.deepEntanglementBonus : 0;
     const factor = e.def.slowFactor !== undefined ? e.def.slowFactor : 1.0;
-    return Math.min(CONFIG.COMBAT.GLOBAL_SLOW_CAP, rawSlow * factor);
+    return Math.min(CONFIG.COMBAT.GLOBAL_SLOW_CAP, (rawSlow + extraEntangle) * factor);
   }
 
   /**
@@ -7253,7 +7261,15 @@ class EnemyManager {
 
     const critMul = isCrit ? CONFIG.COMBAT.CRIT_MULTIPLIER : 1.0;
     const markMul = (enemy.markTimer > 0 || isHolySmite) ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
-    const rawDamage = baseDamage * (1 + (bonusSum || 0)) * critMul * markMul;
+    let prismaticBonus = 0;
+    if (this.scene && this.scene.hasPrismaticSingularity && enemy.elementAuras) {
+      let auraCnt = 0;
+      for (const ak in enemy.elementAuras) {
+        if (enemy.elementAuras[ak] > 0) auraCnt++;
+      }
+      if (auraCnt >= 2) prismaticBonus = 0.50;
+    }
+    const rawDamage = baseDamage * (1 + (bonusSum || 0) + prismaticBonus) * critMul * markMul;
     let frontShieldMul = 1.0;
     if (enemy.hasFrontShield && !isCrit) {
       // 穿透前盾机制：圣光魔法、迫击轰炸、烈焰灼烧绕过正面盾牌抗性
@@ -7528,6 +7544,11 @@ class EnemyManager {
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
       this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+    }
+    if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
+      if (Math.random() < this.scene.eliteDoubleSporeChance) {
+        this.scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 12, true, 16);
+      }
     }
     // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
     if (this.scene) {
@@ -7873,8 +7894,18 @@ class EnemyManager {
 
       const route = e.isFlying ? map.airRoute : ((e.routeIndex === 1 && map.groundRoute2) ? map.groundRoute2 : map.groundRoute);
       if (e.distPx >= route.totalLengthPx) {
-        // 抵达终点种子仓库：扣除威胁值并移除
+        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         const sampleEnd = sampleRouteAtDistance(route, route.totalLengthPx, 0);
+        if (this.scene && this.scene.holyShieldCharges > 0) {
+          this.scene.holyShieldCharges -= 1;
+          if (fx) {
+            fx.spawnFloatingText(sampleEnd.x, sampleEnd.y - 22, '生命壁垒神圣结界抵挡!', '#95DE64', 1.35);
+            if (fx.spawnShockwave) fx.spawnShockwave(sampleEnd.x, sampleEnd.y, 65, '#95DE64');
+          }
+          platform.playSfx('sfx_upgrade');
+          this.pool.releaseAt(i);
+          continue;
+        }
         if (fx) {
           fx.onSeedDamaged(sampleEnd.x, sampleEnd.y);
         }
@@ -8361,6 +8392,9 @@ class ForestHero {
     this.brambleShieldHp = 0;         // 石肤荆棘护盾当前吸收值
     this.brambleShieldMax = 320;      // 护盾上限
     this.stanceAbilityCooldown = 0;   // 姿态战术微操冷却
+    this.bonusHp = 0;                 // 远古知识树额外加成生命
+    this.thornReflectDmg = 0;         // 远古知识树荆棘反伤
+    this.scene = null;
   }
 
   /**
@@ -8415,8 +8449,10 @@ class ForestHero {
    */
   moveTo(x, y, fx = null) {
     if (this.state === 'dead') return;
-    this.targetX = Math.max(24, Math.min(936, x));
-    this.targetY = Math.max(24, Math.min(516, y));
+    const mapW = CONFIG.LAYOUT.MAP.WIDTH || 640;
+    const mapH = CONFIG.LAYOUT.MAP.HEIGHT || 480;
+    this.targetX = Math.max(24, Math.min(mapW - 24, x));
+    this.targetY = Math.max(24, Math.min(mapH - 24, y));
     this.state = 'walk';
     this.rallyMarkerTimer = 1.2;
     this.unblockAll();
@@ -8453,9 +8489,9 @@ class ForestHero {
     this.xp -= this.xpToNext;
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
-    // 属性飞跃成长
+    // 属性飞跃成长（保留远古知识之树生命加成）
     this.baseMaxHp = 560 + (this.level - 1) * 110;
-    this.maxHp = this.baseMaxHp;
+    this.maxHp = this.baseMaxHp + (this.bonusHp || 0);
     this.hp = this.maxHp; // 升级瞬间回满生命！
     this.baseAtk = 46 + (this.level - 1) * 18;
     this.atkDamage = this.baseAtk;
@@ -8511,9 +8547,10 @@ class ForestHero {
       finalDamage = Math.round(amount * 1.15);
     }
 
-    // 天赋 1：尖刺重甲近战创伤反弹 45%
-    if (this.talents.thornsArmor && enemy && enemyManager && enemy.state !== 'death') {
-      const reflectDmg = Math.max(8, Math.round(finalDamage * 0.45));
+    // 天赋 1 & 知识树：尖刺重甲与远古树皮近战创伤反弹
+    const reflectExtra = this.thornReflectDmg || 0;
+    if ((this.talents.thornsArmor || reflectExtra > 0) && enemy && enemyManager && enemy.state !== 'death') {
+      const reflectDmg = (this.talents.thornsArmor ? Math.max(8, Math.round(finalDamage * 0.45)) : 0) + reflectExtra;
       enemyManager.applyDamage(enemy, reflectDmg, false, 'physical', fx, 'hero');
       if (fx) {
         fx.spawnFloatingText(enemy.x, enemy.y - 14, `刺伤 -${reflectDmg}`, '#52C41A', 0.8);
@@ -8564,10 +8601,18 @@ class ForestHero {
 
   castUltimateSkill(enemyManager, fx = null) {
     if (this.state === 'dead' || this.skillCooldown > 0) return false;
-    this.skillCooldown = this.maxSkillCooldown;
+    const ultCdr = (this.scene && this.scene.heroUltCdr) || 0;
+    this.skillCooldown = this.maxSkillCooldown * Math.max(0.4, 1.0 - ultCdr);
     this.isCastingSkill = true;
     this.skillCastTimer = 0.55;
     this.state = 'skill';
+
+    if (this.scene && this.scene.avatarFrenzyDuration > 0 && this.scene.towerManager && this.scene.towerManager.towers) {
+      const tws = this.scene.towerManager.towers;
+      for (let ti = 0; ti < tws.length; ti++) {
+        tws[ti].buffTimer = Math.max(tws[ti].buffTimer || 0, this.scene.avatarFrenzyDuration);
+      }
+    }
 
     platform.playSfx('sfx_thunder');
     const resonanceBonus = this.talents.leylineResonance ? 1.35 : 1.0;
@@ -9071,6 +9116,18 @@ class ForestHero {
       const alpha = Math.min(1.0, Math.max(0.4, this.rallyMarkerTimer || (distToTarget > 6 ? 0.95 : 0)));
       ctx.globalAlpha = alpha;
 
+      // 从英雄脚下指向战旗的浅绿翠虚线行军轨迹
+      if (distToTarget > 8) {
+        ctx.strokeStyle = 'rgba(149, 222, 100, 0.52)';
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y + 8);
+        ctx.lineTo(this.targetX, this.targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       // 旗帜底部柔和地面阴影
       ctx.fillStyle = 'rgba(10, 15, 12, 0.35)';
       ctx.beginPath();
@@ -9283,7 +9340,22 @@ class SporelingPatrol {
       this.createGuard(1, 14, 4)
     ];
 
+    this.ironRank = 0;
     this.repositionCooldown = 0;
+  }
+
+  /**
+   * 应用远古真菌知识之树「钢盔小蘑兵」加成（双倍生命 + 首次濒死神圣眩晕盾）
+   */
+  applyKnowledgeTree(ironRank) {
+    this.ironRank = ironRank || 0;
+    for (let i = 0; i < this.guards.length; i++) {
+      const g = this.guards[i];
+      const baseMax = g.role === 'shield' ? 320 : 210;
+      g.maxHp = this.ironRank > 0 ? baseMax * 2 : baseMax;
+      g.hp = g.maxHp;
+      g.deathShield = this.ironRank > 0;
+    }
   }
 
   createGuard(index, offsetX, offsetY) {
@@ -9451,6 +9523,7 @@ class SporelingPatrol {
         if (g.respawnTimer <= 0) {
           g.state = 'idle';
           g.hp = g.maxHp;
+          g.deathShield = (this.ironRank || 0) > 0;
           g.x = this.rallyX + g.offsetX;
           g.y = this.rallyY + g.offsetY;
           if (fx) {
@@ -9544,6 +9617,24 @@ class SporelingPatrol {
           }
 
           if (g.hp <= 0) {
+            // 「钢盔小蘑兵」濒死免死护盾：恢复 40% 生命并震晕周围地面敌军
+            if (g.deathShield) {
+              g.deathShield = false;
+              g.hp = Math.round(g.maxHp * 0.40);
+              const stunSec = 0.8 + (this.ironRank || 1) * 0.4;
+              for (let ei = 0; ei < aliveEnemies.length; ei++) {
+                const oe = aliveEnemies[ei];
+                if (!oe.isFlying && oe.state !== 'death' && Math.hypot(oe.x - g.x, oe.y - g.y) <= 72) {
+                  oe.stunTimer = Math.max(oe.stunTimer || 0, stunSec);
+                }
+              }
+              if (fx) {
+                fx.spawnFloatingText(g.x, g.y - 20, '钢盔护盾·免疫阵亡!', '#FFD700', 1.15);
+                if (fx.spawnShockwave) fx.spawnShockwave(g.x, g.y, 64, '#FFD700');
+              }
+              platform.playSfx('sfx_upgrade');
+              continue;
+            }
             // 阵亡
             g.state = 'dead';
             g.respawnTimer = 10.0;
@@ -10549,7 +10640,8 @@ class ElementalReactionSystem {
    * 反应 2：超导电弧 (连锁闪电)
    */
   triggerSuperconduct(enemy, baseDmg, scene) {
-    const dmg = Math.round(baseDmg * 1.15 + 45);
+    const extraArmorMul = (enemy.baseArmor > 0 && scene && scene.superconductArmorBonus) ? (1.0 + scene.superconductArmorBonus) : 1.0;
+    const dmg = Math.round((baseDmg * 1.15 + 45) * extraArmorMul);
     this.recordReaction('superconduct', dmg);
 
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'shock', 'reactions');
@@ -10561,13 +10653,14 @@ class ElementalReactionSystem {
       scene.fx.spawnRing(enemy.x, enemy.y, 75, '#69C0FF', 0.4);
     }
 
-    // 寻找最多 3 个最近敌人连锁跳跃（O(N) 范围单次遍历，杜绝昂贵排序与内存开销）
+    // 寻找最多 3 + extra 个最近敌人连锁跳跃
+    const maxChainJumps = 3 + ((scene && scene.superconductExtraJumps) || 0);
     if (scene && scene.enemyManager) {
       const list = scene.enemyManager.getAliveEnemies();
       let jumps = 0;
       let lastX = enemy.x, lastY = enemy.y;
 
-      for (let j = 0; j < list.length && jumps < 3; j++) {
+      for (let j = 0; j < list.length && jumps < maxChainJumps; j++) {
         const next = list[j];
         if (next === enemy || next.state === 'death' || next.hp <= 0) continue;
         const d2 = (next.x - enemy.x) * (next.x - enemy.x) + (next.y - enemy.y) * (next.y - enemy.y);
@@ -14162,6 +14255,7 @@ class AncientKnowledgeTree {
     if (typeof savedTree.totalPoints === 'number') {
       this.totalPointsEarned = Math.max(12, savedTree.totalPoints);
     }
+    this.clearedRewardedMaps = savedTree.clearedRewardedMaps || {};
   }
 
   saveState() {
@@ -14169,7 +14263,8 @@ class AncientKnowledgeTree {
       const save = storage.getSave ? storage.getSave() : {};
       save.knowledgeTree = {
         ranks: this.ranks,
-        totalPoints: this.totalPointsEarned
+        totalPoints: this.totalPointsEarned,
+        clearedRewardedMaps: this.clearedRewardedMaps || {}
       };
       if (storage.saveNow) {
         storage.saveNow();
@@ -14227,11 +14322,42 @@ class AncientKnowledgeTree {
     this.saveState();
   }
 
+  awardPointsForMapFirstClear(mapId, stars) {
+    if (!mapId || stars <= 0) return 0;
+    this.clearedRewardedMaps = this.clearedRewardedMaps || {};
+    let granted = 0;
+    if (!this.clearedRewardedMaps[mapId]) {
+      this.clearedRewardedMaps[mapId] = true;
+      granted = 2;
+      this.totalPointsEarned += granted;
+      this.saveState();
+    }
+    return granted;
+  }
+
   /**
    * 应用所有激活天赋至当前战斗场景
    */
   applyToCombatScene(scene) {
     if (!scene) return;
+
+    // 先重置场景天赋衍生状态，防止重开/洗点后残留
+    scene.photosyntheticSurgeBonus = 0;
+    scene.spellCdrMultiplier = 1.0;
+    scene.holyShieldCharges = 0;
+    scene.hasPrismaticSingularity = false;
+    scene.extraHarvestSpores = 0;
+    scene.eliteDoubleSporeChance = 0;
+    scene.deepEntanglementBonus = 0;
+    scene.superconductExtraJumps = 0;
+    scene.superconductArmorBonus = 0;
+    scene.pyroFissureCfg = null;
+    scene.toxicMiasmaDebuff = 0;
+    scene.tempestRadiusMod = 1.0;
+    scene.tempestVortex = false;
+    scene.awakenedAtkSpeedMod = 1.0;
+    scene.heroUltCdr = 0;
+    scene.avatarFrenzyDuration = 0;
 
     // 1. 菌丝网络：开局额外孢子与自然产出
     const myRank = this.getRank('mycelium_network');
@@ -14240,12 +14366,32 @@ class AncientKnowledgeTree {
       scene.economy.passiveTrickleBonus = myRank * 1.0;
     }
 
-    // 2. 远古树皮：英雄生命与刺甲
+    // 1.5 丰收祝福：大地丰收额外孢子 + 精英双倍掉孢几率
+    const bhRank = this.getRank('bountiful_harvest');
+    if (bhRank > 0) {
+      scene.extraHarvestSpores = bhRank * 40;
+      scene.eliteDoubleSporeChance = bhRank * 0.4;
+    }
+
+    // 2. 远古树皮：英雄生命上限与反伤
     const barkRank = this.getRank('bark_armor');
     if (barkRank > 0 && scene.hero) {
-      scene.hero.maxHp += barkRank * 100;
+      scene.hero.bonusHp = barkRank * 100;
+      scene.hero.maxHp = (scene.hero.baseMaxHp || 560) + scene.hero.bonusHp;
       scene.hero.hp = scene.hero.maxHp;
       scene.hero.thornReflectDmg = barkRank * 18;
+    }
+
+    // 2.2 钢盔小蘑兵：巡逻护卫双倍血量 + 濒死圣盾
+    const ironRank = this.getRank('iron_sporelings');
+    if (scene.sporelingPatrol && typeof scene.sporelingPatrol.applyKnowledgeTree === 'function') {
+      scene.sporelingPatrol.applyKnowledgeTree(ironRank);
+    }
+
+    // 2.4 深根盘缚：敏捷系敌人额外减速
+    const deepRank = this.getRank('deep_entanglement');
+    if (deepRank > 0) {
+      scene.deepEntanglementBonus = deepRank * 0.18;
     }
 
     // 3. 光合激涌：全队攻速与产孢提速
@@ -14254,27 +14400,52 @@ class AncientKnowledgeTree {
       scene.photosyntheticSurgeBonus = psRank * 0.10;
     }
 
-    // 4. 始源觉醒：额外觉醒古种
+    // 3.5 元素共鸣分支：超导 / 烈焰地裂 / 深渊剧毒 / 棱镜奇点
+    const supRank = this.getRank('superconduct_resonance');
+    if (supRank > 0) {
+      scene.superconductExtraJumps = supRank * 1;
+      scene.superconductArmorBonus = supRank * 0.20;
+    }
+    const pyroRank = this.getRank('pyro_fissure');
+    if (pyroRank > 0) {
+      scene.pyroFissureCfg = { radius: 1.0, duration: pyroRank * 2.0, dps: pyroRank * 35 };
+    }
+    const toxRank = this.getRank('toxic_miasma');
+    if (toxRank > 0) {
+      scene.toxicMiasmaDebuff = toxRank * 0.25;
+    }
+    if (this.getRank('prismatic_singularity') > 0) {
+      scene.hasPrismaticSingularity = true;
+    }
+
+    // 4. 始源觉醒：额外觉醒古种与超频攻速加成
     const awakRank = this.getRank('fertile_awakening');
     if (awakRank > 0) {
       scene.awakeningSeeds += awakRank;
+      scene.awakenedAtkSpeedMod = 1.0 + awakRank * 0.15;
     }
 
     // 5. 疾速通灵：神术冷却缩减
     const cdrRank = this.getRank('quickened_mysticism');
     if (cdrRank > 0) {
-      scene.spellCdrMultiplier = 1.0 - cdrRank * 0.12;
+      scene.spellCdrMultiplier = Math.max(0.55, 1.0 - cdrRank * 0.12);
+    }
+
+    // 5.5 风暴狂涌 & 森之化身
+    const tmpRank = this.getRank('tempest_surge');
+    if (tmpRank > 0) {
+      scene.tempestRadiusMod = 1.0 + tmpRank * 0.25;
+      scene.tempestVortex = true;
+    }
+    if (this.getRank('avatar_of_nature') > 0) {
+      scene.heroUltCdr = 0.30;
+      scene.avatarFrenzyDuration = 5.0;
     }
 
     // 6. 生命壁垒：基地结界
     const citRank = this.getRank('living_citadel');
     if (citRank > 0) {
       scene.holyShieldCharges = 1;
-    }
-
-    // 7. 棱镜奇点：多元素增幅
-    if (this.getRank('prismatic_singularity') > 0) {
-      scene.hasPrismaticSingularity = true;
     }
   }
 
@@ -15955,7 +16126,7 @@ class BulletManager {
     h.timer = 0;
     h.slow = node.slow || 0.30;
     h.residualSlowDuration = node.residualSlowDuration || 0;
-    h.armorReduction = node.armorReduction || 0;
+    h.armorReduction = (node.armorReduction || 0) + ((this.scene && this.scene.toxicMiasmaDebuff) ? this.scene.toxicMiasmaDebuff * 4 : 0);
     h.dps = node.dps || 4;
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -16409,11 +16580,12 @@ class BulletManager {
             fx.onBurstExplosion(b.targetX, b.targetY, b.splashRadiusPx, b.branchColor);
           }
 
-          // B3 熔金：爆心留下灼烧区（半径 1.0 格，持续 3 秒，每秒 8 点伤害）
-          if (b.burnZoneCfg) {
+          // B3 熔金或知识树「烈焰地裂」：爆心留下持续灼烧区
+          const burnSource = b.burnZoneCfg || (this.scene && this.scene.pyroFissureCfg);
+          if (burnSource) {
             const burnCfg = b.sourceTower
-              ? Object.assign({}, b.burnZoneCfg, { sourceTower: b.sourceTower })
-              : b.burnZoneCfg;
+              ? Object.assign({}, burnSource, { sourceTower: b.sourceTower })
+              : burnSource;
             this.spawnBurnZone(b.targetX, b.targetY, burnCfg);
           }
 
@@ -17236,6 +17408,9 @@ class TowerManager {
       if (this.scene && this.scene.photosyntheticSurgeBonus && this.towers.length >= 3) {
         speedCoeff *= (1.0 + this.scene.photosyntheticSurgeBonus);
       }
+      if (t.isAwakened && this.scene && this.scene.awakenedAtkSpeedMod > 1) {
+        speedCoeff *= this.scene.awakenedAtkSpeedMod;
+      }
       if (t.cooldown > 0) {
         t.cooldown = Math.max(0, t.cooldown - dt * speedCoeff);
       }
@@ -17827,6 +18002,7 @@ class TowerManager {
     tower.isWebbed = false;
     tower.poisonTimer = 0;
     tower.dormantTimer = 0;
+    tower.isAwakened = true;
     tower.superchargeTimer = 8.0;
     tower.animState = 'upgrade';
     tower.squashScaleX = 1.45;
@@ -17850,10 +18026,12 @@ class TowerManager {
       if (em && bm) {
         for (let i = 0; i < 30; i++) {
           setTimeout(() => {
+            if (!scene || scene.state !== 'BATTLE') return;
             const targets = em.getAliveEnemies();
             if (targets.length === 0) return;
             const target = targets[i % targets.length];
-            bm.spawnArrow(tower.x, tower.y - 14, target, tower.node, 55, true);
+            const wb = bm.spawnWatchBullet(tower.x, tower.y - 14, target, target.x, target.y, Object.assign({}, tower.node, { armorPierceRatio: 0.6 }), 55);
+            if (wb) wb.sourceTower = tower;
             if (i % 3 === 0) platform.playSfx('sfx_shoot');
           }, i * 85);
         }
@@ -17867,7 +18045,7 @@ class TowerManager {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (!e.isFlying && e.state !== 'death') {
-            em.applyDamage(e, 260, false, 'pierce', fx, null);
+            em.applyDamage(e, 260, false, 'pierce', fx, tower);
             e.activeSlow = 0.95;
             e.residualSlowValue = 0.90;
             e.residualSlowTimer = 4.0;
@@ -17884,9 +18062,11 @@ class TowerManager {
       platform.playSfx('sfx_bomb');
       if (em && bm) {
         const alive = em.getAliveEnemies();
-        const target = alive.length > 0 ? alive[0] : { x: 480, y: 270 };
-        bm.spawnCannonball(tower.x, tower.y - 16, target, tower.node, 450);
+        const target = alive.length > 0 ? alive[0] : { x: 320, y: 240 };
+        const bb = bm.spawnBurstShell(tower.x, tower.y - 16, target.x, target.y, Object.assign({}, tower.node, { splashRadius: 2.5 }), 450);
+        if (bb) bb.sourceTower = tower;
         setTimeout(() => {
+          if (!scene || scene.state !== 'BATTLE') return;
           if (fx) {
             fx.triggerScreenShake(8.0, 0.65);
             if (fx.spawnShockwave) fx.spawnShockwave(target.x, target.y, 160, '#FF4D4F');
@@ -17897,7 +18077,7 @@ class TowerManager {
             for (let i = 0; i < targets.length; i++) {
               const e = targets[i];
               if (Math.hypot(e.x - target.x, e.y - target.y) <= 180) {
-                em.applyDamage(e, 420, true, 'splash', fx, null);
+                em.applyDamage(e, 420, true, 'splash', fx, tower);
               }
             }
           }
@@ -17912,7 +18092,7 @@ class TowerManager {
         for (let i = 0; i < alive.length; i++) {
           const e = alive[i];
           if (e.state !== 'death') {
-            em.applyDamage(e, 160, false, 'magic', fx, null);
+            em.applyDamage(e, 160, false, 'magic', fx, tower);
             e.baseArmor = 0;
             e.activeSlow = 0.85;
             e.residualSlowValue = 0.85;
@@ -18286,6 +18466,13 @@ class WaveManager {
       // 当本波所有组均已出完，且场上没有任何存活敌人时，本波完成
       if (allGroupsFinished && enemyManager.getAliveEnemies().length === 0) {
         const rewardInfo = economy.grantWaveClearReward(this.currentWaveIndex);
+        if (scene && scene.ancientKnowledgeTree && scene.ancientKnowledgeTree.getRank('elder_photosynthesis') > 0) {
+          const interest = Math.min(180, Math.round(economy.spores * 0.12));
+          if (interest > 0) {
+            economy.addSpores(interest);
+            if (fx) fx.spawnFloatingText(480, 220, `远古光合利息 +${interest} 孢子!`, '#FFE58F', 1.25);
+          }
+        }
 
         if (this.currentWaveIndex >= this.totalWaves) {
           if (scene && scene.isEndlessMode) {
@@ -19561,6 +19748,12 @@ class UiManager {
     if (scene.activeRallyTargeting) {
       this.renderRallyTargetingReticle(ctx, scene);
     }
+    if (scene.activeHeroRally && scene.hero) {
+      this.renderHeroRallyReticle(ctx, scene);
+    }
+    if (scene.activeAwakeningTargeting) {
+      this.renderAwakeningTargetingHint(ctx, scene);
+    }
 
     // 6.5 拖拽放置守卫全息射程环与磁吸吸附高亮
     this.renderTowerDragPreview(ctx, scene);
@@ -19905,6 +20098,120 @@ class UiManager {
         strokeWidth: 1.8
       });
     }
+    ctx.restore();
+  }
+
+  renderHeroRallyReticle(ctx, scene) {
+    if (!scene || !scene.hero) return;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const scale = mv.SCALE || 1;
+    const mapW = CONFIG.LAYOUT.MAP ? CONFIG.LAYOUT.MAP.WIDTH : 640;
+    const mapH = CONFIG.LAYOUT.MAP ? CONFIG.LAYOUT.MAP.HEIGHT : 480;
+    const minX = mv.OFFSET_X + 24 * scale;
+    const maxX = mv.OFFSET_X + (mapW - 24) * scale;
+    const minY = mv.OFFSET_Y + 24 * scale;
+    const maxY = mv.OFFSET_Y + (mapH - 24) * scale;
+
+    const hx = mv.OFFSET_X + scene.hero.x * scale;
+    const hy = mv.OFFSET_Y + scene.hero.y * scale;
+    const hasHover = this.hoverX >= mv.OFFSET_X && this.hoverX <= mv.OFFSET_X + mapW * scale &&
+      this.hoverY >= mv.OFFSET_Y && this.hoverY <= mv.OFFSET_Y + mapH * scale;
+    const tx = hasHover ? Math.max(minX, Math.min(maxX, this.hoverX)) : hx;
+    const ty = hasHover ? Math.max(minY, Math.min(maxY, this.hoverY)) : hy;
+
+    ctx.save();
+    const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 7.0);
+
+    // 英雄行军指挥轨迹预览虚线
+    ctx.beginPath();
+    ctx.setLineDash([6, 5]);
+    ctx.lineDashOffset = -this.uiAnimTime * 28;
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(tx, ty);
+    ctx.strokeStyle = 'rgba(134, 239, 172, 0.85)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 集结目标光标准星
+    ctx.beginPath();
+    ctx.arc(tx, ty, 18 + pulse * 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.14)';
+    ctx.fill();
+    ctx.strokeStyle = '#86EFAC';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#DCFCE7';
+    ctx.fill();
+
+    for (let a = 0; a < 4; a++) {
+      const ang = a * Math.PI * 0.5 + this.uiAnimTime * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(tx + Math.cos(ang) * 12, ty + Math.sin(ang) * 12);
+      ctx.lineTo(tx + Math.cos(ang) * 24, ty + Math.sin(ang) * 24);
+      ctx.strokeStyle = '#4ADE80';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    const pillW = 204;
+    const pillH = 22;
+    const px = Math.max(12, Math.min(960 - pillW - 12, tx - pillW * 0.5));
+    const py = ty > 72 ? ty - 48 : ty + 30;
+    roundRectPath(ctx, px, py, pillW, pillH, 11);
+    ctx.fillStyle = 'rgba(14, 34, 22, 0.90)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(134, 239, 172, 0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    drawArtText(ctx, '点击地面调遣奥克 · 右键/Esc取消', px + pillW * 0.5, py + pillH * 0.5, {
+      style: 'emerald',
+      size: 10.5,
+      align: 'center',
+      baseline: 'middle'
+    });
+    ctx.restore();
+  }
+
+  renderAwakeningTargetingHint(ctx, scene) {
+    if (!scene || !scene.towerManager) return;
+    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+    const scale = mv.SCALE || 1;
+    const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 6.5);
+
+    ctx.save();
+    for (let i = 0; i < scene.towerManager.towers.length; i++) {
+      const t = scene.towerManager.towers[i];
+      if (!t || t.isAwakened) continue;
+      const sx = mv.OFFSET_X + (t.col + 0.5) * TILE_SIZE * scale;
+      const sy = mv.OFFSET_Y + (t.row + 0.5) * TILE_SIZE * scale;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 20 + pulse * 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(250, 204, 21, ' + (0.45 + pulse * 0.4) + ')';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+
+    const pillW = 248;
+    const pillH = 24;
+    const hasHover = this.hoverX > 0 && this.hoverY > 0;
+    const px = hasHover ? Math.max(12, Math.min(960 - pillW - 12, this.hoverX - pillW * 0.5)) : (960 - pillW) * 0.5;
+    const py = hasHover ? (this.hoverY > 82 ? this.hoverY - 40 : this.hoverY + 26) : 408;
+    roundRectPath(ctx, px, py, pillW, pillH, 12);
+    ctx.fillStyle = 'rgba(24, 38, 16, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.88)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    drawArtText(ctx, '点击任意蘑菇释放灵能觉醒超载 · 右键/Esc取消', px + pillW * 0.5, py + pillH * 0.5, {
+      style: 'gold',
+      size: 10.5,
+      align: 'center',
+      baseline: 'middle'
+    });
     ctx.restore();
   }
 
@@ -22090,7 +22397,7 @@ class UiManager {
     ctx.fillRect(0, 0, 960, 540);
 
     const mw = 396;
-    const mh = inBattle ? 386 : 300;
+    const mh = inBattle ? 446 : 360;
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -22225,6 +22532,34 @@ class UiManager {
       platform.playSfx('sfx_click');
       this.showSettingsModal = false;
     });
+
+    // 7. 底部紧凑快捷键速查卡
+    const footX = mx + 18;
+    const footY = curY + btnH + 8;
+    const footW = mw - 36;
+    const footH = 34;
+    ctx.save();
+    roundRectPath(ctx, footX, footY, footW, footH, 6);
+    ctx.fillStyle = 'rgba(22, 14, 9, 0.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196, 166, 117, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, '快捷键: [1-5]选塔  [Q/W/E/R]神术  [F]大招  [Z]姿态  [空格]觉醒', mx + mw * 0.5, footY + 11, {
+      style: 'gold',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      maxWidth: footW - 12
+    });
+    drawArtText(ctx, '操控: [右键 / Esc]取消瞄准·关窗  [P]切索敌  [V]倍速  [H]纯净', mx + mw * 0.5, footY + 24, {
+      style: 'parchment',
+      size: 9.5,
+      align: 'center',
+      baseline: 'middle',
+      maxWidth: footW - 12
+    });
+    ctx.restore();
   }
 
   /**
@@ -23117,11 +23452,13 @@ class UiManager {
       ctx.stroke();
     }
 
-    // 顶部生命守护值（严密置于框内顶部安全带）
+    // 顶部生命守护值（严密置于框内顶部安全带，含圣盾层数）
     const seeds = scene.economy.seeds;
-    drawArtText(ctx, '❤️ ' + seeds, sporeX + sporeW * 0.5, sporeY + 17.5, {
-      style: seeds <= 5 ? 'crimson' : 'parchment',
-      size: 11,
+    const shields = scene.holyShieldCharges || 0;
+    const seedLabel = shields > 0 ? (`❤️ ${seeds} 🛡️${shields}`) : (`❤️ ${seeds}`);
+    drawArtText(ctx, seedLabel, sporeX + sporeW * 0.5, sporeY + 17.5, {
+      style: seeds <= 5 ? 'crimson' : (shields > 0 ? 'emerald' : 'parchment'),
+      size: shields > 0 ? 10 : 11,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0
@@ -23889,13 +24226,19 @@ class SceneController {
     this.combatScreenJuice = new CombatScreenJuice();
     this.bossOverdriveEngine = new BossOverdriveEngine();
     this.ancientKnowledgeTree.applyToCombatScene(this);
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
     this.enemyManager.tacticalFeats = this.tacticalFeats;
     this.towerManager.guardianSynergies = this.guardianSynergies;
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.towerManager.scene = this;
     this.towerManager.tacticalTargeting = this.tacticalTargeting;
     this.towerManager.mushroomMastery = this.mushroomMastery;
@@ -24013,7 +24356,10 @@ class SceneController {
     this.guardianSynergies = new GuardianSynergies();
     this.combatVfx = new CombatVfxEngine();
     this.tacticalFeats = new TacticalFeats();
-    if (this.hero) this.hero.transcendence = this.heroTranscendence;
+    if (this.hero) {
+      this.hero.transcendence = this.heroTranscendence;
+      this.hero.scene = this;
+    }
     this.bulletManager.elementalCombos = this.elementalCombos;
     this.bulletManager.combatVfx = this.combatVfx;
     this.enemyManager.combatVfx = this.combatVfx;
@@ -24232,6 +24578,12 @@ class SceneController {
       remainingSeeds: this.economy.seeds
     };
     storage.recordMapVictory(this.currentMapId, stars, this.logicalCombatTimeSec, this.economy.seeds);
+    if (this.ancientKnowledgeTree && typeof this.ancientKnowledgeTree.awardPointsForMapFirstClear === 'function') {
+      const gainedPts = this.ancientKnowledgeTree.awardPointsForMapFirstClear(this.currentMapId, stars);
+      if (gainedPts > 0 && this.fx) {
+        this.fx.spawnFloatingText(480, 180, `远古知识之树领悟 +${gainedPts} 点!`, '#95DE64', 1.4);
+      }
+    }
     platform.playSfx('sfx_win');
     if (this.achievements) {
       if (this.economy.seeds >= 20) this.achievements.unlock('flawless_defense', this.fx);
@@ -24265,6 +24617,50 @@ class SceneController {
   }
 
   /**
+   * 统一取消栈（右键点击 / Esc 键优先取消瞄准、选卡、详查框或关闭战报/设置弹窗）
+   */
+  handleCancelAction(fromEsc = false) {
+    if (this.ui && this.ui.showGuideModal) {
+      this.ui.showGuideModal = false;
+      storage.markGuideSeen();
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.ui && this.ui.showSettingsModal) {
+      this.ui.showSettingsModal = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.combatAnalytics && this.combatAnalytics.isOpen) {
+      this.combatAnalytics.isOpen = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.activeSpellCasting || this.activeRallyTargeting || this.activeHeroRally || this.activeAwakeningTargeting) {
+      this.activeSpellCasting = null;
+      this.activeRallyTargeting = false;
+      this.activeHeroRally = false;
+      this.activeAwakeningTargeting = false;
+      if (this.hero) this.hero.isSelected = false;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.selectedBuildTowerId) {
+      this.selectedBuildTowerId = null;
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    if (this.ui && this.ui.inspectorOpen) {
+      this.ui.inspectorOpen = false;
+      this.ui.showTowerDetailBoard = false;
+      this.selectedTile = { col: -1, row: -1 };
+      platform.playSfx('sfx_click');
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * 消费统一输入动作队列
    */
   triggerSpell(spellId) {
@@ -24290,9 +24686,10 @@ class SceneController {
       return;
     }
     if (spellId === 'harvest') {
-      sp.timer = sp.cd;
-      this.economy.spores += sp.gain;
-      this.fx.showBanner('大地丰收！+' + sp.gain + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
+      sp.timer = sp.cd * (this.spellCdrMultiplier || 1.0);
+      const totalHarvest = sp.gain + (this.extraHarvestSpores || 0);
+      this.economy.addSpores(totalHarvest);
+      this.fx.showBanner('大地丰收！+' + totalHarvest + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
       this.fx.spawnParticles(480, 270, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
       platform.playSfx('sfx_win');
       return;
@@ -24319,7 +24716,7 @@ class SceneController {
       return false;
     }
 
-    sp.timer = sp.cd;
+    sp.timer = sp.cd * (this.spellCdrMultiplier || 1.0);
     const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
     const mx = (lx - mv.OFFSET_X) / mv.SCALE;
     const my = (ly - mv.OFFSET_Y) / mv.SCALE;
@@ -24339,21 +24736,25 @@ class SceneController {
       this.fx.showBanner('生命甘霖！防线狂暴', '#52C41A', '滋养并净化 ' + affected + ' 座防御塔，攻速翻倍6秒', 1.5);
       platform.playSfx('sfx_upgrade');
     } else if (spellId === 'shock') {
+      const effRad = sp.radius * (this.tempestRadiusMod || 1.0);
       let enemiesHit = 0;
       const alive = this.enemyManager.getAliveEnemies();
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
-        if (Math.hypot(e.x - mx, e.y - my) <= sp.radius) {
+        if (Math.hypot(e.x - mx, e.y - my) <= effRad) {
           const shockBase = 350;
           const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
           this.enemyManager.applyDamage(e, finalShockDmg, true, 'magic', this.fx, 'reactions');
           e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
+          if (this.tempestVortex && e.distPx > 32) {
+            e.distPx = Math.max(0, e.distPx - 28);
+          }
           enemiesHit++;
         }
       }
       this.fx.triggerShake(8, 350);
-      this.fx.spawnRing(mx, my, sp.radius, '#FFE58F', 0.45, false);
+      this.fx.spawnRing(mx, my, effRad, '#FFE58F', 0.45, false);
       this.fx.spawnParticles(mx, my, 32, ['#FFE58F', '#73D13D', '#FFFFFF', '#40A9FF'], 60, 200, 0.3, 0.65, 5);
       this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', '轰击 ' + enemiesHit + ' 名敌人（对空特攻），定身3.5秒', 1.5);
       platform.playSfx('sfx_boom');
@@ -24711,14 +25112,15 @@ class SceneController {
         if (this.mushroomMastery) {
           this.mushroomMastery.togglePanel();
         }
+      } else if (act.type === 'cancel_action') {
+        this.handleCancelAction(false);
       } else if (act.type === 'toggle_pause') {
-        if (this.ui.showSettingsModal || this.ui.showGuideModal) {
-          this.ui.showSettingsModal = false;
-          this.ui.showGuideModal = false;
-        } else if (this.state === 'BATTLE') {
-          this.pauseGame();
-        } else if (this.state === 'PAUSED') {
-          this.resumeGame();
+        if (!this.handleCancelAction(true)) {
+          if (this.state === 'BATTLE') {
+            this.pauseGame();
+          } else if (this.state === 'PAUSED') {
+            this.resumeGame();
+          }
         }
       }
       } catch (actionErr) {

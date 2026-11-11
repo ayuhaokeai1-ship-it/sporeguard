@@ -225,6 +225,7 @@ class AncientKnowledgeTree {
     if (typeof savedTree.totalPoints === 'number') {
       this.totalPointsEarned = Math.max(12, savedTree.totalPoints);
     }
+    this.clearedRewardedMaps = savedTree.clearedRewardedMaps || {};
   }
 
   saveState() {
@@ -232,7 +233,8 @@ class AncientKnowledgeTree {
       const save = storage.getSave ? storage.getSave() : {};
       save.knowledgeTree = {
         ranks: this.ranks,
-        totalPoints: this.totalPointsEarned
+        totalPoints: this.totalPointsEarned,
+        clearedRewardedMaps: this.clearedRewardedMaps || {}
       };
       if (storage.saveNow) {
         storage.saveNow();
@@ -290,11 +292,42 @@ class AncientKnowledgeTree {
     this.saveState();
   }
 
+  awardPointsForMapFirstClear(mapId, stars) {
+    if (!mapId || stars <= 0) return 0;
+    this.clearedRewardedMaps = this.clearedRewardedMaps || {};
+    let granted = 0;
+    if (!this.clearedRewardedMaps[mapId]) {
+      this.clearedRewardedMaps[mapId] = true;
+      granted = 2;
+      this.totalPointsEarned += granted;
+      this.saveState();
+    }
+    return granted;
+  }
+
   /**
    * 应用所有激活天赋至当前战斗场景
    */
   applyToCombatScene(scene) {
     if (!scene) return;
+
+    // 先重置场景天赋衍生状态，防止重开/洗点后残留
+    scene.photosyntheticSurgeBonus = 0;
+    scene.spellCdrMultiplier = 1.0;
+    scene.holyShieldCharges = 0;
+    scene.hasPrismaticSingularity = false;
+    scene.extraHarvestSpores = 0;
+    scene.eliteDoubleSporeChance = 0;
+    scene.deepEntanglementBonus = 0;
+    scene.superconductExtraJumps = 0;
+    scene.superconductArmorBonus = 0;
+    scene.pyroFissureCfg = null;
+    scene.toxicMiasmaDebuff = 0;
+    scene.tempestRadiusMod = 1.0;
+    scene.tempestVortex = false;
+    scene.awakenedAtkSpeedMod = 1.0;
+    scene.heroUltCdr = 0;
+    scene.avatarFrenzyDuration = 0;
 
     // 1. 菌丝网络：开局额外孢子与自然产出
     const myRank = this.getRank('mycelium_network');
@@ -303,12 +336,32 @@ class AncientKnowledgeTree {
       scene.economy.passiveTrickleBonus = myRank * 1.0;
     }
 
-    // 2. 远古树皮：英雄生命与刺甲
+    // 1.5 丰收祝福：大地丰收额外孢子 + 精英双倍掉孢几率
+    const bhRank = this.getRank('bountiful_harvest');
+    if (bhRank > 0) {
+      scene.extraHarvestSpores = bhRank * 40;
+      scene.eliteDoubleSporeChance = bhRank * 0.4;
+    }
+
+    // 2. 远古树皮：英雄生命上限与反伤
     const barkRank = this.getRank('bark_armor');
     if (barkRank > 0 && scene.hero) {
-      scene.hero.maxHp += barkRank * 100;
+      scene.hero.bonusHp = barkRank * 100;
+      scene.hero.maxHp = (scene.hero.baseMaxHp || 560) + scene.hero.bonusHp;
       scene.hero.hp = scene.hero.maxHp;
       scene.hero.thornReflectDmg = barkRank * 18;
+    }
+
+    // 2.2 钢盔小蘑兵：巡逻护卫双倍血量 + 濒死圣盾
+    const ironRank = this.getRank('iron_sporelings');
+    if (scene.sporelingPatrol && typeof scene.sporelingPatrol.applyKnowledgeTree === 'function') {
+      scene.sporelingPatrol.applyKnowledgeTree(ironRank);
+    }
+
+    // 2.4 深根盘缚：敏捷系敌人额外减速
+    const deepRank = this.getRank('deep_entanglement');
+    if (deepRank > 0) {
+      scene.deepEntanglementBonus = deepRank * 0.18;
     }
 
     // 3. 光合激涌：全队攻速与产孢提速
@@ -317,27 +370,52 @@ class AncientKnowledgeTree {
       scene.photosyntheticSurgeBonus = psRank * 0.10;
     }
 
-    // 4. 始源觉醒：额外觉醒古种
+    // 3.5 元素共鸣分支：超导 / 烈焰地裂 / 深渊剧毒 / 棱镜奇点
+    const supRank = this.getRank('superconduct_resonance');
+    if (supRank > 0) {
+      scene.superconductExtraJumps = supRank * 1;
+      scene.superconductArmorBonus = supRank * 0.20;
+    }
+    const pyroRank = this.getRank('pyro_fissure');
+    if (pyroRank > 0) {
+      scene.pyroFissureCfg = { radius: 1.0, duration: pyroRank * 2.0, dps: pyroRank * 35 };
+    }
+    const toxRank = this.getRank('toxic_miasma');
+    if (toxRank > 0) {
+      scene.toxicMiasmaDebuff = toxRank * 0.25;
+    }
+    if (this.getRank('prismatic_singularity') > 0) {
+      scene.hasPrismaticSingularity = true;
+    }
+
+    // 4. 始源觉醒：额外觉醒古种与超频攻速加成
     const awakRank = this.getRank('fertile_awakening');
     if (awakRank > 0) {
       scene.awakeningSeeds += awakRank;
+      scene.awakenedAtkSpeedMod = 1.0 + awakRank * 0.15;
     }
 
     // 5. 疾速通灵：神术冷却缩减
     const cdrRank = this.getRank('quickened_mysticism');
     if (cdrRank > 0) {
-      scene.spellCdrMultiplier = 1.0 - cdrRank * 0.12;
+      scene.spellCdrMultiplier = Math.max(0.55, 1.0 - cdrRank * 0.12);
+    }
+
+    // 5.5 风暴狂涌 & 森之化身
+    const tmpRank = this.getRank('tempest_surge');
+    if (tmpRank > 0) {
+      scene.tempestRadiusMod = 1.0 + tmpRank * 0.25;
+      scene.tempestVortex = true;
+    }
+    if (this.getRank('avatar_of_nature') > 0) {
+      scene.heroUltCdr = 0.30;
+      scene.avatarFrenzyDuration = 5.0;
     }
 
     // 6. 生命壁垒：基地结界
     const citRank = this.getRank('living_citadel');
     if (citRank > 0) {
       scene.holyShieldCharges = 1;
-    }
-
-    // 7. 棱镜奇点：多元素增幅
-    if (this.getRank('prismatic_singularity') > 0) {
-      scene.hasPrismaticSingularity = true;
     }
   }
 

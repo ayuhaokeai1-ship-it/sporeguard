@@ -28,7 +28,22 @@ class SporelingPatrol {
       this.createGuard(1, 14, 4)
     ];
 
+    this.ironRank = 0;
     this.repositionCooldown = 0;
+  }
+
+  /**
+   * 应用远古真菌知识之树「钢盔小蘑兵」加成（双倍生命 + 首次濒死神圣眩晕盾）
+   */
+  applyKnowledgeTree(ironRank) {
+    this.ironRank = ironRank || 0;
+    for (let i = 0; i < this.guards.length; i++) {
+      const g = this.guards[i];
+      const baseMax = g.role === 'shield' ? 320 : 210;
+      g.maxHp = this.ironRank > 0 ? baseMax * 2 : baseMax;
+      g.hp = g.maxHp;
+      g.deathShield = this.ironRank > 0;
+    }
   }
 
   createGuard(index, offsetX, offsetY) {
@@ -196,6 +211,7 @@ class SporelingPatrol {
         if (g.respawnTimer <= 0) {
           g.state = 'idle';
           g.hp = g.maxHp;
+          g.deathShield = (this.ironRank || 0) > 0;
           g.x = this.rallyX + g.offsetX;
           g.y = this.rallyY + g.offsetY;
           if (fx) {
@@ -289,6 +305,24 @@ class SporelingPatrol {
           }
 
           if (g.hp <= 0) {
+            // 「钢盔小蘑兵」濒死免死护盾：恢复 40% 生命并震晕周围地面敌军
+            if (g.deathShield) {
+              g.deathShield = false;
+              g.hp = Math.round(g.maxHp * 0.40);
+              const stunSec = 0.8 + (this.ironRank || 1) * 0.4;
+              for (let ei = 0; ei < aliveEnemies.length; ei++) {
+                const oe = aliveEnemies[ei];
+                if (!oe.isFlying && oe.state !== 'death' && Math.hypot(oe.x - g.x, oe.y - g.y) <= 72) {
+                  oe.stunTimer = Math.max(oe.stunTimer || 0, stunSec);
+                }
+              }
+              if (fx) {
+                fx.spawnFloatingText(g.x, g.y - 20, '钢盔护盾·免疫阵亡!', '#FFD700', 1.15);
+                if (fx.spawnShockwave) fx.spawnShockwave(g.x, g.y, 64, '#FFD700');
+              }
+              platform.playSfx('sfx_upgrade');
+              continue;
+            }
             // 阵亡
             g.state = 'dead';
             g.respawnTimer = 10.0;

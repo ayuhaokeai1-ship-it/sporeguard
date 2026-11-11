@@ -80,6 +80,12 @@ function initInput() {
         handleKeyDown(res.code || res.key || '');
       });
     }
+
+    if (typeof wx.onRightClick === 'function') {
+      wx.onRightClick(() => {
+        emitAction('cancel_action');
+      });
+    }
   }
 }
 

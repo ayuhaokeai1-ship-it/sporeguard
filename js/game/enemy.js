@@ -271,8 +271,10 @@ class EnemyManager {
   getEffectiveSlow(e) {
     if (e.slowImmune) return 0;
     const rawSlow = Math.max(e.activeSlow || 0, e.residualSlowTimer > 0 ? e.residualSlowValue : 0);
+    const isAgile = e.type === 'swift' || e.type === 'leaper' || e.type === 'larva';
+    const extraEntangle = (rawSlow > 0 && isAgile && this.scene && this.scene.deepEntanglementBonus) ? this.scene.deepEntanglementBonus : 0;
     const factor = e.def.slowFactor !== undefined ? e.def.slowFactor : 1.0;
-    return Math.min(CONFIG.COMBAT.GLOBAL_SLOW_CAP, rawSlow * factor);
+    return Math.min(CONFIG.COMBAT.GLOBAL_SLOW_CAP, (rawSlow + extraEntangle) * factor);
   }
 
   /**
@@ -311,7 +313,15 @@ class EnemyManager {
 
     const critMul = isCrit ? CONFIG.COMBAT.CRIT_MULTIPLIER : 1.0;
     const markMul = (enemy.markTimer > 0 || isHolySmite) ? CONFIG.COMBAT.MARK_MULTIPLIER : 1.0;
-    const rawDamage = baseDamage * (1 + (bonusSum || 0)) * critMul * markMul;
+    let prismaticBonus = 0;
+    if (this.scene && this.scene.hasPrismaticSingularity && enemy.elementAuras) {
+      let auraCnt = 0;
+      for (const ak in enemy.elementAuras) {
+        if (enemy.elementAuras[ak] > 0) auraCnt++;
+      }
+      if (auraCnt >= 2) prismaticBonus = 0.50;
+    }
+    const rawDamage = baseDamage * (1 + (bonusSum || 0) + prismaticBonus) * critMul * markMul;
     let frontShieldMul = 1.0;
     if (enemy.hasFrontShield && !isCrit) {
       // 穿透前盾机制：圣光魔法、迫击轰炸、烈焰灼烧绕过正面盾牌抗性
@@ -586,6 +596,11 @@ class EnemyManager {
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
       this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+    }
+    if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
+      if (Math.random() < this.scene.eliteDoubleSporeChance) {
+        this.scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 12, true, 16);
+      }
     }
     // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
     if (this.scene) {
@@ -931,8 +946,18 @@ class EnemyManager {
 
       const route = e.isFlying ? map.airRoute : ((e.routeIndex === 1 && map.groundRoute2) ? map.groundRoute2 : map.groundRoute);
       if (e.distPx >= route.totalLengthPx) {
-        // 抵达终点种子仓库：扣除威胁值并移除
+        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         const sampleEnd = sampleRouteAtDistance(route, route.totalLengthPx, 0);
+        if (this.scene && this.scene.holyShieldCharges > 0) {
+          this.scene.holyShieldCharges -= 1;
+          if (fx) {
+            fx.spawnFloatingText(sampleEnd.x, sampleEnd.y - 22, '生命壁垒神圣结界抵挡!', '#95DE64', 1.35);
+            if (fx.spawnShockwave) fx.spawnShockwave(sampleEnd.x, sampleEnd.y, 65, '#95DE64');
+          }
+          platform.playSfx('sfx_upgrade');
+          this.pool.releaseAt(i);
+          continue;
+        }
         if (fx) {
           fx.onSeedDamaged(sampleEnd.x, sampleEnd.y);
         }
