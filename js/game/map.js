@@ -425,25 +425,26 @@ class GameMap {
     }
     ctx.restore();
 
-    // 守护小屋圣坛生机结界（生命充沛呈暖金呼吸，危急<=8颗时轻度红脉冲警示）
+    // 守护小屋危急警示光晕（平时隐藏一切几何线框环，仅在种子 <= 8 颗危急时透出柔和猩红警示地面光）
     if (this.mapData && this.mapData.warehouseTile) {
-      const [wc, wr] = this.mapData.warehouseTile;
-      const hx = (wc + 0.5) * TILE_SIZE;
-      const hy = (wr + 0.5) * TILE_SIZE + 6;
       const curSeeds = (this.scene && this.scene.economy) ? this.scene.economy.seeds : 20;
-      const isDanger = curSeeds <= 8;
-      const pulse = 0.85 + Math.sin(animTimeSec * (isDanger ? 6.5 : 2.6)) * 0.15;
-      ctx.save();
-      ctx.translate(hx, hy);
-      ctx.scale(1.0, 0.65);
-      ctx.strokeStyle = isDanger
-        ? `rgba(255, 77, 79, ${(0.55 * pulse).toFixed(2)})`
-        : `rgba(255, 229, 143, ${(0.35 * pulse).toFixed(2)})`;
-      ctx.lineWidth = isDanger ? 2.0 : 1.4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+      if (curSeeds <= 8) {
+        const [wc, wr] = this.mapData.warehouseTile;
+        const hx = (wc + 0.5) * TILE_SIZE;
+        const hy = (wr + 0.5) * TILE_SIZE + 6;
+        const pulse = 0.85 + Math.sin(animTimeSec * 6.5) * 0.15;
+        ctx.save();
+        ctx.translate(hx, hy);
+        ctx.scale(1.0, 0.65);
+        const wGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 26 * pulse);
+        wGrad.addColorStop(0, `rgba(255, 77, 79, ${(0.36 * pulse).toFixed(2)})`);
+        wGrad.addColorStop(1, 'rgba(255, 77, 79, 0)');
+        ctx.fillStyle = wGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 26 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     this.renderRouteGuides(ctx, animTimeSec);
@@ -526,19 +527,20 @@ class GameMap {
         const px = (pt[0] + 0.5) * TILE_SIZE;
         const py = (pt[1] + 0.5) * TILE_SIZE;
         ctx.save();
+        const pGrad = ctx.createRadialGradient(px, py, 2, px, py, 19 * pulse);
+        pGrad.addColorStop(0, 'rgba(255, 110, 64, 0.42)');
+        pGrad.addColorStop(0.7, 'rgba(180, 30, 30, 0.25)');
+        pGrad.addColorStop(1, 'rgba(120, 18, 18, 0)');
+        ctx.fillStyle = pGrad;
         ctx.beginPath();
-        ctx.arc(px, py, 16 * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(120, 18, 18, 0.42)';
+        ctx.arc(px, py, 19 * pulse, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
 
         // 备战倒计时外环进度弧
         ctx.beginPath();
         ctx.arc(px, py, 19.5, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * prog);
-        ctx.strokeStyle = '#FF4D4F';
-        ctx.lineWidth = 2.6;
+        ctx.strokeStyle = 'rgba(255, 92, 92, 0.90)';
+        ctx.lineWidth = 2.4;
         ctx.stroke();
 
         // 清晰提前迎战提示微标

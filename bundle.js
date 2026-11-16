@@ -5395,14 +5395,30 @@ class FxSystem {
         }
       }
 
+      if (r.isUpgrade) {
+        const upImg = platform.getImage(r.color === '#52C41A' ? 'assets/vfx/range_fairy_green.png' : 'assets/vfx/range_sunburst_gold.png');
+        if (upImg && upImg.width) {
+          ctx.save();
+          ctx.translate(Math.round(r.x), Math.round(r.y));
+          ctx.scale(1.0, 0.74);
+          ctx.globalAlpha = Math.max(0, alpha * 0.62);
+          const dSize = curRadius * 2.2;
+          ctx.drawImage(upImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+          ctx.restore();
+          continue;
+        }
+      }
+
       if (!drawHazardSprite(ctx, r.isUpgrade ? 'shockwave_1' : 'shockwave_0', r.x, r.y, curRadius, alpha * 0.75)) {
         ctx.save();
-        ctx.strokeStyle = r.color;
-        ctx.globalAlpha = alpha * 0.65;
-        ctx.lineWidth = 1.8;
+        const rGrad = ctx.createRadialGradient(Math.round(r.x), Math.round(r.y), Math.max(1, curRadius * 0.3), Math.round(r.x), Math.round(r.y), Math.max(4, curRadius));
+        rGrad.addColorStop(0, 'rgba(255, 240, 180, 0)');
+        rGrad.addColorStop(0.7, 'rgba(255, 224, 130, ' + (alpha * 0.28).toFixed(2) + ')');
+        rGrad.addColorStop(1, 'rgba(255, 200, 90, 0)');
+        ctx.fillStyle = rGrad;
         ctx.beginPath();
         ctx.ellipse(Math.round(r.x), Math.round(r.y), Math.round(curRadius), Math.round(curRadius * 0.78), 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.fill();
         ctx.restore();
         platform.recordDrawCall(1);
       }
@@ -6432,25 +6448,26 @@ class GameMap {
     }
     ctx.restore();
 
-    // 守护小屋圣坛生机结界（生命充沛呈暖金呼吸，危急<=8颗时轻度红脉冲警示）
+    // 守护小屋危急警示光晕（平时隐藏一切几何线框环，仅在种子 <= 8 颗危急时透出柔和猩红警示地面光）
     if (this.mapData && this.mapData.warehouseTile) {
-      const [wc, wr] = this.mapData.warehouseTile;
-      const hx = (wc + 0.5) * TILE_SIZE;
-      const hy = (wr + 0.5) * TILE_SIZE + 6;
       const curSeeds = (this.scene && this.scene.economy) ? this.scene.economy.seeds : 20;
-      const isDanger = curSeeds <= 8;
-      const pulse = 0.85 + Math.sin(animTimeSec * (isDanger ? 6.5 : 2.6)) * 0.15;
-      ctx.save();
-      ctx.translate(hx, hy);
-      ctx.scale(1.0, 0.65);
-      ctx.strokeStyle = isDanger
-        ? `rgba(255, 77, 79, ${(0.55 * pulse).toFixed(2)})`
-        : `rgba(255, 229, 143, ${(0.35 * pulse).toFixed(2)})`;
-      ctx.lineWidth = isDanger ? 2.0 : 1.4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+      if (curSeeds <= 8) {
+        const [wc, wr] = this.mapData.warehouseTile;
+        const hx = (wc + 0.5) * TILE_SIZE;
+        const hy = (wr + 0.5) * TILE_SIZE + 6;
+        const pulse = 0.85 + Math.sin(animTimeSec * 6.5) * 0.15;
+        ctx.save();
+        ctx.translate(hx, hy);
+        ctx.scale(1.0, 0.65);
+        const wGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 26 * pulse);
+        wGrad.addColorStop(0, `rgba(255, 77, 79, ${(0.36 * pulse).toFixed(2)})`);
+        wGrad.addColorStop(1, 'rgba(255, 77, 79, 0)');
+        ctx.fillStyle = wGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 26 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     this.renderRouteGuides(ctx, animTimeSec);
@@ -6533,19 +6550,20 @@ class GameMap {
         const px = (pt[0] + 0.5) * TILE_SIZE;
         const py = (pt[1] + 0.5) * TILE_SIZE;
         ctx.save();
+        const pGrad = ctx.createRadialGradient(px, py, 2, px, py, 19 * pulse);
+        pGrad.addColorStop(0, 'rgba(255, 110, 64, 0.42)');
+        pGrad.addColorStop(0.7, 'rgba(180, 30, 30, 0.25)');
+        pGrad.addColorStop(1, 'rgba(120, 18, 18, 0)');
+        ctx.fillStyle = pGrad;
         ctx.beginPath();
-        ctx.arc(px, py, 16 * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(120, 18, 18, 0.42)';
+        ctx.arc(px, py, 19 * pulse, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
 
         // 备战倒计时外环进度弧
         ctx.beginPath();
         ctx.arc(px, py, 19.5, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * prog);
-        ctx.strokeStyle = '#FF4D4F';
-        ctx.lineWidth = 2.6;
+        ctx.strokeStyle = 'rgba(255, 92, 92, 0.90)';
+        ctx.lineWidth = 2.4;
         ctx.stroke();
 
         // 清晰提前迎战提示微标
@@ -9351,23 +9369,25 @@ class ForestHero {
     ctx.ellipse(this.x, this.y + 12, 16, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 姿态专属底环光圈
-    let stanceColor = 'rgba(64, 169, 255, 0.55)'; // 守卫蓝
-    if (this.stance === 'aggressive') stanceColor = 'rgba(255, 77, 79, 0.65)'; // 狂暴红
-    else if (this.stance === 'scout') stanceColor = 'rgba(82, 196, 26, 0.55)'; // 游侠绿
-    if (this.undyingTimer > 0) stanceColor = 'rgba(255, 215, 0, 0.9)'; // 不灭金
+    // 姿态专属柔和地面灵气光晕（仅在明确选中或触发不灭金身时才显示清晰边框环）
+    let glowCol = 'rgba(64, 169, 255,';
+    if (this.stance === 'aggressive') glowCol = 'rgba(255, 77, 79,';
+    else if (this.stance === 'scout') glowCol = 'rgba(82, 196, 26,';
+    if (this.undyingTimer > 0) glowCol = 'rgba(255, 215, 0,';
 
-    ctx.strokeStyle = stanceColor;
-    ctx.lineWidth = (this.isSelected || this.undyingTimer > 0) ? 2.5 : 1.5;
+    const hGrad = ctx.createRadialGradient(this.x, this.y + 12, 3, this.x, this.y + 12, 22);
+    hGrad.addColorStop(0, glowCol + ' 0.34)');
+    hGrad.addColorStop(1, glowCol + ' 0)');
+    ctx.fillStyle = hGrad;
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.ellipse(this.x, this.y + 12, 22, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (this.isSelected || this.levelUpGlowTimer > 0) {
-      ctx.strokeStyle = this.levelUpGlowTimer > 0 ? '#FFD700' : '#73D13D';
-      ctx.lineWidth = 2;
+    if (this.isSelected || this.undyingTimer > 0 || this.levelUpGlowTimer > 0) {
+      ctx.strokeStyle = this.levelUpGlowTimer > 0 || this.undyingTimer > 0 ? '#FFD700' : '#73D13D';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y + 12, 24, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 12, 22, 10, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -12260,18 +12280,32 @@ class CombatJuiceEngine {
    * 绘制战斗特效层 (暴击火花、冲击波与连击小挂件)
    */
   renderFx(ctx) {
-    // 1. 冲击波渲染
+    // 1. 冲击波渲染（优先采用 AI 手绘爆炸烟云，彻底剔除生硬矢量线框椭圆）
     if (this.shockwaves.length > 0) {
+      const boomImg = platform.getImage('assets/vfx/vfx_explosion.png');
       ctx.save();
       for (let i = 0; i < this.shockwaves.length; i++) {
         const sw = this.shockwaves[i];
         if (!sw.active) continue;
-        const alpha = Math.max(0, sw.life / sw.maxLife);
-        ctx.strokeStyle = sw.color;
-        ctx.lineWidth = 2.5 * alpha;
-        ctx.beginPath();
-        ctx.ellipse(sw.x, sw.y, sw.currentRadius, sw.currentRadius * 0.72, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        const alpha = Math.max(0, sw.life / Math.max(0.05, sw.maxLife));
+        if (boomImg && boomImg.width) {
+          ctx.save();
+          ctx.translate(Math.round(sw.x), Math.round(sw.y));
+          ctx.scale(1.0, 0.72);
+          ctx.globalAlpha = alpha * 0.55;
+          const sz = Math.max(12, sw.currentRadius * 2.0);
+          ctx.drawImage(boomImg, -sz * 0.5, -sz * 0.5, sz, sz);
+          ctx.restore();
+        } else {
+          const r = Math.max(8, sw.currentRadius);
+          const g = ctx.createRadialGradient(sw.x, sw.y, r * 0.2, sw.x, sw.y, r);
+          g.addColorStop(0, `rgba(255, 224, 130, ${(alpha * 0.25).toFixed(2)})`);
+          g.addColorStop(1, 'rgba(255, 180, 70, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.ellipse(sw.x, sw.y, r, r * 0.72, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
     }
@@ -13651,18 +13685,22 @@ class GuardianSynergiesSystem {
    * 绘制羁绊光环与林地星轨连接
    */
   render(ctx) {
-    if (this.synergyAuras.length === 0 && this.activeSynergyCount === 0) return;
+    if (this.synergyAuras.length === 0) return;
 
+    const auraImg = platform.getImage('assets/vfx/range_sunburst_gold.png') || platform.getImage('assets/vfx/range_fairy_green.png');
     ctx.save();
     for (let i = 0; i < this.synergyAuras.length; i++) {
       const a = this.synergyAuras[i];
-      const alpha = Math.max(0, a.life / a.maxLife);
-      ctx.strokeStyle = a.color;
-      ctx.globalAlpha = alpha * 0.45;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-      ctx.stroke();
+      const alpha = Math.max(0, a.life / Math.max(0.05, a.maxLife));
+      if (auraImg && auraImg.width) {
+        const d = a.radius * 2;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.35;
+        ctx.translate(Math.round(a.x), Math.round(a.y));
+        ctx.scale(1.0, 0.72);
+        ctx.drawImage(auraImg, -a.radius, -d * 0.5, d, d);
+        ctx.restore();
+      }
     }
     ctx.restore();
   }
@@ -15294,6 +15332,7 @@ module.exports = CombatScreenJuice;
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const platform = require('../core/platform');
 const i18n = require('../i18n');
 const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
@@ -15467,22 +15506,25 @@ class BossOverdriveEngine {
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
     const bx = this.activeBoss.x;
     const by = this.activeBoss.y;
-    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
-    const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 8) * 0.15;
+    const auraImg = platform.getImage(this.phase >= 2 ? 'assets/vfx/range_bramble_red.png' : 'assets/vfx/range_sunburst_gold.png');
+    const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 5) * 0.08;
     ctx.save();
-    ctx.translate(bx, by + 6);
-    ctx.scale(pulse, pulse * 0.7);
-    ctx.strokeStyle = auraColor;
-    ctx.lineWidth = 2.0;
-    ctx.globalAlpha = 0.65;
+    ctx.translate(Math.round(bx), Math.round(by + 10));
+    ctx.scale(pulse, pulse * 0.65);
+    const gCol = this.phase === 3 ? 'rgba(179, 127, 235,' : (this.phase === 2 ? 'rgba(255, 77, 79,' : 'rgba(255, 169, 64,');
+    const rg = ctx.createRadialGradient(0, 0, 6, 0, 0, 34);
+    rg.addColorStop(0, gCol + ' 0.34)');
+    rg.addColorStop(0.6, gCol + ' 0.14)');
+    rg.addColorStop(1, gCol + ' 0)');
+    ctx.fillStyle = rg;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 32, 20, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.rotate(this.overdriveAuraAnim * 2.0);
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.arc(0, 0, 34, 0, Math.PI * 2);
+    ctx.fill();
+    if (auraImg && auraImg.width) {
+      ctx.rotate(this.overdriveAuraAnim * 1.1);
+      ctx.globalAlpha = 0.58;
+      ctx.drawImage(auraImg, -30, -30, 60, 60);
+    }
     ctx.restore();
   }
 
@@ -16777,7 +16819,6 @@ class BulletManager {
         if (prog >= 1) {
           if (this.combatJuice) {
             this.combatJuice.addTrauma(0.32);
-            this.combatJuice.triggerShockwave(b.targetX, b.targetY, b.splashRadiusPx * 1.25, 'rgba(255, 140, 0, 0.82)');
           }
           const effRadius = b.splashRadiusPx * (b.hasToxicBurst ? 1.4 : 1.0);
           const r2 = effRadius * effRadius;
@@ -16919,14 +16960,6 @@ class BulletManager {
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
-
-      if (h.kind === 'acid') {
-        ctx.strokeStyle = `rgba(186, 230, 55, ${0.36 * alpha})`;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
-        ctx.stroke();
-      }
 
       // 少量飘动的柔和微光孢子粒子
       const pulseTime = animTimeSec * 2.2 + i;
@@ -17584,15 +17617,10 @@ class TowerManager {
         const isGrand = tw.synergies && tw.synergies.hasGrandResonance;
         const pulse = 0.72 + Math.sin((this.animTimer || 0) * 3.2 + tw.col) * 0.25;
         ctx.save();
-        ctx.strokeStyle = isGrand ? `rgba(255, 224, 110, ${0.26 * pulse})` : `rgba(135, 232, 160, ${0.20 * pulse})`;
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.ellipse(tw.x, tw.y + 11, 20, 9, 0, 0, Math.PI * 2);
-        ctx.stroke();
         const ang = (this.animTimer || 0) * 1.8 + tw.row * 1.1;
-        ctx.fillStyle = isGrand ? 'rgba(255, 235, 145, 0.55)' : 'rgba(186, 255, 210, 0.45)';
+        ctx.fillStyle = isGrand ? `rgba(255, 235, 145, ${(0.52 * pulse).toFixed(2)})` : `rgba(186, 255, 210, ${(0.42 * pulse).toFixed(2)})`;
         ctx.beginPath();
-        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.6, 0, Math.PI * 2);
+        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -18013,26 +18041,29 @@ class TowerManager {
         ctx.restore();
       }
 
-      // 甘霖狂暴脚底翠绿魔法光环
+      // 甘霖狂暴与圣光照耀脚底柔和灵光光晕（用柔和径向光晕取代生硬几何线框椭圆）
       if (t.buffTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#52C41A';
-        ctx.lineWidth = 1.8;
-        ctx.globalAlpha = 0.75 + Math.sin(t.buffTimer * 10) * 0.25;
+        const bAlpha = 0.30 + Math.sin(t.buffTimer * 10) * 0.10;
+        const bGrad = ctx.createRadialGradient(t.x, t.y + 10, 2, t.x, t.y + 10, 19);
+        bGrad.addColorStop(0, `rgba(82, 196, 26, ${bAlpha.toFixed(2)})`);
+        bGrad.addColorStop(1, 'rgba(82, 196, 26, 0)');
+        ctx.fillStyle = bGrad;
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 10, 16, 7, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.ellipse(t.x, t.y + 10, 19, 8.5, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
-      // 圣光照耀共鸣脚底金芒光环
       if (t.celestialBuffTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#FFD666';
-        ctx.lineWidth = 1.8;
-        ctx.globalAlpha = 0.65 + Math.sin(t.celestialBuffTimer * 8) * 0.25;
+        const cAlpha = 0.30 + Math.sin(t.celestialBuffTimer * 8) * 0.10;
+        const cGrad = ctx.createRadialGradient(t.x, t.y + 10, 2, t.x, t.y + 10, 20);
+        cGrad.addColorStop(0, `rgba(255, 214, 102, ${cAlpha.toFixed(2)})`);
+        cGrad.addColorStop(1, 'rgba(255, 214, 102, 0)');
+        ctx.fillStyle = cGrad;
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 11, 17, 7.5, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.ellipse(t.x, t.y + 10, 20, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 
@@ -18066,15 +18097,16 @@ class TowerManager {
         ctx.restore();
       }
 
-      // 超频大招彩虹金色光芒
+      // 超频大招柔和金芒呼吸底座（AI 圣阳环 + 柔和径向光晕）
       if (t.superchargeTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 2.5;
-        ctx.globalAlpha = 0.8 + Math.sin(t.superchargeTimer * 15) * 0.2;
-        ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 10, 18, 8, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        const sImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
+        if (sImg && sImg.width) {
+          ctx.translate(t.x, t.y + 10);
+          ctx.scale(1.0, 0.45);
+          ctx.globalAlpha = 0.50 + Math.sin(t.superchargeTimer * 12) * 0.15;
+          ctx.drawImage(sImg, -22, -22, 44, 44);
+        }
         ctx.restore();
       }
 
@@ -20574,17 +20606,23 @@ class UiManager {
     const scale = mv.SCALE || 1;
     const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 6.5);
 
+    const goldHaloImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
     ctx.save();
     for (let i = 0; i < scene.towerManager.towers.length; i++) {
       const t = scene.towerManager.towers[i];
       if (!t || t.isAwakened) continue;
       const sx = mv.OFFSET_X + (t.col + 0.5) * TILE_SIZE * scale;
       const sy = mv.OFFSET_Y + (t.row + 0.5) * TILE_SIZE * scale;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 20 + pulse * 4, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(250, 204, 21, ' + (0.45 + pulse * 0.4) + ')';
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
+      if (goldHaloImg && goldHaloImg.width) {
+        ctx.save();
+        ctx.translate(sx, sy + 6 * scale);
+        ctx.scale(1.0, 0.72);
+        ctx.rotate(this.uiAnimTime * 1.4);
+        ctx.globalAlpha = 0.55 + pulse * 0.35;
+        const sz = (40 + pulse * 6) * scale;
+        ctx.drawImage(goldHaloImg, -sz * 0.5, -sz * 0.5, sz, sz);
+        ctx.restore();
+      }
     }
 
     const pillW = 248;
@@ -22287,15 +22325,22 @@ class UiManager {
     }
     ctx.restore();
 
-    // 选中/悬停石座高亮基底
+    // 选中/悬停石座柔和基底（采用 AI 光环贴图替代生硬椭圆线框）
     ctx.save();
-    ctx.fillStyle = opts.affordable === false ? 'rgba(255, 77, 79, 0.22)' : 'rgba(82, 196, 26, 0.22)';
-    ctx.strokeStyle = opts.affordable === false ? 'rgba(255, 120, 117, 0.82)' : 'rgba(255, 229, 143, 0.72)';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.ellipse(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.65, 18, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    const baseHaloImg = platform.getImage(opts.affordable === false ? 'assets/vfx/range_bramble_red.png' : 'assets/vfx/range_fairy_green.png');
+    if (baseHaloImg && baseHaloImg.width) {
+      ctx.save();
+      ctx.translate(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.62);
+      ctx.scale(1.0, 0.68);
+      ctx.globalAlpha = 0.65;
+      ctx.drawImage(baseHaloImg, -20, -20, 40, 40);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = opts.affordable === false ? 'rgba(255, 77, 79, 0.24)' : 'rgba(82, 196, 26, 0.24)';
+      ctx.beginPath();
+      ctx.ellipse(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.65, 18, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // BTD6/KR 式局部菌丝共鸣链路预览：仅展示与当前预览/选中守卫邻近(<=135px)发生羁绊的伙伴连线
     const partners = [];
@@ -22439,14 +22484,23 @@ class UiManager {
           } else {
             const tx = selCol * TILE_SIZE;
             const ty = selRow * TILE_SIZE;
+            const sunImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
             ctx.save();
-            ctx.fillStyle = 'rgba(255, 229, 143, 0.16)';
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.ellipse(tx + 16, ty + 20, 18, 11, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            if (sunImg && sunImg.width) {
+              ctx.translate(tx + 16, ty + 18);
+              ctx.scale(1.0, 0.72);
+              ctx.rotate(this.uiAnimTime * 1.4);
+              ctx.globalAlpha = 0.72;
+              ctx.drawImage(sunImg, -21, -21, 42, 42);
+            } else {
+              const g = ctx.createRadialGradient(tx + 16, ty + 18, 3, tx + 16, ty + 18, 20);
+              g.addColorStop(0, 'rgba(255, 229, 143, 0.34)');
+              g.addColorStop(1, 'rgba(255, 215, 0, 0)');
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.ellipse(tx + 16, ty + 18, 20, 13, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
             ctx.restore();
           }
           return;
@@ -25625,6 +25679,7 @@ class SceneController {
     }
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.update(dt, this);
     if (this.tacticalTargeting) this.tacticalTargeting.update(dt);
+    if (this.combatJuice) this.combatJuice.update(dt);
     if (this.combatScreenJuice) this.combatScreenJuice.update(dt, this.state === 'BATTLE');
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.update(dt, this);
     if (this.elderRootActiveTimer > 0) {

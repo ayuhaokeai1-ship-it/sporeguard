@@ -517,14 +517,30 @@ class FxSystem {
         }
       }
 
+      if (r.isUpgrade) {
+        const upImg = platform.getImage(r.color === '#52C41A' ? 'assets/vfx/range_fairy_green.png' : 'assets/vfx/range_sunburst_gold.png');
+        if (upImg && upImg.width) {
+          ctx.save();
+          ctx.translate(Math.round(r.x), Math.round(r.y));
+          ctx.scale(1.0, 0.74);
+          ctx.globalAlpha = Math.max(0, alpha * 0.62);
+          const dSize = curRadius * 2.2;
+          ctx.drawImage(upImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+          ctx.restore();
+          continue;
+        }
+      }
+
       if (!drawHazardSprite(ctx, r.isUpgrade ? 'shockwave_1' : 'shockwave_0', r.x, r.y, curRadius, alpha * 0.75)) {
         ctx.save();
-        ctx.strokeStyle = r.color;
-        ctx.globalAlpha = alpha * 0.65;
-        ctx.lineWidth = 1.8;
+        const rGrad = ctx.createRadialGradient(Math.round(r.x), Math.round(r.y), Math.max(1, curRadius * 0.3), Math.round(r.x), Math.round(r.y), Math.max(4, curRadius));
+        rGrad.addColorStop(0, 'rgba(255, 240, 180, 0)');
+        rGrad.addColorStop(0.7, 'rgba(255, 224, 130, ' + (alpha * 0.28).toFixed(2) + ')');
+        rGrad.addColorStop(1, 'rgba(255, 200, 90, 0)');
+        ctx.fillStyle = rGrad;
         ctx.beginPath();
         ctx.ellipse(Math.round(r.x), Math.round(r.y), Math.round(curRadius), Math.round(curRadius * 0.78), 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.fill();
         ctx.restore();
         platform.recordDrawCall(1);
       }

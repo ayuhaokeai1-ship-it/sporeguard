@@ -240,18 +240,22 @@ class GuardianSynergiesSystem {
    * 绘制羁绊光环与林地星轨连接
    */
   render(ctx) {
-    if (this.synergyAuras.length === 0 && this.activeSynergyCount === 0) return;
+    if (this.synergyAuras.length === 0) return;
 
+    const auraImg = platform.getImage('assets/vfx/range_sunburst_gold.png') || platform.getImage('assets/vfx/range_fairy_green.png');
     ctx.save();
     for (let i = 0; i < this.synergyAuras.length; i++) {
       const a = this.synergyAuras[i];
-      const alpha = Math.max(0, a.life / a.maxLife);
-      ctx.strokeStyle = a.color;
-      ctx.globalAlpha = alpha * 0.45;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-      ctx.stroke();
+      const alpha = Math.max(0, a.life / Math.max(0.05, a.maxLife));
+      if (auraImg && auraImg.width) {
+        const d = a.radius * 2;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.35;
+        ctx.translate(Math.round(a.x), Math.round(a.y));
+        ctx.scale(1.0, 0.72);
+        ctx.drawImage(auraImg, -a.radius, -d * 0.5, d, d);
+        ctx.restore();
+      }
     }
     ctx.restore();
   }

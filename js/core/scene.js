@@ -1095,6 +1095,7 @@ class SceneController {
     }
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.update(dt, this);
     if (this.tacticalTargeting) this.tacticalTargeting.update(dt);
+    if (this.combatJuice) this.combatJuice.update(dt);
     if (this.combatScreenJuice) this.combatScreenJuice.update(dt, this.state === 'BATTLE');
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.update(dt, this);
     if (this.elderRootActiveTimer > 0) {

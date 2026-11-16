@@ -535,15 +535,10 @@ class TowerManager {
         const isGrand = tw.synergies && tw.synergies.hasGrandResonance;
         const pulse = 0.72 + Math.sin((this.animTimer || 0) * 3.2 + tw.col) * 0.25;
         ctx.save();
-        ctx.strokeStyle = isGrand ? `rgba(255, 224, 110, ${0.26 * pulse})` : `rgba(135, 232, 160, ${0.20 * pulse})`;
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.ellipse(tw.x, tw.y + 11, 20, 9, 0, 0, Math.PI * 2);
-        ctx.stroke();
         const ang = (this.animTimer || 0) * 1.8 + tw.row * 1.1;
-        ctx.fillStyle = isGrand ? 'rgba(255, 235, 145, 0.55)' : 'rgba(186, 255, 210, 0.45)';
+        ctx.fillStyle = isGrand ? `rgba(255, 235, 145, ${(0.52 * pulse).toFixed(2)})` : `rgba(186, 255, 210, ${(0.42 * pulse).toFixed(2)})`;
         ctx.beginPath();
-        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.6, 0, Math.PI * 2);
+        ctx.arc(tw.x + Math.cos(ang) * 18, tw.y + 10 + Math.sin(ang) * 7, 1.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -964,26 +959,29 @@ class TowerManager {
         ctx.restore();
       }
 
-      // 甘霖狂暴脚底翠绿魔法光环
+      // 甘霖狂暴与圣光照耀脚底柔和灵光光晕（用柔和径向光晕取代生硬几何线框椭圆）
       if (t.buffTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#52C41A';
-        ctx.lineWidth = 1.8;
-        ctx.globalAlpha = 0.75 + Math.sin(t.buffTimer * 10) * 0.25;
+        const bAlpha = 0.30 + Math.sin(t.buffTimer * 10) * 0.10;
+        const bGrad = ctx.createRadialGradient(t.x, t.y + 10, 2, t.x, t.y + 10, 19);
+        bGrad.addColorStop(0, `rgba(82, 196, 26, ${bAlpha.toFixed(2)})`);
+        bGrad.addColorStop(1, 'rgba(82, 196, 26, 0)');
+        ctx.fillStyle = bGrad;
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 10, 16, 7, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.ellipse(t.x, t.y + 10, 19, 8.5, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
-      // 圣光照耀共鸣脚底金芒光环
       if (t.celestialBuffTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#FFD666';
-        ctx.lineWidth = 1.8;
-        ctx.globalAlpha = 0.65 + Math.sin(t.celestialBuffTimer * 8) * 0.25;
+        const cAlpha = 0.30 + Math.sin(t.celestialBuffTimer * 8) * 0.10;
+        const cGrad = ctx.createRadialGradient(t.x, t.y + 10, 2, t.x, t.y + 10, 20);
+        cGrad.addColorStop(0, `rgba(255, 214, 102, ${cAlpha.toFixed(2)})`);
+        cGrad.addColorStop(1, 'rgba(255, 214, 102, 0)');
+        ctx.fillStyle = cGrad;
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 11, 17, 7.5, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.ellipse(t.x, t.y + 10, 20, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 
@@ -1017,15 +1015,16 @@ class TowerManager {
         ctx.restore();
       }
 
-      // 超频大招彩虹金色光芒
+      // 超频大招柔和金芒呼吸底座（AI 圣阳环 + 柔和径向光晕）
       if (t.superchargeTimer > 0) {
         ctx.save();
-        ctx.strokeStyle = '#FFE58F';
-        ctx.lineWidth = 2.5;
-        ctx.globalAlpha = 0.8 + Math.sin(t.superchargeTimer * 15) * 0.2;
-        ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 10, 18, 8, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        const sImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
+        if (sImg && sImg.width) {
+          ctx.translate(t.x, t.y + 10);
+          ctx.scale(1.0, 0.45);
+          ctx.globalAlpha = 0.50 + Math.sin(t.superchargeTimer * 12) * 0.15;
+          ctx.drawImage(sImg, -22, -22, 44, 44);
+        }
         ctx.restore();
       }
 

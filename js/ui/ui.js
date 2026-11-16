@@ -1721,17 +1721,23 @@ class UiManager {
     const scale = mv.SCALE || 1;
     const pulse = 0.5 + 0.5 * Math.sin(this.uiAnimTime * 6.5);
 
+    const goldHaloImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
     ctx.save();
     for (let i = 0; i < scene.towerManager.towers.length; i++) {
       const t = scene.towerManager.towers[i];
       if (!t || t.isAwakened) continue;
       const sx = mv.OFFSET_X + (t.col + 0.5) * TILE_SIZE * scale;
       const sy = mv.OFFSET_Y + (t.row + 0.5) * TILE_SIZE * scale;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 20 + pulse * 4, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(250, 204, 21, ' + (0.45 + pulse * 0.4) + ')';
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
+      if (goldHaloImg && goldHaloImg.width) {
+        ctx.save();
+        ctx.translate(sx, sy + 6 * scale);
+        ctx.scale(1.0, 0.72);
+        ctx.rotate(this.uiAnimTime * 1.4);
+        ctx.globalAlpha = 0.55 + pulse * 0.35;
+        const sz = (40 + pulse * 6) * scale;
+        ctx.drawImage(goldHaloImg, -sz * 0.5, -sz * 0.5, sz, sz);
+        ctx.restore();
+      }
     }
 
     const pillW = 248;
@@ -3434,15 +3440,22 @@ class UiManager {
     }
     ctx.restore();
 
-    // 选中/悬停石座高亮基底
+    // 选中/悬停石座柔和基底（采用 AI 光环贴图替代生硬椭圆线框）
     ctx.save();
-    ctx.fillStyle = opts.affordable === false ? 'rgba(255, 77, 79, 0.22)' : 'rgba(82, 196, 26, 0.22)';
-    ctx.strokeStyle = opts.affordable === false ? 'rgba(255, 120, 117, 0.82)' : 'rgba(255, 229, 143, 0.72)';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.ellipse(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.65, 18, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    const baseHaloImg = platform.getImage(opts.affordable === false ? 'assets/vfx/range_bramble_red.png' : 'assets/vfx/range_fairy_green.png');
+    if (baseHaloImg && baseHaloImg.width) {
+      ctx.save();
+      ctx.translate(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.62);
+      ctx.scale(1.0, 0.68);
+      ctx.globalAlpha = 0.65;
+      ctx.drawImage(baseHaloImg, -20, -20, 40, 40);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = opts.affordable === false ? 'rgba(255, 77, 79, 0.24)' : 'rgba(82, 196, 26, 0.24)';
+      ctx.beginPath();
+      ctx.ellipse(tileX + TILE_SIZE * 0.5, tileY + TILE_SIZE * 0.65, 18, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // BTD6/KR 式局部菌丝共鸣链路预览：仅展示与当前预览/选中守卫邻近(<=135px)发生羁绊的伙伴连线
     const partners = [];
@@ -3586,14 +3599,23 @@ class UiManager {
           } else {
             const tx = selCol * TILE_SIZE;
             const ty = selRow * TILE_SIZE;
+            const sunImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
             ctx.save();
-            ctx.fillStyle = 'rgba(255, 229, 143, 0.16)';
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.ellipse(tx + 16, ty + 20, 18, 11, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            if (sunImg && sunImg.width) {
+              ctx.translate(tx + 16, ty + 18);
+              ctx.scale(1.0, 0.72);
+              ctx.rotate(this.uiAnimTime * 1.4);
+              ctx.globalAlpha = 0.72;
+              ctx.drawImage(sunImg, -21, -21, 42, 42);
+            } else {
+              const g = ctx.createRadialGradient(tx + 16, ty + 18, 3, tx + 16, ty + 18, 20);
+              g.addColorStop(0, 'rgba(255, 229, 143, 0.34)');
+              g.addColorStop(1, 'rgba(255, 215, 0, 0)');
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.ellipse(tx + 16, ty + 18, 20, 13, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
             ctx.restore();
           }
           return;

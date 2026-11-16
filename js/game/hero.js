@@ -897,23 +897,25 @@ class ForestHero {
     ctx.ellipse(this.x, this.y + 12, 16, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 姿态专属底环光圈
-    let stanceColor = 'rgba(64, 169, 255, 0.55)'; // 守卫蓝
-    if (this.stance === 'aggressive') stanceColor = 'rgba(255, 77, 79, 0.65)'; // 狂暴红
-    else if (this.stance === 'scout') stanceColor = 'rgba(82, 196, 26, 0.55)'; // 游侠绿
-    if (this.undyingTimer > 0) stanceColor = 'rgba(255, 215, 0, 0.9)'; // 不灭金
+    // 姿态专属柔和地面灵气光晕（仅在明确选中或触发不灭金身时才显示清晰边框环）
+    let glowCol = 'rgba(64, 169, 255,';
+    if (this.stance === 'aggressive') glowCol = 'rgba(255, 77, 79,';
+    else if (this.stance === 'scout') glowCol = 'rgba(82, 196, 26,';
+    if (this.undyingTimer > 0) glowCol = 'rgba(255, 215, 0,';
 
-    ctx.strokeStyle = stanceColor;
-    ctx.lineWidth = (this.isSelected || this.undyingTimer > 0) ? 2.5 : 1.5;
+    const hGrad = ctx.createRadialGradient(this.x, this.y + 12, 3, this.x, this.y + 12, 22);
+    hGrad.addColorStop(0, glowCol + ' 0.34)');
+    hGrad.addColorStop(1, glowCol + ' 0)');
+    ctx.fillStyle = hGrad;
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + 12, 20, 9, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.ellipse(this.x, this.y + 12, 22, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (this.isSelected || this.levelUpGlowTimer > 0) {
-      ctx.strokeStyle = this.levelUpGlowTimer > 0 ? '#FFD700' : '#73D13D';
-      ctx.lineWidth = 2;
+    if (this.isSelected || this.undyingTimer > 0 || this.levelUpGlowTimer > 0) {
+      ctx.strokeStyle = this.levelUpGlowTimer > 0 || this.undyingTimer > 0 ? '#FFD700' : '#73D13D';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.ellipse(this.x, this.y + 12, 24, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 12, 22, 10, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();

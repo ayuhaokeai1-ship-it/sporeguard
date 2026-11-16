@@ -632,7 +632,6 @@ class BulletManager {
         if (prog >= 1) {
           if (this.combatJuice) {
             this.combatJuice.addTrauma(0.32);
-            this.combatJuice.triggerShockwave(b.targetX, b.targetY, b.splashRadiusPx * 1.25, 'rgba(255, 140, 0, 0.82)');
           }
           const effRadius = b.splashRadiusPx * (b.hasToxicBurst ? 1.4 : 1.0);
           const r2 = effRadius * effRadius;
@@ -774,14 +773,6 @@ class BulletManager {
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
-
-      if (h.kind === 'acid') {
-        ctx.strokeStyle = `rgba(186, 230, 55, ${0.36 * alpha})`;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
-        ctx.stroke();
-      }
 
       // 少量飘动的柔和微光孢子粒子
       const pulseTime = animTimeSec * 2.2 + i;

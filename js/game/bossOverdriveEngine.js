@@ -5,6 +5,7 @@
  * 附带顶部史诗级分段 Boss 血条与狂暴阶段视觉光环
  */
 
+const platform = require('../core/platform');
 const i18n = require('../i18n');
 const UI_FONT = '"PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", sans-serif';
 
@@ -178,22 +179,25 @@ class BossOverdriveEngine {
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
     const bx = this.activeBoss.x;
     const by = this.activeBoss.y;
-    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
-    const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 8) * 0.15;
+    const auraImg = platform.getImage(this.phase >= 2 ? 'assets/vfx/range_bramble_red.png' : 'assets/vfx/range_sunburst_gold.png');
+    const pulse = 1.0 + Math.sin(this.overdriveAuraAnim * 5) * 0.08;
     ctx.save();
-    ctx.translate(bx, by + 6);
-    ctx.scale(pulse, pulse * 0.7);
-    ctx.strokeStyle = auraColor;
-    ctx.lineWidth = 2.0;
-    ctx.globalAlpha = 0.65;
+    ctx.translate(Math.round(bx), Math.round(by + 10));
+    ctx.scale(pulse, pulse * 0.65);
+    const gCol = this.phase === 3 ? 'rgba(179, 127, 235,' : (this.phase === 2 ? 'rgba(255, 77, 79,' : 'rgba(255, 169, 64,');
+    const rg = ctx.createRadialGradient(0, 0, 6, 0, 0, 34);
+    rg.addColorStop(0, gCol + ' 0.34)');
+    rg.addColorStop(0.6, gCol + ' 0.14)');
+    rg.addColorStop(1, gCol + ' 0)');
+    ctx.fillStyle = rg;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 32, 20, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.rotate(this.overdriveAuraAnim * 2.0);
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.arc(0, 0, 34, 0, Math.PI * 2);
+    ctx.fill();
+    if (auraImg && auraImg.width) {
+      ctx.rotate(this.overdriveAuraAnim * 1.1);
+      ctx.globalAlpha = 0.58;
+      ctx.drawImage(auraImg, -30, -30, 60, 60);
+    }
     ctx.restore();
   }
 

@@ -201,18 +201,32 @@ class CombatJuiceEngine {
    * 绘制战斗特效层 (暴击火花、冲击波与连击小挂件)
    */
   renderFx(ctx) {
-    // 1. 冲击波渲染
+    // 1. 冲击波渲染（优先采用 AI 手绘爆炸烟云，彻底剔除生硬矢量线框椭圆）
     if (this.shockwaves.length > 0) {
+      const boomImg = platform.getImage('assets/vfx/vfx_explosion.png');
       ctx.save();
       for (let i = 0; i < this.shockwaves.length; i++) {
         const sw = this.shockwaves[i];
         if (!sw.active) continue;
-        const alpha = Math.max(0, sw.life / sw.maxLife);
-        ctx.strokeStyle = sw.color;
-        ctx.lineWidth = 2.5 * alpha;
-        ctx.beginPath();
-        ctx.ellipse(sw.x, sw.y, sw.currentRadius, sw.currentRadius * 0.72, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        const alpha = Math.max(0, sw.life / Math.max(0.05, sw.maxLife));
+        if (boomImg && boomImg.width) {
+          ctx.save();
+          ctx.translate(Math.round(sw.x), Math.round(sw.y));
+          ctx.scale(1.0, 0.72);
+          ctx.globalAlpha = alpha * 0.55;
+          const sz = Math.max(12, sw.currentRadius * 2.0);
+          ctx.drawImage(boomImg, -sz * 0.5, -sz * 0.5, sz, sz);
+          ctx.restore();
+        } else {
+          const r = Math.max(8, sw.currentRadius);
+          const g = ctx.createRadialGradient(sw.x, sw.y, r * 0.2, sw.x, sw.y, r);
+          g.addColorStop(0, `rgba(255, 224, 130, ${(alpha * 0.25).toFixed(2)})`);
+          g.addColorStop(1, 'rgba(255, 180, 70, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.ellipse(sw.x, sw.y, r, r * 0.72, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
     }
