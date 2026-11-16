@@ -1411,6 +1411,14 @@ class SceneController {
       }
       platform.setBgmMixLevel(targetMix);
     }
+
+    if (this.state === 'BATTLE' && !isPaused && this.waveManager && this.waveManager.phase === 'prep') {
+      this._prepBreezeTimer = (this._prepBreezeTimer || 4.0) - realDt;
+      if (this._prepBreezeTimer <= 0) {
+        this._prepBreezeTimer = 10.5;
+        platform.playSfx('sfx_forest_breeze', 0.45);
+      }
+    }
   }
 
   onWaveCleared(clearedWave) {

@@ -846,15 +846,16 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 巡林神圣木羽箭尾部仙尘星芒微粒 (Fairy Dust Motes)
-          ctx.save();
-          const backX = b.x - Math.cos(b.angle) * 16;
-          const backY = b.y - Math.sin(b.angle) * 16;
-          ctx.fillStyle = 'rgba(255, 235, 140, 0.75)';
-          ctx.beginPath();
-          ctx.arc(backX, backY, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          // 暴击或重箭尾迹使用 AI 手绘火花轻点缀
+          if (hitSparkImg && hitSparkImg.width && b.isCrit) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.65;
+            const backX = b.x - Math.cos(b.angle) * 16;
+            const backY = b.y - Math.sin(b.angle) * 16;
+            ctx.drawImage(hitSparkImg, backX - 8, backY - 8, 16, 16);
+            ctx.restore();
+          }
           continue;
         }
 
@@ -863,6 +864,13 @@ class BulletManager {
           ctx.rotate(rot);
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
+          if (hitSparkImg && hitSparkImg.width) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.45;
+            ctx.drawImage(hitSparkImg, b.x - 11, b.y - 11, 22, 22);
+            ctx.restore();
+          }
           continue;
         }
 

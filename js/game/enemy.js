@@ -233,6 +233,13 @@ class EnemyManager {
       e.eliteAffix = ['swift', 'hardened', 'volatile'][Math.floor(Math.random() * 3)];
       e.maxHp = Math.round(e.maxHp * 1.4);
       e.hp = e.maxHp;
+      if (e.eliteAffix === 'swift') {
+        e.speedMultiplier *= 1.20;
+      } else if (e.eliteAffix === 'hardened') {
+        e.baseArmor = (e.baseArmor || 0) + 5;
+      } else if (e.eliteAffix === 'volatile') {
+        e.reward = (e.reward || 3) + 4;
+      }
     }
     e.animFrame = 0;
     e.whiteFlashFrames = 0;
@@ -687,6 +694,29 @@ class EnemyManager {
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');
         }
+        if (enemy.eliteAffix === 'volatile' && !this._isVolatileChainBlast) {
+          this._isVolatileChainBlast = true;
+          try {
+            const nearby = this.getAliveEnemies();
+            let hits = 0;
+            for (let vi = 0; vi < nearby.length && hits < 6; vi++) {
+              const ne = nearby[vi];
+              if (ne !== enemy && Math.hypot(ne.x - enemy.x, ne.y - enemy.y) <= 72) {
+                this.applyDamage(ne, 55, false, 'magic', effFx, 'reactions');
+                hits++;
+              }
+            }
+            if (effFx) {
+              effFx.spawnParticles(enemy.x, enemy.y, 18, ['#B37FEB', '#FF7875', '#FFD666'], 35, 110, 0.25, 0.5, 4);
+              effFx.spawnFloatingText(enemy.x, enemy.y - 30, '爆能连锁!', '#D3ADF7', 1.15);
+            }
+            platform.playSfx('sfx_boom', 0.65, 1.15, false, enemy.x);
+          } finally {
+            this._isVolatileChainBlast = false;
+          }
+        }
+      } else {
+        platform.playSfx('sfx_chitin_pop', 0.48, 1.0, false, enemy.x);
       }
       if (this.scene.hero && this.scene.hero.state !== 'dead') {
         const xpGain = enemy.isBoss ? 80 : (enemy.isElite ? 35 : (enemy.def.baseHp >= 100 ? 15 : 8));
@@ -1436,6 +1466,28 @@ class EnemyManager {
       } else {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(Math.round(e.x - 6), Math.round(cy - 6), 12, 12);
+      }
+      if (e.eliteAffix) {
+        const affMap = {
+          swift: { tag: '疾', col: '#40A9FF' },
+          hardened: { tag: '坚', col: '#FAAD14' },
+          volatile: { tag: '爆', col: '#D3ADF7' }
+        };
+        const aff = affMap[e.eliteAffix];
+        if (aff) {
+          ctx.fillStyle = 'rgba(20, 14, 10, 0.88)';
+          ctx.strokeStyle = aff.col;
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(e.x + 11, cy - 7, 14, 14, 4) : ctx.rect(e.x + 11, cy - 7, 14, 14);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = aff.col;
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(aff.tag, e.x + 18, cy + 0.5);
+        }
       }
       ctx.restore();
     }

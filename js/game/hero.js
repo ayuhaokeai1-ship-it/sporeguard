@@ -232,11 +232,11 @@ class ForestHero {
       talentNotice = '解锁奥义【不灭战魂】致命伤害锁血 4 秒并暴走狂化！';
     }
 
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_rank_up');
     if (fx) {
       fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.6);
       if (talentNotice) {
-        fx.showBanner(`🌳 英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
+        fx.showBanner(`英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
       }
       fx.spawnParticles(this.x, this.y, 36, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 45, 130, 0.4, 0.85, 5);
       if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 60, '#FFD700');
@@ -830,29 +830,22 @@ class ForestHero {
       ctx.arc(this.x - Math.sin(animTimeSec * 2.5) * 10, this.y - 8 + Math.sin(animTimeSec * 2.5) * 5, 2.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // 复活倒计时进度圆环
-      const ratio = 1 - (this.reviveTimer / this.reviveTimeTotal);
-      ctx.strokeStyle = 'rgba(20, 30, 20, 0.65)';
-      ctx.lineWidth = 3.5;
+      // 复活倒计时 AI 古铜徽章底盘（彻底告别白线几何圆环）
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, this.x - 17, this.y - 45, 34, 34);
+      }
+      ctx.fillStyle = 'rgba(18, 28, 16, 0.86)';
       ctx.beginPath();
-      ctx.arc(this.x, this.y - 28, 12, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.arc(this.x, this.y - 28, 11, 0, Math.PI * 2);
+      ctx.fill();
 
-      ctx.strokeStyle = '#52C41A';
-      ctx.lineWidth = 3.0;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y - 28, 12, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
-      ctx.stroke();
-
-      // 倒计时文字与复苏光标
-      ctx.fillStyle = '#FFFFFF';
+      // 倒计时文字与复苏数字
+      ctx.fillStyle = '#95DE64';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      ctx.shadowBlur = 3;
       ctx.fillText(Math.ceil(this.reviveTimer) + 's', this.x, this.y - 28);
-      ctx.shadowBlur = 0;
 
       ctx.restore();
       return;

@@ -120,7 +120,9 @@ const SFX_VOLUMES = {
   sfx_boss_channel: 0.80,
   sfx_victory_fanfare: 0.88,
   sfx_defeat_toll: 0.82,
-  sfx_relic_equip: 0.76
+  sfx_relic_equip: 0.76,
+  sfx_chitin_pop: 0.56,
+  sfx_forest_breeze: 0.22
 };
 
 /**
@@ -815,6 +817,19 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       playFilteredNoise(t0, 0.045, 'bandpass', 1900, 900, 1.8, 0.12 * volumeMod);
       playAcousticNote(587.33 * p, t0, 0.14, 0.16 * volumeMod, [1, 2.0], 0.25);
       playAcousticNote(880.0 * p, t0 + 0.05, 0.22, 0.17 * volumeMod, [1, 2.756], 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_chitin_pop') {
+      // 虫壳碎裂清脆拟音：轻微有机脆裂泡音 (Organic Chitin Pop)
+      playFilteredNoise(t0, 0.042, 'bandpass', 1600 * p, 620 * p, 2.4, 0.11 * volumeMod);
+      playAcousticNote(260 * p, t0, 0.05, 0.11 * volumeMod, [1, 2.3], 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_forest_breeze') {
+      // 备战微风林铃声景：极轻柔森林风铃三和音 (Serene Prep Forest Breeze Chime)
+      playFilteredNoise(t0, 0.45, 'bandpass', 900, 1400, 1.5, 0.04 * volumeMod);
+      const bNotes = [523.25, 659.25, 783.99];
+      for (let i = 0; i < bNotes.length; i++) {
+        playAcousticNote(bNotes[i] * p, t0 + i * 0.11, 0.34, 0.075 * volumeMod, [1, 2.0], 0.22);
+      }
       return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);

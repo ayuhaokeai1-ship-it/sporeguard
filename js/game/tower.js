@@ -953,6 +953,9 @@ class TowerManager {
       }
       const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
       if (wb) wb.sourceTower = tower;
+      if (this.scene && this.scene.fx && (tower.superchargeTimer > 0 || tower.isAwakened)) {
+        this.scene.fx.spawnParticles(tower.x, tower.y - 10, 4, ['#FFE58F', '#95DE64'], 18, 42, 0.12, 0.22, 2.4);
+      }
       if (this.mushroomMastery && this.mushroomMastery.hasMastery('watch', 'watch_m2')) {
         if (Math.random() < 0.22) {
           const wb2 = bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
@@ -990,6 +993,9 @@ class TowerManager {
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
       const bb = bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
       if (bb) bb.sourceTower = tower;
+      if (this.scene && this.scene.fx) {
+        this.scene.fx.spawnParticles(tower.x, tower.y - 14, 5, ['#FFA940', '#FFE58F', '#FF7A45'], 22, 55, 0.14, 0.26, 2.8);
+      }
       platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'lumina') {
       const lb = bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);

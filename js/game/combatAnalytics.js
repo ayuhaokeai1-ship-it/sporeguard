@@ -15,14 +15,14 @@ class CombatAnalyticsSystem {
 
     // 各作战单元数据
     this.categoryStats = {
-      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/vfx/proj_watch_arrow.png' },
-      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/vfx/proj_burst_shell.png' },
-      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/vfx/vfx_spikes.png' },
-      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/vfx/vfx_mist.png' },
-      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/vfx/item_golden_spore.png' },
+      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/ui/cards/card_watch.png' },
+      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/ui/cards/card_burst.png' },
+      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/ui/cards/card_thorn.png' },
+      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/ui/cards/card_mist.png' },
+      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/ui/cards/card_lumina.png' },
       hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#237804', icon: 'assets/vfx/hero_oak.png' },
       sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#5B8C00', icon: 'assets/vfx/sporeling_guard.png' },
-      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_hit_spark.png' }
+      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_synergy_crest.png' }
     };
 
     this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
@@ -200,18 +200,33 @@ class CombatAnalyticsSystem {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 偶数行极淡羊皮纸压纹底带，提升视觉可读性
-      if (i % 2 === 0) {
+      // 偶数行淡棕底纹 + 第一名金色高光底纹
+      if (i === 0 && item.damage > 0) {
+        ctx.fillStyle = 'rgba(212, 136, 6, 0.14)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
+        ctx.fill();
+      } else if (i % 2 === 0) {
         ctx.fillStyle = 'rgba(105, 72, 36, 0.06)';
         ctx.beginPath();
         ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
         ctx.fill();
       }
 
-      // 单位小图标
+      // 单位 AI 手绘徽章圆盘底托（清晰浮雕防混色）
+      const medImg = typeof platform !== 'undefined' ? platform.getImage('assets/ui/frames/medallion_ring.png') : null;
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, px + 30, ry + 2, 24, 24);
+      }
       const ic = item.icon && typeof platform !== 'undefined' ? platform.getImage(item.icon) : null;
       if (ic && ic.width) {
-        ctx.drawImage(ic, px + 32, ry + 4, 20, 20);
+        ctx.drawImage(ic, px + 34, ry + 6, 16, 16);
+      }
+      if (i === 0 && item.damage > 0) {
+        const crnImg = typeof platform !== 'undefined' ? platform.getImage('assets/ui/icons/icon_crown.png') : null;
+        if (crnImg && crnImg.width) {
+          ctx.drawImage(crnImg, px + 22, ry + 1, 12, 12);
+        }
       }
 
       // 单位名称（深棕高亮色，确保在羊皮纸上锐利清晰）

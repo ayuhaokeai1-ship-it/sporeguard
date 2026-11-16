@@ -5577,19 +5577,19 @@ class UiManager {
       ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
       ctx.stroke();
 
-      // 统一徽章底托圆框（消除同列双表情混杂）
+      // AI 古铜纹章徽盘底托 + 荣誉星徽（替换系统 Emoji 与矢量几何圆圈）
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+      const crestImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx + 15, cy + 13, 9.5, 0, Math.PI * 2);
-      ctx.fillStyle = a.unlocked ? 'rgba(212, 136, 6, 0.22)' : 'rgba(20, 14, 10, 0.65)';
-      ctx.fill();
-      ctx.strokeStyle = a.unlocked ? '#D48806' : 'rgba(196, 143, 69, 0.40)';
-      ctx.lineWidth = 1.0;
-      ctx.stroke();
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(a.icon, cx + 15, cy + 13);
+      if (medImg && medImg.width) {
+        ctx.globalAlpha = a.unlocked ? 1.0 : 0.42;
+        ctx.drawImage(medImg, cx + 4, cy + 2, 22, 22);
+      }
+      if (a.unlocked && crestImg && crestImg.width) {
+        ctx.drawImage(crestImg, cx + 8, cy + 6, 14, 14);
+      } else {
+        drawUiIcon(ctx, 16, a.unlocked ? 'star_full' : 'lock', cx + 8, cy + 6, 14);
+      }
       ctx.restore();
 
       // 标题（已解锁使用高对比深琥珀铜色，避免淡黄字浮在浅米白底上）
@@ -5610,15 +5610,20 @@ class UiManager {
       const shortDesc = a.desc.length > 24 ? a.desc.slice(0, 23) + '...' : a.desc;
       ctx.fillText(shortDesc, cx + 30, cy + 19.5, cardW - 66);
 
-      // 右侧星级与状态
-      drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 13, {
-        style: a.unlocked ? 'ink' : 'parchment',
-        color: a.unlocked ? '#237804' : undefined,
-        size: 11,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0
-      });
+      // 右侧星级与状态（AI 星徽/铜锁图集图标）
+      if (a.unlocked) {
+        drawUiIcon(ctx, 16, 'star_full', cx + cardW - 22, cy + 6.5, 13);
+        drawArtText(ctx, '+' + a.rewardStars, cx + cardW - 25, cy + 13, {
+          style: 'ink',
+          color: '#237804',
+          size: 11,
+          align: 'right',
+          baseline: 'middle',
+          strokeWidth: 0
+        });
+      } else {
+        drawUiIcon(ctx, 16, 'lock', cx + cardW - 24, cy + 6, 14);
+      }
     }
 
     ctx.restore();

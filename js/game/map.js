@@ -577,14 +577,25 @@ class GameMap {
           ctx.fill();
         }
 
-        // 清晰提前迎战提示微标
+        // 清晰提前迎战提示与波次兵种速览（含空袭/重甲/首领一眼辨识）
+        let scoutTag = '迎战!';
+        const summary = typeof waveMgr.getUpcomingWaveSummary === 'function' ? waveMgr.getUpcomingWaveSummary() : [];
+        if (summary && summary.length > 0) {
+          const hasBossG = summary.some((s) => s.def && s.def.isBoss);
+          const hasFlyG = summary.some((s) => s.def && s.def.isFlying);
+          const hasArmoredG = summary.some((s) => s.def && (s.def.hasFrontShield || (s.def.armor || 0) >= 6));
+          if (hasBossG) scoutTag = '迎战·首领!';
+          else if (hasFlyG) scoutTag = '迎战·空袭';
+          else if (hasArmoredG) scoutTag = '迎战·重甲';
+        }
+        const tagW = scoutTag.length > 4 ? 58 : 44;
         const tagY = Math.max(12, py - 24);
-        const tagX = Math.max(26, Math.min(614, px));
+        const tagX = Math.max(32, Math.min(608, px));
         ctx.fillStyle = 'rgba(28, 14, 8, 0.92)';
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 1.0;
         ctx.beginPath();
-        ctx.roundRect ? ctx.roundRect(tagX - 22, tagY - 7, 44, 14, 5) : ctx.rect(tagX - 22, tagY - 7, 44, 14);
+        ctx.roundRect ? ctx.roundRect(tagX - tagW * 0.5, tagY - 7, tagW, 14, 5) : ctx.rect(tagX - tagW * 0.5, tagY - 7, tagW, 14);
         ctx.fill();
         ctx.stroke();
 
@@ -592,7 +603,7 @@ class GameMap {
         ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('迎战!', tagX, tagY + 0.5);
+        ctx.fillText(scoutTag, tagX, tagY + 0.5);
         ctx.restore();
       }
       platform.recordDrawCall(1);

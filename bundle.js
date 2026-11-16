@@ -3111,7 +3111,9 @@ const SFX_VOLUMES = {
   sfx_boss_channel: 0.80,
   sfx_victory_fanfare: 0.88,
   sfx_defeat_toll: 0.82,
-  sfx_relic_equip: 0.76
+  sfx_relic_equip: 0.76,
+  sfx_chitin_pop: 0.56,
+  sfx_forest_breeze: 0.22
 };
 
 /**
@@ -3806,6 +3808,19 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       playFilteredNoise(t0, 0.045, 'bandpass', 1900, 900, 1.8, 0.12 * volumeMod);
       playAcousticNote(587.33 * p, t0, 0.14, 0.16 * volumeMod, [1, 2.0], 0.25);
       playAcousticNote(880.0 * p, t0 + 0.05, 0.22, 0.17 * volumeMod, [1, 2.756], 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_chitin_pop') {
+      // 虫壳碎裂清脆拟音：轻微有机脆裂泡音 (Organic Chitin Pop)
+      playFilteredNoise(t0, 0.042, 'bandpass', 1600 * p, 620 * p, 2.4, 0.11 * volumeMod);
+      playAcousticNote(260 * p, t0, 0.05, 0.11 * volumeMod, [1, 2.3], 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_forest_breeze') {
+      // 备战微风林铃声景：极轻柔森林风铃三和音 (Serene Prep Forest Breeze Chime)
+      playFilteredNoise(t0, 0.45, 'bandpass', 900, 1400, 1.5, 0.04 * volumeMod);
+      const bNotes = [523.25, 659.25, 783.99];
+      for (let i = 0; i < bNotes.length; i++) {
+        playAcousticNote(bNotes[i] * p, t0 + i * 0.11, 0.34, 0.075 * volumeMod, [1, 2.0], 0.22);
+      }
       return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
@@ -4517,28 +4532,37 @@ class AchievementManager {
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    // 左侧徽章大图标
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(item.icon, tx + 26, ty + 21);
+    // 左侧 AI 古铜徽章底托与荣誉纹章（彻底替代系统 Emoji）
+    const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+    const crestImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
+    if (medImg && medImg.width) {
+      ctx.drawImage(medImg, tx + 10, ty + 5, 32, 32);
+    }
+    if (crestImg && crestImg.width) {
+      ctx.drawImage(crestImg, tx + 15, ty + 10, 22, 22);
+    }
 
     // 标题：成就解锁
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`成就达成 · ${item.title}`, tx + 52, ty + 14);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 48, ty + 14);
 
     // 描述详情
     ctx.fillStyle = '#E8DEC8';
     ctx.font = '10px "Microsoft YaHei", sans-serif';
-    ctx.fillText(item.desc, tx + 52, ty + 30);
+    ctx.fillText(item.desc, tx + 48, ty + 29, tw - 102);
 
-    // 右侧奖励星级
+    // 右侧 AI 星徽与数字奖励
+    const starImg = platform.getImage('assets/ui/icons/icon_star_full.png');
+    if (starImg && starImg.width) {
+      ctx.drawImage(starImg, tx + tw - 26, ty + 13, 15, 15);
+    }
     ctx.fillStyle = '#FFE58F';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 14, ty + 21);
+    ctx.fillText(`+${item.rewardStars}`, tx + tw - 29, ty + 21);
 
     ctx.restore();
   }
@@ -6923,14 +6947,25 @@ class GameMap {
           ctx.fill();
         }
 
-        // 清晰提前迎战提示微标
+        // 清晰提前迎战提示与波次兵种速览（含空袭/重甲/首领一眼辨识）
+        let scoutTag = '迎战!';
+        const summary = typeof waveMgr.getUpcomingWaveSummary === 'function' ? waveMgr.getUpcomingWaveSummary() : [];
+        if (summary && summary.length > 0) {
+          const hasBossG = summary.some((s) => s.def && s.def.isBoss);
+          const hasFlyG = summary.some((s) => s.def && s.def.isFlying);
+          const hasArmoredG = summary.some((s) => s.def && (s.def.hasFrontShield || (s.def.armor || 0) >= 6));
+          if (hasBossG) scoutTag = '迎战·首领!';
+          else if (hasFlyG) scoutTag = '迎战·空袭';
+          else if (hasArmoredG) scoutTag = '迎战·重甲';
+        }
+        const tagW = scoutTag.length > 4 ? 58 : 44;
         const tagY = Math.max(12, py - 24);
-        const tagX = Math.max(26, Math.min(614, px));
+        const tagX = Math.max(32, Math.min(608, px));
         ctx.fillStyle = 'rgba(28, 14, 8, 0.92)';
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 1.0;
         ctx.beginPath();
-        ctx.roundRect ? ctx.roundRect(tagX - 22, tagY - 7, 44, 14, 5) : ctx.rect(tagX - 22, tagY - 7, 44, 14);
+        ctx.roundRect ? ctx.roundRect(tagX - tagW * 0.5, tagY - 7, tagW, 14, 5) : ctx.rect(tagX - tagW * 0.5, tagY - 7, tagW, 14);
         ctx.fill();
         ctx.stroke();
 
@@ -6938,7 +6973,7 @@ class GameMap {
         ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('迎战!', tagX, tagY + 0.5);
+        ctx.fillText(scoutTag, tagX, tagY + 0.5);
         ctx.restore();
       }
       platform.recordDrawCall(1);
@@ -7661,6 +7696,13 @@ class EnemyManager {
       e.eliteAffix = ['swift', 'hardened', 'volatile'][Math.floor(Math.random() * 3)];
       e.maxHp = Math.round(e.maxHp * 1.4);
       e.hp = e.maxHp;
+      if (e.eliteAffix === 'swift') {
+        e.speedMultiplier *= 1.20;
+      } else if (e.eliteAffix === 'hardened') {
+        e.baseArmor = (e.baseArmor || 0) + 5;
+      } else if (e.eliteAffix === 'volatile') {
+        e.reward = (e.reward || 3) + 4;
+      }
     }
     e.animFrame = 0;
     e.whiteFlashFrames = 0;
@@ -8115,6 +8157,29 @@ class EnemyManager {
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');
         }
+        if (enemy.eliteAffix === 'volatile' && !this._isVolatileChainBlast) {
+          this._isVolatileChainBlast = true;
+          try {
+            const nearby = this.getAliveEnemies();
+            let hits = 0;
+            for (let vi = 0; vi < nearby.length && hits < 6; vi++) {
+              const ne = nearby[vi];
+              if (ne !== enemy && Math.hypot(ne.x - enemy.x, ne.y - enemy.y) <= 72) {
+                this.applyDamage(ne, 55, false, 'magic', effFx, 'reactions');
+                hits++;
+              }
+            }
+            if (effFx) {
+              effFx.spawnParticles(enemy.x, enemy.y, 18, ['#B37FEB', '#FF7875', '#FFD666'], 35, 110, 0.25, 0.5, 4);
+              effFx.spawnFloatingText(enemy.x, enemy.y - 30, '爆能连锁!', '#D3ADF7', 1.15);
+            }
+            platform.playSfx('sfx_boom', 0.65, 1.15, false, enemy.x);
+          } finally {
+            this._isVolatileChainBlast = false;
+          }
+        }
+      } else {
+        platform.playSfx('sfx_chitin_pop', 0.48, 1.0, false, enemy.x);
       }
       if (this.scene.hero && this.scene.hero.state !== 'dead') {
         const xpGain = enemy.isBoss ? 80 : (enemy.isElite ? 35 : (enemy.def.baseHp >= 100 ? 15 : 8));
@@ -8865,6 +8930,28 @@ class EnemyManager {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(Math.round(e.x - 6), Math.round(cy - 6), 12, 12);
       }
+      if (e.eliteAffix) {
+        const affMap = {
+          swift: { tag: '疾', col: '#40A9FF' },
+          hardened: { tag: '坚', col: '#FAAD14' },
+          volatile: { tag: '爆', col: '#D3ADF7' }
+        };
+        const aff = affMap[e.eliteAffix];
+        if (aff) {
+          ctx.fillStyle = 'rgba(20, 14, 10, 0.88)';
+          ctx.strokeStyle = aff.col;
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(e.x + 11, cy - 7, 14, 14, 4) : ctx.rect(e.x + 11, cy - 7, 14, 14);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = aff.col;
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(aff.tag, e.x + 18, cy + 0.5);
+        }
+      }
       ctx.restore();
     }
     if (e.state === 'death') return;
@@ -9168,11 +9255,11 @@ class ForestHero {
       talentNotice = '解锁奥义【不灭战魂】致命伤害锁血 4 秒并暴走狂化！';
     }
 
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_rank_up');
     if (fx) {
       fx.spawnFloatingText(this.x, this.y - 36, `英雄进阶! Lv.${this.level}`, '#FFD700', 1.6);
       if (talentNotice) {
-        fx.showBanner(`🌳 英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
+        fx.showBanner(`英雄升至 Lv.${this.level}`, '#FFD700', talentNotice, 2.2);
       }
       fx.spawnParticles(this.x, this.y, 36, ['#FFD700', '#52C41A', '#FFFFFF', '#FFA940'], 45, 130, 0.4, 0.85, 5);
       if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 60, '#FFD700');
@@ -9766,29 +9853,22 @@ class ForestHero {
       ctx.arc(this.x - Math.sin(animTimeSec * 2.5) * 10, this.y - 8 + Math.sin(animTimeSec * 2.5) * 5, 2.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // 复活倒计时进度圆环
-      const ratio = 1 - (this.reviveTimer / this.reviveTimeTotal);
-      ctx.strokeStyle = 'rgba(20, 30, 20, 0.65)';
-      ctx.lineWidth = 3.5;
+      // 复活倒计时 AI 古铜徽章底盘（彻底告别白线几何圆环）
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, this.x - 17, this.y - 45, 34, 34);
+      }
+      ctx.fillStyle = 'rgba(18, 28, 16, 0.86)';
       ctx.beginPath();
-      ctx.arc(this.x, this.y - 28, 12, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.arc(this.x, this.y - 28, 11, 0, Math.PI * 2);
+      ctx.fill();
 
-      ctx.strokeStyle = '#52C41A';
-      ctx.lineWidth = 3.0;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y - 28, 12, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
-      ctx.stroke();
-
-      // 倒计时文字与复苏光标
-      ctx.fillStyle = '#FFFFFF';
+      // 倒计时文字与复苏数字
+      ctx.fillStyle = '#95DE64';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      ctx.shadowBlur = 3;
       ctx.fillText(Math.ceil(this.reviveTimer) + 's', this.x, this.y - 28);
-      ctx.shadowBlur = 0;
 
       ctx.restore();
       return;
@@ -12168,14 +12248,14 @@ class CombatAnalyticsSystem {
 
     // 各作战单元数据
     this.categoryStats = {
-      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/vfx/proj_watch_arrow.png' },
-      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/vfx/proj_burst_shell.png' },
-      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/vfx/vfx_spikes.png' },
-      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/vfx/vfx_mist.png' },
-      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/vfx/item_golden_spore.png' },
+      watch: { name: '瞭望箭菇', damage: 0, kills: 0, color: '#096DD9', icon: 'assets/ui/cards/card_watch.png' },
+      burst: { name: '爆裂重炮', damage: 0, kills: 0, color: '#D4380D', icon: 'assets/ui/cards/card_burst.png' },
+      thorn: { name: '刺棘地刺', damage: 0, kills: 0, color: '#389E0D', icon: 'assets/ui/cards/card_thorn.png' },
+      mist: { name: '迷雾孢子', damage: 0, kills: 0, color: '#722ED1', icon: 'assets/ui/cards/card_mist.png' },
+      lumina: { name: '日曜金菇', damage: 0, kills: 0, color: '#D48806', icon: 'assets/ui/cards/card_lumina.png' },
       hero: { name: '橡木守护者', damage: 0, kills: 0, color: '#237804', icon: 'assets/vfx/hero_oak.png' },
       sporelings: { name: '孢子近卫军', damage: 0, kills: 0, color: '#5B8C00', icon: 'assets/vfx/sporeling_guard.png' },
-      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_hit_spark.png' }
+      reactions: { name: '自然元素反应', damage: 0, kills: 0, color: '#CF1322', icon: 'assets/vfx/vfx_synergy_crest.png' }
     };
 
     this.toggleBtnRect = { x: 118, y: 14, w: 64, h: 24 };
@@ -12353,18 +12433,33 @@ class CombatAnalyticsSystem {
       const item = sorted[i];
       const ry = startY + i * rowH;
 
-      // 偶数行极淡羊皮纸压纹底带，提升视觉可读性
-      if (i % 2 === 0) {
+      // 偶数行淡棕底纹 + 第一名金色高光底纹
+      if (i === 0 && item.damage > 0) {
+        ctx.fillStyle = 'rgba(212, 136, 6, 0.14)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
+        ctx.fill();
+      } else if (i % 2 === 0) {
         ctx.fillStyle = 'rgba(105, 72, 36, 0.06)';
         ctx.beginPath();
         ctx.roundRect ? ctx.roundRect(px + 26, ry + 1, pw - 52, rowH - 3, 6) : ctx.rect(px + 26, ry + 1, pw - 52, rowH - 3);
         ctx.fill();
       }
 
-      // 单位小图标
+      // 单位 AI 手绘徽章圆盘底托（清晰浮雕防混色）
+      const medImg = typeof platform !== 'undefined' ? platform.getImage('assets/ui/frames/medallion_ring.png') : null;
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, px + 30, ry + 2, 24, 24);
+      }
       const ic = item.icon && typeof platform !== 'undefined' ? platform.getImage(item.icon) : null;
       if (ic && ic.width) {
-        ctx.drawImage(ic, px + 32, ry + 4, 20, 20);
+        ctx.drawImage(ic, px + 34, ry + 6, 16, 16);
+      }
+      if (i === 0 && item.damage > 0) {
+        const crnImg = typeof platform !== 'undefined' ? platform.getImage('assets/ui/icons/icon_crown.png') : null;
+        if (crnImg && crnImg.width) {
+          ctx.drawImage(crnImg, px + 22, ry + 1, 12, 12);
+        }
       }
 
       // 单位名称（深棕高亮色，确保在羊皮纸上锐利清晰）
@@ -18062,15 +18157,16 @@ class BulletManager {
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
 
-          // 巡林神圣木羽箭尾部仙尘星芒微粒 (Fairy Dust Motes)
-          ctx.save();
-          const backX = b.x - Math.cos(b.angle) * 16;
-          const backY = b.y - Math.sin(b.angle) * 16;
-          ctx.fillStyle = 'rgba(255, 235, 140, 0.75)';
-          ctx.beginPath();
-          ctx.arc(backX, backY, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          // 暴击或重箭尾迹使用 AI 手绘火花轻点缀
+          if (hitSparkImg && hitSparkImg.width && b.isCrit) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.65;
+            const backX = b.x - Math.cos(b.angle) * 16;
+            const backY = b.y - Math.sin(b.angle) * 16;
+            ctx.drawImage(hitSparkImg, backX - 8, backY - 8, 16, 16);
+            ctx.restore();
+          }
           continue;
         }
 
@@ -18079,6 +18175,13 @@ class BulletManager {
           ctx.rotate(rot);
           ctx.drawImage(vfxImg, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
           ctx.restore();
+          if (hitSparkImg && hitSparkImg.width) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.45;
+            ctx.drawImage(hitSparkImg, b.x - 11, b.y - 11, 22, 22);
+            ctx.restore();
+          }
           continue;
         }
 
@@ -19080,6 +19183,9 @@ class TowerManager {
       }
       const wb = bulletManager.spawnWatchBullet(tower.x, tower.y - 10, target, pred.x, pred.y, watchNode, baseDmg);
       if (wb) wb.sourceTower = tower;
+      if (this.scene && this.scene.fx && (tower.superchargeTimer > 0 || tower.isAwakened)) {
+        this.scene.fx.spawnParticles(tower.x, tower.y - 10, 4, ['#FFE58F', '#95DE64'], 18, 42, 0.12, 0.22, 2.4);
+      }
       if (this.mushroomMastery && this.mushroomMastery.hasMastery('watch', 'watch_m2')) {
         if (Math.random() < 0.22) {
           const wb2 = bulletManager.spawnWatchBullet(tower.x + 6, tower.y - 12, target, pred.x + 8, pred.y + 4, watchNode, baseDmg);
@@ -19117,6 +19223,9 @@ class TowerManager {
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
       const bb = bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
       if (bb) bb.sourceTower = tower;
+      if (this.scene && this.scene.fx) {
+        this.scene.fx.spawnParticles(tower.x, tower.y - 14, 5, ['#FFA940', '#FFE58F', '#FF7A45'], 22, 55, 0.14, 0.26, 2.8);
+      }
       platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'lumina') {
       const lb = bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
@@ -25673,19 +25782,19 @@ class UiManager {
       ctx.lineWidth = a.unlocked ? 1.4 : 1.0;
       ctx.stroke();
 
-      // 统一徽章底托圆框（消除同列双表情混杂）
+      // AI 古铜纹章徽盘底托 + 荣誉星徽（替换系统 Emoji 与矢量几何圆圈）
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+      const crestImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx + 15, cy + 13, 9.5, 0, Math.PI * 2);
-      ctx.fillStyle = a.unlocked ? 'rgba(212, 136, 6, 0.22)' : 'rgba(20, 14, 10, 0.65)';
-      ctx.fill();
-      ctx.strokeStyle = a.unlocked ? '#D48806' : 'rgba(196, 143, 69, 0.40)';
-      ctx.lineWidth = 1.0;
-      ctx.stroke();
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(a.icon, cx + 15, cy + 13);
+      if (medImg && medImg.width) {
+        ctx.globalAlpha = a.unlocked ? 1.0 : 0.42;
+        ctx.drawImage(medImg, cx + 4, cy + 2, 22, 22);
+      }
+      if (a.unlocked && crestImg && crestImg.width) {
+        ctx.drawImage(crestImg, cx + 8, cy + 6, 14, 14);
+      } else {
+        drawUiIcon(ctx, 16, a.unlocked ? 'star_full' : 'lock', cx + 8, cy + 6, 14);
+      }
       ctx.restore();
 
       // 标题（已解锁使用高对比深琥珀铜色，避免淡黄字浮在浅米白底上）
@@ -25706,15 +25815,20 @@ class UiManager {
       const shortDesc = a.desc.length > 24 ? a.desc.slice(0, 23) + '...' : a.desc;
       ctx.fillText(shortDesc, cx + 30, cy + 19.5, cardW - 66);
 
-      // 右侧星级与状态
-      drawArtText(ctx, a.unlocked ? ('+' + a.rewardStars + '⭐') : '🔒', cx + cardW - 18, cy + 13, {
-        style: a.unlocked ? 'ink' : 'parchment',
-        color: a.unlocked ? '#237804' : undefined,
-        size: 11,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0
-      });
+      // 右侧星级与状态（AI 星徽/铜锁图集图标）
+      if (a.unlocked) {
+        drawUiIcon(ctx, 16, 'star_full', cx + cardW - 22, cy + 6.5, 13);
+        drawArtText(ctx, '+' + a.rewardStars, cx + cardW - 25, cy + 13, {
+          style: 'ink',
+          color: '#237804',
+          size: 11,
+          align: 'right',
+          baseline: 'middle',
+          strokeWidth: 0
+        });
+      } else {
+        drawUiIcon(ctx, 16, 'lock', cx + cardW - 24, cy + 6, 14);
+      }
     }
 
     ctx.restore();
@@ -27956,6 +28070,14 @@ class SceneController {
         targetMix = hasBoss ? 0.48 : ((this.resonanceActiveTimer || 0) > 0 ? 0.46 : (isPrep ? 0.30 : 0.40));
       }
       platform.setBgmMixLevel(targetMix);
+    }
+
+    if (this.state === 'BATTLE' && !isPaused && this.waveManager && this.waveManager.phase === 'prep') {
+      this._prepBreezeTimer = (this._prepBreezeTimer || 4.0) - realDt;
+      if (this._prepBreezeTimer <= 0) {
+        this._prepBreezeTimer = 10.5;
+        platform.playSfx('sfx_forest_breeze', 0.45);
+      }
     }
   }
 

@@ -145,28 +145,37 @@ class AchievementManager {
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    // 左侧徽章大图标
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(item.icon, tx + 26, ty + 21);
+    // 左侧 AI 古铜徽章底托与荣誉纹章（彻底替代系统 Emoji）
+    const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+    const crestImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
+    if (medImg && medImg.width) {
+      ctx.drawImage(medImg, tx + 10, ty + 5, 32, 32);
+    }
+    if (crestImg && crestImg.width) {
+      ctx.drawImage(crestImg, tx + 15, ty + 10, 22, 22);
+    }
 
     // 标题：成就解锁
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`成就达成 · ${item.title}`, tx + 52, ty + 14);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`成就达成 · ${item.title}`, tx + 48, ty + 14);
 
     // 描述详情
     ctx.fillStyle = '#E8DEC8';
     ctx.font = '10px "Microsoft YaHei", sans-serif';
-    ctx.fillText(item.desc, tx + 52, ty + 30);
+    ctx.fillText(item.desc, tx + 48, ty + 29, tw - 102);
 
-    // 右侧奖励星级
+    // 右侧 AI 星徽与数字奖励
+    const starImg = platform.getImage('assets/ui/icons/icon_star_full.png');
+    if (starImg && starImg.width) {
+      ctx.drawImage(starImg, tx + tw - 26, ty + 13, 15, 15);
+    }
     ctx.fillStyle = '#FFE58F';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`+${item.rewardStars}⭐`, tx + tw - 14, ty + 21);
+    ctx.fillText(`+${item.rewardStars}`, tx + tw - 29, ty + 21);
 
     ctx.restore();
   }
