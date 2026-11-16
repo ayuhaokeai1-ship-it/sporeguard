@@ -252,9 +252,6 @@ class SceneController {
       this.woodlandBlessings.reset();
       this.blessingMods = this.woodlandBlessings.createDefaultMods();
     }
-    this.pyroFissureCfg = null;
-    this.toxicMiasmaDebuff = 0;
-    this.spellCdrMultiplier = 1.0;
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
     if (this.combatScreenJuice) this.combatScreenJuice.reset();
     this.earlyCallsCount = 0;
@@ -365,6 +362,30 @@ class SceneController {
   callWaveEarly() {
     if (this.state !== 'BATTLE') return;
     this.waveManager.callNextWaveEarly(this.economy, this.fx, this);
+  }
+
+  onEarlyWaveRush(rushStreak = 1) {
+    // 战意连呼激励：立即缩减全部自然神术与英雄技能 20% 冷却
+    for (const k in this.spells) {
+      const sp = this.spells[k];
+      if (sp && sp.timer > 0) {
+        sp.timer = Math.max(0, sp.timer - Math.max(1.5, sp.timer * 0.20));
+      }
+    }
+    if (this.hero && this.hero.skillCooldown > 0) {
+      this.hero.skillCooldown = Math.max(0, this.hero.skillCooldown - Math.max(1.5, this.hero.skillCooldown * 0.20));
+    }
+    if (this.heroSkills && this.heroSkills.skills) {
+      for (const skKey in this.heroSkills.skills) {
+        const sk = this.heroSkills.skills[skKey];
+        if (sk && sk.timer > 0) {
+          sk.timer = Math.max(0, sk.timer - Math.max(1.2, sk.timer * 0.20));
+        }
+      }
+    }
+    if (this.achievements && rushStreak >= 3) {
+      this.achievements.unlock('audacious_commander', this.fx);
+    }
   }
 
   tryBuildOnSelectedTile() {

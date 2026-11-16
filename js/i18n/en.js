@@ -244,4 +244,7 @@ module.exports = {
   enemy_siege_beetle_name: 'Ironclad Siege Beetle',
   enemy_siege_beetle_type: 'Frontal Shield Phalanx',
   enemy_siege_beetle_tip: 'Frontal pavise shield resists 75% projectile damage; flank or use armor pierce.',
+  enemy_treasure_name: 'Gilded Treasure Grub',
+  enemy_treasure_type: 'Rare Bounty',
+  enemy_treasure_tip: 'Darts across the grove carrying spoils! Tap to shake loose spores, defeat for Awakening Seed & gold!'
 };

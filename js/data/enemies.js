@@ -390,6 +390,24 @@ const ENEMIES = {
     artSize: { width: 18, height: 18 },
     animFrames: { walk: 4, death: 3 },
     isBoss: false
+  },
+
+  treasure_beetle: {
+    id: 'treasure_beetle',
+    nameKey: 'enemy_treasure_name',
+    typeKey: 'enemy_treasure_type',
+    tipKey: 'enemy_treasure_tip',
+    baseHp: 240,
+    speed: 2.05,
+    armor: 2,
+    threat: 0,
+    reward: 40,
+    isFlying: false,
+    isTreasure: true,
+    slowFactor: 0.75,
+    artSize: { width: 14, height: 14 },
+    animFrames: { walk: 4, death: 3 },
+    isBoss: false
   }
 };
 

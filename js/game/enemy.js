@@ -22,6 +22,7 @@ const ENEMY_TINTS = {
   splitter: PALETTE.ENEMY_SPLITTER,
   larva: PALETTE.ENEMY_SPLITTER,
   weaver: '#B37FEB',
+  treasure_beetle: '#FFD666',
   boss_m1: PALETTE.ENEMY_EYE,
   boss_m2: PALETTE.BRANCH_A,
   boss_m3: PALETTE.ENEMY_SPLITTER,
@@ -165,6 +166,8 @@ class EnemyManager {
     e.def = def;
     e.isFlying = Boolean(def.isFlying);
     e.isBoss = Boolean(def.isBoss);
+    e.isTreasure = Boolean(def.isTreasure);
+    e.treasureTaps = 0;
     e.fromWave = options.fromWave !== undefined ? options.fromWave : true;
     e.hp = maxHp;
     e.maxHp = maxHp;
@@ -224,7 +227,7 @@ class EnemyManager {
       e.reward = Math.round(e.reward * 2.0);
     }
     e.eliteAffix = null;
-    if (!e.isBoss && waveIndex >= 3 && Math.random() < 0.18) {
+    if (!e.isBoss && !e.isTreasure && waveIndex >= 3 && Math.random() < 0.18) {
       e.isElite = true;
       e.eliteAffix = ['swift', 'hardened', 'volatile'][Math.floor(Math.random() * 3)];
       e.maxHp = Math.round(e.maxHp * 1.4);
@@ -366,14 +369,18 @@ class EnemyManager {
       enemy.markTimer = CONFIG.COMBAT.MARK_DURATION;
     }
 
-    // 5.7 单体命中表现：目标白闪 2 帧
+    // 5.7 单体命中表现：目标白闪 2 帧 + 重甲敲击/暴击拟音
     enemy.whiteFlashFrames = CONFIG.FEEDBACK.HIT.whiteFlashFrames;
     if (enemy.type === 'armored' || enemy.baseArmor > 0) {
       enemy.hitArmorFrames = 6;
+      if (frontShieldMul < 1.0 || (effArmor >= 10 && rawDamage <= effArmor + 10)) {
+        platform.playSfx('sfx_armor_clang', 0.65);
+      }
     }
 
     if (isCrit && fx) {
       fx.spawnFloatingText(enemy.x, enemy.y - 14, '💥' + Math.round(actualDamage), '#FFD700', 1.12);
+      platform.playSfx('sfx_crit', 0.72);
     }
 
     enemy.hp -= actualDamage;
@@ -448,6 +455,7 @@ class EnemyManager {
       }
         fx.spawnRing(enemy.x, enemy.y, 44, PALETTE.UPGRADE_LV1, 0.35, true);
       }
+      platform.playSfx('sfx_phase_shift', 0.85);
       // 立即执行一次阶段二召唤以增强压迫感
       this.triggerBossSummon(enemy, map, fx);
     }
@@ -478,6 +486,8 @@ class EnemyManager {
       }
         fx.spawnRing(enemy.x, enemy.y, 52, PALETTE.BRANCH_B, 0.40, true);
       }
+      platform.playSfx('sfx_phase_shift', 0.95);
+      platform.playSfx('sfx_boss_horn', 0.78);
     }
   }
 
@@ -641,9 +651,25 @@ class EnemyManager {
         this.scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 12, true, 16);
       }
     }
-    // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
+    // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子 & 黄金宝囊虫暴击横财
     if (this.scene) {
-      if (enemy.isElite || enemy.isBoss) {
+      if (enemy.isTreasure) {
+        const bonusGold = 35 + (enemy.waveIndex || 1) * 4;
+        if (economy) economy.addSpores(bonusGold);
+        if ((this.scene.awakeningSeeds || 0) < 5) {
+          this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 30, `✨ 黄金横财 +${bonusGold}孢 & +1觉醒种子!`, '#FFD700', 1.38);
+        } else {
+          if (economy) economy.addSpores(35);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 30, `✨ 黄金宝囊爆裂 +${bonusGold + 35}孢!`, '#FFD700', 1.38);
+        }
+        if (effFx) {
+          effFx.spawnParticles(enemy.x, enemy.y, 32, ['#FFD700', '#FFF1B8', '#FFA940', '#FFFFFF'], 45, 145, 0.35, 0.75, 4.5);
+          if (typeof effFx.spawnShockwave === 'function') effFx.spawnShockwave(enemy.x, enemy.y, 56, '#FFD700');
+          effFx.showBanner('✨ 击破黄金宝囊虫！', '#FFD666', '珍稀黄金孢子与觉醒种子倾泻而出！', 1.8);
+        }
+        platform.playSfx('sfx_treasure', 1.0, 1.0, true);
+      } else if (enemy.isElite || enemy.isBoss) {
         if (Math.random() < 0.40 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
@@ -1019,8 +1045,17 @@ class EnemyManager {
 
       const route = e.isFlying ? map.airRoute : ((e.routeIndex === 1 && map.groundRoute2) ? map.groundRoute2 : map.groundRoute);
       if (e.distPx >= route.totalLengthPx) {
-        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         const sampleEnd = sampleRouteAtDistance(route, route.totalLengthPx, 0);
+        if (e.isTreasure) {
+          // 黄金宝囊虫属于奖励奇袭，跑脱仅散逸金粉，绝不扣除基地生命种子
+          if (fx) {
+            fx.spawnParticles(sampleEnd.x, sampleEnd.y, 12, ['#FFD700', '#FFF1B8'], 20, 60, 0.25, 0.5, 3);
+            fx.spawnFloatingText(sampleEnd.x - 20, sampleEnd.y - 16, '宝囊虫溜走了!', '#FFD666', 1.0);
+          }
+          this.pool.releaseAt(i);
+          continue;
+        }
+        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         if (this.scene && this.scene.holyShieldCharges > 0) {
           this.scene.holyShieldCharges -= 1;
           if (fx) {
@@ -1125,6 +1160,21 @@ class EnemyManager {
           }
           platform.playSfx('sfx_click');
           return true;
+        }
+        // C. Treasure Beetle Click-Shake Spores (PvZ / Kingdom Rush tactile critter loot)
+        if (e.isTreasure) {
+          if ((e.treasureTaps || 0) < 3) {
+            e.treasureTaps = (e.treasureTaps || 0) + 1;
+            const shakeGold = 8;
+            if (this.scene && this.scene.economy) this.scene.economy.addSpores(shakeGold);
+            this.applyDirectDamage(e, 18, 0, false, false, 0, null, this.scene ? this.scene.economy : null, fx, 'hero', {});
+            if (fx) {
+              fx.spawnFloatingText(e.x, e.y - 20, `✨ 震落 +${shakeGold} 孢!`, '#FFD700', 1.15);
+              fx.spawnParticles(e.x, e.y, 10, ['#FFD700', '#FFF1B8', '#FFFFFF'], 25, 75, 0.2, 0.45, 3.2);
+            }
+            platform.playMusicalScale(e.treasureTaps + 2);
+            return true;
+          }
         }
       }
     }
@@ -1273,6 +1323,9 @@ class EnemyManager {
     } else if (e.type === 'weaver') {
       customImgPath = 'assets/vfx/enemy_weaver.png';
       customW = 38; customH = 34;
+    } else if (e.type === 'treasure_beetle') {
+      customImgPath = 'assets/vfx/enemy_treasure_beetle.png';
+      customW = 42; customH = 42;
     }
 
     let usedCustomArt = false;
@@ -1280,6 +1333,18 @@ class EnemyManager {
       const cImg = platform.getImage(customImgPath);
       if (cImg && cImg.width) {
         usedCustomArt = true;
+        if (e.isTreasure && e.state !== 'death') {
+          ctx.save();
+          const gp = 0.65 + Math.sin(e.animTimer * 8) * 0.25;
+          const tGrad = ctx.createRadialGradient(e.x, e.y, 4, e.x, e.y, 26);
+          tGrad.addColorStop(0, `rgba(255, 215, 0, ${(0.48 * gp).toFixed(2)})`);
+          tGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+          ctx.fillStyle = tGrad;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, 26, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
         // 高性能纯 GPU 闪白 (去除导致 GPU 重新光栅化的 ctx.filter)
@@ -1303,12 +1368,30 @@ class EnemyManager {
 
     if (!usedCustomArt) {
       // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
-      const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
+      const spriteType = e.isTreasure ? 'beetle' : e.type;
+      const drawn = drawEnemySprite(ctx, spriteType, animState, e.animFrame, e.x, e.y, false);
       if (!drawn) {
         const sz = (e.def.artSize.width || 12) * 2;
         ctx.fillStyle = e.tintColor;
         ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
         platform.recordDrawCall(1);
+      }
+
+      if (e.isTreasure && e.state !== 'death') {
+        ctx.save();
+        const gp = 0.65 + Math.sin(e.animTimer * 8) * 0.25;
+        const tGrad = ctx.createRadialGradient(e.x, e.y, 3, e.x, e.y, 24);
+        tGrad.addColorStop(0, `rgba(255, 215, 0, ${(0.45 * gp).toFixed(2)})`);
+        tGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = tGrad;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 24, 0, Math.PI * 2);
+        ctx.fill();
+        const sackImg = platform.getImage('assets/vfx/item_golden_spore.png');
+        if (sackImg && sackImg.width) {
+          ctx.drawImage(sackImg, Math.round(e.x - 10), Math.round(e.y - 18), 20, 20);
+        }
+        ctx.restore();
       }
 
       // 命中火花迸发

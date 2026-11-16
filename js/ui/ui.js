@@ -1021,57 +1021,74 @@ class UiManager {
     }
 
     // 顶部木质横幅与两侧导航居中对称对齐（centerX = 480, centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 344, 12, 272, 48, 0.98);
+    const save = storage.getSave();
+    const ktTree = scene.ancientKnowledgeTree;
+    const availPts = (ktTree && typeof ktTree.getAvailablePoints === 'function') ? ktTree.getAvailablePoints() : 0;
+    const totalCampStars = MAP_ORDER.reduce((acc, mId) => acc + ((save.maps && save.maps[mId] && save.maps[mId].stars) || 0), 0);
+
+    this.drawAiFrame(ctx, 'top_bar', 352, 12, 256, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = 'bold 20px ' + CN_FONT;
+    ctx.font = 'bold 19px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(i18n.t('btn_level_select'), 480, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 27, 18, 96, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 18, 18, 76, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
-      font: `bold 14.5px ${CN_FONT}`
+      font: `bold 13.5px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 131, 18, 120, 36, i18n.t('btn_guide'), {
+    this.drawPixelButton(ctx, 'lvl_codex', 100, 18, 96, 36, '秘典图鉴', {
       skin: 'btn_wood',
       iconCat: 24,
       iconKey: 'guide',
-      font: `bold 14px ${CN_FONT}`
+      font: `bold 13px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
+      this.codexTab = 0;
       this.showGuideModal = true;
     });
 
-    const save = storage.getSave();
-    if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
-      ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 645, 18, 148, 36, 0.96)) {
-        roundRectPath(ctx, 564, 18, 140, 36, 8);
-        ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 719, 36, {
-        style: 'gold',
-        size: 11.5,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0,
-        maxWidth: 118
-      });
-      ctx.restore();
-    }
+    this.drawPixelButton(ctx, 'lvl_tree', 202, 18, 142, 36, availPts > 0 ? `知识树(${availPts}点)` : '远古知识树', {
+      skin: availPts > 0 ? 'btn_green' : 'btn_wood',
+      iconCat: 16,
+      iconKey: 'upgrade',
+      font: `bold 12.5px ${CN_FONT}`
+    }, () => {
+      platform.playSfx('sfx_click');
+      this.codexTab = 2;
+      this.showGuideModal = true;
+    });
 
-    this.drawPixelButton(ctx, 'lvl_settings', 801, 18, 132, 36, i18n.t('btn_settings'), {
+    const rightBadgeText = (save.endlessRecord && save.endlessRecord.bestWave > 0)
+      ? `无尽最高 第${save.endlessRecord.bestWave}波`
+      : `林地总星数 ${totalCampStars}/12 ★`;
+    ctx.save();
+    if (!this.drawAiFrame(ctx, 'top_bar', 616, 18, 192, 36, 0.96)) {
+      roundRectPath(ctx, 616, 18, 192, 36, 8);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    drawArtText(ctx, rightBadgeText, 712, 36, {
+      style: 'gold',
+      size: 11.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0,
+      maxWidth: 168
+    });
+    ctx.restore();
+
+    this.drawPixelButton(ctx, 'lvl_settings', 816, 18, 126, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
-      font: `bold 14px ${CN_FONT}`
+      font: `bold 13.5px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       this.showSettingsModal = true;
@@ -1782,28 +1799,17 @@ class UiManager {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 集结目标光标准星
-    ctx.beginPath();
-    ctx.arc(tx, ty, 18 + pulse * 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(74, 222, 128, 0.14)';
-    ctx.fill();
-    ctx.strokeStyle = '#86EFAC';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#DCFCE7';
-    ctx.fill();
-
-    for (let a = 0; a < 4; a++) {
-      const ang = a * Math.PI * 0.5 + this.uiAnimTime * 1.4;
-      ctx.beginPath();
-      ctx.moveTo(tx + Math.cos(ang) * 12, ty + Math.sin(ang) * 12);
-      ctx.lineTo(tx + Math.cos(ang) * 24, ty + Math.sin(ang) * 24);
-      ctx.strokeStyle = '#4ADE80';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    // 100% AI 手绘集结目标光标准星
+    const rallyReticle = platform.getImage('assets/vfx/range_commander_reticle.png') || platform.getImage('assets/vfx/vfx_target_lock.png');
+    if (rallyReticle && rallyReticle.width) {
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.scale(1.0, 0.78);
+      ctx.rotate(this.uiAnimTime * 1.1);
+      ctx.globalAlpha = 0.78 + pulse * 0.18;
+      const dSize = 46 + pulse * 6;
+      ctx.drawImage(rallyReticle, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+      ctx.restore();
     }
 
     const pillW = 204;
@@ -2830,6 +2836,17 @@ class UiManager {
     if (quickHoverText && !this.showTowerDetailBoard) {
       const qTipY = botY > 400 ? Math.max(10, topY - 30) : Math.min(444, botY + 34);
       this.drawFloatingTooltipPill(ctx, anchorX, qTipY, quickHoverText, 380);
+    } else if (!this.showTowerDetailBoard && ((tower.vetRank || 0) > 0 || (tower.kills || 0) > 0 || (tower.totalSporesGenerated || 0) > 0)) {
+      const vet = scene.towerManager.getVeteranStats(tower);
+      const isMvp = scene.towerManager.mvpTowerId === tower.id;
+      const tdmg = Math.round(tower.totalDamage || 0);
+      const tdmgStr = tdmg >= 1000 ? `${(tdmg / 1000).toFixed(1)}k` : String(tdmg);
+      const mvpTag = isMvp ? 'MVP王牌 · ' : '';
+      const statLine = tower.typeId === 'lumina'
+        ? `${mvpTag}${vet.label} · 产孢 ${tower.totalSporesGenerated || 0} · 击杀 ${tower.kills || 0}`
+        : `${mvpTag}${vet.label} · ${tower.kills || 0}杀 · ${tdmgStr}伤`;
+      const statY = botY > 404 ? Math.max(10, topY - 26) : Math.min(444, botY + 28);
+      this.drawFloatingTooltipPill(ctx, anchorX, statY, statLine, 260);
     }
 
     this.quickRingBounds = {
@@ -3196,19 +3213,25 @@ class UiManager {
       ctx.restore();
     }
 
-    // 3.5 单塔累计战功统计栏 (Pop Count & Damage Contribution)
+    // 3.5 单塔累计战功统计栏 (Veteran Rank + MVP + Pop Count & Damage Contribution)
+    const vetInfo = scene.towerManager.getVeteranStats(tower);
+    const isMvpTower = scene.towerManager.mvpTowerId === tower.id;
     const tdmg = Math.round(tower.totalDamage || 0);
     const tdmgStr = tdmg >= 1000 ? `${(tdmg / 1000).toFixed(1)}k` : String(tdmg);
     const tkills = tower.kills || 0;
+    const vetPrefix = isMvpTower ? `[MVP] ${vetInfo.label}` : vetInfo.label;
+    const summaryText = tower.typeId === 'lumina'
+      ? `${vetPrefix} · 产孢 ${tower.totalSporesGenerated || 0} · 击杀 ${tkills} · 伤 ${tdmgStr}`
+      : `${vetPrefix} · 输出 ${tdmgStr} · 击杀 ${tkills} · 覆路 ${cov.coveredTiles}格`;
     ctx.save();
     roundRectPath(ctx, bx, y + 211, btnW, 20, 5);
-    ctx.fillStyle = 'rgba(72, 48, 28, 0.08)';
+    ctx.fillStyle = isMvpTower ? 'rgba(212, 136, 6, 0.16)' : 'rgba(72, 48, 28, 0.08)';
     ctx.fill();
-    ctx.fillStyle = THEME.INK_MID;
+    ctx.fillStyle = isMvpTower ? '#8C4D00' : THEME.INK_MID;
     ctx.font = `bold 10.5px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`本塔战功：输出 ${tdmgStr} 伤害  ·  击杀 ${tkills} 虫  ·  覆路 ${cov.coveredTiles} 格`, bx + btnW * 0.5, y + 221, btnW - 12);
+    ctx.fillText(summaryText, bx + btnW * 0.5, y + 221, btnW - 12);
     ctx.restore();
 
     // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 22px 下边距，不贴木框）
@@ -4101,9 +4124,9 @@ class UiManager {
       const settleRib = platform.getImage(isWin ? 'assets/ui/frames/banner_ribbon_gold.png' : 'assets/ui/frames/banner_ribbon_crimson.png');
       if (settleRib && settleRib.width) {
         const ribW = 356;
-        const ribH = 88;
+        const ribH = 80;
         const ribX = mx + Math.round((mw - ribW) * 0.5);
-        const ribY = my + 12;
+        const ribY = my + 8;
         ctx.drawImage(settleRib, ribX, ribY, ribW, ribH);
         ctx.fillStyle = isWin ? '#2C1406' : '#FFF5E8';
         ctx.font = 'bold 19px ' + CN_FONT;
@@ -4113,12 +4136,23 @@ class UiManager {
         ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
         ctx.font = 'bold 21px ' + CN_FONT;
         ctx.textBaseline = 'middle';
-        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 56);
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 48);
       }
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + Math.round(mw * 0.5) - 63 + s * 46, my + 84, 34);
+        drawUiIcon(ctx, 16, sKey, mx + Math.round(mw * 0.5) - 56 + s * 42, my + 74, 28);
+      }
+      if (isWin && scene.ancientKnowledgeTree) {
+        const ktAvail = scene.ancientKnowledgeTree.getAvailablePoints ? scene.ancientKnowledgeTree.getAvailablePoints() : 0;
+        drawArtText(ctx, `远古知识之树可用点数：${ktAvail} 点（选关界面可配点强化全军）`, mx + mw * 0.5, my + 114, {
+          style: 'ink',
+          color: '#237804',
+          size: 10.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0
+        });
       }
 
       // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
@@ -5530,14 +5564,15 @@ class UiManager {
         maxWidth: barW - 40
       });
 
-      // 下行提前迎战主文案
-      drawArtText(ctx, '▶ 提前迎战 (+' + earlyBonus + '孢)', barX + barW * 0.5, drawY + 38.5, {
+      // 下行提前迎战主文案（附带连呼激励提示）
+      const streakStr = (waveMgr.rushStreak || 0) >= 1 ? ` · 连呼×${waveMgr.rushStreak + 1}` : ' · -20%冷却';
+      drawArtText(ctx, `▶ 提前迎战 (+${earlyBonus}孢${streakStr})`, barX + barW * 0.5, drawY + 38.5, {
         style: 'emerald',
-        size: 13.5,
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.7,
-        maxWidth: barW - 24
+        maxWidth: barW - 22
       });
       ctx.restore();
 

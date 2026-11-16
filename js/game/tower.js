@@ -26,6 +26,7 @@ class TowerManager {
 
   clear() {
     this.towers.length = 0;
+    this.mvpTowerId = 0;
   }
 
   getTowerAt(col, row) {
@@ -98,7 +99,10 @@ class TowerManager {
       superchargeTimer: 0, // 能量肥料超频大招倒计时
       celestialBuffTimer: 0, // 圣光照耀共鸣攻速光环计时器
       totalDamage: 0,
-      kills: 0
+      kills: 0,
+      totalSporesGenerated: 0,
+      totalHealed: 0,
+      vetRank: 0
     };
 
     const tile = map.getTile(col, row);
@@ -229,9 +233,28 @@ class TowerManager {
     return (map.groundRoute && map.groundRoute.totalLengthPx) || 1;
   }
 
+  getVeteranStats(tower) {
+    const rank = (tower && tower.vetRank) || 0;
+    if (rank >= 3) return { rank: 3, label: '传奇王牌', aspdBonus: 0.18, dmgBonus: 0.15, rangeBonus: 0.30, critBonus: 0.08 };
+    if (rank === 2) return { rank: 2, label: '百战老兵', aspdBonus: 0.12, dmgBonus: 0.08, rangeBonus: 0.20, critBonus: 0.04 };
+    if (rank === 1) return { rank: 1, label: '林地新锐', aspdBonus: 0.06, dmgBonus: 0.04, rangeBonus: 0, critBonus: 0 };
+    return { rank: 0, label: '新驻守卫', aspdBonus: 0, dmgBonus: 0, rangeBonus: 0, critBonus: 0 };
+  }
+
+  getTowerCombatScore(tower) {
+    if (!tower) return 0;
+    return Math.round(
+      (tower.kills || 0) * 60 +
+      (tower.totalDamage || 0) +
+      (tower.totalSporesGenerated || 0) * 6 +
+      (tower.totalHealed || 0) * 4
+    );
+  }
+
   getEffectiveRange(tower) {
     if (!tower || !tower.node) return 3.0;
     let r = tower.node.range || 3.0;
+    r += this.getVeteranStats(tower).rangeBonus;
     if (tower.typeId === 'watch' && this.scene && this.scene.blessingMods && this.scene.blessingMods.watchRangeMult > 1) {
       r *= this.scene.blessingMods.watchRangeMult;
     }
@@ -589,8 +612,27 @@ class TowerManager {
       }
     }
 
+    let topScore = 449;
+    let topId = 0;
     for (let i = 0; i < this.towers.length; i++) {
       const t = this.towers[i];
+      const sc = this.getTowerCombatScore(t);
+      if (sc > topScore) {
+        topScore = sc;
+        topId = t.id;
+      }
+      const nextRank = sc >= 4200 ? 3 : (sc >= 1800 ? 2 : (sc >= 650 ? 1 : 0));
+      if (nextRank > (t.vetRank || 0)) {
+        t.vetRank = nextRank;
+        t.hp = Math.min(t.maxHp, t.hp + Math.round(t.maxHp * 0.15));
+        t.upgradeAnimTimer = Math.max(t.upgradeAnimTimer || 0, 0.34);
+        const vs = this.getVeteranStats(t);
+        if (fx) {
+          fx.spawnFloatingText(t.x, t.y - 26, `★ 晋升·${vs.label}!`, nextRank >= 3 ? '#FFD700' : '#95DE64', 1.2);
+          if (typeof fx.spawnRing === 'function') fx.spawnRing(t.x, t.y, 34, nextRank >= 3 ? '#FFD700' : '#BAE7FF', 0.42, false);
+        }
+        platform.playSfx('sfx_rank_up');
+      }
 
       // 落地 Squash & Stretch 弹性回弹计算
       if (t.squashTimer > 0) {
@@ -667,6 +709,10 @@ class TowerManager {
       if (this.scene && this.scene.blessingMods && this.scene.blessingMods.globalAspdBonus > 0) {
         speedCoeff *= (1.0 + this.scene.blessingMods.globalAspdBonus);
       }
+      const vetStats = this.getVeteranStats(t);
+      if (vetStats.aspdBonus > 0) {
+        speedCoeff *= (1.0 + vetStats.aspdBonus);
+      }
       if (t.isAwakened && this.scene && this.scene.awakenedAtkSpeedMod > 1) {
         speedCoeff *= this.scene.awakenedAtkSpeedMod;
       }
@@ -682,6 +728,7 @@ class TowerManager {
           if (t.sporeHarvestTimer >= hInterval) {
             t.sporeHarvestTimer = 0;
             const gen = t.node.sporeGen;
+            t.totalSporesGenerated = (t.totalSporesGenerated || 0) + gen;
             if (economy) {
               economy.addSpores(gen);
             }
@@ -708,11 +755,13 @@ class TowerManager {
                 const ot = this.towers[j];
                 if (ot.hp > 0 && ot.hp < ot.maxHp && Math.hypot(ot.x - t.x, ot.y - t.y) <= radPx) {
                   this.healTower(ot, healAmt, false, fx);
+                  t.totalHealed = (t.totalHealed || 0) + healAmt;
                   didPulse = true;
                 }
               }
               if (sporelingPatrol) {
                 sporelingPatrol.healGuards(t.x, t.y, radPx, healAmt);
+                t.totalHealed = (t.totalHealed || 0) + Math.round(healAmt * 0.5);
                 didPulse = true;
               }
             }
@@ -738,6 +787,7 @@ class TowerManager {
             if (didPulse && fx) {
               if (fx.spawnRing) fx.spawnRing(t.x, t.y, radPx * 0.45, '#73D13D', 0.4, false);
               fx.spawnParticles(t.x, t.y, 8, ['#52C41A', '#FFE58F'], 20, 40);
+              platform.playSfx('sfx_heal', 0.65);
             }
           }
         }
@@ -831,13 +881,17 @@ class TowerManager {
         }
       }
     }
+    this.mvpTowerId = topId;
   }
 
   getBuffedNode(tower) {
     if (!tower || !tower.node) return tower.node;
-    if (!tower.luminaDmgBonus) return tower.node;
+    const vet = this.getVeteranStats(tower);
+    if (!tower.luminaDmgBonus && !vet.dmgBonus && !vet.critBonus) return tower.node;
     return Object.assign({}, tower.node, {
-      damageBonus: (tower.node.damageBonus || 0) + tower.luminaDmgBonus
+      damageBonus: (tower.node.damageBonus || 0) + (tower.luminaDmgBonus || 0) + vet.dmgBonus,
+      critRate: (tower.node.critRate || 0) + vet.critBonus,
+      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, vet.critBonus > 0 ? 1.85 : 1.0)
     });
   }
 
@@ -1204,6 +1258,30 @@ class TowerManager {
         ctx.restore();
         platform.recordDrawCall(2);
       }
+
+      // 100% AI 手绘百战勋阶星徽（左下底座）+ AI 手绘王牌 MVP 金冠（头顶悬浮）
+      if ((t.vetRank || 0) > 0) {
+        const vetImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
+        if (vetImg && vetImg.width) {
+          const sz = t.vetRank >= 3 ? 14 : (t.vetRank === 2 ? 12 : 10);
+          ctx.save();
+          ctx.globalAlpha = t.vetRank >= 3 ? 1.0 : (t.vetRank === 2 ? 0.92 : 0.80);
+          ctx.drawImage(vetImg, Math.round(t.x - 18), Math.round(tileY + 14), sz, sz);
+          ctx.restore();
+          platform.recordDrawCall(1);
+        }
+      }
+      if (this.mvpTowerId && t.id === this.mvpTowerId && !t.isWebbed) {
+        const crownImg = platform.getImage('assets/ui/icons/icon_crown.png');
+        if (crownImg && crownImg.width) {
+          ctx.save();
+          const bob = Math.sin((this.animTimer || 0) * 3.5) * 1.6;
+          const crownY = Math.round((t.hp < t.maxHp ? tileY - 22 : tileY - 16) + bob);
+          ctx.drawImage(crownImg, Math.round(t.x - 7), crownY - 7, 14, 14);
+          ctx.restore();
+          platform.recordDrawCall(1);
+        }
+      }
     }
   }
 
@@ -1236,7 +1314,7 @@ class TowerManager {
       fx.spawnParticles(tower.x, tower.y, 8, ['#E6F7FF', '#BAE7FF', '#FFFFFF'], 20, 60, 0.2, 0.4, 2.5);
       fx.spawnFloatingText(tower.x, tower.y - 20, `-1 破丝 (+5 孢子)`, '#BAE7FF', 0.9);
     }
-    platform.playSfx('sfx_laser');
+    platform.playSfx('sfx_web_snap', 0.9, 1.0 + (3 - tower.webHealth) * 0.14);
 
     if (tower.webHealth <= 0) {
       tower.isWebbed = false;
@@ -1246,7 +1324,7 @@ class TowerManager {
         fx.spawnParticles(tower.x, tower.y, 28, ['#FFD700', '#FFF1B8', '#69C0FF', '#FFFFFF'], 35, 110, 0.35, 0.65, 4);
         fx.spawnFloatingText(tower.x, tower.y - 30, '挣脱! 破茧狂暴+30%!', '#FFD700', 1.4);
       }
-      platform.playSfx('sfx_upgrade');
+      platform.playSfx('sfx_web_snap', 1.0, 1.45, true);
       if (this.scene && this.scene.woodlandBlessings) {
         this.scene.woodlandBlessings.triggerStormArc(this.scene, 2, 130);
       }

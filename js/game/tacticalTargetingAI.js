@@ -5,6 +5,8 @@
  * 索敌逻辑本身由 TowerManager.selectTarget 负责，此处只负责显示。
  */
 
+const platform = require('../core/platform');
+
 class TacticalTargetingAI {
   constructor() {
     this.animTimer = 0;
@@ -15,42 +17,34 @@ class TacticalTargetingAI {
   }
 
   /**
-   * 在地图坐标系内绘制。target 为 null 时不绘制。
+   * 在地图坐标系内绘制 100% AI 手绘德鲁伊索敌法阵准星。target 为 null 时不绘制。
    */
   renderTargetHighlight(ctx, tower, target) {
     if (!tower || !target || target.state === 'death' || target.hp <= 0) return;
 
     ctx.save();
-    const pulse = 1.0 + Math.sin(this.animTimer * 8) * 0.08;
-    const color = '#FFE58F';
+    const pulse = 1.0 + Math.sin(this.animTimer * 6.5) * 0.07;
 
-    ctx.strokeStyle = color;
+    // 柔和灵光连线
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.36)';
     ctx.lineWidth = 1.2;
-    ctx.globalAlpha = 0.4;
-    ctx.setLineDash([4, 4]);
-    ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 8);
+    ctx.setLineDash([4, 5]);
+    ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 9);
     ctx.beginPath();
     ctx.moveTo(tower.x, tower.y - 12);
     ctx.lineTo(target.x, target.y);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.translate(target.x, target.y + 4);
-    ctx.scale(pulse, pulse);
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const mk = 13;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-mk, 0); ctx.lineTo(-mk + 5, 0);
-    ctx.moveTo(mk, 0); ctx.lineTo(mk - 5, 0);
-    ctx.moveTo(0, -mk * 0.6); ctx.lineTo(0, -mk * 0.6 + 3);
-    ctx.moveTo(0, mk * 0.6); ctx.lineTo(0, mk * 0.6 - 3);
-    ctx.stroke();
+    const lockImg = platform.getImage('assets/vfx/vfx_target_lock.png');
+    if (lockImg && lockImg.width) {
+      ctx.translate(target.x, target.y + 4);
+      ctx.scale(pulse, pulse * 0.72);
+      ctx.rotate(this.animTimer * 1.1);
+      ctx.globalAlpha = 0.88;
+      ctx.drawImage(lockImg, -19, -19, 38, 38);
+      platform.recordDrawCall(1);
+    }
     ctx.restore();
   }
 }

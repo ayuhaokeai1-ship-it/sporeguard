@@ -244,4 +244,7 @@ module.exports = {
   enemy_siege_beetle_name: '铁壁攻城巨兜',
   enemy_siege_beetle_type: '正面坚盾 · 掩护推进',
   enemy_siege_beetle_tip: '正面巨型骨盾减免75%弹丸伤害，需用尖刺穿透破甲或侧翼包抄',
+  enemy_treasure_name: '黄金宝囊虫',
+  enemy_treasure_type: '珍稀奇袭 · 横财掉落',
+  enemy_treasure_tip: '高速穿过战场的黄金运宝甲虫！点击可震落金孢，击杀必爆海量孢子与觉醒古种！'
 };

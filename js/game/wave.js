@@ -26,6 +26,8 @@ class WaveManager {
     this.prepTimerSec = CONFIG.ECONOMY.PREP_TIME_FIRST_WAVE; // 第一波前 40 秒
     this.waveElapsedSec = 0;
     this.activeGroups = [];
+    this.rushStreak = 0;
+    this._treasureWaveSpawned = -1;
   }
 
   isPrepPhase() {
@@ -160,17 +162,33 @@ class WaveManager {
       platform.playSfx('sfx_horn');
     }
     if (this.phase !== 'prep') return 0;
-    const bonus = economy.grantEarlyCallBonus(this.prepTimerSec);
+    this.rushStreak = (this.rushStreak || 0) + 1;
+    const rawBonus = economy.grantEarlyCallBonus(this.prepTimerSec);
+    const streakMult = Math.min(2.0, 1 + (this.rushStreak - 1) * 0.25);
+    const extraRushBonus = Math.max(0, Math.round(rawBonus * (streakMult - 1)));
+    if (extraRushBonus > 0) {
+      economy.addSpores(extraRushBonus);
+    }
+    const bonus = rawBonus + extraRushBonus;
+    if (scene && typeof scene.onEarlyWaveRush === 'function') {
+      scene.onEarlyWaveRush(this.rushStreak);
+    }
     if (fx) {
       if (bonus > 0) {
-        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
+        const streakTag = this.rushStreak >= 2 ? ` (连呼×${this.rushStreak}!)` : '';
+        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子${streakTag}`, PALETTE.BRANCH_B, 1.35);
         fx.spawnParticles(320, 220, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
       }
-      fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
+      fx.showBanner(
+        this.rushStreak >= 2 ? `🔥 战意连呼 ×${this.rushStreak} · 全军神术冷却-20%！` : '虫潮先锋突袭！',
+        PALETTE.CRIMSON_SELL,
+        '林地号角长鸣，全军进入战备状态',
+        1.6
+      );
       fx.triggerScreenShake(2.5, 0.15);
     }
     this.startCurrentWave(economy, fx, scene);
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_horn_rush', 0.9, 1.0 + Math.min(0.45, (this.rushStreak - 1) * 0.08));
     return bonus;
   }
 
@@ -281,6 +299,7 @@ class WaveManager {
       this.prepTimerSec -= dt;
       if (this.prepTimerSec <= 0) {
         this.prepTimerSec = 0;
+        this.rushStreak = 0;
         this.startCurrentWave(economy, fx, scene);
       }
       return;
@@ -288,6 +307,30 @@ class WaveManager {
 
     if (this.phase === 'combat') {
       this.waveElapsedSec += dt;
+
+      // 中段破局奇袭：第 4, 7, 10, 13, 16 波及无尽每 3 波出没「黄金宝囊虫」
+      if (
+        this.currentWaveIndex >= 4 &&
+        (this.currentWaveIndex % 3 === 1) &&
+        this._treasureWaveSpawned !== this.currentWaveIndex &&
+        this.waveElapsedSec >= 5.5 &&
+        ENEMIES.treasure_beetle
+      ) {
+        this._treasureWaveSpawned = this.currentWaveIndex;
+        const tb = enemyManager.spawnEnemy('treasure_beetle', map, this.currentWaveIndex, {
+          fromWave: false,
+          startDistPx: 0,
+          lateralOffsetPx: 0,
+          routeIndex: (map && map.groundRoute2 && this.currentWaveIndex % 2 === 0) ? 1 : 0
+        });
+        if (tb) {
+          platform.playSfx('sfx_treasure', 0.8);
+          if (fx) {
+            fx.showBanner('✨ 黄金宝囊虫出没！', '#FFD666', '点击震落金孢，击杀必爆珍稀觉醒古种与横财！', 2.1);
+            fx.spawnParticles(tb.x, tb.y, 18, ['#FFD700', '#FFF1B8', '#FFFFFF'], 30, 85, 0.3, 0.6, 4);
+          }
+        }
+      }
 
       let allGroupsFinished = true;
       for (let i = 0; i < this.activeGroups.length; i++) {

@@ -102,7 +102,12 @@ function bootstrapGame() {
     'assets/ui/frames/radial_wheel_bg.png',
     'assets/ui/frames/banner_ribbon_gold.png',
     'assets/ui/frames/banner_ribbon_crimson.png',
-    'assets/ui/frames/boss_hud_frame.png'
+    'assets/ui/frames/boss_hud_frame.png',
+    'assets/ui/icons/icon_crown.png',
+    'assets/vfx/enemy_treasure_beetle.png',
+    'assets/vfx/vfx_target_lock.png',
+    'assets/vfx/vfx_veteran_crest.png',
+    'assets/vfx/range_commander_reticle.png'
   ];
 
   Promise.all([

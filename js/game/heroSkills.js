@@ -116,8 +116,7 @@ class HeroSkillSystem {
     const hy = this.hero.y;
     const facing = this.hero.facingLeft ? -1 : 1;
 
-    platform.playSfx('sfx_shoot');
-    platform.playSfx('sfx_thorn');
+    platform.playSfx('sfx_hero_cleave');
 
     if (scene && scene.fx) {
       scene.fx.triggerScreenShake(3.0, 0.25);
@@ -174,7 +173,7 @@ class HeroSkillSystem {
     const healAmount = Math.round(this.hero.maxHp * sk.healRatio);
     this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + healAmount);
 
-    platform.playSfx('sfx_build');
+    platform.playSfx('sfx_hero_shield');
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(this.hero.x), Math.round(this.hero.y - 42), `🛡️ 荆棘木肤! +${healAmount}HP`, '#FFD666');
       scene.fx.spawnRing(this.hero.x, this.hero.y, 80, '#FFC069', 0.6);
@@ -190,8 +189,7 @@ class HeroSkillSystem {
     const hy = this.hero.y;
     const radius = this.skills.roots.radiusPx;
 
-    platform.playSfx('sfx_thorn');
-    platform.playSfx('sfx_boom');
+    platform.playSfx('sfx_hero_roots');
 
     this.activeVfx.push({
       type: 'roots',
@@ -233,8 +231,8 @@ class HeroSkillSystem {
     const sk = this.skills.awakening;
     sk.activeTimer = sk.duration;
 
-    platform.playSfx('sfx_win');
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_boss_horn', 0.85, 1.15);
+    platform.playSfx('sfx_branch_evolve');
 
     if (scene && scene.fx) {
       scene.fx.triggerScreenShake(6.0, 0.6);

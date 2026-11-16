@@ -1278,6 +1278,24 @@ const ENEMIES = {
     artSize: { width: 18, height: 18 },
     animFrames: { walk: 4, death: 3 },
     isBoss: false
+  },
+
+  treasure_beetle: {
+    id: 'treasure_beetle',
+    nameKey: 'enemy_treasure_name',
+    typeKey: 'enemy_treasure_type',
+    tipKey: 'enemy_treasure_tip',
+    baseHp: 240,
+    speed: 2.05,
+    armor: 2,
+    threat: 0,
+    reward: 40,
+    isFlying: false,
+    isTreasure: true,
+    slowFactor: 0.75,
+    artSize: { width: 14, height: 14 },
+    animFrames: { walk: 4, death: 3 },
+    isBoss: false
   }
 };
 
@@ -2664,6 +2682,9 @@ module.exports = {
   enemy_siege_beetle_name: '铁壁攻城巨兜',
   enemy_siege_beetle_type: '正面坚盾 · 掩护推进',
   enemy_siege_beetle_tip: '正面巨型骨盾减免75%弹丸伤害，需用尖刺穿透破甲或侧翼包抄',
+  enemy_treasure_name: '黄金宝囊虫',
+  enemy_treasure_type: '珍稀奇袭 · 横财掉落',
+  enemy_treasure_tip: '高速穿过战场的黄金运宝甲虫！点击可震落金孢，击杀必爆海量孢子与觉醒古种！'
 };
   };
 
@@ -2915,6 +2936,9 @@ module.exports = {
   enemy_siege_beetle_name: 'Ironclad Siege Beetle',
   enemy_siege_beetle_type: 'Frontal Shield Phalanx',
   enemy_siege_beetle_tip: 'Frontal pavise shield resists 75% projectile damage; flank or use armor pierce.',
+  enemy_treasure_name: 'Gilded Treasure Grub',
+  enemy_treasure_type: 'Rare Bounty',
+  enemy_treasure_tip: 'Darts across the grove carrying spoils! Tap to shake loose spores, defeat for Awakening Seed & gold!'
 };
   };
 
@@ -3041,10 +3065,7 @@ const AUDIO_PATHS = {
   sfx_bomb: 'audio/sfx_bomb.wav',
   sfx_shock: 'audio/sfx_shock.wav',
   sfx_laser: 'audio/sfx_laser.wav',
-  sfx_place: 'audio/sfx_place.wav',
-  sfx_branch_evolve: 'audio/sfx_upgrade.wav',
-  sfx_blessing: 'audio/sfx_upgrade.wav',
-  sfx_boss_horn: 'audio/sfx_horn.wav'
+  sfx_place: 'audio/sfx_place.wav'
 };
 
 const SFX_VOLUMES = {
@@ -3071,7 +3092,18 @@ const SFX_VOLUMES = {
   sfx_place: 0.65,
   sfx_branch_evolve: 0.82,
   sfx_blessing: 0.85,
-  sfx_boss_horn: 0.88
+  sfx_boss_horn: 0.88,
+  sfx_crit: 0.72,
+  sfx_armor_clang: 0.62,
+  sfx_rank_up: 0.80,
+  sfx_treasure: 0.85,
+  sfx_web_snap: 0.76,
+  sfx_hero_cleave: 0.82,
+  sfx_hero_shield: 0.78,
+  sfx_hero_roots: 0.82,
+  sfx_horn_rush: 0.84,
+  sfx_phase_shift: 0.86,
+  sfx_heal: 0.70
 };
 
 /**
@@ -3622,6 +3654,74 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       playAcousticNote(110.0, t0, 0.65, 0.26 * volumeMod, [1, 1.5, 2.0, 3.0], 0.42);
       playAcousticNote(164.81, t0 + 0.08, 0.60, 0.22 * volumeMod, [1, 2.0, 3.0], 0.38);
       return true;
+    } else if (sfxKey === 'sfx_crit') {
+      // 暴击弱点贯穿：脆响泛音+金色叮鸣 (Crisp Crit Flare)
+      playFilteredNoise(t0, 0.06, 'highpass', 2400 * p, 5200 * p, 1.8, 0.12 * volumeMod);
+      playAcousticNote(880 * p, t0, 0.09, 0.16 * volumeMod, [1, 2.0, 3.0], 0.32);
+      playAcousticNote(1318.51 * p, t0 + 0.025, 0.14, 0.14 * volumeMod, [1, 2.756], 0.26);
+      return true;
+    } else if (sfxKey === 'sfx_armor_clang') {
+      // 重甲硬壳弹开：沉实硬甲敲击 (Chitinous Armor Clack)
+      playFilteredNoise(t0, 0.045, 'bandpass', 1450 * p, 680 * p, 3.4, 0.13 * volumeMod);
+      playAcousticNote(196 * p, t0, 0.055, 0.13 * volumeMod, [1, 2.41], 0.38);
+      return true;
+    } else if (sfxKey === 'sfx_rank_up') {
+      // 守卫百战晋升：双段温暖青铜风铃 (Veteran Rank Promotion Bell)
+      playFilteredNoise(t0 + 0.03, 0.18, 'highpass', 3200, 5600, 2.0, 0.07 * volumeMod);
+      playAcousticNote(587.33 * p, t0, 0.22, 0.18 * volumeMod, [1, 2.0, 2.756], 0.28);
+      playAcousticNote(880.0 * p, t0 + 0.06, 0.28, 0.20 * volumeMod, [1, 2.0, 2.756], 0.26);
+      playAcousticNote(1174.66 * p, t0 + 0.12, 0.34, 0.18 * volumeMod, [1, 2.0], 0.24);
+      return true;
+    } else if (sfxKey === 'sfx_treasure') {
+      // 黄金宝囊虫暴击掉落：连续水晶金币喷泉 (Golden Bounty Cascade)
+      const tNotes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
+      for (let i = 0; i < tNotes.length; i++) {
+        playAcousticNote(tNotes[i] * p, t0 + i * 0.042, 0.26, 0.16 * volumeMod, [1, 2.756], 0.24);
+      }
+      playFilteredNoise(t0 + 0.04, 0.22, 'highpass', 3600, 6200, 2.4, 0.07 * volumeMod);
+      return true;
+    } else if (sfxKey === 'sfx_web_snap') {
+      // 撕断腐化蛛丝破茧：紧绷弦断+清脆释放铃音 (Spider Web Snap & Release)
+      playFilteredNoise(t0, 0.08, 'highpass', 2800 * p, 4800 * p, 1.5, 0.15 * volumeMod);
+      playAcousticNote(739.99 * p, t0, 0.11, 0.16 * volumeMod, [1, 2.0], 0.30);
+      playAcousticNote(1174.66 * p, t0 + 0.04, 0.18, 0.14 * volumeMod, [1, 2.756], 0.25);
+      return true;
+    } else if (sfxKey === 'sfx_hero_cleave') {
+      // 奥克·巨木横扫：沉重橡木挥斧+实木震击 (Heavy Oak Cleave)
+      playFilteredNoise(t0, 0.18, 'bandpass', 420 * p, 1400 * p, 1.4, 0.20 * volumeMod);
+      playAcousticNote(146.83 * p, t0 + 0.04, 0.16, 0.22 * volumeMod, [1, 1.5, 2.2], 0.40);
+      return true;
+    } else if (sfxKey === 'sfx_hero_shield') {
+      // 奥克·荆棘木肤：硬木护甲扣合+大地共鸣 (Bark Shield Lock)
+      playFilteredNoise(t0, 0.10, 'bandpass', 1200, 500, 2.2, 0.15 * volumeMod);
+      playAcousticNote(246.94 * p, t0, 0.22, 0.18 * volumeMod, [1, 2.0, 3.0], 0.32);
+      playAcousticNote(369.99 * p, t0 + 0.05, 0.26, 0.16 * volumeMod, [1, 2.0], 0.28);
+      return true;
+    } else if (sfxKey === 'sfx_hero_roots') {
+      // 奥克·庇护根脉：裂土轰鸣+藤蔓急束 (Root Eruption)
+      playFilteredNoise(t0, 0.32, 'lowpass', 720, 140, 1.1, 0.22 * volumeMod);
+      playAcousticNote(130.81 * p, t0, 0.24, 0.20 * volumeMod, [1, 1.5, 2.5], 0.38);
+      playAcousticNote(329.63 * p, t0 + 0.05, 0.14, 0.14 * volumeMod, [1, 2.4], 0.32);
+      return true;
+    } else if (sfxKey === 'sfx_horn_rush') {
+      // 提前迎敌·战意连呼：高昂激越双圆号五度号角 (Horn Rush Streak)
+      playAcousticNote(329.63 * p, t0, 0.26, 0.17 * volumeMod, [1, 2.0, 3.0], 0.34);
+      playAcousticNote(493.88 * p, t0 + 0.045, 0.30, 0.18 * volumeMod, [1, 2.0, 3.0], 0.34);
+      playAcousticNote(659.25 * p, t0 + 0.095, 0.34, 0.19 * volumeMod, [1, 2.0], 0.30);
+      return true;
+    } else if (sfxKey === 'sfx_phase_shift') {
+      // 首领阶段狂暴转换：深沉低音战锣与不详共鸣 (Boss Phase Shift Rumble)
+      playFilteredNoise(t0, 0.42, 'lowpass', 600, 110, 0.9, 0.22 * volumeMod);
+      playAcousticNote(98.0 * p, t0, 0.55, 0.25 * volumeMod, [1, 1.498, 2.1], 0.45);
+      playAcousticNote(146.83 * p, t0 + 0.07, 0.48, 0.20 * volumeMod, [1, 2.0], 0.38);
+      return true;
+    } else if (sfxKey === 'sfx_heal') {
+      // 灵光群疗/甘霖恢复：温暖泉水竖琴上行音阶 (Warm Sanctuary Heal)
+      const hNotes = [523.25, 659.25, 783.99];
+      for (let i = 0; i < hNotes.length; i++) {
+        playAcousticNote(hNotes[i] * p, t0 + i * 0.05, 0.22, 0.13 * volumeMod, [1, 2.0], 0.26);
+      }
+      return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
@@ -3674,6 +3774,8 @@ function createAudioInstance(src, loop, volume) {
   return null;
 }
 
+let bgmFadeTimer = null;
+
 function playBgm(bgmKey) {
   pendingBgmKey = bgmKey;
   if (!audioUnlocked || !bgmEnabled) return;
@@ -3691,20 +3793,46 @@ function playBgm(bgmKey) {
   if (!src) return;
 
   if (!bgmContexts[bgmKey]) {
-    bgmContexts[bgmKey] = createAudioInstance(src, true, 0.42);
+    bgmContexts[bgmKey] = createAudioInstance(src, true, 0.06);
   }
   const inst = bgmContexts[bgmKey];
   if (inst) {
+    try { inst.volume = 0.06; } catch (e) {}
     setTimeout(() => {
+      if (currentBgmKey !== bgmKey || !bgmEnabled) return;
       try {
         const p = inst.play();
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (e) {}
+      if (bgmFadeTimer) {
+        clearInterval(bgmFadeTimer);
+        bgmFadeTimer = null;
+      }
+      let step = 0;
+      bgmFadeTimer = setInterval(() => {
+        step += 1;
+        if (currentBgmKey !== bgmKey || !bgmEnabled) {
+          clearInterval(bgmFadeTimer);
+          bgmFadeTimer = null;
+          return;
+        }
+        try {
+          inst.volume = Math.min(0.42, 0.06 + (0.36 * step) / 8);
+        } catch (e) {}
+        if (step >= 8) {
+          clearInterval(bgmFadeTimer);
+          bgmFadeTimer = null;
+        }
+      }, 60);
     }, 16);
   }
 }
 
 function stopBgm() {
+  if (bgmFadeTimer) {
+    clearInterval(bgmFadeTimer);
+    bgmFadeTimer = null;
+  }
   if (currentBgmKey && bgmContexts[currentBgmKey]) {
     try {
       const inst = bgmContexts[currentBgmKey];
@@ -7125,6 +7253,7 @@ const ENEMY_TINTS = {
   splitter: PALETTE.ENEMY_SPLITTER,
   larva: PALETTE.ENEMY_SPLITTER,
   weaver: '#B37FEB',
+  treasure_beetle: '#FFD666',
   boss_m1: PALETTE.ENEMY_EYE,
   boss_m2: PALETTE.BRANCH_A,
   boss_m3: PALETTE.ENEMY_SPLITTER,
@@ -7268,6 +7397,8 @@ class EnemyManager {
     e.def = def;
     e.isFlying = Boolean(def.isFlying);
     e.isBoss = Boolean(def.isBoss);
+    e.isTreasure = Boolean(def.isTreasure);
+    e.treasureTaps = 0;
     e.fromWave = options.fromWave !== undefined ? options.fromWave : true;
     e.hp = maxHp;
     e.maxHp = maxHp;
@@ -7327,7 +7458,7 @@ class EnemyManager {
       e.reward = Math.round(e.reward * 2.0);
     }
     e.eliteAffix = null;
-    if (!e.isBoss && waveIndex >= 3 && Math.random() < 0.18) {
+    if (!e.isBoss && !e.isTreasure && waveIndex >= 3 && Math.random() < 0.18) {
       e.isElite = true;
       e.eliteAffix = ['swift', 'hardened', 'volatile'][Math.floor(Math.random() * 3)];
       e.maxHp = Math.round(e.maxHp * 1.4);
@@ -7469,14 +7600,18 @@ class EnemyManager {
       enemy.markTimer = CONFIG.COMBAT.MARK_DURATION;
     }
 
-    // 5.7 单体命中表现：目标白闪 2 帧
+    // 5.7 单体命中表现：目标白闪 2 帧 + 重甲敲击/暴击拟音
     enemy.whiteFlashFrames = CONFIG.FEEDBACK.HIT.whiteFlashFrames;
     if (enemy.type === 'armored' || enemy.baseArmor > 0) {
       enemy.hitArmorFrames = 6;
+      if (frontShieldMul < 1.0 || (effArmor >= 10 && rawDamage <= effArmor + 10)) {
+        platform.playSfx('sfx_armor_clang', 0.65);
+      }
     }
 
     if (isCrit && fx) {
       fx.spawnFloatingText(enemy.x, enemy.y - 14, '💥' + Math.round(actualDamage), '#FFD700', 1.12);
+      platform.playSfx('sfx_crit', 0.72);
     }
 
     enemy.hp -= actualDamage;
@@ -7551,6 +7686,7 @@ class EnemyManager {
       }
         fx.spawnRing(enemy.x, enemy.y, 44, PALETTE.UPGRADE_LV1, 0.35, true);
       }
+      platform.playSfx('sfx_phase_shift', 0.85);
       // 立即执行一次阶段二召唤以增强压迫感
       this.triggerBossSummon(enemy, map, fx);
     }
@@ -7581,6 +7717,8 @@ class EnemyManager {
       }
         fx.spawnRing(enemy.x, enemy.y, 52, PALETTE.BRANCH_B, 0.40, true);
       }
+      platform.playSfx('sfx_phase_shift', 0.95);
+      platform.playSfx('sfx_boss_horn', 0.78);
     }
   }
 
@@ -7744,9 +7882,25 @@ class EnemyManager {
         this.scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 12, true, 16);
       }
     }
-    // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
+    // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子 & 黄金宝囊虫暴击横财
     if (this.scene) {
-      if (enemy.isElite || enemy.isBoss) {
+      if (enemy.isTreasure) {
+        const bonusGold = 35 + (enemy.waveIndex || 1) * 4;
+        if (economy) economy.addSpores(bonusGold);
+        if ((this.scene.awakeningSeeds || 0) < 5) {
+          this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 30, `✨ 黄金横财 +${bonusGold}孢 & +1觉醒种子!`, '#FFD700', 1.38);
+        } else {
+          if (economy) economy.addSpores(35);
+          if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 30, `✨ 黄金宝囊爆裂 +${bonusGold + 35}孢!`, '#FFD700', 1.38);
+        }
+        if (effFx) {
+          effFx.spawnParticles(enemy.x, enemy.y, 32, ['#FFD700', '#FFF1B8', '#FFA940', '#FFFFFF'], 45, 145, 0.35, 0.75, 4.5);
+          if (typeof effFx.spawnShockwave === 'function') effFx.spawnShockwave(enemy.x, enemy.y, 56, '#FFD700');
+          effFx.showBanner('✨ 击破黄金宝囊虫！', '#FFD666', '珍稀黄金孢子与觉醒种子倾泻而出！', 1.8);
+        }
+        platform.playSfx('sfx_treasure', 1.0, 1.0, true);
+      } else if (enemy.isElite || enemy.isBoss) {
         if (Math.random() < 0.40 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
@@ -8122,8 +8276,17 @@ class EnemyManager {
 
       const route = e.isFlying ? map.airRoute : ((e.routeIndex === 1 && map.groundRoute2) ? map.groundRoute2 : map.groundRoute);
       if (e.distPx >= route.totalLengthPx) {
-        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         const sampleEnd = sampleRouteAtDistance(route, route.totalLengthPx, 0);
+        if (e.isTreasure) {
+          // 黄金宝囊虫属于奖励奇袭，跑脱仅散逸金粉，绝不扣除基地生命种子
+          if (fx) {
+            fx.spawnParticles(sampleEnd.x, sampleEnd.y, 12, ['#FFD700', '#FFF1B8'], 20, 60, 0.25, 0.5, 3);
+            fx.spawnFloatingText(sampleEnd.x - 20, sampleEnd.y - 16, '宝囊虫溜走了!', '#FFD666', 1.0);
+          }
+          this.pool.releaseAt(i);
+          continue;
+        }
+        // 抵达终点种子仓库：若持有知识树「生命壁垒」神圣结界，彻底抵挡一次扣血
         if (this.scene && this.scene.holyShieldCharges > 0) {
           this.scene.holyShieldCharges -= 1;
           if (fx) {
@@ -8228,6 +8391,21 @@ class EnemyManager {
           }
           platform.playSfx('sfx_click');
           return true;
+        }
+        // C. Treasure Beetle Click-Shake Spores (PvZ / Kingdom Rush tactile critter loot)
+        if (e.isTreasure) {
+          if ((e.treasureTaps || 0) < 3) {
+            e.treasureTaps = (e.treasureTaps || 0) + 1;
+            const shakeGold = 8;
+            if (this.scene && this.scene.economy) this.scene.economy.addSpores(shakeGold);
+            this.applyDirectDamage(e, 18, 0, false, false, 0, null, this.scene ? this.scene.economy : null, fx, 'hero', {});
+            if (fx) {
+              fx.spawnFloatingText(e.x, e.y - 20, `✨ 震落 +${shakeGold} 孢!`, '#FFD700', 1.15);
+              fx.spawnParticles(e.x, e.y, 10, ['#FFD700', '#FFF1B8', '#FFFFFF'], 25, 75, 0.2, 0.45, 3.2);
+            }
+            platform.playMusicalScale(e.treasureTaps + 2);
+            return true;
+          }
         }
       }
     }
@@ -8376,6 +8554,9 @@ class EnemyManager {
     } else if (e.type === 'weaver') {
       customImgPath = 'assets/vfx/enemy_weaver.png';
       customW = 38; customH = 34;
+    } else if (e.type === 'treasure_beetle') {
+      customImgPath = 'assets/vfx/enemy_treasure_beetle.png';
+      customW = 42; customH = 42;
     }
 
     let usedCustomArt = false;
@@ -8383,6 +8564,18 @@ class EnemyManager {
       const cImg = platform.getImage(customImgPath);
       if (cImg && cImg.width) {
         usedCustomArt = true;
+        if (e.isTreasure && e.state !== 'death') {
+          ctx.save();
+          const gp = 0.65 + Math.sin(e.animTimer * 8) * 0.25;
+          const tGrad = ctx.createRadialGradient(e.x, e.y, 4, e.x, e.y, 26);
+          tGrad.addColorStop(0, `rgba(255, 215, 0, ${(0.48 * gp).toFixed(2)})`);
+          tGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+          ctx.fillStyle = tGrad;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, 26, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
         ctx.save();
         const walkBob = Math.sin(e.animTimer * 10) * 1.5;
         // 高性能纯 GPU 闪白 (去除导致 GPU 重新光栅化的 ctx.filter)
@@ -8406,12 +8599,30 @@ class EnemyManager {
 
     if (!usedCustomArt) {
       // 普通图集怪物受击：保留本体立绘，辅以明亮微光，杜绝纯白剪影失真
-      const drawn = drawEnemySprite(ctx, e.type, animState, e.animFrame, e.x, e.y, false);
+      const spriteType = e.isTreasure ? 'beetle' : e.type;
+      const drawn = drawEnemySprite(ctx, spriteType, animState, e.animFrame, e.x, e.y, false);
       if (!drawn) {
         const sz = (e.def.artSize.width || 12) * 2;
         ctx.fillStyle = e.tintColor;
         ctx.fillRect(Math.round(e.x - sz * 0.5), Math.round(e.y - sz * 0.5), sz, sz);
         platform.recordDrawCall(1);
+      }
+
+      if (e.isTreasure && e.state !== 'death') {
+        ctx.save();
+        const gp = 0.65 + Math.sin(e.animTimer * 8) * 0.25;
+        const tGrad = ctx.createRadialGradient(e.x, e.y, 3, e.x, e.y, 24);
+        tGrad.addColorStop(0, `rgba(255, 215, 0, ${(0.45 * gp).toFixed(2)})`);
+        tGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = tGrad;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 24, 0, Math.PI * 2);
+        ctx.fill();
+        const sackImg = platform.getImage('assets/vfx/item_golden_spore.png');
+        if (sackImg && sackImg.width) {
+          ctx.drawImage(sackImg, Math.round(e.x - 10), Math.round(e.y - 18), 20, 20);
+        }
+        ctx.restore();
       }
 
       // 命中火花迸发
@@ -11320,8 +11531,7 @@ class HeroSkillSystem {
     const hy = this.hero.y;
     const facing = this.hero.facingLeft ? -1 : 1;
 
-    platform.playSfx('sfx_shoot');
-    platform.playSfx('sfx_thorn');
+    platform.playSfx('sfx_hero_cleave');
 
     if (scene && scene.fx) {
       scene.fx.triggerScreenShake(3.0, 0.25);
@@ -11378,7 +11588,7 @@ class HeroSkillSystem {
     const healAmount = Math.round(this.hero.maxHp * sk.healRatio);
     this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + healAmount);
 
-    platform.playSfx('sfx_build');
+    platform.playSfx('sfx_hero_shield');
     if (scene && scene.fx) {
       scene.fx.spawnDamageText(Math.round(this.hero.x), Math.round(this.hero.y - 42), `🛡️ 荆棘木肤! +${healAmount}HP`, '#FFD666');
       scene.fx.spawnRing(this.hero.x, this.hero.y, 80, '#FFC069', 0.6);
@@ -11394,8 +11604,7 @@ class HeroSkillSystem {
     const hy = this.hero.y;
     const radius = this.skills.roots.radiusPx;
 
-    platform.playSfx('sfx_thorn');
-    platform.playSfx('sfx_boom');
+    platform.playSfx('sfx_hero_roots');
 
     this.activeVfx.push({
       type: 'roots',
@@ -11437,8 +11646,8 @@ class HeroSkillSystem {
     const sk = this.skills.awakening;
     sk.activeTimer = sk.duration;
 
-    platform.playSfx('sfx_win');
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_boss_horn', 0.85, 1.15);
+    platform.playSfx('sfx_branch_evolve');
 
     if (scene && scene.fx) {
       scene.fx.triggerScreenShake(6.0, 0.6);
@@ -15309,6 +15518,8 @@ module.exports = {
  * 索敌逻辑本身由 TowerManager.selectTarget 负责，此处只负责显示。
  */
 
+const platform = require('../core/platform');
+
 class TacticalTargetingAI {
   constructor() {
     this.animTimer = 0;
@@ -15319,42 +15530,34 @@ class TacticalTargetingAI {
   }
 
   /**
-   * 在地图坐标系内绘制。target 为 null 时不绘制。
+   * 在地图坐标系内绘制 100% AI 手绘德鲁伊索敌法阵准星。target 为 null 时不绘制。
    */
   renderTargetHighlight(ctx, tower, target) {
     if (!tower || !target || target.state === 'death' || target.hp <= 0) return;
 
     ctx.save();
-    const pulse = 1.0 + Math.sin(this.animTimer * 8) * 0.08;
-    const color = '#FFE58F';
+    const pulse = 1.0 + Math.sin(this.animTimer * 6.5) * 0.07;
 
-    ctx.strokeStyle = color;
+    // 柔和灵光连线
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.36)';
     ctx.lineWidth = 1.2;
-    ctx.globalAlpha = 0.4;
-    ctx.setLineDash([4, 4]);
-    ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 8);
+    ctx.setLineDash([4, 5]);
+    ctx.lineDashOffset = -Math.round((this.animTimer * 24) % 9);
     ctx.beginPath();
     ctx.moveTo(tower.x, tower.y - 12);
     ctx.lineTo(target.x, target.y);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.translate(target.x, target.y + 4);
-    ctx.scale(pulse, pulse);
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const mk = 13;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-mk, 0); ctx.lineTo(-mk + 5, 0);
-    ctx.moveTo(mk, 0); ctx.lineTo(mk - 5, 0);
-    ctx.moveTo(0, -mk * 0.6); ctx.lineTo(0, -mk * 0.6 + 3);
-    ctx.moveTo(0, mk * 0.6); ctx.lineTo(0, mk * 0.6 - 3);
-    ctx.stroke();
+    const lockImg = platform.getImage('assets/vfx/vfx_target_lock.png');
+    if (lockImg && lockImg.width) {
+      ctx.translate(target.x, target.y + 4);
+      ctx.scale(pulse, pulse * 0.72);
+      ctx.rotate(this.animTimer * 1.1);
+      ctx.globalAlpha = 0.88;
+      ctx.drawImage(lockImg, -19, -19, 38, 38);
+      platform.recordDrawCall(1);
+    }
     ctx.restore();
   }
 }
@@ -17466,6 +17669,7 @@ class TowerManager {
 
   clear() {
     this.towers.length = 0;
+    this.mvpTowerId = 0;
   }
 
   getTowerAt(col, row) {
@@ -17538,7 +17742,10 @@ class TowerManager {
       superchargeTimer: 0, // 能量肥料超频大招倒计时
       celestialBuffTimer: 0, // 圣光照耀共鸣攻速光环计时器
       totalDamage: 0,
-      kills: 0
+      kills: 0,
+      totalSporesGenerated: 0,
+      totalHealed: 0,
+      vetRank: 0
     };
 
     const tile = map.getTile(col, row);
@@ -17669,9 +17876,28 @@ class TowerManager {
     return (map.groundRoute && map.groundRoute.totalLengthPx) || 1;
   }
 
+  getVeteranStats(tower) {
+    const rank = (tower && tower.vetRank) || 0;
+    if (rank >= 3) return { rank: 3, label: '传奇王牌', aspdBonus: 0.18, dmgBonus: 0.15, rangeBonus: 0.30, critBonus: 0.08 };
+    if (rank === 2) return { rank: 2, label: '百战老兵', aspdBonus: 0.12, dmgBonus: 0.08, rangeBonus: 0.20, critBonus: 0.04 };
+    if (rank === 1) return { rank: 1, label: '林地新锐', aspdBonus: 0.06, dmgBonus: 0.04, rangeBonus: 0, critBonus: 0 };
+    return { rank: 0, label: '新驻守卫', aspdBonus: 0, dmgBonus: 0, rangeBonus: 0, critBonus: 0 };
+  }
+
+  getTowerCombatScore(tower) {
+    if (!tower) return 0;
+    return Math.round(
+      (tower.kills || 0) * 60 +
+      (tower.totalDamage || 0) +
+      (tower.totalSporesGenerated || 0) * 6 +
+      (tower.totalHealed || 0) * 4
+    );
+  }
+
   getEffectiveRange(tower) {
     if (!tower || !tower.node) return 3.0;
     let r = tower.node.range || 3.0;
+    r += this.getVeteranStats(tower).rangeBonus;
     if (tower.typeId === 'watch' && this.scene && this.scene.blessingMods && this.scene.blessingMods.watchRangeMult > 1) {
       r *= this.scene.blessingMods.watchRangeMult;
     }
@@ -18029,8 +18255,27 @@ class TowerManager {
       }
     }
 
+    let topScore = 449;
+    let topId = 0;
     for (let i = 0; i < this.towers.length; i++) {
       const t = this.towers[i];
+      const sc = this.getTowerCombatScore(t);
+      if (sc > topScore) {
+        topScore = sc;
+        topId = t.id;
+      }
+      const nextRank = sc >= 4200 ? 3 : (sc >= 1800 ? 2 : (sc >= 650 ? 1 : 0));
+      if (nextRank > (t.vetRank || 0)) {
+        t.vetRank = nextRank;
+        t.hp = Math.min(t.maxHp, t.hp + Math.round(t.maxHp * 0.15));
+        t.upgradeAnimTimer = Math.max(t.upgradeAnimTimer || 0, 0.34);
+        const vs = this.getVeteranStats(t);
+        if (fx) {
+          fx.spawnFloatingText(t.x, t.y - 26, `★ 晋升·${vs.label}!`, nextRank >= 3 ? '#FFD700' : '#95DE64', 1.2);
+          if (typeof fx.spawnRing === 'function') fx.spawnRing(t.x, t.y, 34, nextRank >= 3 ? '#FFD700' : '#BAE7FF', 0.42, false);
+        }
+        platform.playSfx('sfx_rank_up');
+      }
 
       // 落地 Squash & Stretch 弹性回弹计算
       if (t.squashTimer > 0) {
@@ -18107,6 +18352,10 @@ class TowerManager {
       if (this.scene && this.scene.blessingMods && this.scene.blessingMods.globalAspdBonus > 0) {
         speedCoeff *= (1.0 + this.scene.blessingMods.globalAspdBonus);
       }
+      const vetStats = this.getVeteranStats(t);
+      if (vetStats.aspdBonus > 0) {
+        speedCoeff *= (1.0 + vetStats.aspdBonus);
+      }
       if (t.isAwakened && this.scene && this.scene.awakenedAtkSpeedMod > 1) {
         speedCoeff *= this.scene.awakenedAtkSpeedMod;
       }
@@ -18122,6 +18371,7 @@ class TowerManager {
           if (t.sporeHarvestTimer >= hInterval) {
             t.sporeHarvestTimer = 0;
             const gen = t.node.sporeGen;
+            t.totalSporesGenerated = (t.totalSporesGenerated || 0) + gen;
             if (economy) {
               economy.addSpores(gen);
             }
@@ -18148,11 +18398,13 @@ class TowerManager {
                 const ot = this.towers[j];
                 if (ot.hp > 0 && ot.hp < ot.maxHp && Math.hypot(ot.x - t.x, ot.y - t.y) <= radPx) {
                   this.healTower(ot, healAmt, false, fx);
+                  t.totalHealed = (t.totalHealed || 0) + healAmt;
                   didPulse = true;
                 }
               }
               if (sporelingPatrol) {
                 sporelingPatrol.healGuards(t.x, t.y, radPx, healAmt);
+                t.totalHealed = (t.totalHealed || 0) + Math.round(healAmt * 0.5);
                 didPulse = true;
               }
             }
@@ -18178,6 +18430,7 @@ class TowerManager {
             if (didPulse && fx) {
               if (fx.spawnRing) fx.spawnRing(t.x, t.y, radPx * 0.45, '#73D13D', 0.4, false);
               fx.spawnParticles(t.x, t.y, 8, ['#52C41A', '#FFE58F'], 20, 40);
+              platform.playSfx('sfx_heal', 0.65);
             }
           }
         }
@@ -18271,13 +18524,17 @@ class TowerManager {
         }
       }
     }
+    this.mvpTowerId = topId;
   }
 
   getBuffedNode(tower) {
     if (!tower || !tower.node) return tower.node;
-    if (!tower.luminaDmgBonus) return tower.node;
+    const vet = this.getVeteranStats(tower);
+    if (!tower.luminaDmgBonus && !vet.dmgBonus && !vet.critBonus) return tower.node;
     return Object.assign({}, tower.node, {
-      damageBonus: (tower.node.damageBonus || 0) + tower.luminaDmgBonus
+      damageBonus: (tower.node.damageBonus || 0) + (tower.luminaDmgBonus || 0) + vet.dmgBonus,
+      critRate: (tower.node.critRate || 0) + vet.critBonus,
+      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, vet.critBonus > 0 ? 1.85 : 1.0)
     });
   }
 
@@ -18644,6 +18901,30 @@ class TowerManager {
         ctx.restore();
         platform.recordDrawCall(2);
       }
+
+      // 100% AI 手绘百战勋阶星徽（左下底座）+ AI 手绘王牌 MVP 金冠（头顶悬浮）
+      if ((t.vetRank || 0) > 0) {
+        const vetImg = platform.getImage('assets/vfx/vfx_veteran_crest.png');
+        if (vetImg && vetImg.width) {
+          const sz = t.vetRank >= 3 ? 14 : (t.vetRank === 2 ? 12 : 10);
+          ctx.save();
+          ctx.globalAlpha = t.vetRank >= 3 ? 1.0 : (t.vetRank === 2 ? 0.92 : 0.80);
+          ctx.drawImage(vetImg, Math.round(t.x - 18), Math.round(tileY + 14), sz, sz);
+          ctx.restore();
+          platform.recordDrawCall(1);
+        }
+      }
+      if (this.mvpTowerId && t.id === this.mvpTowerId && !t.isWebbed) {
+        const crownImg = platform.getImage('assets/ui/icons/icon_crown.png');
+        if (crownImg && crownImg.width) {
+          ctx.save();
+          const bob = Math.sin((this.animTimer || 0) * 3.5) * 1.6;
+          const crownY = Math.round((t.hp < t.maxHp ? tileY - 22 : tileY - 16) + bob);
+          ctx.drawImage(crownImg, Math.round(t.x - 7), crownY - 7, 14, 14);
+          ctx.restore();
+          platform.recordDrawCall(1);
+        }
+      }
     }
   }
 
@@ -18676,7 +18957,7 @@ class TowerManager {
       fx.spawnParticles(tower.x, tower.y, 8, ['#E6F7FF', '#BAE7FF', '#FFFFFF'], 20, 60, 0.2, 0.4, 2.5);
       fx.spawnFloatingText(tower.x, tower.y - 20, `-1 破丝 (+5 孢子)`, '#BAE7FF', 0.9);
     }
-    platform.playSfx('sfx_laser');
+    platform.playSfx('sfx_web_snap', 0.9, 1.0 + (3 - tower.webHealth) * 0.14);
 
     if (tower.webHealth <= 0) {
       tower.isWebbed = false;
@@ -18686,7 +18967,7 @@ class TowerManager {
         fx.spawnParticles(tower.x, tower.y, 28, ['#FFD700', '#FFF1B8', '#69C0FF', '#FFFFFF'], 35, 110, 0.35, 0.65, 4);
         fx.spawnFloatingText(tower.x, tower.y - 30, '挣脱! 破茧狂暴+30%!', '#FFD700', 1.4);
       }
-      platform.playSfx('sfx_upgrade');
+      platform.playSfx('sfx_web_snap', 1.0, 1.45, true);
       if (this.scene && this.scene.woodlandBlessings) {
         this.scene.woodlandBlessings.triggerStormArc(this.scene, 2, 130);
       }
@@ -18900,6 +19181,8 @@ class WaveManager {
     this.prepTimerSec = CONFIG.ECONOMY.PREP_TIME_FIRST_WAVE; // 第一波前 40 秒
     this.waveElapsedSec = 0;
     this.activeGroups = [];
+    this.rushStreak = 0;
+    this._treasureWaveSpawned = -1;
   }
 
   isPrepPhase() {
@@ -19034,17 +19317,33 @@ class WaveManager {
       platform.playSfx('sfx_horn');
     }
     if (this.phase !== 'prep') return 0;
-    const bonus = economy.grantEarlyCallBonus(this.prepTimerSec);
+    this.rushStreak = (this.rushStreak || 0) + 1;
+    const rawBonus = economy.grantEarlyCallBonus(this.prepTimerSec);
+    const streakMult = Math.min(2.0, 1 + (this.rushStreak - 1) * 0.25);
+    const extraRushBonus = Math.max(0, Math.round(rawBonus * (streakMult - 1)));
+    if (extraRushBonus > 0) {
+      economy.addSpores(extraRushBonus);
+    }
+    const bonus = rawBonus + extraRushBonus;
+    if (scene && typeof scene.onEarlyWaveRush === 'function') {
+      scene.onEarlyWaveRush(this.rushStreak);
+    }
     if (fx) {
       if (bonus > 0) {
-        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子!`, PALETTE.BRANCH_B, 1.35);
+        const streakTag = this.rushStreak >= 2 ? ` (连呼×${this.rushStreak}!)` : '';
+        fx.spawnFloatingText(320, 220, `提前迎敌 +${bonus} 孢子${streakTag}`, PALETTE.BRANCH_B, 1.35);
         fx.spawnParticles(320, 220, 26, ['#FFE58F', '#FFA940', '#52C41A', '#FFFFFF'], 60, 160, 0.35, 0.7, 4.5);
       }
-      fx.showBanner('虫潮先锋突袭！', PALETTE.CRIMSON_SELL, '林地号角长鸣，全军进入战备状态', 1.6);
+      fx.showBanner(
+        this.rushStreak >= 2 ? `🔥 战意连呼 ×${this.rushStreak} · 全军神术冷却-20%！` : '虫潮先锋突袭！',
+        PALETTE.CRIMSON_SELL,
+        '林地号角长鸣，全军进入战备状态',
+        1.6
+      );
       fx.triggerScreenShake(2.5, 0.15);
     }
     this.startCurrentWave(economy, fx, scene);
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx('sfx_horn_rush', 0.9, 1.0 + Math.min(0.45, (this.rushStreak - 1) * 0.08));
     return bonus;
   }
 
@@ -19155,6 +19454,7 @@ class WaveManager {
       this.prepTimerSec -= dt;
       if (this.prepTimerSec <= 0) {
         this.prepTimerSec = 0;
+        this.rushStreak = 0;
         this.startCurrentWave(economy, fx, scene);
       }
       return;
@@ -19162,6 +19462,30 @@ class WaveManager {
 
     if (this.phase === 'combat') {
       this.waveElapsedSec += dt;
+
+      // 中段破局奇袭：第 4, 7, 10, 13, 16 波及无尽每 3 波出没「黄金宝囊虫」
+      if (
+        this.currentWaveIndex >= 4 &&
+        (this.currentWaveIndex % 3 === 1) &&
+        this._treasureWaveSpawned !== this.currentWaveIndex &&
+        this.waveElapsedSec >= 5.5 &&
+        ENEMIES.treasure_beetle
+      ) {
+        this._treasureWaveSpawned = this.currentWaveIndex;
+        const tb = enemyManager.spawnEnemy('treasure_beetle', map, this.currentWaveIndex, {
+          fromWave: false,
+          startDistPx: 0,
+          lateralOffsetPx: 0,
+          routeIndex: (map && map.groundRoute2 && this.currentWaveIndex % 2 === 0) ? 1 : 0
+        });
+        if (tb) {
+          platform.playSfx('sfx_treasure', 0.8);
+          if (fx) {
+            fx.showBanner('✨ 黄金宝囊虫出没！', '#FFD666', '点击震落金孢，击杀必爆珍稀觉醒古种与横财！', 2.1);
+            fx.spawnParticles(tb.x, tb.y, 18, ['#FFD700', '#FFF1B8', '#FFFFFF'], 30, 85, 0.3, 0.6, 4);
+          }
+        }
+      }
 
       let allGroupsFinished = true;
       for (let i = 0; i < this.activeGroups.length; i++) {
@@ -20288,57 +20612,74 @@ class UiManager {
     }
 
     // 顶部木质横幅与两侧导航居中对称对齐（centerX = 480, centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 344, 12, 272, 48, 0.98);
+    const save = storage.getSave();
+    const ktTree = scene.ancientKnowledgeTree;
+    const availPts = (ktTree && typeof ktTree.getAvailablePoints === 'function') ? ktTree.getAvailablePoints() : 0;
+    const totalCampStars = MAP_ORDER.reduce((acc, mId) => acc + ((save.maps && save.maps[mId] && save.maps[mId].stars) || 0), 0);
+
+    this.drawAiFrame(ctx, 'top_bar', 352, 12, 256, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
-    ctx.font = 'bold 20px ' + CN_FONT;
+    ctx.font = 'bold 19px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(i18n.t('btn_level_select'), 480, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 27, 18, 96, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 18, 18, 76, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
-      font: `bold 14.5px ${CN_FONT}`
+      font: `bold 13.5px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 131, 18, 120, 36, i18n.t('btn_guide'), {
+    this.drawPixelButton(ctx, 'lvl_codex', 100, 18, 96, 36, '秘典图鉴', {
       skin: 'btn_wood',
       iconCat: 24,
       iconKey: 'guide',
-      font: `bold 14px ${CN_FONT}`
+      font: `bold 13px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
+      this.codexTab = 0;
       this.showGuideModal = true;
     });
 
-    const save = storage.getSave();
-    if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
-      ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 645, 18, 148, 36, 0.96)) {
-        roundRectPath(ctx, 564, 18, 140, 36, 8);
-        ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 719, 36, {
-        style: 'gold',
-        size: 11.5,
-        align: 'center',
-        baseline: 'middle',
-        strokeWidth: 0,
-        maxWidth: 118
-      });
-      ctx.restore();
-    }
+    this.drawPixelButton(ctx, 'lvl_tree', 202, 18, 142, 36, availPts > 0 ? `知识树(${availPts}点)` : '远古知识树', {
+      skin: availPts > 0 ? 'btn_green' : 'btn_wood',
+      iconCat: 16,
+      iconKey: 'upgrade',
+      font: `bold 12.5px ${CN_FONT}`
+    }, () => {
+      platform.playSfx('sfx_click');
+      this.codexTab = 2;
+      this.showGuideModal = true;
+    });
 
-    this.drawPixelButton(ctx, 'lvl_settings', 801, 18, 132, 36, i18n.t('btn_settings'), {
+    const rightBadgeText = (save.endlessRecord && save.endlessRecord.bestWave > 0)
+      ? `无尽最高 第${save.endlessRecord.bestWave}波`
+      : `林地总星数 ${totalCampStars}/12 ★`;
+    ctx.save();
+    if (!this.drawAiFrame(ctx, 'top_bar', 616, 18, 192, 36, 0.96)) {
+      roundRectPath(ctx, 616, 18, 192, 36, 8);
+      ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230, 187, 96, 0.72)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    drawArtText(ctx, rightBadgeText, 712, 36, {
+      style: 'gold',
+      size: 11.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0,
+      maxWidth: 168
+    });
+    ctx.restore();
+
+    this.drawPixelButton(ctx, 'lvl_settings', 816, 18, 126, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
-      font: `bold 14px ${CN_FONT}`
+      font: `bold 13.5px ${CN_FONT}`
     }, () => {
       platform.playSfx('sfx_click');
       this.showSettingsModal = true;
@@ -21049,28 +21390,17 @@ class UiManager {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 集结目标光标准星
-    ctx.beginPath();
-    ctx.arc(tx, ty, 18 + pulse * 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(74, 222, 128, 0.14)';
-    ctx.fill();
-    ctx.strokeStyle = '#86EFAC';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(tx, ty, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#DCFCE7';
-    ctx.fill();
-
-    for (let a = 0; a < 4; a++) {
-      const ang = a * Math.PI * 0.5 + this.uiAnimTime * 1.4;
-      ctx.beginPath();
-      ctx.moveTo(tx + Math.cos(ang) * 12, ty + Math.sin(ang) * 12);
-      ctx.lineTo(tx + Math.cos(ang) * 24, ty + Math.sin(ang) * 24);
-      ctx.strokeStyle = '#4ADE80';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    // 100% AI 手绘集结目标光标准星
+    const rallyReticle = platform.getImage('assets/vfx/range_commander_reticle.png') || platform.getImage('assets/vfx/vfx_target_lock.png');
+    if (rallyReticle && rallyReticle.width) {
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.scale(1.0, 0.78);
+      ctx.rotate(this.uiAnimTime * 1.1);
+      ctx.globalAlpha = 0.78 + pulse * 0.18;
+      const dSize = 46 + pulse * 6;
+      ctx.drawImage(rallyReticle, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
+      ctx.restore();
     }
 
     const pillW = 204;
@@ -22097,6 +22427,17 @@ class UiManager {
     if (quickHoverText && !this.showTowerDetailBoard) {
       const qTipY = botY > 400 ? Math.max(10, topY - 30) : Math.min(444, botY + 34);
       this.drawFloatingTooltipPill(ctx, anchorX, qTipY, quickHoverText, 380);
+    } else if (!this.showTowerDetailBoard && ((tower.vetRank || 0) > 0 || (tower.kills || 0) > 0 || (tower.totalSporesGenerated || 0) > 0)) {
+      const vet = scene.towerManager.getVeteranStats(tower);
+      const isMvp = scene.towerManager.mvpTowerId === tower.id;
+      const tdmg = Math.round(tower.totalDamage || 0);
+      const tdmgStr = tdmg >= 1000 ? `${(tdmg / 1000).toFixed(1)}k` : String(tdmg);
+      const mvpTag = isMvp ? 'MVP王牌 · ' : '';
+      const statLine = tower.typeId === 'lumina'
+        ? `${mvpTag}${vet.label} · 产孢 ${tower.totalSporesGenerated || 0} · 击杀 ${tower.kills || 0}`
+        : `${mvpTag}${vet.label} · ${tower.kills || 0}杀 · ${tdmgStr}伤`;
+      const statY = botY > 404 ? Math.max(10, topY - 26) : Math.min(444, botY + 28);
+      this.drawFloatingTooltipPill(ctx, anchorX, statY, statLine, 260);
     }
 
     this.quickRingBounds = {
@@ -22463,19 +22804,25 @@ class UiManager {
       ctx.restore();
     }
 
-    // 3.5 单塔累计战功统计栏 (Pop Count & Damage Contribution)
+    // 3.5 单塔累计战功统计栏 (Veteran Rank + MVP + Pop Count & Damage Contribution)
+    const vetInfo = scene.towerManager.getVeteranStats(tower);
+    const isMvpTower = scene.towerManager.mvpTowerId === tower.id;
     const tdmg = Math.round(tower.totalDamage || 0);
     const tdmgStr = tdmg >= 1000 ? `${(tdmg / 1000).toFixed(1)}k` : String(tdmg);
     const tkills = tower.kills || 0;
+    const vetPrefix = isMvpTower ? `[MVP] ${vetInfo.label}` : vetInfo.label;
+    const summaryText = tower.typeId === 'lumina'
+      ? `${vetPrefix} · 产孢 ${tower.totalSporesGenerated || 0} · 击杀 ${tkills} · 伤 ${tdmgStr}`
+      : `${vetPrefix} · 输出 ${tdmgStr} · 击杀 ${tkills} · 覆路 ${cov.coveredTiles}格`;
     ctx.save();
     roundRectPath(ctx, bx, y + 211, btnW, 20, 5);
-    ctx.fillStyle = 'rgba(72, 48, 28, 0.08)';
+    ctx.fillStyle = isMvpTower ? 'rgba(212, 136, 6, 0.16)' : 'rgba(72, 48, 28, 0.08)';
     ctx.fill();
-    ctx.fillStyle = THEME.INK_MID;
+    ctx.fillStyle = isMvpTower ? '#8C4D00' : THEME.INK_MID;
     ctx.font = `bold 10.5px ${UI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`本塔战功：输出 ${tdmgStr} 伤害  ·  击杀 ${tkills} 虫  ·  覆路 ${cov.coveredTiles} 格`, bx + btnW * 0.5, y + 221, btnW - 12);
+    ctx.fillText(summaryText, bx + btnW * 0.5, y + 221, btnW - 12);
     ctx.restore();
 
     // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 22px 下边距，不贴木框）
@@ -23368,9 +23715,9 @@ class UiManager {
       const settleRib = platform.getImage(isWin ? 'assets/ui/frames/banner_ribbon_gold.png' : 'assets/ui/frames/banner_ribbon_crimson.png');
       if (settleRib && settleRib.width) {
         const ribW = 356;
-        const ribH = 88;
+        const ribH = 80;
         const ribX = mx + Math.round((mw - ribW) * 0.5);
-        const ribY = my + 12;
+        const ribY = my + 8;
         ctx.drawImage(settleRib, ribX, ribY, ribW, ribH);
         ctx.fillStyle = isWin ? '#2C1406' : '#FFF5E8';
         ctx.font = 'bold 19px ' + CN_FONT;
@@ -23380,12 +23727,23 @@ class UiManager {
         ctx.fillStyle = isWin ? THEME.ENAMEL_GREEN : THEME.CRIMSON_SELL;
         ctx.font = 'bold 21px ' + CN_FONT;
         ctx.textBaseline = 'middle';
-        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 56);
+        ctx.fillText(isWin ? i18n.t('state_victory') : i18n.t('state_defeat'), mx + mw * 0.5, my + 48);
       }
 
       for (let s = 0; s < 3; s++) {
         const sKey = s < stars ? 'star_full' : 'star_empty';
-        drawUiIcon(ctx, 16, sKey, mx + Math.round(mw * 0.5) - 63 + s * 46, my + 84, 34);
+        drawUiIcon(ctx, 16, sKey, mx + Math.round(mw * 0.5) - 56 + s * 42, my + 74, 28);
+      }
+      if (isWin && scene.ancientKnowledgeTree) {
+        const ktAvail = scene.ancientKnowledgeTree.getAvailablePoints ? scene.ancientKnowledgeTree.getAvailablePoints() : 0;
+        drawArtText(ctx, `远古知识之树可用点数：${ktAvail} 点（选关界面可配点强化全军）`, mx + mw * 0.5, my + 114, {
+          style: 'ink',
+          color: '#237804',
+          size: 10.5,
+          align: 'center',
+          baseline: 'middle',
+          strokeWidth: 0
+        });
       }
 
       // 战功总结手卷内嵌卡（2x2 真实战绩面板：耗时 / 种子 / 灭虫 / 核心主力）
@@ -24797,14 +25155,15 @@ class UiManager {
         maxWidth: barW - 40
       });
 
-      // 下行提前迎战主文案
-      drawArtText(ctx, '▶ 提前迎战 (+' + earlyBonus + '孢)', barX + barW * 0.5, drawY + 38.5, {
+      // 下行提前迎战主文案（附带连呼激励提示）
+      const streakStr = (waveMgr.rushStreak || 0) >= 1 ? ` · 连呼×${waveMgr.rushStreak + 1}` : ' · -20%冷却';
+      drawArtText(ctx, `▶ 提前迎战 (+${earlyBonus}孢${streakStr})`, barX + barW * 0.5, drawY + 38.5, {
         style: 'emerald',
-        size: 13.5,
+        size: 12.5,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0.7,
-        maxWidth: barW - 24
+        maxWidth: barW - 22
       });
       ctx.restore();
 
@@ -25501,9 +25860,6 @@ class SceneController {
       this.woodlandBlessings.reset();
       this.blessingMods = this.woodlandBlessings.createDefaultMods();
     }
-    this.pyroFissureCfg = null;
-    this.toxicMiasmaDebuff = 0;
-    this.spellCdrMultiplier = 1.0;
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
     if (this.combatScreenJuice) this.combatScreenJuice.reset();
     this.earlyCallsCount = 0;
@@ -25614,6 +25970,30 @@ class SceneController {
   callWaveEarly() {
     if (this.state !== 'BATTLE') return;
     this.waveManager.callNextWaveEarly(this.economy, this.fx, this);
+  }
+
+  onEarlyWaveRush(rushStreak = 1) {
+    // 战意连呼激励：立即缩减全部自然神术与英雄技能 20% 冷却
+    for (const k in this.spells) {
+      const sp = this.spells[k];
+      if (sp && sp.timer > 0) {
+        sp.timer = Math.max(0, sp.timer - Math.max(1.5, sp.timer * 0.20));
+      }
+    }
+    if (this.hero && this.hero.skillCooldown > 0) {
+      this.hero.skillCooldown = Math.max(0, this.hero.skillCooldown - Math.max(1.5, this.hero.skillCooldown * 0.20));
+    }
+    if (this.heroSkills && this.heroSkills.skills) {
+      for (const skKey in this.heroSkills.skills) {
+        const sk = this.heroSkills.skills[skKey];
+        if (sk && sk.timer > 0) {
+          sk.timer = Math.max(0, sk.timer - Math.max(1.2, sk.timer * 0.20));
+        }
+      }
+    }
+    if (this.achievements && rushStreak >= 3) {
+      this.achievements.unlock('audacious_commander', this.fx);
+    }
   }
 
   tryBuildOnSelectedTile() {
@@ -26935,7 +27315,12 @@ function bootstrapGame() {
     'assets/ui/frames/radial_wheel_bg.png',
     'assets/ui/frames/banner_ribbon_gold.png',
     'assets/ui/frames/banner_ribbon_crimson.png',
-    'assets/ui/frames/boss_hud_frame.png'
+    'assets/ui/frames/boss_hud_frame.png',
+    'assets/ui/icons/icon_crown.png',
+    'assets/vfx/enemy_treasure_beetle.png',
+    'assets/vfx/vfx_target_lock.png',
+    'assets/vfx/vfx_veteran_crest.png',
+    'assets/vfx/range_commander_reticle.png'
   ];
 
   Promise.all([

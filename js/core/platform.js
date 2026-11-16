@@ -74,10 +74,7 @@ const AUDIO_PATHS = {
   sfx_bomb: 'audio/sfx_bomb.wav',
   sfx_shock: 'audio/sfx_shock.wav',
   sfx_laser: 'audio/sfx_laser.wav',
-  sfx_place: 'audio/sfx_place.wav',
-  sfx_branch_evolve: 'audio/sfx_upgrade.wav',
-  sfx_blessing: 'audio/sfx_upgrade.wav',
-  sfx_boss_horn: 'audio/sfx_horn.wav'
+  sfx_place: 'audio/sfx_place.wav'
 };
 
 const SFX_VOLUMES = {
@@ -104,7 +101,18 @@ const SFX_VOLUMES = {
   sfx_place: 0.65,
   sfx_branch_evolve: 0.82,
   sfx_blessing: 0.85,
-  sfx_boss_horn: 0.88
+  sfx_boss_horn: 0.88,
+  sfx_crit: 0.72,
+  sfx_armor_clang: 0.62,
+  sfx_rank_up: 0.80,
+  sfx_treasure: 0.85,
+  sfx_web_snap: 0.76,
+  sfx_hero_cleave: 0.82,
+  sfx_hero_shield: 0.78,
+  sfx_hero_roots: 0.82,
+  sfx_horn_rush: 0.84,
+  sfx_phase_shift: 0.86,
+  sfx_heal: 0.70
 };
 
 /**
@@ -655,6 +663,74 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       playAcousticNote(110.0, t0, 0.65, 0.26 * volumeMod, [1, 1.5, 2.0, 3.0], 0.42);
       playAcousticNote(164.81, t0 + 0.08, 0.60, 0.22 * volumeMod, [1, 2.0, 3.0], 0.38);
       return true;
+    } else if (sfxKey === 'sfx_crit') {
+      // 暴击弱点贯穿：脆响泛音+金色叮鸣 (Crisp Crit Flare)
+      playFilteredNoise(t0, 0.06, 'highpass', 2400 * p, 5200 * p, 1.8, 0.12 * volumeMod);
+      playAcousticNote(880 * p, t0, 0.09, 0.16 * volumeMod, [1, 2.0, 3.0], 0.32);
+      playAcousticNote(1318.51 * p, t0 + 0.025, 0.14, 0.14 * volumeMod, [1, 2.756], 0.26);
+      return true;
+    } else if (sfxKey === 'sfx_armor_clang') {
+      // 重甲硬壳弹开：沉实硬甲敲击 (Chitinous Armor Clack)
+      playFilteredNoise(t0, 0.045, 'bandpass', 1450 * p, 680 * p, 3.4, 0.13 * volumeMod);
+      playAcousticNote(196 * p, t0, 0.055, 0.13 * volumeMod, [1, 2.41], 0.38);
+      return true;
+    } else if (sfxKey === 'sfx_rank_up') {
+      // 守卫百战晋升：双段温暖青铜风铃 (Veteran Rank Promotion Bell)
+      playFilteredNoise(t0 + 0.03, 0.18, 'highpass', 3200, 5600, 2.0, 0.07 * volumeMod);
+      playAcousticNote(587.33 * p, t0, 0.22, 0.18 * volumeMod, [1, 2.0, 2.756], 0.28);
+      playAcousticNote(880.0 * p, t0 + 0.06, 0.28, 0.20 * volumeMod, [1, 2.0, 2.756], 0.26);
+      playAcousticNote(1174.66 * p, t0 + 0.12, 0.34, 0.18 * volumeMod, [1, 2.0], 0.24);
+      return true;
+    } else if (sfxKey === 'sfx_treasure') {
+      // 黄金宝囊虫暴击掉落：连续水晶金币喷泉 (Golden Bounty Cascade)
+      const tNotes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
+      for (let i = 0; i < tNotes.length; i++) {
+        playAcousticNote(tNotes[i] * p, t0 + i * 0.042, 0.26, 0.16 * volumeMod, [1, 2.756], 0.24);
+      }
+      playFilteredNoise(t0 + 0.04, 0.22, 'highpass', 3600, 6200, 2.4, 0.07 * volumeMod);
+      return true;
+    } else if (sfxKey === 'sfx_web_snap') {
+      // 撕断腐化蛛丝破茧：紧绷弦断+清脆释放铃音 (Spider Web Snap & Release)
+      playFilteredNoise(t0, 0.08, 'highpass', 2800 * p, 4800 * p, 1.5, 0.15 * volumeMod);
+      playAcousticNote(739.99 * p, t0, 0.11, 0.16 * volumeMod, [1, 2.0], 0.30);
+      playAcousticNote(1174.66 * p, t0 + 0.04, 0.18, 0.14 * volumeMod, [1, 2.756], 0.25);
+      return true;
+    } else if (sfxKey === 'sfx_hero_cleave') {
+      // 奥克·巨木横扫：沉重橡木挥斧+实木震击 (Heavy Oak Cleave)
+      playFilteredNoise(t0, 0.18, 'bandpass', 420 * p, 1400 * p, 1.4, 0.20 * volumeMod);
+      playAcousticNote(146.83 * p, t0 + 0.04, 0.16, 0.22 * volumeMod, [1, 1.5, 2.2], 0.40);
+      return true;
+    } else if (sfxKey === 'sfx_hero_shield') {
+      // 奥克·荆棘木肤：硬木护甲扣合+大地共鸣 (Bark Shield Lock)
+      playFilteredNoise(t0, 0.10, 'bandpass', 1200, 500, 2.2, 0.15 * volumeMod);
+      playAcousticNote(246.94 * p, t0, 0.22, 0.18 * volumeMod, [1, 2.0, 3.0], 0.32);
+      playAcousticNote(369.99 * p, t0 + 0.05, 0.26, 0.16 * volumeMod, [1, 2.0], 0.28);
+      return true;
+    } else if (sfxKey === 'sfx_hero_roots') {
+      // 奥克·庇护根脉：裂土轰鸣+藤蔓急束 (Root Eruption)
+      playFilteredNoise(t0, 0.32, 'lowpass', 720, 140, 1.1, 0.22 * volumeMod);
+      playAcousticNote(130.81 * p, t0, 0.24, 0.20 * volumeMod, [1, 1.5, 2.5], 0.38);
+      playAcousticNote(329.63 * p, t0 + 0.05, 0.14, 0.14 * volumeMod, [1, 2.4], 0.32);
+      return true;
+    } else if (sfxKey === 'sfx_horn_rush') {
+      // 提前迎敌·战意连呼：高昂激越双圆号五度号角 (Horn Rush Streak)
+      playAcousticNote(329.63 * p, t0, 0.26, 0.17 * volumeMod, [1, 2.0, 3.0], 0.34);
+      playAcousticNote(493.88 * p, t0 + 0.045, 0.30, 0.18 * volumeMod, [1, 2.0, 3.0], 0.34);
+      playAcousticNote(659.25 * p, t0 + 0.095, 0.34, 0.19 * volumeMod, [1, 2.0], 0.30);
+      return true;
+    } else if (sfxKey === 'sfx_phase_shift') {
+      // 首领阶段狂暴转换：深沉低音战锣与不详共鸣 (Boss Phase Shift Rumble)
+      playFilteredNoise(t0, 0.42, 'lowpass', 600, 110, 0.9, 0.22 * volumeMod);
+      playAcousticNote(98.0 * p, t0, 0.55, 0.25 * volumeMod, [1, 1.498, 2.1], 0.45);
+      playAcousticNote(146.83 * p, t0 + 0.07, 0.48, 0.20 * volumeMod, [1, 2.0], 0.38);
+      return true;
+    } else if (sfxKey === 'sfx_heal') {
+      // 灵光群疗/甘霖恢复：温暖泉水竖琴上行音阶 (Warm Sanctuary Heal)
+      const hNotes = [523.25, 659.25, 783.99];
+      for (let i = 0; i < hNotes.length; i++) {
+        playAcousticNote(hNotes[i] * p, t0 + i * 0.05, 0.22, 0.13 * volumeMod, [1, 2.0], 0.26);
+      }
+      return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
@@ -707,6 +783,8 @@ function createAudioInstance(src, loop, volume) {
   return null;
 }
 
+let bgmFadeTimer = null;
+
 function playBgm(bgmKey) {
   pendingBgmKey = bgmKey;
   if (!audioUnlocked || !bgmEnabled) return;
@@ -724,20 +802,46 @@ function playBgm(bgmKey) {
   if (!src) return;
 
   if (!bgmContexts[bgmKey]) {
-    bgmContexts[bgmKey] = createAudioInstance(src, true, 0.42);
+    bgmContexts[bgmKey] = createAudioInstance(src, true, 0.06);
   }
   const inst = bgmContexts[bgmKey];
   if (inst) {
+    try { inst.volume = 0.06; } catch (e) {}
     setTimeout(() => {
+      if (currentBgmKey !== bgmKey || !bgmEnabled) return;
       try {
         const p = inst.play();
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (e) {}
+      if (bgmFadeTimer) {
+        clearInterval(bgmFadeTimer);
+        bgmFadeTimer = null;
+      }
+      let step = 0;
+      bgmFadeTimer = setInterval(() => {
+        step += 1;
+        if (currentBgmKey !== bgmKey || !bgmEnabled) {
+          clearInterval(bgmFadeTimer);
+          bgmFadeTimer = null;
+          return;
+        }
+        try {
+          inst.volume = Math.min(0.42, 0.06 + (0.36 * step) / 8);
+        } catch (e) {}
+        if (step >= 8) {
+          clearInterval(bgmFadeTimer);
+          bgmFadeTimer = null;
+        }
+      }, 60);
     }, 16);
   }
 }
 
 function stopBgm() {
+  if (bgmFadeTimer) {
+    clearInterval(bgmFadeTimer);
+    bgmFadeTimer = null;
+  }
   if (currentBgmKey && bgmContexts[currentBgmKey]) {
     try {
       const inst = bgmContexts[currentBgmKey];
