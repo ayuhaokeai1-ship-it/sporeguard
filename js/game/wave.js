@@ -27,6 +27,7 @@ class WaveManager {
     this.waveElapsedSec = 0;
     this.activeGroups = [];
     this.rushStreak = 0;
+    this.waveIntervalScale = 1.0;
     this._treasureWaveSpawned = -1;
   }
 
@@ -223,13 +224,14 @@ class WaveManager {
     economy.onWaveStart();
 
     // 同一组出生带一致或微扰的 ±6 像素横向偏移
+    const ivScale = this.waveIntervalScale || 1.0;
     this.activeGroups = waveDef.groups.map((g, idx) => ({
       type: g.type,
       count: g.count,
-      interval: Math.max(0.2, g.interval || 1.5),
-      start: g.start || 0,
+      interval: Math.max(0.2, (g.interval || 1.5) * ivScale),
+      start: (g.start || 0) * ivScale,
       spawned: 0,
-      timer: g.interval || 1.5, // 到达 start 时间后立即刷出第 1 只
+      timer: (g.interval || 1.5) * ivScale, // 到达 start 时间后立即刷出第 1 只
       groupLateralBase: ((idx % 3) - 1) * 3,
       routeIndex: g.routeIndex || 0
     }));
@@ -418,7 +420,8 @@ class WaveManager {
           const clearedWave = this.currentWaveIndex;
           this.currentWaveIndex += 1;
           this.phase = 'prep';
-          this.prepTimerSec = CONFIG.ECONOMY.PREP_TIME_NEXT_WAVE; // 之后每波备战 15 秒
+          const ivScaleNext = this.waveIntervalScale || 1.0;
+          this.prepTimerSec = Math.round(CONFIG.ECONOMY.PREP_TIME_NEXT_WAVE * ivScaleNext * 10) / 10; // 之后每波备战 15 秒 (极速契约压缩)
           if (scene && typeof scene.onWaveCleared === 'function') {
             scene.onWaveCleared(clearedWave);
           }

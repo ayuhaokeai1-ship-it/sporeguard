@@ -158,7 +158,7 @@ class EnemyManager {
     const e = this.pool.acquire(false);
     if (!e) return null;
 
-    const hpMul = this.getHpMultiplier(map.mapId, waveIndex);
+    const hpMul = this.getHpMultiplier(map.mapId, waveIndex) * ((this.scene && this.scene.activePact === 'iron') ? 1.35 : 1.0);
     const maxHp = Math.max(1, Math.round(def.baseHp * hpMul));
 
     e.uid = this.nextUid++;
@@ -175,7 +175,7 @@ class EnemyManager {
       this.scene.bossOverdriveEngine.registerBoss(e);
     }
     e.baseSpeedTiles = def.speed;
-    e.speedMultiplier = 1.0;
+    e.speedMultiplier = (this.scene && this.scene.activePact === 'iron') ? 1.12 : ((this.scene && this.scene.activePact === 'blitz') ? 1.08 : 1.0);
     e.baseArmor = def.armor || 0;
     e.threat = def.threat || 1;
     e.reward = def.reward || 3;
@@ -658,8 +658,12 @@ class EnemyManager {
       if (typeof this.scene.addResonance === 'function') {
         this.scene.addResonance(enemy.isBoss ? 25 : ((enemy.isElite || enemy.isTreasure) ? 10 : 3));
       }
-      if ((this.scene.resonanceActiveTimer || 0) > 0 && economy && (enemy.reward || 0) > 0) {
-        economy.addSpores(Math.max(1, Math.round((enemy.reward || 2) * 0.25)));
+      if (((this.scene.resonanceActiveTimer || 0) > 0 || (this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('amber_crown')) || this.scene.activePact === 'blitz') && economy && (enemy.reward || 0) > 0) {
+        let extraRatio = 0;
+        if ((this.scene.resonanceActiveTimer || 0) > 0) extraRatio += 0.25;
+        if (this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('amber_crown')) extraRatio += 0.15;
+        if (this.scene.activePact === 'blitz') extraRatio += 0.15;
+        economy.addSpores(Math.max(1, Math.round((enemy.reward || 2) * extraRatio)));
       }
       if (enemy.isTreasure) {
         const bonusGold = 35 + (enemy.waveIndex || 1) * 4;

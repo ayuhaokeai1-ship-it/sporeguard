@@ -124,11 +124,13 @@ class BulletManager {
     const dy = predY - y;
     const dist = Math.max(1, Math.hypot(dx, dy));
 
+    const hasFeather = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('windseeker_feather'));
+    const hasPrism = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('chlorophyll_prism'));
     b.kind = 'watch';
     b.spriteKey = node.branch === 'A' ? 'watch_a' : (node.branch === 'B' ? 'watch_b' : 'watch_base');
     b.x = x;
     b.y = y;
-    b.speed = node.bulletSpeed || 640;
+    b.speed = (node.bulletSpeed || 640) * (hasFeather ? 1.25 : 1.0);
     b.vx = (dx / dist) * b.speed;
     b.vy = (dy / dist) * b.speed;
     b.angle = Math.atan2(dy, dx);
@@ -139,7 +141,7 @@ class BulletManager {
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
     const pierceExtra = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.pierceBonus || 0) : 0;
     b.armorPierceRatio = Math.min(0.85, b.armorPierceRatio + pierceExtra);
-    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
+    b.flatArmorPierce = ((node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0) + (hasPrism ? 4 : 0);
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
     b.targetObstacle = targetObstacle;
@@ -155,11 +157,13 @@ class BulletManager {
     const b = this.bulletPool.acquire(false);
     if (!b) return null;
 
+    const hasFeather = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('windseeker_feather'));
+    const hasPrism = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('chlorophyll_prism'));
     b.kind = 'thorn';
     b.spriteKey = node.branch === 'A' ? 'thorn_a' : (node.branch === 'B' ? 'thorn_b' : 'thorn_base');
     b.x = x;
     b.y = y;
-    b.speed = node.bulletSpeed || 900;
+    b.speed = (node.bulletSpeed || 900) * (hasFeather ? 1.25 : 1.0);
     b.angle = angleRad;
     b.vx = Math.cos(angleRad) * b.speed;
     b.vy = Math.sin(angleRad) * b.speed;
@@ -170,8 +174,8 @@ class BulletManager {
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
     const pierceExtra = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.pierceBonus || 0) : 0;
     b.armorPierceRatio = Math.min(0.85, b.armorPierceRatio + pierceExtra);
-    b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
-    b.pierceRemaining = node.pierce || 2;
+    b.flatArmorPierce = ((node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0) + (hasPrism ? 3 : 0);
+    b.pierceRemaining = (node.pierce || 2) + (hasPrism ? 1 : 0);
     b.pierceCountSoFar = 0;
         b.hasToxicBurst = false;
         b.hasPoisonThorn = false;
@@ -200,8 +204,9 @@ class BulletManager {
     b.y = y;
     b.targetX = targetX;
     b.targetY = targetY;
+    const hasFeather = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('windseeker_feather'));
     b.flightTimer = 0;
-    b.flightDuration = node.flightTime || 0.38;
+    b.flightDuration = (node.flightTime || 0.38) * (hasFeather ? 0.80 : 1.0);
     b.baseDamage = baseDamage;
     b.damageBonus = node.damageBonus || 0;
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0.45;
@@ -265,10 +270,11 @@ class BulletManager {
     h.radiusPx = (node.cloudRadius || 1.5) * TILE_SIZE;
     h.duration = node.cloudDuration || 3.0;
     h.timer = 0;
-    h.slow = node.slow || 0.30;
+    const hasGlacial = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('glacial_tear'));
+    h.slow = Math.min(0.88, (node.slow || 0.30) + (hasGlacial ? 0.16 : 0));
     h.residualSlowDuration = node.residualSlowDuration || 0;
     h.armorReduction = (node.armorReduction || 0) + ((this.scene && this.scene.toxicMiasmaDebuff) ? this.scene.toxicMiasmaDebuff * 4 : 0);
-    const mistDpsMult = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.mistDpsMult || 1.0) : 1.0;
+    const mistDpsMult = ((this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.mistDpsMult || 1.0) : 1.0) * (hasGlacial ? 1.18 : 1.0);
     h.dps = Math.round((node.dps || 4) * mistDpsMult);
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -712,6 +718,10 @@ class BulletManager {
                 'burst',
                 { sourceTower: b.sourceTower, armorPierceRatio: burstPierce }
               );
+              if (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('volcanic_geode')) {
+                e.burnTimer = Math.max(e.burnTimer || 0, 3.0);
+                e.burnDps = Math.max(e.burnDps || 0, 20);
+              }
               if (this.elementalCombos) {
                 this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
               }

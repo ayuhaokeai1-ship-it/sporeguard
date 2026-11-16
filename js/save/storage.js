@@ -17,11 +17,12 @@ function createDefaultSave() {
     },
     guideSeen: false,
     maps: {
-      map1: { unlocked: true, stars: 0, bestTime: null, bestSeeds: 0 },
-      map2: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 },
-      map3: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 },
-      map4: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0 }
+      map1: { unlocked: true, stars: 0, bestTime: null, bestSeeds: 0, ironCleared: false, blitzCleared: false },
+      map2: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0, ironCleared: false, blitzCleared: false },
+      map3: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0, ironCleared: false, blitzCleared: false },
+      map4: { unlocked: false, stars: 0, bestTime: null, bestSeeds: 0, ironCleared: false, blitzCleared: false }
     },
+    equippedRelics: ['chlorophyll_prism', 'amber_crown', 'thunder_core', 'heart_of_groves'],
     endlessRecord: { bestWave: 0 }
   };
 }
@@ -49,6 +50,9 @@ function migrateSave(raw) {
       map3: Object.assign({}, def.maps.map3, raw.maps && raw.maps.map3 ? raw.maps.map3 : {}),
       map4: Object.assign({}, def.maps.map4, raw.maps && raw.maps.map4 ? raw.maps.map4 : {})
     },
+    equippedRelics: Array.isArray(raw.equippedRelics) && raw.equippedRelics.length > 0
+      ? raw.equippedRelics.slice(0, 4)
+      : def.equippedRelics.slice(),
     endlessRecord: raw.endlessRecord && typeof raw.endlessRecord.bestWave === 'number'
       ? { bestWave: raw.endlessRecord.bestWave }
       : { bestWave: 0 }
@@ -157,12 +161,59 @@ function recordEndlessWave(wave) {
   }
 }
 
+function getTotalStars() {
+  const save = getSave();
+  if (!save || !save.maps) return 0;
+  let total = 0;
+  for (const k in save.maps) {
+    if (save.maps[k] && typeof save.maps[k].stars === 'number') {
+      total += save.maps[k].stars;
+    }
+  }
+  return total;
+}
+
+function recordMapPactClear(mapId, pactId) {
+  const save = getSave();
+  const record = save.maps && save.maps[mapId];
+  if (!record) return false;
+  if (pactId === 'iron' && !record.ironCleared) {
+    record.ironCleared = true;
+    saveNow();
+    return true;
+  }
+  if (pactId === 'blitz' && !record.blitzCleared) {
+    record.blitzCleared = true;
+    saveNow();
+    return true;
+  }
+  return false;
+}
+
+function getEquippedRelics() {
+  const save = getSave();
+  return Array.isArray(save.equippedRelics)
+    ? save.equippedRelics.slice(0, 4)
+    : ['chlorophyll_prism', 'amber_crown', 'thunder_core', 'heart_of_groves'];
+}
+
+function setEquippedRelics(ids) {
+  const save = getSave();
+  save.equippedRelics = Array.isArray(ids) ? ids.slice(0, 4) : [];
+  saveNow();
+  return save.equippedRelics;
+}
+
 module.exports = {
   loadSave,
   getSave,
   saveNow,
   recordMapVictory,
   recordEndlessWave,
+  getTotalStars,
+  recordMapPactClear,
+  getEquippedRelics,
+  setEquippedRelics,
   updateSettings,
   markGuideSeen,
   unlockAllMapsForTest

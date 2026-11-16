@@ -163,7 +163,8 @@ class WeatherManager {
     if (this.currentWeather === 'rain') {
       this.lightningTimer -= dt;
       if (this.lightningTimer <= 0) {
-        this.lightningTimer = 6.5 + Math.random() * 2.0;
+        const thunderRelicMul = (enemyManager && enemyManager.scene && enemyManager.scene.relicArsenal && enemyManager.scene.relicArsenal.hasRelic('thunder_core')) ? 0.65 : 1.0;
+        this.lightningTimer = (6.5 + Math.random() * 2.0) * thunderRelicMul;
         this.triggerNaturalLightning(enemyManager, fx);
       }
       if (this.lightningFlash > 0) {

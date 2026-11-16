@@ -73,6 +73,8 @@ class SceneController {
     this.ui = new UiManager();
 
     this.speedMultiplier = 1;
+    this.selectedPact = 'normal';
+    this.activePact = 'normal';
     this.hero = new ForestHero(this.map);
     this.hero.scene = this;
     this.awakeningSeeds = 2;
@@ -186,8 +188,9 @@ class SceneController {
     platform.playBgm('bgm_title');
   }
 
-  startLevel(mapId) {
-    this.isEndlessMode = false;
+  startLevel(mapId, opts = {}) {
+    this.isEndlessMode = Boolean(opts && opts.endless);
+    this.activePact = this.isEndlessMode ? 'normal' : (this.selectedPact || 'normal');
     const mData = MAPS[mapId] || MAPS.map1;
     this.currentMapId = mData.id;
 
@@ -200,6 +203,7 @@ class SceneController {
     this.enemyManager.clear();
     this.bulletManager.clear();
     this.towerManager.clear();
+    this.sporelingPatrol.scene = this;
     this.sporelingPatrol.initDefaultRally(this.map);
     this.sporeDropManager.reset();
     this.flankAlertTimer = 0;
@@ -256,6 +260,24 @@ class SceneController {
     this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
+    if (this.relicArsenal && this.relicArsenal.hasRelic('deep_roots_charm')) {
+      this.economy.maxSeeds += 3;
+      this.economy.seeds += 3;
+    }
+    if (this.sporelingPatrol && typeof this.sporelingPatrol.applyKnowledgeTree === 'function') {
+      const ironR = this.ancientKnowledgeTree ? this.ancientKnowledgeTree.getRank('iron_sporelings') : 0;
+      this.sporelingPatrol.applyKnowledgeTree(ironR, this);
+    }
+    this.spellCdrMultiplier = this.spellCdrMultiplier || 1.0;
+    if (this.activePact === 'iron') {
+      this.economy.addSpores(80);
+    } else if (this.activePact === 'blitz') {
+      this.spellCdrMultiplier *= 0.70;
+      if (this.waveManager) {
+        this.waveManager.waveIntervalScale = 0.72;
+        this.waveManager.prepTimerSec = Math.round(this.waveManager.prepTimerSec * 0.75 * 10) / 10;
+      }
+    }
     if (this.woodlandBlessings) {
       this.woodlandBlessings.reset();
       this.blessingMods = this.woodlandBlessings.createDefaultMods();
@@ -305,7 +327,7 @@ class SceneController {
     const isSameMapVictory = this.state === 'SETTLEMENT' && this.settlementResult && this.settlementResult.victory && (!mapId || mapId === this.currentMapId);
     const needFreshStart = !isSameMapVictory;
     if (needFreshStart) {
-      this.startLevel(mapId || this.currentMapId || 'map1');
+      this.startLevel(mapId || this.currentMapId || 'map1', { endless: true });
       if (this.economy) {
         this.economy.spores += 160;
       }
@@ -314,6 +336,7 @@ class SceneController {
       }
     }
     this.isEndlessMode = true;
+    this.activePact = 'normal';
     this.state = 'BATTLE';
     if (this.waveManager) {
       this.waveManager.startEndlessMode(this.economy, this.fx);
@@ -400,8 +423,9 @@ class SceneController {
   addResonance(amount) {
     if (this.state !== 'BATTLE' || !amount || amount <= 0) return;
     if (this.resonanceActiveTimer > 0) return;
+    const pactMul = this.activePact === 'iron' ? 1.25 : (this.activePact === 'blitz' ? 1.20 : 1.0);
     const prev = this.resonanceCharge || 0;
-    this.resonanceCharge = Math.min(100, prev + amount);
+    this.resonanceCharge = Math.min(100, prev + amount * pactMul);
     if (prev < 100 && this.resonanceCharge >= 100) {
       platform.playSfx('sfx_crystal_clear', 0.9, 1.08);
       if (this.fx) {
@@ -552,13 +576,26 @@ class SceneController {
       remainingSeeds: this.economy.seeds
     };
     storage.recordMapVictory(this.currentMapId, stars, this.logicalCombatTimeSec, this.economy.seeds);
+    let pactPts = 0;
+    if ((this.activePact === 'iron' || this.activePact === 'blitz') && storage.recordMapPactClear && storage.recordMapPactClear(this.currentMapId, this.activePact)) {
+      pactPts = 2;
+    }
     if (this.ancientKnowledgeTree && typeof this.ancientKnowledgeTree.awardPointsForMapFirstClear === 'function') {
       const gainedPts = this.ancientKnowledgeTree.awardPointsForMapFirstClear(this.currentMapId, stars);
-      if (gainedPts > 0 && this.fx) {
-        this.fx.spawnFloatingText(480, 180, `远古知识之树领悟 +${gainedPts} 点!`, '#95DE64', 1.4);
+      if (pactPts > 0) {
+        this.ancientKnowledgeTree.totalPointsEarned = (this.ancientKnowledgeTree.totalPointsEarned || 0) + pactPts;
+        if (typeof this.ancientKnowledgeTree.saveToStorage === 'function') {
+          this.ancientKnowledgeTree.saveToStorage();
+        }
+      }
+      const totalPts = (gainedPts || 0) + pactPts;
+      if (totalPts > 0 && this.fx) {
+        this.fx.spawnFloatingText(480, 180, `远古知识之树领悟 +${totalPts} 点!`, '#95DE64', 1.4);
       }
     }
+    if (typeof platform.setBgmMixLevel === 'function') platform.setBgmMixLevel(0.18);
     platform.playSfx('sfx_win');
+    platform.playSfx('sfx_victory_fanfare', 0.9, 1.0, true);
     if (this.achievements) {
       if (this.economy.seeds >= 20) this.achievements.unlock('flawless_defense', this.fx);
       if (this.economy.seeds === 1) this.achievements.unlock('last_stand', this.fx);
@@ -587,7 +624,9 @@ class SceneController {
       clearTimeSec: this.logicalCombatTimeSec,
       remainingSeeds: 0
     };
+    if (typeof platform.setBgmMixLevel === 'function') platform.setBgmMixLevel(0.16);
     platform.playSfx('sfx_lose');
+    platform.playSfx('sfx_defeat_toll', 0.9, 1.0, true);
   }
 
   /**
@@ -732,6 +771,24 @@ class SceneController {
         }
       }
       this.fx.triggerShake(8, 350);
+      if (this.relicArsenal && this.relicArsenal.hasRelic('thunder_core')) {
+        sp.timer *= 0.85;
+        let arcBonusTarget = null;
+        let bestScore = -1;
+        for (let ai = 0; ai < alive.length; ai++) {
+          const ae = alive[ai];
+          if (ae.state === 'death' || ae.hp <= 0) continue;
+          const d = Math.hypot(ae.x - mx, ae.y - my);
+          if (d <= effRad + 110) {
+            const sc = (ae.baseArmor || 0) * 60 + ae.hp;
+            if (sc > bestScore) { bestScore = sc; arcBonusTarget = ae; }
+          }
+        }
+        if (arcBonusTarget) {
+          this.enemyManager.applyDamage(arcBonusTarget, 95, true, 'magic', this.fx, 'reactions');
+          this.fx.spawnFloatingText(arcBonusTarget.x, arcBonusTarget.y - 24, '古雷追加 -95', '#69C0FF', 1.05);
+        }
+      }
       this.fx.spawnRing(mx, my, effRad, '#FFE58F', 0.45, false);
       this.fx.spawnParticles(mx, my, 32, ['#FFE58F', '#73D13D', '#FFFFFF', '#40A9FF'], 60, 200, 0.3, 0.65, 5);
       this.fx.showBanner('雷霆震爆！群怪麻痹', '#FFE58F', '轰击 ' + enemiesHit + ' 名敌人（对空特攻），定身3.5秒', 1.5);
@@ -1342,6 +1399,18 @@ class SceneController {
 
     const isPaused = this.state !== 'BATTLE' || this.ui.showGuideModal || this.ui.showSettingsModal || this.ui.showBlessingModal;
     this.fx.update(realDt, this.state === 'BATTLE', isPaused);
+
+    if (typeof platform.setBgmMixLevel === 'function') {
+      const hasBoss = Boolean(this.bossOverdriveEngine && this.bossOverdriveEngine.activeBoss && this.bossOverdriveEngine.activeBoss.hp > 0);
+      const isPrep = Boolean(this.waveManager && this.waveManager.phase === 'prep');
+      let targetMix = 0.40;
+      if (this.state === 'SETTLEMENT') targetMix = 0.18;
+      else if (isPaused) targetMix = 0.22;
+      else if (this.state === 'BATTLE') {
+        targetMix = hasBoss ? 0.48 : ((this.resonanceActiveTimer || 0) > 0 ? 0.46 : (isPrep ? 0.30 : 0.40));
+      }
+      platform.setBgmMixLevel(targetMix);
+    }
   }
 
   onWaveCleared(clearedWave) {

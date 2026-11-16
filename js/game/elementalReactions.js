@@ -111,6 +111,13 @@ class ElementalReactionSystem {
 
     if (reactionResult) {
       enemy._reactCd = 2.6;
+      if (scene && scene.relicArsenal && scene.relicArsenal.hasRelic('heart_of_groves')) {
+        const extraReactDmg = Math.max(8, Math.round((reactionResult.damage || 30) * 0.35));
+        if (enemy.hp > 0 && enemy.state !== 'death') {
+          enemy.takeDamage(extraReactDmg, null, 'magic', 'reactions');
+          this.stats.reactionDamage += extraReactDmg;
+        }
+      }
     }
 
     return reactionResult;

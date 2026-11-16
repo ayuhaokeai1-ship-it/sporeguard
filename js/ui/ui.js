@@ -861,15 +861,26 @@ class UiManager {
     ctx.fillRect(0, 400, 960, 140);
     ctx.restore();
 
-    // 森林萤火孢子微粒动画
+    // 森林萤火孢子微粒动画与柔光浮灵
+    const titleSparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
     for (let i = 0; i < 24; i++) {
       const sx = ((i * 97 + Math.floor(this.uiAnimTime * (10 + (i % 5) * 3))) % 920) + 20;
       const sy = ((i * 61 - Math.floor(this.uiAnimTime * (8 + (i % 4) * 3))) % 430 + 430) % 430 + 18;
       const pulse = 0.48 + 0.34 * Math.sin(this.uiAnimTime * 2.2 + i);
-      ctx.fillStyle = i % 2 === 0 ? `rgba(255, 228, 130, ${pulse.toFixed(2)})` : `rgba(145, 255, 165, ${(pulse * 0.9).toFixed(2)})`;
-      ctx.beginPath();
-      ctx.arc(sx, sy, i % 3 === 0 ? 2.4 : 1.5, 0, Math.PI * 2);
-      ctx.fill();
+      if (titleSparkImg && titleSparkImg.width && i % 6 === 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = pulse * 0.35;
+        ctx.translate(sx, sy);
+        ctx.rotate(this.uiAnimTime * 0.6 + i);
+        ctx.drawImage(titleSparkImg, -7, -7, 14, 14);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = i % 2 === 0 ? `rgba(255, 228, 130, ${pulse.toFixed(2)})` : `rgba(145, 255, 165, ${(pulse * 0.9).toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, i % 3 === 0 ? 2.2 : 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // 左上角 AI V4 精雕冠冕翡翠徽章牌（严密避让右侧英雄群像，主标题精准确位内槽）
@@ -1094,6 +1105,60 @@ class UiManager {
       this.showSettingsModal = true;
     });
 
+    // 第二栏：太古圣物装配入口 + 三选一守望挑战契约（y=58..82，不重叠顶栏与关卡卡片）
+    const eqRelics = (scene.relicArsenal && scene.relicArsenal.equippedRelicIds) ? scene.relicArsenal.equippedRelicIds : [];
+    const unlockedRelicsCount = (scene.relicArsenal && scene.relicArsenal.relicDefinitions)
+      ? Object.keys(scene.relicArsenal.relicDefinitions).filter((id) => scene.relicArsenal.isRelicUnlocked(id)).length
+      : 6;
+    this.drawPixelButton(ctx, 'lvl_relics', 18, 58, 164, 24, `太古圣物 (${eqRelics.length}/4)`, {
+      skin: 'btn_wood',
+      iconCat: 16,
+      iconKey: 'upgrade',
+      iconSize: 14,
+      font: `bold 11.5px ${CN_FONT}`
+    }, () => {
+      platform.playSfx('sfx_click');
+      this.codexTab = 4;
+      this.showGuideModal = true;
+    });
+
+    const curPact = scene.selectedPact || 'normal';
+    const pacts = [
+      { id: 'normal', label: '标准哨守 · 经典平衡', tip: '常规战力比例' },
+      { id: 'iron', label: '铁血契约 · 首通+2知识', tip: '敌+35%血/+12%速 · 初+80孢' },
+      { id: 'blitz', label: '极速狂潮 · 全军+22%攻速', tip: '间隔×0.7 · CD-30% · 首通+2知识' }
+    ];
+    for (let pi = 0; pi < pacts.length; pi++) {
+      const pDef = pacts[pi];
+      const px = 194 + pi * 184;
+      const isPactAct = curPact === pDef.id;
+      this.drawPixelButton(ctx, 'pact_' + pDef.id, px, 58, 178, 24, pDef.label, {
+        skin: isPactAct ? (pDef.id === 'iron' ? 'btn_red' : (pDef.id === 'blitz' ? 'btn_blue' : 'btn_green')) : 'btn_wood',
+        font: `bold 11px ${CN_FONT}`
+      }, () => {
+        scene.selectedPact = pDef.id;
+        platform.playSfx('sfx_relic_equip', 0.85);
+      });
+    }
+
+    const activePactInfo = pacts.find((p) => p.id === curPact) || pacts[0];
+    ctx.save();
+    roundRectPath(ctx, 748, 58, 194, 24, 7);
+    ctx.fillStyle = 'rgba(20, 14, 9, 0.88)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(198, 143, 69, 0.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, `${activePactInfo.tip} (${unlockedRelicsCount}/12圣物)`, 845, 70, {
+      style: 'parchment',
+      size: 10,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0,
+      maxWidth: 184
+    });
+    ctx.restore();
+
     const cardW = MAP_ORDER.length >= 4 ? 216 : 288;
     const cardGap = MAP_ORDER.length >= 4 ? 14 : 24;
     const totalCardsW = MAP_ORDER.length * cardW + (MAP_ORDER.length - 1) * cardGap;
@@ -1105,16 +1170,16 @@ class UiManager {
       const mData = MAPS[mapId];
       const rec = (save.maps && save.maps[mapId]) || { unlocked: i === 0, stars: 0, bestTime: null, bestSeeds: 0 };
       const cardX = startCardX + i * (cardW + cardGap);
-      const cardY = 76;
-      const cardH = 442;
+      const cardY = 88;
+      const cardH = 434;
 
       // 使用 AI 9-Slice 手绘木框羊皮纸大卡片（边框厚度固定锐利，内容完全放进羊皮纸框内）
       this.drawWoodlandPanel(ctx, cardX, cardY, cardW, cardH, rec.unlocked ? THEME.BRONZE_MID : '#5A554C', 0.98, 14, true);
 
       const prevX = cardX + (compact ? 22 : 28);
-      const prevY = cardY + (compact ? 28 : 30);
+      const prevY = cardY + (compact ? 26 : 28);
       const prevW = cardW - (compact ? 44 : 56);
-      const prevH = compact ? 96 : 124;
+      const prevH = compact ? 92 : 120;
       const mAtlas = platform.getImage(mData.atlasPath);
       if (mAtlas && MAP_ATLAS_LAYOUT.sceneBg) {
         const sb = MAP_ATLAS_LAYOUT.sceneBg;
@@ -1147,6 +1212,27 @@ class UiManager {
       drawLandmarkDot(mData.spawnTile2, '#B37FEB', 'rgba(20, 12, 18, 0.85)', compact ? 2.2 : 2.8);
       drawLandmarkDot(mData.warehouseTile, '#FFD666', 'rgba(42, 24, 10, 0.90)', compact ? 2.9 : 3.6);
 
+      if (rec.ironCleared || rec.blitzCleared) {
+        const pactImg = platform.getImage('assets/ui/frames/medal_pact_crest.png');
+        if (pactImg && pactImg.width) {
+          ctx.drawImage(pactImg, prevX + prevW - 26, prevY + 3, 22, 22);
+        }
+        const badgeLabel = (rec.ironCleared && rec.blitzCleared) ? '双契' : (rec.ironCleared ? '铁血' : '狂潮');
+        ctx.save();
+        roundRectPath(ctx, prevX + prevW - 56, prevY + 6, 28, 15, 4);
+        ctx.fillStyle = 'rgba(26, 14, 8, 0.86)';
+        ctx.fill();
+        ctx.strokeStyle = '#FFD666';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.fillStyle = '#FFE58F';
+        ctx.font = `bold 9px ${CN_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeLabel, prevX + prevW - 42, prevY + 13.5);
+        ctx.restore();
+      }
+
       ctx.strokeStyle = 'rgba(72, 46, 22, 0.85)';
       ctx.lineWidth = 2;
       ctx.strokeRect(prevX, prevY, prevW, prevH);
@@ -1154,23 +1240,23 @@ class UiManager {
       ctx.fillStyle = THEME.INK_DARK;
       ctx.font = `bold ${compact ? 15 : 19}px ${CN_FONT}`;
       ctx.textAlign = 'center';
-      ctx.fillText(i18n.t(mData.nameKey), cardX + cardW * 0.5, cardY + (compact ? 144 : 174), cardW - 40);
+      ctx.fillText(i18n.t(mData.nameKey), cardX + cardW * 0.5, cardY + (compact ? 136 : 168), cardW - 40);
 
       ctx.fillStyle = THEME.ENAMEL_GREEN;
       ctx.font = `bold ${compact ? 11.5 : 13}px ${CN_FONT}`;
-      ctx.fillText(i18n.t(mData.subtitleKey), cardX + cardW * 0.5, cardY + (compact ? 164 : 197), cardW - 40);
+      ctx.fillText(i18n.t(mData.subtitleKey), cardX + cardW * 0.5, cardY + (compact ? 156 : 191), cardW - 40);
 
       const starSz = compact ? 24 : 28;
       const starGap = compact ? 30 : 34;
       const starX0 = Math.round(cardX + (cardW - (starSz + starGap * 2)) * 0.5);
-      const starY = cardY + (compact ? 178 : 212);
+      const starY = cardY + (compact ? 170 : 206);
       for (let s = 0; s < 3; s++) {
         const starKey = s < rec.stars ? 'star_full' : 'star_empty';
         drawUiIcon(ctx, 16, starKey, starX0 + s * starGap, starY, starSz);
       }
 
       const descPad = compact ? 22 : 28;
-      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 210 : 244), cardW - descPad * 2, compact ? 15.5 : 17.5, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
+      this.drawWrappedText(ctx, i18n.t(mData.descKey), cardX + descPad, cardY + (compact ? 202 : 238), cardW - descPad * 2, compact ? 15.5 : 17.5, THEME.INK_MID, `${compact ? 11 : 12}px ${CN_FONT}`);
 
       // 中部战术威胁与首领情报小框（消除中间羊皮纸空洞，提升关卡识别度）
       const mapIntel = ({
@@ -1179,7 +1265,7 @@ class UiManager {
         map3: { route: '荧光双道 · 自爆与复生', boss: '首领：万巢裂殖母体' },
         map4: { route: '古殿双圣道 · 终局围剿', boss: '首领：蚀日圣甲皇' }
       })[mapId] || { route: '双线协同作战', boss: '首领压阵' };
-      const intelY = cardY + (compact ? 270 : 282);
+      const intelY = cardY + (compact ? 264 : 276);
       const intelH = compact ? 38 : 36;
       ctx.save();
       roundRectPath(ctx, cardX + descPad, intelY, cardW - descPad * 2, intelH, 7);
@@ -1203,10 +1289,10 @@ class UiManager {
       ctx.textAlign = 'left';
       const timeStr = rec.bestTime !== null ? (rec.bestTime + 's') : i18n.t('record_none');
       const seedStr = rec.bestSeeds > 0 ? (rec.bestSeeds + ' / 20') : i18n.t('record_none');
-      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 322 : 328));
-      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 342 : 348));
+      ctx.fillText(i18n.t('best_time') + ': ' + timeStr, cardX + descPad, cardY + (compact ? 316 : 322));
+      ctx.fillText(i18n.t('best_seeds') + ': ' + seedStr, cardX + descPad, cardY + (compact ? 336 : 342));
 
-      const btnY = cardY + 368;
+      const btnY = cardY + 358;
       if (rec.unlocked) {
         const hasCleared = rec.stars > 0;
         const sidePad = compact ? 22 : 26;
@@ -3237,29 +3323,56 @@ class UiManager {
     ctx.fillText(summaryText, bx + btnW * 0.5, y + 221, btnW - 12);
     ctx.restore();
 
-    // 4. 底部动作栏：全宽战术索敌优先级切换按钮（严格留出 22px 下边距，不贴木框）
+    // 4. 底部动作栏：索敌优先级切换 & 可选灵能觉醒唤醒（严格留出下边距）
     const prioKey = 'prio_' + tower.priority;
     const canCyclePrio = (def.priorities && def.priorities.length > 1);
+    const canAwakenHere = Boolean((scene.awakeningSeeds || 0) > 0 && !tower.isAwakened && typeof scene.towerManager.triggerAwakening === 'function');
+    const prioW = canAwakenHere ? 186 : btnW;
     this.drawPixelButton(
       ctx,
       'btn_tower_prio',
       bx,
       y + 236,
-      btnW,
+      prioW,
       34,
-      `切换索敌策略：${i18n.t(prioKey)}`,
+      `${canAwakenHere ? '索敌：' : '切换索敌策略：'}${i18n.t(prioKey)}`,
       {
         skin: 'btn_blue',
         disabled: !canCyclePrio,
         align: 'center',
-        font: `bold 13px ${UI_FONT}`,
+        font: `bold ${canAwakenHere ? 12 : 13}px ${UI_FONT}`,
         iconKey: 'target',
-        iconSize: 18
+        iconSize: 17
       },
       () => {
         scene.towerManager.cyclePriority(tower);
       }
     );
+    if (canAwakenHere) {
+      this.drawPixelButton(
+        ctx,
+        'btn_tower_awaken',
+        bx + prioW + 8,
+        y + 236,
+        btnW - prioW - 8,
+        34,
+        `觉醒 (${scene.awakeningSeeds})`,
+        {
+          skin: 'btn_green',
+          align: 'center',
+          font: `bold 12px ${UI_FONT}`,
+          iconCat: 16,
+          iconKey: 'upgrade',
+          iconSize: 15
+        },
+        () => {
+          if ((scene.awakeningSeeds || 0) > 0 && !tower.isAwakened) {
+            scene.awakeningSeeds -= 1;
+            scene.towerManager.triggerAwakening(tower, scene, scene.fx, scene.economy);
+          }
+        }
+      );
+    }
   }
 
   /**
@@ -3881,42 +3994,86 @@ class UiManager {
   }
 
   /**
-   * 战场左上角已获【林地圣佑】缩略勋章栏（轻量化零遮挡）
+   * 战场左上角已获【林地圣佑 · 菌灵羁绊 · 出战圣物】缩略勋章栏（100% AI 手绘圆环底托，x=16..286 严格避让首领血条）
    */
   renderActiveBlessingBadges(ctx, scene) {
-    if (!scene || !scene.woodlandBlessings) return;
-    const owned = scene.woodlandBlessings.getOwnedDefs();
-    if (!owned || owned.length === 0) return;
+    if (!scene) return;
     const isZh = i18n.getLang() !== 'en';
-    const startX = 16;
-    const y = 44;
-    const sz = 22;
-    const gap = 5;
+    const owned = (scene.woodlandBlessings && scene.woodlandBlessings.getOwnedDefs) ? scene.woodlandBlessings.getOwnedDefs() : [];
+    const activeSyns = (scene.guardianSynergies && scene.guardianSynergies.getActiveSynergies) ? scene.guardianSynergies.getActiveSynergies() : [];
+    const relicIds = (scene.relicArsenal && scene.relicArsenal.equippedRelicIds) ? scene.relicArsenal.equippedRelicIds : [];
 
+    const items = [];
     for (let i = 0; i < owned.length; i++) {
       const b = owned[i];
+      items.push({
+        icon: b.icon,
+        tip: `${isZh ? b.nameZh : b.nameEn}：${isZh ? b.descZh : b.descEn}`
+      });
+    }
+    if (activeSyns.length > 0) {
+      const synNames = activeSyns.map((s) => s.name).join('、');
+      items.push({
+        icon: 'assets/vfx/vfx_synergy_crest.png',
+        badgeCount: activeSyns.length,
+        tip: `星轨羁绊 (${activeSyns.length}/5 已激活)：${synNames}`
+      });
+    }
+    for (let i = 0; i < relicIds.length; i++) {
+      const rDef = scene.relicArsenal.getRelic(relicIds[i]);
+      if (rDef) {
+        items.push({
+          icon: rDef.icon,
+          tip: `太古圣物 · ${rDef.name}：${rDef.desc}`
+        });
+      }
+    }
+    if (items.length === 0) return;
+
+    const startX = 16;
+    const y = 44;
+    const sz = 23;
+    const gap = 3;
+    const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+    const maxItems = Math.min(items.length, 9);
+
+    for (let i = 0; i < maxItems; i++) {
+      const it = items[i];
       const bx = startX + i * (sz + gap);
       const hov = this.isPointHovered(bx, y, sz, sz);
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(bx + sz * 0.5, y + sz * 0.5, sz * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = hov ? 'rgba(54, 38, 18, 0.96)' : 'rgba(26, 18, 12, 0.90)';
-      ctx.fill();
-      ctx.strokeStyle = hov ? '#FFD700' : (b.accent || '#C68F45');
-      ctx.lineWidth = hov ? 1.8 : 1.3;
-      ctx.stroke();
-
-      const img = platform.getImage(b.icon);
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, bx - 1, y - 1, sz + 2, sz + 2);
+      }
+      const img = platform.getImage(it.icon);
       if (img && img.width) {
-        ctx.drawImage(img, bx + 3, y + 3, sz - 6, sz - 6);
+        ctx.drawImage(img, bx + 4, y + 4, sz - 8, sz - 8);
+      }
+      if (it.badgeCount) {
+        ctx.fillStyle = '#18100A';
+        roundRectPath(ctx, bx + sz - 11, y + sz - 10, 12, 10, 3);
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.fillStyle = '#FFE58F';
+        ctx.font = `bold 8.5px ${CN_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(it.badgeCount), bx + sz - 5, y + sz - 5);
+      }
+      if (hov && medImg && medImg.width) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.25;
+        ctx.drawImage(medImg, bx - 2, y - 2, sz + 4, sz + 4);
       }
       ctx.restore();
 
       if (hov) {
         this.bottomHoverTip = {
           x: Math.max(150, bx + 110),
-          y: y + 36,
-          text: `✨ ${isZh ? b.nameZh : b.nameEn}：${isZh ? b.descZh : b.descEn}`
+          y: y + 38,
+          text: it.tip
         };
       }
     }
@@ -4113,8 +4270,9 @@ class UiManager {
       const bx = mx + 56;
       const bw = mw - 112;
 
-      this.drawPixelButton(ctx, 'settle_endless_retry', bx, my + 194, bw, 42, '🔥 再次挑战深渊', {
-        skin: 'btn_green'
+      this.drawPixelButton(ctx, 'settle_endless_retry', bx, my + 194, bw, 42, '再次挑战深渊', {
+        skin: 'btn_green',
+        iconKey: 'play'
       }, () => {
         platform.playSfx('sfx_click');
         scene.startEndlessMode();
@@ -4516,21 +4674,25 @@ class UiManager {
       platform.playSfx('sfx_click');
     });
 
-    // 2. 顶部四大篇章分页标签 (Tabs) — 完全放在木框内安全羊皮纸上
+    // 2. 顶部五大篇章分页标签 (Tabs) — 完全放在木框内安全羊皮纸上
+    const eqRelicsCnt = (curScene && curScene.relicArsenal && curScene.relicArsenal.equippedRelicIds)
+      ? curScene.relicArsenal.equippedRelicIds.length
+      : 4;
     const tabs = [
-      { id: 0, label: '🍄 蘑菇守卫 (5/5)' },
-      { id: 1, label: '🐛 林区害虫 (17/17)' },
-      { id: 2, label: '🌿 远古真菌知识之树' },
-      { id: 3, label: '🏆 王国成就 (20)' }
+      { id: 0, label: '蘑菇守卫 (5/5)' },
+      { id: 1, label: '林区害虫 (17/17)' },
+      { id: 2, label: '远古知识之树' },
+      { id: 3, label: '王国成就 (20)' },
+      { id: 4, label: `太古圣物 (${eqRelicsCnt}/4)` }
     ];
     const tabY = my + 38;
-    const tabW = 176;
+    const tabW = 148;
     const tabH = 30;
     const tabStartX = mx + 28;
 
     for (let i = 0; i < tabs.length; i++) {
       const tb = tabs[i];
-      const tbx = tabStartX + i * (tabW + 8);
+      const tbx = tabStartX + i * (tabW + 10);
       const isCur = this.codexTab === tb.id;
 
       ctx.save();
@@ -4543,7 +4705,7 @@ class UiManager {
 
       drawArtText(ctx, tb.label, tbx + tabW * 0.5, tabY + tabH * 0.5, {
         style: isCur ? 'gold' : 'parchment',
-        size: 12.5,
+        size: 12,
         align: 'center',
         baseline: 'middle',
         strokeWidth: 0
@@ -4572,6 +4734,8 @@ class UiManager {
       } else {
         this.renderCodexTacticsTab(ctx, bodyX, bodyY, bodyW, bodyH);
       }
+    } else if (this.codexTab === 4) {
+      this.renderCodexRelicsTab(ctx, bodyX, bodyY, bodyW, bodyH, curScene);
     } else {
       this.renderCodexAchievementsTab(ctx, bodyX, bodyY, bodyW, bodyH);
     }
@@ -4582,7 +4746,7 @@ class UiManager {
     const playBtnX = mx + mw - playBtnW - 30;
     const playBtnY = my + mh - playBtnH - 34;
 
-    this.drawPixelButton(ctx, 'codex_play_btn', playBtnX, playBtnY, playBtnW, playBtnH, '⚔️ 开启保卫战 · 进入战场', {
+    this.drawPixelButton(ctx, 'codex_play_btn', playBtnX, playBtnY, playBtnW, playBtnH, '开启保卫战 · 进入战场', {
       skin: 'btn_green',
       font: `bold 13.5px ${CN_FONT}`,
       iconKey: 'play'
@@ -4601,7 +4765,7 @@ class UiManager {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawArtText(ctx, '💡 点击任意空白区域或右上角 [×] 即可关闭秘典继续游玩', mx + 30 + hintW * 0.5, playBtnY + playBtnH * 0.5, {
+    drawArtText(ctx, '提示：点击任意空白区域或右上角 [×] 即可关闭秘典继续游玩', mx + 30 + hintW * 0.5, playBtnY + playBtnH * 0.5, {
       style: 'parchment',
       size: 11.5,
       align: 'center',
@@ -4610,6 +4774,139 @@ class UiManager {
     });
 
     ctx.restore();
+  }
+
+  /**
+   * 篇章 5：太古圣物殿堂 · 12 件圣物 4 槽自由配装构筑 (Hades / Slay the Spire Keepsake Armory)
+   */
+  renderCodexRelicsTab(ctx, x, y, w, h, scene) {
+    const arsenal = scene && scene.relicArsenal;
+    if (!arsenal || !arsenal.relicDefinitions) return;
+    const defs = Object.values(arsenal.relicDefinitions);
+    const totalStars = storage.getTotalStars ? storage.getTotalStars() : 0;
+    const eqIds = arsenal.equippedRelicIds || [];
+
+    // 顶部状态栏（高度 26px）
+    ctx.save();
+    roundRectPath(ctx, x, y, w, 26, 7);
+    ctx.fillStyle = 'rgba(24, 17, 11, 0.90)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196, 143, 69, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawArtText(ctx, `出战圣物配置：${eqIds.length} / 4 件（点击已解锁圣物卡片即可装配或替换）`, x + 14, y + 13, {
+      style: 'gold',
+      size: 11.5,
+      align: 'left',
+      baseline: 'middle',
+      strokeWidth: 0
+    });
+    drawArtText(ctx, `战役总星徽：${totalStars} / 12 ★`, x + w - 14, y + 13, {
+      style: 'emerald',
+      size: 11.5,
+      align: 'right',
+      baseline: 'middle',
+      strokeWidth: 0
+    });
+    ctx.restore();
+
+    const cols = 4;
+    const gapX = 8;
+    const gapY = 6;
+    const cardW = Math.floor((w - gapX * (cols - 1)) / cols); // ~191px
+    const cardH = 97;
+    const gridY = y + 32;
+    const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+    const rarityMap = {
+      legendary: { label: '传奇', col: '#FFD666' },
+      epic: { label: '史诗', col: '#D3ADF7' },
+      rare: { label: '稀有', col: '#91D5FF' }
+    };
+
+    for (let i = 0; i < defs.length; i++) {
+      const rDef = defs[i];
+      const colI = i % cols;
+      const rowI = Math.floor(i / cols);
+      const cx = x + colI * (cardW + gapX);
+      const cy = gridY + rowI * (cardH + gapY);
+      const isUnlocked = arsenal.isRelicUnlocked(rDef.id);
+      const isEquipped = eqIds.includes(rDef.id);
+      const hovered = this.isPointHovered(cx, cy, cardW, cardH);
+
+      ctx.save();
+      roundRectPath(ctx, cx, cy, cardW, cardH, 8);
+      if (isEquipped) {
+        ctx.fillStyle = hovered ? 'rgba(42, 72, 34, 0.96)' : 'rgba(28, 52, 24, 0.94)';
+      } else if (isUnlocked) {
+        ctx.fillStyle = hovered ? 'rgba(54, 38, 22, 0.94)' : 'rgba(30, 21, 14, 0.88)';
+      } else {
+        ctx.fillStyle = 'rgba(20, 15, 12, 0.72)';
+      }
+      ctx.fill();
+      ctx.strokeStyle = isEquipped
+        ? '#95DE64'
+        : (isUnlocked ? (hovered ? '#FFD700' : 'rgba(198, 143, 69, 0.55)') : 'rgba(90, 75, 62, 0.45)');
+      ctx.lineWidth = isEquipped ? 2.0 : (hovered ? 1.6 : 1.0);
+      ctx.stroke();
+
+      // 左侧 AI 铜徽圆托 + 圣物原画
+      const icCx = cx + 26;
+      const icCy = cy + 26;
+      if (medImg && medImg.width) {
+        ctx.globalAlpha = isUnlocked ? 1.0 : 0.42;
+        ctx.drawImage(medImg, icCx - 20, icCy - 20, 40, 40);
+      }
+      const icImg = platform.getImage(rDef.icon);
+      if (icImg && icImg.width) {
+        ctx.drawImage(icImg, icCx - 12, icCy - 12, 24, 24);
+      }
+      ctx.globalAlpha = 1.0;
+
+      // 圣物名字与稀有度
+      const rar = rarityMap[rDef.rarity] || rarityMap.rare;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = isUnlocked ? (isEquipped ? '#B7EB8F' : '#FFE58F') : '#8C8478';
+      ctx.font = `bold 11.5px ${CN_FONT}`;
+      ctx.fillText(rDef.name, cx + 50, cy + 16, cardW - 58);
+
+      ctx.fillStyle = rar.col;
+      ctx.font = `bold 9.5px ${CN_FONT}`;
+      ctx.fillText(rar.label, cx + 50, cy + 31);
+
+      // 状态小标（右上或右下）
+      const stLabel = isEquipped ? '已出战' : (isUnlocked ? '可装配' : `需 ${rDef.unlockStars} ★`);
+      const stBg = isEquipped ? 'rgba(56, 158, 13, 0.85)' : (isUnlocked ? 'rgba(140, 94, 42, 0.55)' : 'rgba(110, 32, 28, 0.72)');
+      ctx.save();
+      roundRectPath(ctx, cx + cardW - 56, cy + 23, 48, 15, 4);
+      ctx.fillStyle = stBg;
+      ctx.fill();
+      ctx.fillStyle = '#FFFDF5';
+      ctx.font = `bold 9px ${CN_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(stLabel, cx + cardW - 32, cy + 30.5);
+      ctx.restore();
+
+      // 效果描述（两行紧致排布）
+      this.drawWrappedText(
+        ctx,
+        rDef.desc,
+        cx + 10,
+        cy + 49,
+        cardW - 20,
+        14,
+        isUnlocked ? '#E8DEC8' : '#7D7468',
+        `9.5px ${CN_FONT}`
+      );
+      ctx.restore();
+
+      this.registerButton('codex_relic_' + rDef.id, cx, cy, cardW, cardH, () => {
+        const res = arsenal.toggleEquipRelic(rDef.id);
+        if (!res.ok && res.reason === 'locked') {
+          this.showToast(`累计获得 ${res.needStars} 颗战役星徽即可解锁「${rDef.name}」`);
+        }
+      });
+    }
   }
 
   /**
@@ -5804,7 +6101,7 @@ class UiManager {
       btnY,
       68,
       btnH,
-      '⏸ 暂停',
+      '暂停',
       {
         skin: 'btn_wood',
         font: 'bold 14.5px ' + CN_FONT
@@ -5821,9 +6118,12 @@ class UiManager {
       btnY,
       92,
       btnH,
-      '⚙️ 菜单',
+      '菜单',
       {
         skin: 'btn_wood',
+        iconCat: 16,
+        iconKey: 'settings',
+        iconSize: 16,
         font: 'bold 14.5px ' + CN_FONT
       },
       () => {

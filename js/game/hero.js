@@ -254,6 +254,13 @@ class ForestHero {
       return;
     }
 
+    if (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('windseeker_feather') && Math.random() < 0.20) {
+      if (fx) {
+        fx.spawnFloatingText(this.x, this.y - 22, '灵羽闪避!', '#BAE7FF', 0.95);
+      }
+      return;
+    }
+
     // 守卫姿态天然 35% 坚韧硬甲减伤，狂暴姿态承伤 +15%
     let finalDamage = amount;
     if (this.transcendence) {
@@ -603,7 +610,8 @@ class ForestHero {
 
     if (distToTarget > 6) {
       this.state = 'walk';
-      const moveStep = this.speed * dt;
+      const featherSpeedMul = (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('windseeker_feather')) ? 1.25 : 1.0;
+      const moveStep = this.speed * featherSpeedMul * dt;
       this.x += (dx / distToTarget) * Math.min(distToTarget, moveStep);
       this.y += (dy / distToTarget) * Math.min(distToTarget, moveStep);
       if (dx < -2) this.facingLeft = true;

@@ -110,7 +110,9 @@ function bootstrapGame() {
     'assets/vfx/range_commander_reticle.png',
     'assets/vfx/vfx_spawn_portal.png',
     'assets/ui/frames/medallion_ring.png',
-    'assets/vfx/vfx_resonance_orb.png'
+    'assets/vfx/vfx_resonance_orb.png',
+    'assets/vfx/vfx_synergy_crest.png',
+    'assets/ui/frames/medal_pact_crest.png'
   ];
 
   Promise.all([

@@ -258,6 +258,9 @@ class TowerManager {
     if (tower.typeId === 'watch' && this.scene && this.scene.blessingMods && this.scene.blessingMods.watchRangeMult > 1) {
       r *= this.scene.blessingMods.watchRangeMult;
     }
+    if (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('chlorophyll_prism')) {
+      r *= 1.12;
+    }
     return r;
   }
 
@@ -356,7 +359,7 @@ class TowerManager {
    */
   selectObstacleTarget(tower, map, scene) {
     if (!map || !map.obstacles) return null;
-    const rangePx = tower.node.range * TILE_SIZE;
+    const rangePx = this.getEffectiveRange(tower) * TILE_SIZE;
     const r2 = rangePx * rangePx;
 
     // 1. 若玩家手动集火锁定了某个障碍物，优先判定该障碍物是否在射程内
@@ -604,7 +607,8 @@ class TowerManager {
         if (i === j) continue;
         const ot = this.towers[j];
         if (Math.hypot(ot.x - lt.x, ot.y - lt.y) <= auraRangePx) {
-          const extraLuminaAspd = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.luminaAspdBonus || 0) : 0;
+          const extraLuminaAspd = ((this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.luminaAspdBonus || 0) : 0)
+            + ((this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('solar_vial')) ? 0.18 : 0);
           if (dmgB > ot.luminaDmgBonus) ot.luminaDmgBonus = dmgB;
           if ((aspdB + extraLuminaAspd) > ot.luminaAspdBonus) ot.luminaAspdBonus = aspdB + extraLuminaAspd;
           if (ward) ot.hasHolyWard = true;
@@ -712,6 +716,9 @@ class TowerManager {
       if (this.scene && this.scene.resonanceActiveTimer > 0) {
         speedCoeff *= 1.35;
       }
+      if (this.scene && this.scene.activePact === 'blitz') {
+        speedCoeff *= 1.22;
+      }
       const vetStats = this.getVeteranStats(t);
       if (vetStats.aspdBonus > 0) {
         speedCoeff *= (1.0 + vetStats.aspdBonus);
@@ -730,7 +737,8 @@ class TowerManager {
           const hInterval = t.node.sporeInterval || 10.0;
           if (t.sporeHarvestTimer >= hInterval) {
             t.sporeHarvestTimer = 0;
-            const gen = t.node.sporeGen;
+            const solarBoost = (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('solar_vial')) ? 1.25 : 1.0;
+            const gen = Math.round(t.node.sporeGen * solarBoost);
             t.totalSporesGenerated = (t.totalSporesGenerated || 0) + gen;
             if (economy) {
               economy.addSpores(gen);
@@ -891,11 +899,14 @@ class TowerManager {
     if (!tower || !tower.node) return tower.node;
     const vet = this.getVeteranStats(tower);
     const resCritBonus = (this.scene && this.scene.resonanceActiveTimer > 0) ? 0.20 : 0;
-    if (!tower.luminaDmgBonus && !vet.dmgBonus && !vet.critBonus && !resCritBonus) return tower.node;
+    const hasClover = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('clover_providence'));
+    const relicCrit = hasClover ? 0.14 : 0;
+    const totalCritAdd = vet.critBonus + resCritBonus + relicCrit;
+    if (!tower.luminaDmgBonus && !vet.dmgBonus && !totalCritAdd) return tower.node;
     return Object.assign({}, tower.node, {
       damageBonus: (tower.node.damageBonus || 0) + (tower.luminaDmgBonus || 0) + vet.dmgBonus,
-      critRate: (tower.node.critRate || 0) + vet.critBonus + resCritBonus,
-      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, (vet.critBonus > 0 || resCritBonus > 0) ? 1.85 : 1.0)
+      critRate: (tower.node.critRate || 0) + totalCritAdd,
+      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, hasClover ? 2.15 : (totalCritAdd > 0 ? 1.85 : 1.0))
     });
   }
 

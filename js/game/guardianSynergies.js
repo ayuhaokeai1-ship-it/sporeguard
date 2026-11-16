@@ -71,6 +71,7 @@ class GuardianSynergiesSystem {
     this.celestialPulseTimer = 0;
     this.activeSynergyCount = 0;
     this.synergyAuras = [];
+    this.synergyLinks = [];
   }
 
   reset() {
@@ -78,23 +79,37 @@ class GuardianSynergiesSystem {
     this.celestialPulseTimer = 0;
     this.activeSynergyCount = 0;
     this.synergyAuras.length = 0;
+    this.synergyLinks.length = 0;
     for (let k in this.synergies) {
       this.synergies[k].active = false;
     }
   }
 
+  getActiveSynergies() {
+    const res = [];
+    for (const k in this.synergies) {
+      if (this.synergies[k] && this.synergies[k].active) {
+        res.push(this.synergies[k]);
+      }
+    }
+    return res;
+  }
+
   /**
    * 依据场上建筑更新羁绊激活状态
    */
-  updateSynergies(towers) {
+  updateSynergies(towers, scene = null) {
     if (!towers) return;
+    const prevStates = {};
+    for (const k in this.synergies) {
+      prevStates[k] = Boolean(this.synergies[k].active);
+    }
     const counts = {};
     for (let i = 0; i < towers.length; i++) {
       const t = towers[i];
       counts[t.typeId] = (counts[t.typeId] || 0) + 1;
     }
 
-    let prevActiveCount = this.activeSynergyCount;
     let newActiveCount = 0;
 
     // 1. 双星瞭望
@@ -124,6 +139,49 @@ class GuardianSynergiesSystem {
     if (grandActive) newActiveCount++;
 
     this.activeSynergyCount = newActiveCount;
+
+    if (scene && scene.state === 'BATTLE' && towers.length >= 2) {
+      for (const k in this.synergies) {
+        const syn = this.synergies[k];
+        if (syn.active && !prevStates[k]) {
+          this.onSynergyActivated(syn, towers, scene);
+          break;
+        }
+      }
+    }
+  }
+
+  onSynergyActivated(syn, towers, scene) {
+    platform.playSfx('sfx_synergy_link', 0.9, 1.0);
+    if (scene.fx) {
+      scene.fx.showBanner(`星轨羁绊激活 · ${syn.name}！`, syn.color || '#FFD700', syn.desc, 2.3);
+    }
+    const involved = [];
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      if (syn.reqTypes && syn.reqTypes.includes(t.typeId)) {
+        involved.push(t);
+      } else if (syn.needOffensive && ['watch', 'mist', 'thorn', 'burst'].includes(t.typeId)) {
+        involved.push(t);
+      }
+    }
+    for (let i = 0; i < involved.length - 1 && i < 6; i++) {
+      const a = involved[i];
+      const b = involved[i + 1];
+      this.synergyLinks.push({
+        x1: a.x,
+        y1: a.y,
+        x2: b.x,
+        y2: b.y,
+        color: syn.color || '#73D13D',
+        life: 2.6,
+        maxLife: 2.6
+      });
+    }
+    if (involved.length > 0 && scene.fx) {
+      const mid = involved[0];
+      this.synergyAuras.push({ x: mid.x, y: mid.y, radius: 22, life: 0.9, maxLife: 0.9 });
+    }
   }
 
   /**
@@ -132,7 +190,7 @@ class GuardianSynergiesSystem {
   update(dt, scene) {
     if (!scene || scene.state !== 'BATTLE') return;
     const towers = scene.towerManager ? scene.towerManager.towers : [];
-    this.updateSynergies(towers);
+    this.updateSynergies(towers, scene);
 
     // 盖亚之怒自动蓄力
     if (this.synergies.grand_awakening.active) {
@@ -156,7 +214,13 @@ class GuardianSynergiesSystem {
       this.celestialPulseTimer = 0;
     }
 
-    // 更新光环微粒生命
+    // 更新光环微粒与星轨连线生命
+    for (let i = this.synergyLinks.length - 1; i >= 0; i--) {
+      this.synergyLinks[i].life -= dt;
+      if (this.synergyLinks[i].life <= 0) {
+        this.synergyLinks.splice(i, 1);
+      }
+    }
     for (let i = this.synergyAuras.length - 1; i >= 0; i--) {
       const a = this.synergyAuras[i];
       a.life -= dt;
@@ -240,10 +304,32 @@ class GuardianSynergiesSystem {
    * 绘制羁绊光环与林地星轨连接
    */
   render(ctx) {
-    if (this.synergyAuras.length === 0) return;
+    if (this.synergyAuras.length === 0 && this.synergyLinks.length === 0) return;
 
     const auraImg = platform.getImage('assets/vfx/range_sunburst_gold.png') || platform.getImage('assets/vfx/range_fairy_green.png');
+    const crestImg = platform.getImage('assets/vfx/vfx_synergy_crest.png');
     ctx.save();
+    for (let i = 0; i < this.synergyLinks.length; i++) {
+      const lk = this.synergyLinks[i];
+      const alpha = Math.max(0, lk.life / Math.max(0.05, lk.maxLife));
+      const midX = (lk.x1 + lk.x2) * 0.5;
+      const midY = (lk.y1 + lk.y2) * 0.5 - 24;
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.92, alpha * 1.15);
+      ctx.strokeStyle = lk.color || '#FFD700';
+      ctx.lineWidth = 2.6;
+      ctx.setLineDash([7, 5]);
+      ctx.beginPath();
+      ctx.moveTo(lk.x1, lk.y1 - 8);
+      ctx.quadraticCurveTo(midX, midY, lk.x2, lk.y2 - 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (crestImg && crestImg.width) {
+        const sz = 24;
+        ctx.drawImage(crestImg, Math.round(midX - sz * 0.5), Math.round(midY - sz * 0.5 + 8), sz, sz);
+      }
+      ctx.restore();
+    }
     for (let i = 0; i < this.synergyAuras.length; i++) {
       const a = this.synergyAuras[i];
       const alpha = Math.max(0, a.life / Math.max(0.05, a.maxLife));

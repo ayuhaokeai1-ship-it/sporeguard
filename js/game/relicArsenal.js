@@ -5,137 +5,157 @@
  */
 
 const platform = require('../core/platform');
+const storage = require('../save/storage');
 
 class RelicArsenalSystem {
   constructor() {
+    this.maxSlots = 4;
     this.relicDefinitions = {
       chlorophyll_prism: {
         id: 'chlorophyll_prism',
         nameKey: 'relic_prism_name',
         name: '叶绿晶棱镜',
-        desc: '所有植物守卫射程提升 25%，并有 18% 几率破空穿透目标',
+        desc: '全塔射程 +12%，瞭望菇与刺棘菇有 10% 几率额外穿透目标',
         icon: 'assets/vfx/relic_clover.png',
         rarity: 'rare',
-        isUnlocked: true,
-        stats: { rangeBonus: 0.25, pierceChance: 0.18 }
-      },
-      thunder_core: {
-        id: 'thunder_core',
-        nameKey: 'relic_thunder_name',
-        name: '古雷木核晶',
-        desc: '天候雷击频率翻倍，雷电击中潮湿敌人时触发超导电弧连锁',
-        icon: 'assets/vfx/relic_lightning.png',
-        rarity: 'epic',
-        isUnlocked: true,
-        stats: { thunderCooldownReduction: 0.5 }
+        unlockStars: 0,
+        stats: { rangeBonus: 0.12, pierceChance: 0.10 }
       },
       amber_crown: {
         id: 'amber_crown',
         nameKey: 'relic_crown_name',
         name: '琥珀菌王冠',
-        desc: '掉落金孢子价值提升 30%，英雄每秒持续自动再生 12 点生命值',
+        desc: '击杀/掉落金孢子收益 +15%，树人英雄每秒持续再生 12 点生命',
         icon: 'assets/vfx/relic_coin.png',
         rarity: 'legendary',
-        isUnlocked: true,
-        stats: { sporeBonus: 0.30, heroRegen: 12 }
+        unlockStars: 0,
+        stats: { sporeBonus: 0.15, heroRegen: 12 }
       },
-      clover_providence: {
-        id: 'clover_providence',
-        nameKey: 'relic_clover_name',
-        name: '天命幸运四叶草',
-        desc: '所有战塔与英雄攻击获得 22% 暴击率，造成 240% 致命暴击伤害',
-        icon: 'assets/vfx/relic_clover.png',
-        rarity: 'rare',
-        isUnlocked: true,
-        stats: { critChance: 0.22, critMultiplier: 2.4 }
-      },
-      silk_carapace: {
-        id: 'silk_carapace',
-        nameKey: 'relic_carapace_name',
-        name: '黑曜蛛王坚甲',
-        desc: '防御塔被蛛丝缠绕封印后，2.0秒内自动破茧反噬，反弹剧毒尖刺',
-        icon: 'assets/vfx/vfx_web_cocoon.png',
+      thunder_core: {
+        id: 'thunder_core',
+        nameKey: 'relic_thunder_name',
+        name: '古雷木核晶',
+        desc: '雨天落雷频率缩短 35%，[R] 雷霆震爆冷却缩短 15% 并额外连击护盾目标',
+        icon: 'assets/vfx/relic_lightning.png',
         rarity: 'epic',
-        isUnlocked: true,
-        stats: { autoCleanseSec: 2.0 }
-      },
-      solar_vial: {
-        id: 'solar_vial',
-        nameKey: 'relic_solar_name',
-        name: '日光日曜精魄瓶',
-        desc: '日曜菇光合充能效果提升 40%，周围两格内防御塔常驻攻速 +30%',
-        icon: 'assets/vfx/relic_lumina.png',
-        rarity: 'epic',
-        isUnlocked: true,
-        stats: { auraAtkSpd: 0.30 }
-      },
-      heroic_standard: {
-        id: 'heroic_standard',
-        nameKey: 'relic_standard_name',
-        name: '孢子近卫荣耀战旗',
-        desc: '近卫巡逻军生命上限提升 50%，战阵重聚冷却时间缩短 50%',
-        icon: 'assets/vfx/prop_rally_flag.png',
-        rarity: 'rare',
-        isUnlocked: true,
-        stats: { guardHpBonus: 0.50, respawnCut: 0.5 }
-      },
-      deep_roots_charm: {
-        id: 'deep_roots_charm',
-        nameKey: 'relic_charm_name',
-        name: '神木太古深根印',
-        desc: '圣树生命种子上限 +3，任何逼近终点的怪物立刻受到 50% 现存血量重创',
-        icon: 'assets/vfx/hero_oak.png',
-        rarity: 'legendary',
-        isUnlocked: true,
-        stats: { extraSeeds: 3, breachPunishRatio: 0.50 }
-      },
-      glacial_tear: {
-        id: 'glacial_tear',
-        nameKey: 'relic_tear_name',
-        name: '玄冰霜华之泪',
-        desc: '迷雾孢子在地面凝结 4 秒冻土，敌人移动速度额外削减 40%',
-        icon: 'assets/vfx/prop_dew.png',
-        rarity: 'rare',
-        isUnlocked: true,
-        stats: { extraSlow: 0.40 }
-      },
-      volcanic_geode: {
-        id: 'volcanic_geode',
-        nameKey: 'relic_geode_name',
-        name: '熔岩炽火晶核',
-        desc: '爆裂重炮命中必定在地面遗留持续燃烧的熔岩火海，造成百分比最大生命灼烧',
-        icon: 'assets/vfx/proj_burst_shell.png',
-        rarity: 'epic',
-        isUnlocked: true,
-        stats: { burnRatio: 0.05 }
+        unlockStars: 0,
+        stats: { thunderCooldownReduction: 0.35, shockCdReduction: 0.15 }
       },
       heart_of_groves: {
         id: 'heart_of_groves',
         nameKey: 'relic_heart_name',
         name: '苍翠圣林始源之心',
-        desc: '全元素反应(烈焰/超导/极寒/爆轰/光合)波及范围扩大 45%，反应伤害提升 50%',
+        desc: '全元素反应(烈焰/超导/极寒/爆轰/光合/腐蚀)触发伤害提升 35%',
         icon: 'assets/vfx/item_awakening_seed.png',
         rarity: 'legendary',
-        isUnlocked: true,
-        stats: { reactionDmgBonus: 0.50, reactionAoeBonus: 0.45 }
+        unlockStars: 0,
+        stats: { reactionDmgBonus: 0.35 }
+      },
+      heroic_standard: {
+        id: 'heroic_standard',
+        nameKey: 'relic_standard_name',
+        name: '孢子近卫荣耀战旗',
+        desc: '巡逻菇精卫最大生命 +45%，阵亡复活冷却时间缩短 35%',
+        icon: 'assets/vfx/prop_rally_flag.png',
+        rarity: 'rare',
+        unlockStars: 0,
+        stats: { guardHpBonus: 0.45, respawnCut: 0.35 }
       },
       windseeker_feather: {
         id: 'windseeker_feather',
         nameKey: 'relic_feather_name',
         name: '追风迅捷之羽',
-        desc: '全军弹道飞行速度与英雄移速提升 35%，闪避敌方远程抛射物 25% 几率',
+        desc: '弹道飞行速度与英雄移速 +25%，英雄闪避敌方伤害 20% 几率',
         icon: 'assets/vfx/proj_watch_arrow.png',
         rarity: 'rare',
-        isUnlocked: true,
-        stats: { speedBonus: 0.35, dodgeChance: 0.25 }
+        unlockStars: 0,
+        stats: { speedBonus: 0.25, dodgeChance: 0.20 }
+      },
+      clover_providence: {
+        id: 'clover_providence',
+        nameKey: 'relic_clover_name',
+        name: '天命幸运四叶草',
+        desc: '全守卫塔获得 +14% 暴击率，暴击倍率提升至 215%',
+        icon: 'assets/vfx/relic_clover.png',
+        rarity: 'rare',
+        unlockStars: 2,
+        stats: { critChance: 0.14, critMultiplier: 2.15 }
+      },
+      glacial_tear: {
+        id: 'glacial_tear',
+        nameKey: 'relic_tear_name',
+        name: '玄冰霜华之泪',
+        desc: '迷雾菇迷雾额外附加 16% 寒霜减速，并使滞留毒雾伤害 +18%',
+        icon: 'assets/vfx/prop_dew.png',
+        rarity: 'rare',
+        unlockStars: 4,
+        stats: { extraSlow: 0.16, mistDpsBonus: 0.18 }
+      },
+      silk_carapace: {
+        id: 'silk_carapace',
+        nameKey: 'relic_carapace_name',
+        name: '黑曜蛛王坚甲',
+        desc: '防御塔被蛛丝缠绕后 2.0 秒内自动破茧反震，对周围造成 95 点范围反噬',
+        icon: 'assets/vfx/vfx_web_cocoon.png',
+        rarity: 'epic',
+        unlockStars: 6,
+        stats: { autoCleanseSec: 2.0, counterDmg: 95 }
+      },
+      solar_vial: {
+        id: 'solar_vial',
+        nameKey: 'relic_solar_name',
+        name: '日光日曜精魄瓶',
+        desc: '灵光菇产孢提升 25%，圣域光环使邻近防御塔额外 +18% 攻速',
+        icon: 'assets/vfx/prop_lumina_base.png',
+        rarity: 'epic',
+        unlockStars: 8,
+        stats: { sporeHarvestBonus: 0.25, auraAtkSpd: 0.18 }
+      },
+      volcanic_geode: {
+        id: 'volcanic_geode',
+        nameKey: 'relic_geode_name',
+        name: '熔岩炽火晶核',
+        desc: '爆裂重炮命中直接引燃范围内敌人，附加 3 秒每秒 20 点炽火灼烧',
+        icon: 'assets/vfx/proj_burst_shell.png',
+        rarity: 'epic',
+        unlockStars: 10,
+        stats: { burnDps: 20, burnDuration: 3.0 }
+      },
+      deep_roots_charm: {
+        id: 'deep_roots_charm',
+        nameKey: 'relic_charm_name',
+        name: '神木太古深根印',
+        desc: '圣树生命种子上限 +3，逼近终点仓库的敌军受古根鞭笞重创 40% 当前生命',
+        icon: 'assets/vfx/hero_oak.png',
+        rarity: 'legendary',
+        unlockStars: 12,
+        stats: { extraSeeds: 3, breachPunishRatio: 0.40 }
       }
     };
 
-    this.equippedRelicIds = ['chlorophyll_prism', 'amber_crown', 'thunder_core', 'heart_of_groves'];
+    this.syncFromStorage();
+  }
+
+  syncFromStorage() {
+    const saved = storage.getEquippedRelics ? storage.getEquippedRelics() : null;
+    if (Array.isArray(saved) && saved.length > 0) {
+      this.equippedRelicIds = saved.filter((id) => Boolean(this.relicDefinitions[id])).slice(0, this.maxSlots);
+    } else {
+      this.equippedRelicIds = ['chlorophyll_prism', 'amber_crown', 'thunder_core', 'heart_of_groves'];
+    }
+  }
+
+  isRelicUnlocked(id) {
+    const def = this.relicDefinitions[id];
+    if (!def) return false;
+    const req = def.unlockStars || 0;
+    if (req <= 0) return true;
+    const stars = storage.getTotalStars ? storage.getTotalStars() : 0;
+    return stars >= req;
   }
 
   hasRelic(id) {
-    return this.equippedRelicIds.includes(id);
+    return this.equippedRelicIds.includes(id) && this.isRelicUnlocked(id);
   }
 
   getRelic(id) {
@@ -143,22 +163,47 @@ class RelicArsenalSystem {
   }
 
   equipRelic(id) {
-    if (this.relicDefinitions[id] && !this.equippedRelicIds.includes(id)) {
-      this.equippedRelicIds.push(id);
-      return true;
+    if (!this.relicDefinitions[id] || !this.isRelicUnlocked(id)) return false;
+    if (this.equippedRelicIds.includes(id)) return true;
+    if (this.equippedRelicIds.length >= this.maxSlots) return false;
+    this.equippedRelicIds.push(id);
+    if (storage.setEquippedRelics) storage.setEquippedRelics(this.equippedRelicIds);
+    platform.playSfx('sfx_relic_equip');
+    return true;
+  }
+
+  toggleEquipRelic(id) {
+    if (!this.relicDefinitions[id]) return { ok: false, reason: 'missing' };
+    if (!this.isRelicUnlocked(id)) {
+      platform.playSfx('sfx_hurt');
+      return { ok: false, reason: 'locked', needStars: this.relicDefinitions[id].unlockStars || 0 };
     }
-    return false;
+    const idx = this.equippedRelicIds.indexOf(id);
+    if (idx !== -1) {
+      this.equippedRelicIds.splice(idx, 1);
+      if (storage.setEquippedRelics) storage.setEquippedRelics(this.equippedRelicIds);
+      platform.playSfx('sfx_click');
+      return { ok: true, equipped: false };
+    }
+    if (this.equippedRelicIds.length >= this.maxSlots) {
+      // 自动替换最早装配的一件圣物，零操作摩擦！
+      this.equippedRelicIds.shift();
+    }
+    this.equippedRelicIds.push(id);
+    if (storage.setEquippedRelics) storage.setEquippedRelics(this.equippedRelicIds);
+    platform.playSfx('sfx_relic_equip');
+    return { ok: true, equipped: true };
   }
 
   update(dt, scene) {
     // 琥珀王冠：英雄每秒自动回复
     if (this.hasRelic('amber_crown') && scene && scene.hero) {
-      if (scene.hero.hp > 0 && scene.hero.hp < scene.hero.maxHp) {
+      if (scene.hero.hp > 0 && scene.hero.hp < scene.hero.maxHp && scene.hero.state !== 'dead') {
         scene.hero.hp = Math.min(scene.hero.maxHp, scene.hero.hp + 12 * dt);
       }
     }
 
-    // 黑曜蛛王甲：自动解救被封印的防御塔
+    // 黑曜蛛王甲：自动解救被封印的防御塔并反震周围敌军
     if (this.hasRelic('silk_carapace') && scene && scene.towerManager) {
       const tws = scene.towerManager.towers;
       for (let i = 0; i < tws.length; i++) {
@@ -167,14 +212,47 @@ class RelicArsenalSystem {
           t.webCleanseTimer = (t.webCleanseTimer || 0) + dt;
           if (t.webCleanseTimer >= 2.0) {
             t.isWebbed = false;
+            t.webHealth = 0;
             t.webCleanseTimer = 0;
+            if (scene.enemyManager) {
+              const enemies = scene.enemyManager.getAliveEnemies();
+              for (let ei = 0; ei < enemies.length; ei++) {
+                const e = enemies[ei];
+                if (Math.hypot(e.x - t.x, e.y - t.y) <= 95) {
+                  scene.enemyManager.applyDamage(e, 95, false, 'magic', scene.fx, t);
+                }
+              }
+            }
+            platform.playSfx('sfx_web_snap', 0.9, 1.2, true, t.x);
             if (scene.fx) {
-              scene.fx.spawnDamageText(Math.round(t.x), Math.round(t.y - 18), '🛡️ 黑曜破茧反噬!', '#B37FEB');
+              scene.fx.spawnDamageText(Math.round(t.x), Math.round(t.y - 18), '黑曜破茧反震!', '#B37FEB');
               scene.fx.spawnRing(t.x, t.y, 70, '#D3ADF7', 0.4);
             }
           }
         } else {
           t.webCleanseTimer = 0;
+        }
+      }
+    }
+
+    // 神木太古深根印：敌军逼近终点仓库 (<= 75px) 触发一次 40% 当前生命根鞭惩罚
+    if (this.hasRelic('deep_roots_charm') && scene && scene.map && scene.map.mapData && scene.enemyManager) {
+      const wTile = scene.map.mapData.warehouseTile || [19, 12];
+      const wx = (wTile[0] + 0.5) * 32;
+      const wy = (wTile[1] + 0.5) * 32;
+      const enemies = scene.enemyManager.getAliveEnemies();
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (e._deepRootPunished || e.isTreasure || e.state === 'death') continue;
+        if (Math.hypot(e.x - wx, e.y - wy) <= 78) {
+          e._deepRootPunished = true;
+          const burstDmg = Math.max(40, Math.round(e.hp * 0.40));
+          scene.enemyManager.applyDamage(e, burstDmg, true, 'magic', scene.fx, 'reactions');
+          e.residualSlowTimer = Math.max(e.residualSlowTimer || 0, 2.2);
+          e.residualSlowValue = Math.max(e.residualSlowValue || 0, 0.65);
+          if (scene.fx) {
+            scene.fx.spawnFloatingText(e.x, e.y - 24, `深根制裁 -${burstDmg}`, '#73D13D', 1.15);
+          }
         }
       }
     }

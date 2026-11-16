@@ -107,6 +107,7 @@ class BossOverdriveEngine {
         this.channelType = 'stomp';
         this.channelMax = 2.4;
         this.channelTimer = 2.4;
+        platform.playSfx('sfx_boss_channel');
         if (scene.fx) {
           scene.fx.spawnFloatingText(this.activeBoss.x, this.activeBoss.y - 34, '⚡ 蓄力震地! 速用天雷/裂地打断!', '#FFA940', 1.2);
         }
@@ -122,6 +123,7 @@ class BossOverdriveEngine {
         this.channelType = 'summon';
         this.channelMax = 2.4;
         this.channelTimer = 2.4;
+        platform.playSfx('sfx_boss_channel');
         if (scene.fx) {
           scene.fx.spawnFloatingText(this.activeBoss.x, this.activeBoss.y - 34, '🕳️ 蓄力唤虫! 速打断破防!', '#B37FEB', 1.2);
         }

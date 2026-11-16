@@ -35,12 +35,14 @@ class SporelingPatrol {
   /**
    * 应用远古真菌知识之树「钢盔小蘑兵」加成（双倍生命 + 首次濒死神圣眩晕盾）
    */
-  applyKnowledgeTree(ironRank) {
+  applyKnowledgeTree(ironRank, scene = null) {
     this.ironRank = ironRank || 0;
+    if (scene) this.scene = scene;
+    const stdMul = (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('heroic_standard')) ? 1.45 : 1.0;
     for (let i = 0; i < this.guards.length; i++) {
       const g = this.guards[i];
       const baseMax = g.role === 'shield' ? 320 : 210;
-      g.maxHp = this.ironRank > 0 ? baseMax * 2 : baseMax;
+      g.maxHp = Math.round((this.ironRank > 0 ? baseMax * 2 : baseMax) * stdMul);
       g.hp = g.maxHp;
       g.deathShield = this.ironRank > 0;
     }
@@ -325,7 +327,8 @@ class SporelingPatrol {
             }
             // 阵亡
             g.state = 'dead';
-            g.respawnTimer = 10.0;
+            const fastRespawn = Boolean(this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('heroic_standard'));
+            g.respawnTimer = fastRespawn ? 6.5 : 10.0;
             if (e.blockedBy === g) {
               e.isBlocked = false;
               e.blockedBy = null;
@@ -333,7 +336,7 @@ class SporelingPatrol {
             g.blockedEnemy = null;
             if (fx) {
               fx.spawnParticles(g.x, g.y, 16, ['#5C4028', '#A08060'], 20, 60, 0.2, 0.5, 3);
-              fx.spawnFloatingText(g.x, g.y - 16, '菇精卫阵亡 (10s重生)', '#FF7875', 1.2);
+              fx.spawnFloatingText(g.x, g.y - 16, `菇精卫阵亡 (${g.respawnTimer}s重生)`, '#FF7875', 1.2);
             }
           }
         }

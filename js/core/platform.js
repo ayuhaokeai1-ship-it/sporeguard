@@ -115,7 +115,12 @@ const SFX_VOLUMES = {
   sfx_heal: 0.70,
   sfx_resonate_burst: 0.90,
   sfx_boss_interrupt: 0.88,
-  sfx_crystal_clear: 0.82
+  sfx_crystal_clear: 0.82,
+  sfx_synergy_link: 0.84,
+  sfx_boss_channel: 0.80,
+  sfx_victory_fanfare: 0.88,
+  sfx_defeat_toll: 0.82,
+  sfx_relic_equip: 0.76
 };
 
 /**
@@ -774,6 +779,43 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
         playAcousticNote(cNotes[i] * p, t0 + i * 0.045, 0.30, 0.16 * volumeMod, [1, 2.0, 2.756], 0.26);
       }
       return true;
+    } else if (sfxKey === 'sfx_synergy_link') {
+      // 菌灵星轨共鸣连接：竖琴五度晶耀和弦 (Mystic Mycelium Synergy Chime)
+      playFilteredNoise(t0 + 0.02, 0.24, 'highpass', 2800, 5800, 2.0, 0.08 * volumeMod);
+      const sNotes = [440.0, 554.37, 659.25, 880.0, 1318.51];
+      for (let i = 0; i < sNotes.length; i++) {
+        playAcousticNote(sNotes[i] * p, t0 + i * 0.052, 0.38, 0.15 * volumeMod, [1, 2.0, 3.0], 0.24);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_boss_channel') {
+      // 首领大招蓄力警报：深沉低音战角震颤 (Boss Channeling Warning Horn)
+      playFilteredNoise(t0, 0.36, 'lowpass', 520, 120, 1.0, 0.20 * volumeMod);
+      playAcousticNote(82.41, t0, 0.52, 0.25 * volumeMod, [1, 1.5, 2.2], 0.42);
+      playAcousticNote(123.47, t0 + 0.09, 0.44, 0.19 * volumeMod, [1, 2.0], 0.36);
+      return true;
+    } else if (sfxKey === 'sfx_victory_fanfare') {
+      // 守林胜利凯旋乐章：古树大调凯旋赞歌 (Victory Brass & Harp Fanfare)
+      playFilteredNoise(t0 + 0.08, 0.32, 'highpass', 3200, 6200, 2.2, 0.08 * volumeMod);
+      const vNotes = [392.0, 493.88, 587.33, 783.99, 987.77, 1174.66];
+      for (let i = 0; i < vNotes.length; i++) {
+        playAcousticNote(vNotes[i], t0 + i * 0.072, 0.55, 0.17 * volumeMod, [1, 2.0, 3.0], 0.26);
+      }
+      playAcousticNote(196.0, t0, 0.72, 0.20 * volumeMod, [1, 1.5, 2.0], 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_defeat_toll') {
+      // 防线失守低鸣钟：庄重低沉古林余响 (Sanctuary Fall Somber Toll)
+      playFilteredNoise(t0, 0.42, 'lowpass', 480, 95, 1.1, 0.16 * volumeMod);
+      const dNotes = [293.66, 246.94, 196.0, 146.83];
+      for (let i = 0; i < dNotes.length; i++) {
+        playAcousticNote(dNotes[i], t0 + i * 0.13, 0.52, 0.19 * volumeMod, [1, 2.0], 0.34);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_relic_equip') {
+      // 圣物镶嵌祭坛共鸣：精巧镶嵌+金铃回响 (Relic Socket Resonance)
+      playFilteredNoise(t0, 0.045, 'bandpass', 1900, 900, 1.8, 0.12 * volumeMod);
+      playAcousticNote(587.33 * p, t0, 0.14, 0.16 * volumeMod, [1, 2.0], 0.25);
+      playAcousticNote(880.0 * p, t0 + 0.05, 0.22, 0.17 * volumeMod, [1, 2.756], 0.22);
+      return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
@@ -894,6 +936,22 @@ function stopBgm() {
     } catch (e) {}
   }
   currentBgmKey = null;
+}
+
+/**
+ * 动态战局混音音量平滑调节（Boss/狂潮/备战/结算柔和过渡，避免音频割裂）
+ */
+function setBgmMixLevel(targetVol = 0.42) {
+  if (!audioUnlocked || !bgmEnabled || !currentBgmKey || bgmFadeTimer) return;
+  const inst = bgmContexts[currentBgmKey];
+  if (!inst || typeof inst.volume !== 'number') return;
+  const clamped = Math.max(0.08, Math.min(0.55, targetVol));
+  try {
+    const cur = inst.volume;
+    if (Math.abs(cur - clamped) > 0.015) {
+      inst.volume = Math.max(0.05, Math.min(0.58, cur + (clamped - cur) * 0.18));
+    }
+  } catch (e) {}
 }
 
 /**
@@ -1080,6 +1138,7 @@ module.exports = {
   getAudioConfig,
   playBgm,
   stopBgm,
+  setBgmMixLevel,
   playSfx,
   playHoverSfx,
   playMusicalScale,
