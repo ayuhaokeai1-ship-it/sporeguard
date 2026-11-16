@@ -204,6 +204,7 @@ class EnemyManager {
     e.isRooted = false;
     e.rootTimer = 0;
     e.stunTimer = 0;
+    e.bossStaggerTimer = 0;
     e._reactCd = 0;
     if (e.elementAuras) {
       e.elementAuras.pyro = 0;
@@ -359,28 +360,29 @@ class EnemyManager {
     }
     const baseEffArmor = this.getEffectiveArmor(enemy);
     const effArmor = Math.max(0, (baseEffArmor * (1 - armorPierceRatio)) - flatArmorPierce);
+    const staggerMult = (enemy.bossStaggerTimer > 0) ? 1.35 : 1.0;
     const actualDamage = Math.max(
       rawDamage - effArmor,
       rawDamage * CONFIG.COMBAT.MIN_ARMOR_DAMAGE_RATIO
-    ) * frontShieldMul;
+    ) * frontShieldMul * staggerMult;
 
     // 瞭望菇 A3 / 圣光神罚 命中后刷新 3 秒标记
     if (appliesMark || isHolySmite) {
       enemy.markTimer = CONFIG.COMBAT.MARK_DURATION;
     }
 
-    // 5.7 单体命中表现：目标白闪 2 帧 + 重甲敲击/暴击拟音
+    // 5.7 单体命中表现：目标白闪 2 帧 + 重甲敲击/暴击拟音 (含立体声声场定位)
     enemy.whiteFlashFrames = CONFIG.FEEDBACK.HIT.whiteFlashFrames;
     if (enemy.type === 'armored' || enemy.baseArmor > 0) {
       enemy.hitArmorFrames = 6;
       if (frontShieldMul < 1.0 || (effArmor >= 10 && rawDamage <= effArmor + 10)) {
-        platform.playSfx('sfx_armor_clang', 0.65);
+        platform.playSfx('sfx_armor_clang', 0.65, 1.0, false, enemy.x);
       }
     }
 
     if (isCrit && fx) {
       fx.spawnFloatingText(enemy.x, enemy.y - 14, '💥' + Math.round(actualDamage), '#FFD700', 1.12);
-      platform.playSfx('sfx_crit', 0.72);
+      platform.playSfx('sfx_crit', 0.72, 1.0, false, enemy.x);
     }
 
     enemy.hp -= actualDamage;
@@ -518,7 +520,7 @@ class EnemyManager {
   applyDamage(enemy, amount, isCrit = false, dType = 'physical', fx = null, source = null) {
     if (!enemy || enemy.state === 'death' || enemy.hp <= 0) return 0;
     const finalFx = fx || (this.scene ? this.scene.fx : null);
-    let dmg = Math.max(1, Math.round(amount));
+    let dmg = Math.max(1, Math.round(amount * ((enemy.bossStaggerTimer || 0) > 0 ? 1.35 : 1.0)));
 
     if (dType === 'physical' && enemy.baseArmor && !isCrit) {
       const reduction = Math.max(0.2, 1 - (enemy.baseArmor * 0.05));
@@ -653,6 +655,12 @@ class EnemyManager {
     }
     // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子 & 黄金宝囊虫暴击横财
     if (this.scene) {
+      if (typeof this.scene.addResonance === 'function') {
+        this.scene.addResonance(enemy.isBoss ? 25 : ((enemy.isElite || enemy.isTreasure) ? 10 : 3));
+      }
+      if ((this.scene.resonanceActiveTimer || 0) > 0 && economy && (enemy.reward || 0) > 0) {
+        economy.addSpores(Math.max(1, Math.round((enemy.reward || 2) * 0.25)));
+      }
       if (enemy.isTreasure) {
         const bonusGold = 35 + (enemy.waveIndex || 1) * 4;
         if (economy) economy.addSpores(bonusGold);
@@ -774,6 +782,9 @@ class EnemyManager {
       }
       if (e.stunTimer > 0) {
         e.stunTimer = Math.max(0, e.stunTimer - dt);
+      }
+      if ((e.bossStaggerTimer || 0) > 0) {
+        e.bossStaggerTimer = Math.max(0, e.bossStaggerTimer - dt);
       }
       if (e.rootTimer > 0) {
         e.rootTimer = Math.max(0, e.rootTimer - dt);
@@ -1068,6 +1079,9 @@ class EnemyManager {
         }
         if (fx) {
           fx.onSeedDamaged(sampleEnd.x, sampleEnd.y);
+        }
+        if (this.scene) {
+          this.scene.lastLeakEnemyType = e.type;
         }
         const defeated = economy ? economy.onEnemyLeak(e.threat) : false;
         this.pool.releaseAt(i);

@@ -709,6 +709,9 @@ class TowerManager {
       if (this.scene && this.scene.blessingMods && this.scene.blessingMods.globalAspdBonus > 0) {
         speedCoeff *= (1.0 + this.scene.blessingMods.globalAspdBonus);
       }
+      if (this.scene && this.scene.resonanceActiveTimer > 0) {
+        speedCoeff *= 1.35;
+      }
       const vetStats = this.getVeteranStats(t);
       if (vetStats.aspdBonus > 0) {
         speedCoeff *= (1.0 + vetStats.aspdBonus);
@@ -887,11 +890,12 @@ class TowerManager {
   getBuffedNode(tower) {
     if (!tower || !tower.node) return tower.node;
     const vet = this.getVeteranStats(tower);
-    if (!tower.luminaDmgBonus && !vet.dmgBonus && !vet.critBonus) return tower.node;
+    const resCritBonus = (this.scene && this.scene.resonanceActiveTimer > 0) ? 0.20 : 0;
+    if (!tower.luminaDmgBonus && !vet.dmgBonus && !vet.critBonus && !resCritBonus) return tower.node;
     return Object.assign({}, tower.node, {
       damageBonus: (tower.node.damageBonus || 0) + (tower.luminaDmgBonus || 0) + vet.dmgBonus,
-      critRate: (tower.node.critRate || 0) + vet.critBonus,
-      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, vet.critBonus > 0 ? 1.85 : 1.0)
+      critRate: (tower.node.critRate || 0) + vet.critBonus + resCritBonus,
+      critMultiplier: Math.max(tower.node.critMultiplier || 1.0, (vet.critBonus > 0 || resCritBonus > 0) ? 1.85 : 1.0)
     });
   }
 
@@ -904,22 +908,22 @@ class TowerManager {
         watchNode.critRate = (watchNode.critRate || 0) + 0.20;
       }
       bulletManager.spawnWatchBullet(tower.x, tower.y - 10, null, obs.x, obs.y, watchNode, baseDmg, obs);
-      platform.playSfx('sfx_shoot');
+      platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'mist') {
       bulletManager.spawnMistCloud(obs.x, obs.y, node);
-      platform.playSfx('sfx_mist');
+      platform.playSfx('sfx_mist', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'thorn') {
       const baseAngle = Math.atan2(obs.y - tower.y, obs.x - tower.x);
       const thornOpts = { hasPoisonThorn: tower.synergies && tower.synergies.hasPoisonThorn };
       bulletManager.spawnThornSpike(tower.x, tower.y - 6, baseAngle, node, baseDmg, 1.0, thornOpts);
-      platform.playSfx('sfx_thorn');
+      platform.playSfx('sfx_thorn', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'burst') {
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
       bulletManager.spawnBurstShell(tower.x, tower.y - 12, obs.x, obs.y, node, baseDmg, burstOpts);
-      platform.playSfx('sfx_shoot');
+      platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'lumina') {
       bulletManager.spawnLuminaRay(tower.x, tower.y - 10, null, node, baseDmg, obs);
-      platform.playSfx('sfx_laser');
+      platform.playSfx('sfx_laser', 1.0, 1.0, false, tower.x);
     }
   }
 
@@ -944,11 +948,11 @@ class TowerManager {
           if (wb2) wb2.sourceTower = tower;
         }
       }
-      platform.playSfx('sfx_shoot');
+      platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'mist') {
       const mh = bulletManager.spawnMistCloud(target.x, target.y, Object.assign({}, node, { sourceTower: tower }));
       if (mh && !mh.sourceTower) mh.sourceTower = tower;
-      platform.playSfx('sfx_mist');
+      platform.playSfx('sfx_mist', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'thorn') {
       const dist = Math.hypot(target.x - tower.x, target.y - tower.y);
       const travelSec = dist / (node.bulletSpeed || 900);
@@ -969,17 +973,17 @@ class TowerManager {
         if (tbL) tbL.sourceTower = tower;
         if (tbR) tbR.sourceTower = tower;
       }
-      platform.playSfx('sfx_thorn');
+      platform.playSfx('sfx_thorn', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'burst') {
       const pred = enemyManager.predictEnemyPosition(target, node.flightTime || 0.38, map);
       const burstOpts = { hasToxicBurst: tower.synergies && tower.synergies.hasToxicBurst };
       const bb = bulletManager.spawnBurstShell(tower.x, tower.y - 12, pred.x, pred.y, node, baseDmg, burstOpts);
       if (bb) bb.sourceTower = tower;
-      platform.playSfx('sfx_shoot');
+      platform.playSfx('sfx_shoot', 1.0, 1.0, false, tower.x);
     } else if (tower.typeId === 'lumina') {
       const lb = bulletManager.spawnLuminaRay(tower.x, tower.y - 10, target, node, baseDmg);
       if (lb) lb.sourceTower = tower;
-      platform.playSfx('sfx_laser');
+      platform.playSfx('sfx_laser', 1.0, 1.0, false, tower.x);
     }
   }
 
@@ -1324,7 +1328,10 @@ class TowerManager {
         fx.spawnParticles(tower.x, tower.y, 28, ['#FFD700', '#FFF1B8', '#69C0FF', '#FFFFFF'], 35, 110, 0.35, 0.65, 4);
         fx.spawnFloatingText(tower.x, tower.y - 30, '挣脱! 破茧狂暴+30%!', '#FFD700', 1.4);
       }
-      platform.playSfx('sfx_web_snap', 1.0, 1.45, true);
+      platform.playSfx('sfx_web_snap', 1.0, 1.45, true, tower.x);
+      if (this.scene && typeof this.scene.addResonance === 'function') {
+        this.scene.addResonance(8);
+      }
       if (this.scene && this.scene.woodlandBlessings) {
         this.scene.woodlandBlessings.triggerStormArc(this.scene, 2, 130);
       }

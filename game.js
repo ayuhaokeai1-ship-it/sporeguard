@@ -107,7 +107,10 @@ function bootstrapGame() {
     'assets/vfx/enemy_treasure_beetle.png',
     'assets/vfx/vfx_target_lock.png',
     'assets/vfx/vfx_veteran_crest.png',
-    'assets/vfx/range_commander_reticle.png'
+    'assets/vfx/range_commander_reticle.png',
+    'assets/vfx/vfx_spawn_portal.png',
+    'assets/ui/frames/medallion_ring.png',
+    'assets/vfx/vfx_resonance_orb.png'
   ];
 
   Promise.all([

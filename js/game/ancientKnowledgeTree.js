@@ -514,7 +514,7 @@ class AncientKnowledgeTree {
       const iconAssets = {
         mycelium_network: 'assets/vfx/item_awakening_seed.png',
         bountiful_harvest: 'assets/vfx/prop_dew.png',
-        photosynthetic_surge: 'assets/vfx/relic_lumina.png',
+        photosynthetic_surge: 'assets/vfx/vfx_resonance_orb.png',
         elder_photosynthesis: 'assets/vfx/item_golden_spore.png',
         bark_armor: 'assets/vfx/relic_shield.png',
         iron_sporelings: 'assets/vfx/sporeling_guard.png',
@@ -530,27 +530,18 @@ class AncientKnowledgeTree {
         avatar_of_nature: 'assets/vfx/hero_oak.png'
       };
       const iconImg = platform.getImage(iconAssets[t.id] || 'assets/vfx/item_golden_spore.png');
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
       const medCx = cx + cardW * 0.5;
-      const medCy = cy + 36;
-      const medR = 23;
+      const medCy = cy + 38;
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(medCx, medCy, medR, 0, Math.PI * 2);
-      ctx.fillStyle = curRank > 0 ? 'rgba(28, 48, 24, 0.96)' : 'rgba(18, 14, 10, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = isMax ? '#FFD700' : (curRank > 0 ? '#73D13D' : 'rgba(196, 143, 69, 0.55)');
-      ctx.lineWidth = isMax ? 2.0 : 1.3;
-      ctx.stroke();
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, medCx - 29, medCy - 29, 58, 58);
+      }
       if (iconImg && iconImg.width) {
         const sc = Math.min(34 / iconImg.width, 34 / iconImg.height);
         const dw = iconImg.width * sc;
         const dh = iconImg.height * sc;
         ctx.drawImage(iconImg, medCx - dw * 0.5, medCy - dh * 0.5, dw, dh);
-      } else {
-        ctx.font = '24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(t.icon, medCx, medCy);
       }
       ctx.restore();
 

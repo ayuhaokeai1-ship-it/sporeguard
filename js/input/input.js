@@ -172,6 +172,8 @@ function handleKeyDown(rawKey) {
     emitAction('cycle_speed');
   } else if (key === 'keyf' || key === 'f') {
     emitAction('hero_ultimate');
+  } else if (key === 'keyt' || key === 't') {
+    emitAction('trigger_resonance');
   } else if (key === 'keyz' || key === 'z') {
     emitAction('cycle_hero_stance');
   } else if (key === 'keym' || key === 'm') {

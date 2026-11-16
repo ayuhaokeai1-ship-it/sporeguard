@@ -257,30 +257,60 @@ class GameMap {
         scene.targetedObstacle = null;
       }
 
-      // 奖励爆发：黄金孢子 + 20%几率掉落远古觉醒种子
+      // 开荒特色奇遇奖励：4 类障碍物破除后均开辟新灵土并触发各自专属战地增益！
       const rewardSpores = 35 + (obs.variant || 0) * 10;
       if (economy) {
         economy.addSpores(rewardSpores);
       }
-      let dropAwakening = false;
-      if (scene && Math.random() < 0.20) {
-        scene.awakeningSeeds = (scene.awakeningSeeds || 0) + 1;
-        dropAwakening = true;
+      let bonusBanner = null;
+      const v = (obs.variant || 0) % 4;
+      if (scene) {
+        if (typeof scene.addResonance === 'function') scene.addResonance(10);
+        if (v === 0) {
+          // 枯萎巨桩：自然生机涌现，治疗生命最低友军/英雄 +85 HP
+          if (scene.hero && scene.hero.state !== 'dead') {
+            scene.hero.hp = Math.min(scene.hero.maxHp, scene.hero.hp + 85);
+          }
+          bonusBanner = '🌿 树芯回春 +85 HP!';
+        } else if (v === 1) {
+          // 古遗石堆：古圣契约庇护，获得 +1 层基地圣盾
+          scene.holyShieldCharges = Math.min(3, (scene.holyShieldCharges || 0) + 1);
+          bonusBanner = '🛡️ 古石赐福 · 基地圣盾+1!';
+        } else if (v === 2) {
+          // 幽森魔晶：必掉 1 颗觉醒种子 + 缩减全神术 35% 冷却
+          scene.awakeningSeeds = Math.min(5, (scene.awakeningSeeds || 0) + 1);
+          for (const sk in scene.spells) {
+            if (scene.spells[sk] && scene.spells[sk].timer > 0) {
+              scene.spells[sk].timer = Math.max(0, scene.spells[sk].timer * 0.65);
+            }
+          }
+          bonusBanner = '✨ 魔晶激涌 · +1觉醒 & 冷却-35%!';
+        } else if (v === 3 && scene.enemyManager) {
+          // 荆棘腐木：荆棘爆碎震撼 110px 敌军造成 90 点破甲伤
+          const alive = scene.enemyManager.getAliveEnemies();
+          for (let ei = 0; ei < alive.length; ei++) {
+            const em = alive[ei];
+            if (Math.hypot(em.x - obs.x, em.y - obs.y) <= 115) {
+              scene.enemyManager.applyDamage(em, 90, false, 'pierce', fx, 'reactions');
+            }
+          }
+          bonusBanner = '💥 腐木荆爆 · 震伤周边虫群!';
+        }
       }
 
       if (fx) {
         fx.triggerScreenShake(3.5, 0.25);
-        fx.spawnFloatingText(obs.x, obs.y - 24, `🌱 开辟领地 +${rewardSpores} 孢子!`, '#FFE58F', 1.35);
-        if (dropAwakening) {
-          fx.spawnFloatingText(obs.x, obs.y - 44, '✨ 发现远古觉醒种子!', '#B37FEB', 1.8);
+        fx.spawnFloatingText(obs.x, obs.y - 24, `开辟领地 +${rewardSpores} 孢子!`, '#FFE58F', 1.35);
+        if (bonusBanner) {
+          fx.spawnFloatingText(obs.x, obs.y - 44, bonusBanner, '#95DE64', 1.5);
         }
         fx.spawnParticles(obs.x, obs.y, 28, ['#52C41A', '#FFE58F', '#8C6842', '#D48806', '#FFFFFF'], 40, 120, 0.3, 0.6, 4);
         if (typeof fx.spawnShockwave === 'function') {
-          fx.spawnShockwave(obs.x, obs.y, 40, '#52C41A');
+          fx.spawnShockwave(obs.x, obs.y, 48, v === 2 ? '#69C0FF' : '#52C41A');
         }
       }
-      platform.playSfx('sfx_bomb');
-      platform.playSfx('sfx_win', 0.8);
+      platform.playSfx(v === 2 ? 'sfx_crystal_clear' : 'sfx_bomb', 0.9, 1.0, false, obs.x);
+      platform.playSfx('sfx_win', 0.72, 1.0, false, obs.x);
       if (typeof wx !== 'undefined' && wx.vibrateShort) {
         try { wx.vibrateShort({ type: 'heavy' }); } catch (e) {}
       }
@@ -520,33 +550,37 @@ class GameMap {
           portals.push(this.mapData.spawnTile2);
         }
       }
-      const pulse = 1.0 + Math.sin(animTimeSec * 5.2) * 0.1;
+      const portalSigilImg = platform.getImage('assets/vfx/vfx_spawn_portal.png');
+      const pulse = 1.0 + Math.sin(animTimeSec * 5.2) * 0.08;
       for (let pi = 0; pi < portals.length; pi++) {
         const pt = portals[pi];
         if (!pt) continue;
         const px = (pt[0] + 0.5) * TILE_SIZE;
         const py = (pt[1] + 0.5) * TILE_SIZE;
         ctx.save();
-        const pGrad = ctx.createRadialGradient(px, py, 2, px, py, 19 * pulse);
-        pGrad.addColorStop(0, 'rgba(255, 110, 64, 0.42)');
-        pGrad.addColorStop(0.7, 'rgba(180, 30, 30, 0.25)');
-        pGrad.addColorStop(1, 'rgba(120, 18, 18, 0)');
-        ctx.fillStyle = pGrad;
-        ctx.beginPath();
-        ctx.arc(px, py, 19 * pulse, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 备战倒计时外环进度弧
-        ctx.beginPath();
-        ctx.arc(px, py, 19.5, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * prog);
-        ctx.strokeStyle = 'rgba(255, 92, 92, 0.90)';
-        ctx.lineWidth = 2.4;
-        ctx.stroke();
+        if (portalSigilImg && portalSigilImg.width) {
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(animTimeSec * 0.9);
+          ctx.globalAlpha = 0.86;
+          const sz = Math.round(42 * pulse);
+          ctx.drawImage(portalSigilImg, -sz * 0.5, -sz * 0.5, sz, sz);
+          ctx.restore();
+        } else {
+          const pGrad = ctx.createRadialGradient(px, py, 2, px, py, 19 * pulse);
+          pGrad.addColorStop(0, 'rgba(255, 110, 64, 0.42)');
+          pGrad.addColorStop(0.7, 'rgba(180, 30, 30, 0.25)');
+          pGrad.addColorStop(1, 'rgba(120, 18, 18, 0)');
+          ctx.fillStyle = pGrad;
+          ctx.beginPath();
+          ctx.arc(px, py, 19 * pulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         // 清晰提前迎战提示微标
         const tagY = Math.max(12, py - 24);
         const tagX = Math.max(26, Math.min(614, px));
-        ctx.fillStyle = 'rgba(28, 14, 8, 0.90)';
+        ctx.fillStyle = 'rgba(28, 14, 8, 0.92)';
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 1.0;
         ctx.beginPath();

@@ -112,7 +112,10 @@ const SFX_VOLUMES = {
   sfx_hero_roots: 0.82,
   sfx_horn_rush: 0.84,
   sfx_phase_shift: 0.86,
-  sfx_heal: 0.70
+  sfx_heal: 0.70,
+  sfx_resonate_burst: 0.90,
+  sfx_boss_interrupt: 0.88,
+  sfx_crystal_clear: 0.82
 };
 
 /**
@@ -446,6 +449,8 @@ function unlockAudio() {
  * 多泛音原声乐器物理合成引擎 2.0 (Kalimba / Rosewood Marimba / Harp / Acoustic Pluck)
  * 彻底告别粗糙方波电子音，提供温润、清脆、有质感的森林原声打击乐体验
  */
+let activeStereoDest = null;
+
 function ensureAudioGraph() {
   if (!webAudioCtx) return null;
   if (!masterCompressor && typeof webAudioCtx.createDynamicsCompressor === 'function') {
@@ -475,7 +480,21 @@ function ensureAudioGraph() {
     }
     foleyNoiseBuffer = buf;
   }
-  return masterCompressor || webAudioCtx.destination;
+  return activeStereoDest || masterCompressor || webAudioCtx.destination;
+}
+
+function createStereoDest(panX) {
+  const baseOut = masterCompressor || (webAudioCtx && webAudioCtx.destination) || null;
+  if (!baseOut || panX === null || panX === undefined || typeof webAudioCtx.createStereoPanner !== 'function') {
+    return baseOut;
+  }
+  const norm = Math.abs(panX) > 1.5 ? ((panX - 320) / 320) : panX;
+  const clamped = Math.max(-0.62, Math.min(0.62, norm));
+  if (Math.abs(clamped) < 0.04) return baseOut;
+  const panner = webAudioCtx.createStereoPanner();
+  panner.pan.setValueAtTime(clamped, webAudioCtx.currentTime);
+  panner.connect(baseOut);
+  return panner;
 }
 
 function playFilteredNoise(startTime, duration, filterType, freqStart, freqEnd, q, vol) {
@@ -731,6 +750,30 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
         playAcousticNote(hNotes[i] * p, t0 + i * 0.05, 0.22, 0.13 * volumeMod, [1, 2.0], 0.26);
       }
       return true;
+    } else if (sfxKey === 'sfx_resonate_burst') {
+      // 万木共振爆发：古树圣域宏大泛音大三和弦+暖低频共鸣 (World Tree Resonance Climax)
+      playFilteredNoise(t0, 0.35, 'highpass', 2400, 6200, 1.8, 0.11 * volumeMod);
+      playAcousticNote(130.81, t0, 0.55, 0.24 * volumeMod, [1, 1.5, 2.0], 0.36);
+      const rNotes = [392.0, 523.25, 659.25, 783.99, 1046.5];
+      for (let i = 0; i < rNotes.length; i++) {
+        playAcousticNote(rNotes[i] * p, t0 + i * 0.038, 0.45, 0.16 * volumeMod, [1, 2.0, 3.0], 0.28);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_boss_interrupt') {
+      // 首领破防打断：清脆晶体击碎+沉稳战鼓+亮金回响 (Boss Stagger Interrupt)
+      playFilteredNoise(t0, 0.18, 'highpass', 2800, 5800, 1.5, 0.16 * volumeMod);
+      playAcousticNote(110.0, t0, 0.28, 0.22 * volumeMod, [1, 1.5], 0.40);
+      playAcousticNote(987.77, t0, 0.25, 0.18 * volumeMod, [1, 2.756], 0.26);
+      playAcousticNote(1318.51, t0 + 0.045, 0.32, 0.17 * volumeMod, [1, 2.0], 0.24);
+      return true;
+    } else if (sfxKey === 'sfx_crystal_clear') {
+      // 幽森魔晶破除：魔力泉涌上升三连音 (Arcane Crystal Shatter)
+      playFilteredNoise(t0, 0.16, 'bandpass', 2600, 5400, 2.2, 0.10 * volumeMod);
+      const cNotes = [587.33, 739.99, 880.0, 1174.66];
+      for (let i = 0; i < cNotes.length; i++) {
+        playAcousticNote(cNotes[i] * p, t0 + i * 0.045, 0.30, 0.16 * volumeMod, [1, 2.0, 2.756], 0.26);
+      }
+      return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
@@ -857,7 +900,7 @@ function stopBgm() {
  * 播放音效（优先使用音频文件，同时提供低延迟合成泛音确保零延迟打击感）
  */
 const sfxThrottle = {};
-function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false) {
+function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false, panX = null) {
   if (!audioUnlocked || !sfxEnabled) return;
   const now = nowMs();
   if (!bypassThrottle && sfxThrottle[sfxKey] && (now - sfxThrottle[sfxKey] < 45)) {
@@ -870,9 +913,9 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
     try {
       if (sfxKey === 'sfx_click') navigator.vibrate(8);
       else if (sfxKey === 'sfx_build') navigator.vibrate(15);
-      else if (sfxKey === 'sfx_upgrade') navigator.vibrate([10, 30, 15]);
+      else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_resonate_burst') navigator.vibrate([10, 30, 15]);
       else if (sfxKey === 'sfx_hurt') navigator.vibrate(22);
-      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb') navigator.vibrate(30);
+      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boss_interrupt') navigator.vibrate(30);
     } catch (e) {}
   }
   if (typeof wx !== 'undefined' && wx.vibrateShort) {
@@ -883,9 +926,11 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
     } catch (e) {}
   }
 
-  // 1. WebAudio 优先：多发无损并发 + 细腻自然随机音高抖动与五声音阶升调支持
+  // 1. WebAudio 优先：多发无损并发 + 空间左右声道立体定位 + 自然音高微扰
   if (webAudioCtx) {
     const pRate = (pitchMod || 1.0) * (pitchMod && pitchMod !== 1.0 ? 1.0 : (0.96 + Math.random() * 0.08));
+    ensureAudioGraph();
+    const outDest = createStereoDest(panX);
     if (audioBuffers[sfxKey]) {
       try {
         const srcNode = webAudioCtx.createBufferSource();
@@ -895,7 +940,7 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
         const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
         gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
         srcNode.connect(gainNode);
-        gainNode.connect(ensureAudioGraph());
+        gainNode.connect(outDest || ensureAudioGraph());
         srcNode.start(0);
         return;
       } catch (e) {}
@@ -916,8 +961,13 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
             loadingAudioBuffers[sfxKey] = false;
           });
       }
-      if (playSynthesizedSound(sfxKey, volumeMod, pRate)) {
-        return;
+      activeStereoDest = outDest;
+      try {
+        if (playSynthesizedSound(sfxKey, volumeMod, pRate)) {
+          return;
+        }
+      } finally {
+        activeStereoDest = null;
       }
     }
   }

@@ -374,6 +374,10 @@ class ForestHero {
         const dist = Math.hypot(e.x - this.x, e.y - this.y);
         if (dist <= baseRadius) {
           enemyManager.applyDamage(e, skillDmg, false, 'physical', fx, 'hero');
+          const bossScene = this.scene || (enemyManager && enemyManager.scene);
+          if (e.isBoss && bossScene && bossScene.bossOverdriveEngine) {
+            bossScene.bossOverdriveEngine.interruptBoss(bossScene);
+          }
           // 强力定身晕眩
           e.activeSlow = 0.95;
           e.residualSlowValue = 0.85;

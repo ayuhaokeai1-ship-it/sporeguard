@@ -1382,6 +1382,9 @@ class UiManager {
     // 3. 顶部右上角极简控制栏 (仅 3 个清晰木质按钮: [倍速], [暂停], [菜单])
     this.renderPvZTopRightMenu(ctx, scene);
 
+    // 3.5 右下角外框「万木共振 [T]」森林充能水晶徽章（严格置于 x=808..946 战场外安全侧边距，绝不遮挡地块）
+    this.renderForestResonanceHud(ctx, scene);
+
     // 4. 【彻底释放全屏战场】左下角极简圆盘英雄徽章与3大自然神术法球 (占据极小空间，95%画面完全纯净沉浸！)
     this.renderPvZBottomLeftHeroAndSpells(ctx, scene);
 
@@ -3997,16 +4000,20 @@ class UiManager {
       ctx.textBaseline = 'middle';
       ctx.fillText(tagStr, cx + cardW - 63, cy + 32);
 
-      // 圆形手绘图标法阵底托
+      // 手绘古铜法阵圆环底托（100% AI 栅格美术，禁止几何矢量圆）
       const icCx = cx + cardW * 0.5;
       const icCy = cy + 94;
-      ctx.beginPath();
-      ctx.arc(icCx, icCy, 36, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(26, 18, 10, 0.90)';
-      ctx.fill();
-      ctx.strokeStyle = hovered ? '#FFD700' : (ch.accent || '#C68F45');
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
+      const medImg = platform.getImage('assets/ui/frames/medallion_ring.png');
+      if (medImg && medImg.width) {
+        ctx.drawImage(medImg, icCx - 42, icCy - 42, 84, 84);
+      }
+      if (hovered) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.25;
+        if (medImg && medImg.width) ctx.drawImage(medImg, icCx - 44, icCy - 44, 88, 88);
+        ctx.restore();
+      }
 
       const img = platform.getImage(ch.icon);
       if (img && img.width) {
@@ -4059,7 +4066,7 @@ class UiManager {
     const bestEndless = (save && save.endlessRecord) ? save.endlessRecord.bestWave : 0;
 
     const mw = 446;
-    const mh = isEndless ? 336 : (isWin ? (scene.hasNextMap() ? 404 : 362) : 348);
+    const mh = isEndless ? 336 : (isWin ? (scene.hasNextMap() ? 404 : 362) : 378);
     const mx = (960 - mw) * 0.5;
     const my = (540 - mh) * 0.5;
 
@@ -4250,14 +4257,31 @@ class UiManager {
           scene.enterLevelSelect();
         });
       } else {
-        this.drawPixelButton(ctx, 'settle_restart', bx, my + 220, bw, 40, i18n.t('btn_restart'), {
+        const advice = (typeof scene.getDefeatAdvice === 'function') ? scene.getDefeatAdvice() : '';
+        if (advice) {
+          roundRectPath(ctx, mx + 36, my + 210, mw - 72, 28, 7);
+          ctx.fillStyle = 'rgba(140, 29, 24, 0.10)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(140, 29, 24, 0.28)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          drawArtText(ctx, advice, mx + mw * 0.5, my + 224, {
+            style: 'ink',
+            color: '#7A201A',
+            size: 10.5,
+            align: 'center',
+            baseline: 'middle',
+            strokeWidth: 0
+          });
+        }
+        this.drawPixelButton(ctx, 'settle_restart', bx, my + 246, bw, 40, i18n.t('btn_restart'), {
           skin: 'btn_green'
         }, () => {
           platform.playSfx('sfx_click');
           scene.restartLevel();
         });
 
-        this.drawPixelButton(ctx, 'settle_levels', bx, my + 270, bw, 40, i18n.t('btn_level_select'), {
+        this.drawPixelButton(ctx, 'settle_levels', bx, my + 296, bw, 40, i18n.t('btn_level_select'), {
           skin: 'btn_wood'
         }, () => {
           platform.playSfx('sfx_click');
@@ -5636,6 +5660,115 @@ class UiManager {
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.7
+    });
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 【右下角外框「万木共振 [T]」森林充能水晶徽章】(置于 x=808..946, y=418..464)
+  // =========================================================================
+  renderForestResonanceHud(ctx, scene) {
+    if (!scene || scene.state !== 'BATTLE') return;
+    const rx = 808;
+    const ry = 418;
+    const rw = 138;
+    const rh = 46;
+    const activeTimer = scene.resonanceActiveTimer || 0;
+    const isActive = activeTimer > 0;
+    const charge = isActive ? 100 : Math.max(0, Math.min(100, Math.round(scene.resonanceCharge || 0)));
+    const isReady = !isActive && charge >= 100;
+    const hovered = this.hoverX >= rx && this.hoverX <= rx + rw && this.hoverY >= ry && this.hoverY <= ry + rh;
+
+    ctx.save();
+    roundRectPath(ctx, rx, ry, rw, rh, 10);
+    const bgGrad = ctx.createLinearGradient(rx, ry, rx, ry + rh);
+    if (isActive) {
+      bgGrad.addColorStop(0, 'rgba(30, 68, 34, 0.94)');
+      bgGrad.addColorStop(1, 'rgba(14, 34, 18, 0.96)');
+    } else if (isReady) {
+      bgGrad.addColorStop(0, 'rgba(54, 42, 18, 0.94)');
+      bgGrad.addColorStop(1, 'rgba(28, 22, 10, 0.96)');
+    } else {
+      bgGrad.addColorStop(0, 'rgba(34, 24, 15, 0.90)');
+      bgGrad.addColorStop(1, 'rgba(18, 13, 8, 0.94)');
+    }
+    ctx.fillStyle = bgGrad;
+    ctx.fill();
+    ctx.strokeStyle = isActive
+      ? '#95DE64'
+      : (isReady ? (hovered ? '#FFF1B8' : '#FFD666') : (hovered ? '#E6B86A' : 'rgba(198, 143, 69, 0.65)'));
+    ctx.lineWidth = (isReady || isActive) ? 1.8 : 1.3;
+    ctx.stroke();
+
+    const orbImg = platform.getImage('assets/vfx/vfx_resonance_orb.png');
+    if (orbImg && orbImg.width) {
+      const pulse = (isReady || isActive) ? (1 + Math.sin(Date.now() * 0.008) * 0.08) : 1;
+      const sz = Math.round(34 * pulse);
+      const ox = rx + 24 - sz * 0.5;
+      const oy = ry + rh * 0.5 - sz * 0.5;
+      if (isReady || isActive) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.35 + Math.sin(Date.now() * 0.01) * 0.15;
+        ctx.drawImage(orbImg, ox - 3, oy - 3, sz + 6, sz + 6);
+        ctx.restore();
+      }
+      ctx.drawImage(orbImg, ox, oy, sz, sz);
+      platform.recordDrawCall(1);
+    }
+
+    const tx = rx + 46;
+    const barW = 82;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isActive ? '#B7EB8F' : (isReady ? '#FFE58F' : '#F4E6CA');
+    ctx.font = `bold 11px ${CN_FONT}`;
+    ctx.fillText('万木共振 [T]', tx, ry + 13);
+
+    roundRectPath(ctx, tx, ry + 22, barW, 7, 3.5);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fill();
+    const pct = isActive ? Math.max(0, Math.min(1, activeTimer / 10.0)) : (charge / 100);
+    if (pct > 0) {
+      const fillW = Math.max(4, Math.round(barW * pct));
+      roundRectPath(ctx, tx, ry + 22, fillW, 7, 3.5);
+      const fillGrad = ctx.createLinearGradient(tx, ry + 22, tx + fillW, ry + 22);
+      if (isActive) {
+        fillGrad.addColorStop(0, '#52C41A');
+        fillGrad.addColorStop(1, '#D9F7BE');
+      } else if (isReady) {
+        fillGrad.addColorStop(0, '#FAAD14');
+        fillGrad.addColorStop(1, '#FFF566');
+      } else {
+        fillGrad.addColorStop(0, '#389E0D');
+        fillGrad.addColorStop(1, '#95DE64');
+      }
+      ctx.fillStyle = fillGrad;
+      ctx.fill();
+    }
+
+    ctx.font = `bold 9.5px ${CN_FONT}`;
+    ctx.fillStyle = isActive ? '#95DE64' : (isReady ? '#FFD666' : '#D2BE9C');
+    const subText = isActive
+      ? `狂潮 ${activeTimer.toFixed(1)}s`
+      : (isReady ? '已蓄满·点击释放' : `充能 ${charge}%`);
+    ctx.fillText(subText, tx, ry + 37);
+
+    if (hovered && !this.inspectorOpen && !this.isDragging && !this.showSettingsModal && !this.showGuideModal && !this.showBlessingModal) {
+      this.bottomHoverTip = {
+        x: 680,
+        y: ry - 18,
+        text: '万木共振 [T]：击杀/破丝/清障/抢波蓄能，满100%激活10秒全军攻速+35%、暴击+20%、击杀孢子+25%并回血'
+      };
+    }
+
+    this.registerButton('forest_resonance', rx, ry, rw, rh, () => {
+      if (isReady && typeof scene.activateResonance === 'function') {
+        scene.activateResonance();
+      } else if (!isActive) {
+        platform.playSfx('sfx_click');
+        this.showToast(`万木共振充能 ${charge}%：击杀敌虫/救破蛛网/清障可加速充能`);
+      }
     });
     ctx.restore();
   }

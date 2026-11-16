@@ -74,7 +74,11 @@ class SceneController {
 
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
+    this.hero.scene = this;
     this.awakeningSeeds = 2;
+    this.resonanceCharge = 0;
+    this.resonanceActiveTimer = 0;
+    this.lastLeakEnemyType = null;
     this.weather = new WeatherManager();
     this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
@@ -212,7 +216,11 @@ class SceneController {
 
     this.speedMultiplier = 1;
     this.hero = new ForestHero(this.map);
+    this.hero.scene = this;
     this.awakeningSeeds = 2;
+    this.resonanceCharge = 0;
+    this.resonanceActiveTimer = 0;
+    this.lastLeakEnemyType = null;
     this.weather = new WeatherManager();
     this.weather.initForMap(this.currentMapId);
     this.achievements = achievements;
@@ -383,9 +391,70 @@ class SceneController {
         }
       }
     }
+    this.addResonance(8 + rushStreak * 3);
     if (this.achievements && rushStreak >= 3) {
       this.achievements.unlock('audacious_commander', this.fx);
     }
+  }
+
+  addResonance(amount) {
+    if (this.state !== 'BATTLE' || !amount || amount <= 0) return;
+    if (this.resonanceActiveTimer > 0) return;
+    const prev = this.resonanceCharge || 0;
+    this.resonanceCharge = Math.min(100, prev + amount);
+    if (prev < 100 && this.resonanceCharge >= 100) {
+      platform.playSfx('sfx_crystal_clear', 0.9, 1.08);
+      if (this.fx) {
+        this.fx.showBanner('万木共振蓄满！', '#73D13D', '点击右下「万木共振」或按 [T] 唤醒全林地狂潮', 2.4);
+      }
+    }
+  }
+
+  activateResonance() {
+    if (this.state !== 'BATTLE') return false;
+    if ((this.resonanceCharge || 0) < 100 || this.resonanceActiveTimer > 0) return false;
+    this.resonanceCharge = 0;
+    this.resonanceActiveTimer = 10.0;
+    platform.playSfx('sfx_resonate_burst', 1.0, 1.0);
+    if (this.hero && this.hero.state !== 'dead') {
+      this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + Math.round(this.hero.maxHp * 0.30));
+    }
+    if (this.towerManager && this.towerManager.towers) {
+      for (let i = 0; i < this.towerManager.towers.length; i++) {
+        const tw = this.towerManager.towers[i];
+        tw.isWebbed = false;
+        tw.webHealth = 0;
+        tw.dormantTimer = 0;
+        if (this.fx) {
+          this.fx.spawnParticles(tw.x, tw.y, 10, ['#73D13D', '#BAE7FF', '#FFD666'], 20, 65, 0.25, 0.45, 3.5);
+        }
+      }
+    }
+    if (this.fx) {
+      this.fx.triggerScreenShake(5.5, 0.35);
+      this.fx.showBanner('万木共振 · 林海狂潮！(10s)', '#95DE64', '全塔攻速 +35% · 暴击 +20% · 击杀孢子 +25%', 2.6);
+    }
+    return true;
+  }
+
+  getDefeatAdvice() {
+    const t = String(this.lastLeakEnemyType || '').toLowerCase();
+    if (t.includes('boss') || t.includes('king') || t.includes('queen') || t.includes('overlord')) {
+      return '战术复盘：首领蓄力阶段可用「雷霆震爆 / 大地轰鸣 / 天雷」打断并触发 +35% 破防易伤！';
+    }
+    if (t.includes('fly') || t.includes('wasp') || t.includes('moth') || t.includes('wing')) {
+      return '战术复盘：空中虫群移速较快，建议优先在路口补建「刺棘菇 / 瞭望菇」专职对空截杀！';
+    }
+    if (t.includes('armor') || t.includes('shield') || t.includes('beetle') || t.includes('heavy')) {
+      return '战术复盘：高甲前盾虫抗物理极强，请升级「灵光菇」魔法贯通或使用「爆裂菇」破甲！';
+    }
+    if (t.includes('spider') || t.includes('web')) {
+      return '战术复盘：蛛丝会封锁炮塔输出！发现白丝缠绕时请连点 3 下破茧，还能白嫖超频增伤！';
+    }
+    if (this.towerManager && this.towerManager.towers && this.towerManager.towers.length < 4) {
+      return '战术复盘：前期防线火力点偏少，建议先铺设多座「蘑菇守卫」覆盖拐角再逐步精升！';
+    }
+    return '战术复盘：合理利用「圣树召唤」、[T]万木共振与清理路障奇遇奖励，可在关键波次逆转战局！';
   }
 
   tryBuildOnSelectedTile() {
@@ -651,6 +720,9 @@ class SceneController {
           const shockBase = 350;
           const finalShockDmg = e.isFlying ? Math.round(shockBase * 1.5) : shockBase;
           this.enemyManager.applyDamage(e, finalShockDmg, true, 'magic', this.fx, 'reactions');
+          if (e.isBoss && this.bossOverdriveEngine) {
+            this.bossOverdriveEngine.interruptBoss(this);
+          }
           e.residualSlowTimer = 3.5;
           e.residualSlowValue = 0.95;
           if (this.tempestVortex && e.distPx > 32) {
@@ -1014,6 +1086,10 @@ class SceneController {
         if (this.state === 'BATTLE') {
           this.cycleSpeed();
         }
+      } else if (act.type === 'trigger_resonance') {
+        if (this.state === 'BATTLE') {
+          this.activateResonance();
+        }
       } else if (act.type === 'toggle_zen_mode') {
         if (this.state === 'BATTLE') {
           this.ui.toggleZenMode(this.fx);
@@ -1143,6 +1219,9 @@ class SceneController {
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.update(dt, this);
     if (this.elderRootActiveTimer > 0) {
       this.elderRootActiveTimer = Math.max(0, this.elderRootActiveTimer - dt);
+    }
+    if (this.resonanceActiveTimer > 0) {
+      this.resonanceActiveTimer = Math.max(0, this.resonanceActiveTimer - dt);
     }
     if (this.comboKillTimer > 0) {
       this.comboKillTimer = Math.max(0, this.comboKillTimer - dt);

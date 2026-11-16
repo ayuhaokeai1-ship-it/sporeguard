@@ -225,11 +225,12 @@ class ForestContraptions {
 
       if (distMap <= 34) {
         if (scene.economy) scene.economy.addSpores(10);
+        if (typeof scene.addResonance === 'function') scene.addResonance(4);
         if (scene.fx) {
           scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+10 晶莹晨露', '#69C0FF', 1.25);
           scene.fx.spawnParticles(dew.x, dew.y, 16, ['#BAE7FF', '#91D5FF', '#FFFFFF', '#52C41A'], 25, 60, 0.25, 0.5, 4);
         }
-        platform.playSfx('sfx_coin');
+        platform.playSfx('sfx_coin', 1.0, 1.0, false, dew.x);
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(12); } catch (e) {}
         }
@@ -311,6 +312,9 @@ class ForestContraptions {
           if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
             scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
             scene.enemyManager.applyStun(e, 2.2);
+            if (e.isBoss && scene.bossOverdriveEngine) {
+              scene.bossOverdriveEngine.interruptBoss(scene);
+            }
             hitCount += 1;
             if (scene.fx) {
               scene.fx.spawnShockwave(e.x, e.y, 28, '#40A9FF');

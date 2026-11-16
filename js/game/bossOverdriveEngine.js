@@ -19,6 +19,9 @@ class BossOverdriveEngine {
     this.stompCooldown = 8.0;
     this.summonCooldown = 12.0;
     this.overdriveAuraAnim = 0;
+    this.channelTimer = 0;
+    this.channelMax = 2.4;
+    this.channelType = null;
     this.pendingSpawns = [];
   }
 
@@ -31,6 +34,8 @@ class BossOverdriveEngine {
     this.enragedTimer = 0;
     this.stompCooldown = 6.0;
     this.summonCooldown = 10.0;
+    this.channelTimer = 0;
+    this.channelType = null;
     if (typeof platform !== 'undefined' && typeof platform.playSfx === 'function') {
       platform.playSfx('sfx_boss_horn');
     }
@@ -41,6 +46,8 @@ class BossOverdriveEngine {
     this.activeBoss = null;
     this.phase = 1;
     this.currentHp = 0;
+    this.channelTimer = 0;
+    this.channelType = null;
   }
 
   reset() {
@@ -79,12 +86,31 @@ class BossOverdriveEngine {
       this.triggerPhase3Transition(scene);
     }
 
+    // 1.5 蓄力破防打断倒计时（首领蓄力前摇期间，天雷/大招可打断并触发破防易伤）
+    if (this.channelTimer > 0) {
+      this.channelTimer -= dt;
+      if (this.channelTimer <= 0) {
+        this.channelTimer = 0;
+        const firedType = this.channelType;
+        this.channelType = null;
+        if (firedType === 'stomp') this.executeEarthStomp(scene);
+        else if (firedType === 'summon') this.executeSubterraneanSummon(scene);
+      }
+      return;
+    }
+
     // 2. 二阶段狂暴践踏技能（仅陆地重甲首领发动撼地践踏；空中蛾后专注毒粉狂暴）
     if (this.phase >= 2 && !this.activeBoss.isFlying) {
       this.stompCooldown -= dt;
       if (this.stompCooldown <= 0) {
-        this.stompCooldown = 7.5;
-        this.executeEarthStomp(scene);
+        this.stompCooldown = 8.5;
+        this.channelType = 'stomp';
+        this.channelMax = 2.4;
+        this.channelTimer = 2.4;
+        if (scene.fx) {
+          scene.fx.spawnFloatingText(this.activeBoss.x, this.activeBoss.y - 34, '⚡ 蓄力震地! 速用天雷/裂地打断!', '#FFA940', 1.2);
+        }
+        return;
       }
     }
 
@@ -92,10 +118,44 @@ class BossOverdriveEngine {
     if (this.phase >= 3) {
       this.summonCooldown -= dt;
       if (this.summonCooldown <= 0) {
-        this.summonCooldown = 11.0;
-        this.executeSubterraneanSummon(scene);
+        this.summonCooldown = 12.0;
+        this.channelType = 'summon';
+        this.channelMax = 2.4;
+        this.channelTimer = 2.4;
+        if (scene.fx) {
+          scene.fx.spawnFloatingText(this.activeBoss.x, this.activeBoss.y - 34, '🕳️ 蓄力唤虫! 速打断破防!', '#B37FEB', 1.2);
+        }
       }
     }
+  }
+
+  /**
+   * 强控/天雷/奥克大招打断首领蓄力，进入 3 秒破防虚弱状态 (+35% 伤害 + +45 孢子)
+   */
+  interruptBoss(scene) {
+    if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return false;
+    if (this.channelTimer <= 0) return false;
+
+    this.channelTimer = 0;
+    this.channelType = null;
+    this.activeBoss.stunTimer = Math.max(this.activeBoss.stunTimer || 0, 2.0);
+    this.activeBoss.bossStaggerTimer = 3.2;
+
+    if (scene && scene.economy) {
+      scene.economy.addSpores(45);
+    }
+    if (scene && typeof scene.addResonance === 'function') {
+      scene.addResonance(16);
+    }
+    if (scene && scene.fx) {
+      scene.fx.triggerScreenShake(5.5, 0.35);
+      scene.fx.showBanner('💥 首领破防！全伤 +35% · +45 孢子！', '#FFD700', '蓄力被完美打断，趁机倾泻火力！', 1.9);
+      scene.fx.spawnFloatingText(this.activeBoss.x, this.activeBoss.y - 28, '💥 破防虚弱 +35%!', '#FFD700', 1.35);
+      scene.fx.spawnParticles(this.activeBoss.x, this.activeBoss.y, 34, ['#FFD700', '#69C0FF', '#FFFFFF'], 50, 150, 0.3, 0.65, 4.5);
+      if (typeof scene.fx.spawnShockwave === 'function') scene.fx.spawnShockwave(this.activeBoss.x, this.activeBoss.y, 72, '#FFD700');
+    }
+    platform.playSfx('sfx_boss_interrupt', 0.95, 1.0, true, this.activeBoss.x);
+    return true;
   }
 
   triggerPhase2Transition(scene) {
@@ -289,6 +349,22 @@ class BossOverdriveEngine {
         ctx.lineTo(tx, barY + barH);
         ctx.stroke();
       });
+
+      // 首领蓄力打断条 / 破防虚弱指示
+      if (this.channelTimer > 0) {
+        const chRatio = Math.max(0, Math.min(1.0, this.channelTimer / Math.max(0.1, this.channelMax)));
+        ctx.fillStyle = '#FFE58F';
+        ctx.font = `bold 9.5px ${UI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`⚡ 蓄力狂袭中 (${this.channelTimer.toFixed(1)}s) — 天雷/裂地可打断!`, wellX + wellW * 0.5, barY + barH + 10);
+        ctx.fillStyle = '#FF4D4F';
+        ctx.fillRect(wellX, barY + barH + 2, Math.round(wellW * chRatio), 2.5);
+      } else if ((this.activeBoss.bossStaggerTimer || 0) > 0) {
+        ctx.fillStyle = '#95DE64';
+        ctx.font = `bold 9.5px ${UI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`💥 破防虚弱中 · 承受全部伤害 +35% (${this.activeBoss.bossStaggerTimer.toFixed(1)}s)`, wellX + wellW * 0.5, barY + barH + 10);
+      }
 
       ctx.restore();
       return;
