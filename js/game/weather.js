@@ -385,23 +385,26 @@ class WeatherManager {
     const bw = 96;
     const bh = 24;
 
-    ctx.fillStyle = 'rgba(28, 20, 12, 0.92)';
+    const oakGrad = ctx.createLinearGradient(x, y, x, y + bh);
+    oakGrad.addColorStop(0, 'rgba(62, 40, 22, 0.96)');
+    oakGrad.addColorStop(1, 'rgba(30, 19, 10, 0.96)');
+    ctx.fillStyle = oakGrad;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 12) : ctx.rect(x, y, bw, bh);
+    ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 8) : ctx.rect(x, y, bw, bh);
     ctx.fill();
 
     ctx.strokeStyle = b.border;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.34)';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, bw - 4, bh - 4, 10) : ctx.rect(x + 2, y + 2, bw - 4, bh - 4);
+    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, bw - 4, bh - 4, 6) : ctx.rect(x + 2, y + 2, bw - 4, bh - 4);
     ctx.stroke();
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 10.5px sans-serif';
+    ctx.fillStyle = '#FFE58F';
+    ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${b.icon} ${b.text}`, x + bw * 0.5, y + bh * 0.5);

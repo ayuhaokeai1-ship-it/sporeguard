@@ -217,23 +217,13 @@ class ForestContraptions {
 
   handlePointerDown(inputX, inputY, scene, dewOnly = false) {
     if (!scene || scene.state !== 'BATTLE') return false;
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-    const scale = mv.SCALE || 0.85;
 
-
-
-    // 1. 点击清晨露珠：“啵”地破裂获得孢子微彩蛋 (支持超大 60px 触控圈与双坐标系)
+    // 1. 点击清晨露珠（调用方已统一传入地图逻辑坐标 mx, my，严禁双重平移造成右侧幽灵错位）
     for (let i = this.dewDrops.length - 1; i >= 0; i--) {
       const dew = this.dewDrops[i];
       const distMap = Math.hypot(inputX - dew.x, inputY - dew.y);
-      const screenX = mv.OFFSET_X + dew.x * scale;
-      const screenY = mv.OFFSET_Y + dew.y * scale;
-      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
-      const convertedMx = (inputX - mv.OFFSET_X) / scale;
-      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-      const distConverted = Math.hypot(convertedMx - dew.x, convertedMy - dew.y);
 
-      if (distMap <= 60 || distScreen <= 60 || distConverted <= 60) {
+      if (distMap <= 34) {
         if (scene.economy) scene.economy.addSpores(10);
         if (scene.fx) {
           scene.fx.spawnFloatingText(dew.x, dew.y - 14, '+10 晶莹晨露', '#69C0FF', 1.25);
@@ -254,14 +244,8 @@ class ForestContraptions {
     if (this.pitcher) {
       const p = this.pitcher;
       const distMap = Math.hypot(inputX - p.x, inputY - p.y);
-      const screenX = mv.OFFSET_X + p.x * scale;
-      const screenY = mv.OFFSET_Y + p.y * scale;
-      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
-      const convertedMx = (inputX - mv.OFFSET_X) / scale;
-      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-      const distConverted = Math.hypot(convertedMx - p.x, convertedMy - p.y);
 
-      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
+      if (distMap <= 28) {
         if (p.cd > 0) {
           scene.ui.showToast(`猪笼草生长中 (冷却 ${Math.ceil(p.cd)}s)`);
           return true;
@@ -306,14 +290,8 @@ class ForestContraptions {
     if (this.thunderTree) {
       const t = this.thunderTree;
       const distMap = Math.hypot(inputX - t.x, inputY - t.y);
-      const screenX = mv.OFFSET_X + t.x * scale;
-      const screenY = mv.OFFSET_Y + t.y * scale;
-      const distScreen = Math.hypot(inputX - screenX, inputY - screenY);
-      const convertedMx = (inputX - mv.OFFSET_X) / scale;
-      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-      const distConverted = Math.hypot(convertedMx - t.x, convertedMy - t.y);
 
-      if (distMap <= 45 || distScreen <= 45 || distConverted <= 45) {
+      if (distMap <= 28) {
         if (t.cd > 0) {
           scene.ui.showToast(`雷击古木充能中 (冷却 ${Math.ceil(t.cd)}s)`);
           return true;

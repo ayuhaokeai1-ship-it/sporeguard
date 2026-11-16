@@ -74,7 +74,10 @@ const AUDIO_PATHS = {
   sfx_bomb: 'audio/sfx_bomb.wav',
   sfx_shock: 'audio/sfx_shock.wav',
   sfx_laser: 'audio/sfx_laser.wav',
-  sfx_place: 'audio/sfx_place.wav'
+  sfx_place: 'audio/sfx_place.wav',
+  sfx_branch_evolve: 'audio/sfx_upgrade.wav',
+  sfx_blessing: 'audio/sfx_upgrade.wav',
+  sfx_boss_horn: 'audio/sfx_horn.wav'
 };
 
 const SFX_VOLUMES = {
@@ -98,7 +101,10 @@ const SFX_VOLUMES = {
   sfx_bomb: 0.75,
   sfx_shock: 0.70,
   sfx_laser: 0.60,
-  sfx_place: 0.65
+  sfx_place: 0.65,
+  sfx_branch_evolve: 0.82,
+  sfx_blessing: 0.85,
+  sfx_boss_horn: 0.88
 };
 
 /**
@@ -626,6 +632,28 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       playAcousticNote(293.66 * p, t0, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
       playAcousticNote(440.00 * p, t0 + 0.06, 0.38, 0.18 * volumeMod, [1, 2.0, 3.0], 0.35);
       playAcousticNote(587.33 * p, t0 + 0.12, 0.42, 0.20 * volumeMod, [1, 2.0, 3.0], 0.35);
+      return true;
+    } else if (sfxKey === 'sfx_branch_evolve') {
+      // 分支特化进阶共鸣 (Majestic Branch Evolution Chord + Sparkle)
+      playFilteredNoise(t0 + 0.05, 0.22, 'highpass', 3000 * p, 5600 * p, 2.2, 0.09 * volumeMod);
+      const evoNotes = [392.00, 493.88, 587.33, 783.99, 1174.66];
+      for (let i = 0; i < evoNotes.length; i++) {
+        playAcousticNote(evoNotes[i] * p, t0 + i * 0.05, 0.36, 0.17 * volumeMod, [1, 2.0, 2.756], 0.30);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_blessing') {
+      // 古树圣佑天籁竖琴和弦 (Ancient World Tree Sanctuary Arpeggio)
+      playFilteredNoise(t0 + 0.06, 0.24, 'bandpass', 2600 * p, 4400 * p, 2.0, 0.08 * volumeMod);
+      const blsNotes = [440.00, 554.37, 659.25, 880.00, 1108.73];
+      for (let i = 0; i < blsNotes.length; i++) {
+        playAcousticNote(blsNotes[i] * p, t0 + i * 0.058, 0.42, 0.17 * volumeMod, [1, 2.0, 3.0], 0.25);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_boss_horn') {
+      // 深林首领战角 (Deep Epic Boss War Horn)
+      playFilteredNoise(t0, 0.45, 'lowpass', 700, 140, 1.0, 0.18 * volumeMod);
+      playAcousticNote(110.0, t0, 0.65, 0.26 * volumeMod, [1, 1.5, 2.0, 3.0], 0.42);
+      playAcousticNote(164.81, t0 + 0.08, 0.60, 0.22 * volumeMod, [1, 2.0, 3.0], 0.38);
       return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);

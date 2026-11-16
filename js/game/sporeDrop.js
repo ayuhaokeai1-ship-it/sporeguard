@@ -160,29 +160,16 @@ class SporeDropManager {
    * @returns {boolean} 是否成功点击收集
    */
   handlePointerDown(inputX, inputY, economy, fx) {
-    const hitRadius = 72; // 手机端超大触控判定圈 (72px，超2个完整格子)，极速拾取零失误
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-    const scale = mv.SCALE || 0.85;
+    // 调用方统一传入地图逻辑坐标 (mx, my)，使用 40px 舒适拾取半径，避免双坐标幻影误吞点击
+    const hitRadius = 40;
 
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       const bob = Math.sin(d.animTimer * 4) * 3;
       const dy = d.y + bob;
-
-      // 1. 地图坐标系距离 (若传入的是地图坐标)
       const distMap = Math.hypot(inputX - d.x, inputY - dy);
 
-      // 2. 屏幕坐标系距离 (若传入的是屏幕坐标)
-      const screenDx = mv.OFFSET_X + d.x * scale;
-      const screenDy = mv.OFFSET_Y + dy * scale;
-      const distScreen = Math.hypot(inputX - screenDx, inputY - screenDy);
-
-      // 3. 屏幕转地图坐标距离
-      const convertedMx = (inputX - mv.OFFSET_X) / scale;
-      const convertedMy = (inputY - mv.OFFSET_Y) / scale;
-      const distConverted = Math.hypot(convertedMx - d.x, convertedMy - dy);
-
-      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
+      if (distMap <= hitRadius) {
         // 成功拾取！计算连击与升调音律
         const now = Date.now();
         if (now - this.lastCollectTime < 1600) {
@@ -196,7 +183,8 @@ class SporeDropManager {
         if (this.sporeCombo >= 3) {
           bonusSpores = Math.min(15, (this.sporeCombo - 2) * 3);
         }
-        const totalEarned = d.spores + bonusSpores;
+        const gainMult = (this.scene && this.scene.blessingMods && this.scene.blessingMods.sporeGainMult) ? this.scene.blessingMods.sporeGainMult : 1.0;
+        const totalEarned = Math.round((d.spores + bonusSpores) * gainMult);
 
         if (economy) {
           economy.addSpores(totalEarned);
@@ -210,9 +198,12 @@ class SporeDropManager {
         }
 
         if (fx) {
+          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+          const screenDx = mv.OFFSET_X + d.x * (mv.SCALE || 1.0);
+          const screenDy = mv.OFFSET_Y + dy * (mv.SCALE || 1.0);
           const comboText = this.sporeCombo >= 3
             ? `♫ ${this.sporeCombo}连音律动! +${totalEarned}`
-            : `+${d.spores} 晨露孢子!`;
+            : `+${totalEarned} 晨露孢子!`;
           const textColor = this.sporeCombo >= 5 ? '#FFD700' : (this.sporeCombo >= 3 ? '#52C41A' : '#FFE58F');
           fx.spawnFloatingText(d.x, dy - 18, comboText, textColor, 1.45);
           fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);

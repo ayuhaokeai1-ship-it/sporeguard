@@ -137,6 +137,8 @@ class BulletManager {
     b.isCrit = node.critRate > 0 && Math.random() < node.critRate;
     b.appliesMark = Boolean(node.appliesMark);
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    const pierceExtra = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.pierceBonus || 0) : 0;
+    b.armorPierceRatio = Math.min(0.85, b.armorPierceRatio + pierceExtra);
     b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.targetEnemy = targetEnemy;
     b.targetUid = targetEnemy ? targetEnemy.uid : 0;
@@ -166,6 +168,8 @@ class BulletManager {
     b.isCrit = false;
     b.appliesMark = false;
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0;
+    const pierceExtra = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.pierceBonus || 0) : 0;
+    b.armorPierceRatio = Math.min(0.85, b.armorPierceRatio + pierceExtra);
     b.flatArmorPierce = (node.armorPierce && node.armorPierce >= 1) ? node.armorPierce : 0;
     b.pierceRemaining = node.pierce || 2;
     b.pierceCountSoFar = 0;
@@ -201,7 +205,8 @@ class BulletManager {
     b.baseDamage = baseDamage;
     b.damageBonus = node.damageBonus || 0;
     b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0.45;
-    b.splashRadiusPx = (node.splashRadius || 1.25) * TILE_SIZE;
+    const splashMult = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.burstSplashMult || 1.0) : 1.0;
+    b.splashRadiusPx = (node.splashRadius || 1.25) * TILE_SIZE * splashMult;
     b.burnZoneCfg = node.burnZone || null;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
     b.maxLife = b.flightDuration + 0.1;
@@ -263,7 +268,8 @@ class BulletManager {
     h.slow = node.slow || 0.30;
     h.residualSlowDuration = node.residualSlowDuration || 0;
     h.armorReduction = (node.armorReduction || 0) + ((this.scene && this.scene.toxicMiasmaDebuff) ? this.scene.toxicMiasmaDebuff * 4 : 0);
-    h.dps = node.dps || 4;
+    const mistDpsMult = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.mistDpsMult || 1.0) : 1.0;
+    h.dps = Math.round((node.dps || 4) * mistDpsMult);
     h.affectAir = true;
     h.color = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
     h.sourceTower = node.sourceTower || null;

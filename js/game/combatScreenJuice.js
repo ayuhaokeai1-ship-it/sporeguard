@@ -226,18 +226,32 @@ class CombatScreenJuice {
       ctx.scale(this.comboScale, this.comboScale);
 
       const isHigh = this.comboCount >= 10;
-      ctx.fillStyle = isHigh ? 'rgba(140, 29, 24, 0.90)' : 'rgba(26, 38, 24, 0.88)';
-      ctx.strokeStyle = isHigh ? '#FFA39E' : '#FFE58F';
-      ctx.lineWidth = 2.0;
-
-      const badgeW = 148;
+      const badgeW = 152;
       const badgeH = 28;
+      const bgGrad = ctx.createLinearGradient(0, -badgeH * 0.5, 0, badgeH * 0.5);
+      if (isHigh) {
+        bgGrad.addColorStop(0, 'rgba(156, 36, 26, 0.96)');
+        bgGrad.addColorStop(1, 'rgba(84, 16, 12, 0.96)');
+      } else {
+        bgGrad.addColorStop(0, 'rgba(62, 40, 22, 0.96)');
+        bgGrad.addColorStop(1, 'rgba(30, 19, 10, 0.96)');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.strokeStyle = isHigh ? '#FFBB96' : '#C68F45';
+      ctx.lineWidth = 1.8;
+
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH, 14) : ctx.rect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH);
+      ctx.roundRect ? ctx.roundRect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH, 8) : ctx.rect(-badgeW * 0.5, -badgeH * 0.5, badgeW, badgeH);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = isHigh ? '#FFF1F0' : '#FFE58F';
+      ctx.strokeStyle = 'rgba(255, 229, 143, 0.30)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-badgeW * 0.5 + 2, -badgeH * 0.5 + 2, badgeW - 4, badgeH - 4, 6) : ctx.rect(-badgeW * 0.5 + 2, -badgeH * 0.5 + 2, badgeW - 4, badgeH - 4);
+      ctx.stroke();
+
+      ctx.fillStyle = isHigh ? '#FFF2E8' : '#FFE58F';
       ctx.font = `bold 13px ${UI_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

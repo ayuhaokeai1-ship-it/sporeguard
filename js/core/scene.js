@@ -30,6 +30,7 @@ const GuardianSynergies = require('../game/guardianSynergies');
 const CombatVfxEngine = require('../game/combatVfxEngine');
 const TacticalFeats = require('../game/tacticalFeats');
 const { AncientKnowledgeTree } = require('../game/ancientKnowledgeTree');
+const { WoodlandBlessings } = require('../game/woodlandBlessings');
 const { TacticalTargetingAI } = require('../game/tacticalTargetingAI');
 const CombatScreenJuice = require('../game/combatScreenJuice');
 const BossOverdriveEngine = require('../game/bossOverdriveEngine');
@@ -56,6 +57,7 @@ class SceneController {
     this.towerManager = new TowerManager();
     this.sporelingPatrol = new SporelingPatrol();
     this.sporeDropManager = new SporeDropManager();
+    this.sporeDropManager.scene = this;
     this.flankAlertTimer = 0;
     this.crisisSlowMoTriggered = false;
     this.contraptions = new ForestContraptions();
@@ -88,6 +90,8 @@ class SceneController {
     this.combatVfx = new CombatVfxEngine();
     this.tacticalFeats = new TacticalFeats();
     this.ancientKnowledgeTree = new AncientKnowledgeTree();
+    this.woodlandBlessings = new WoodlandBlessings();
+    this.blessingMods = this.woodlandBlessings.createDefaultMods();
     this.tacticalTargeting = new TacticalTargetingAI();
     this.combatScreenJuice = new CombatScreenJuice();
     this.bossOverdriveEngine = new BossOverdriveEngine();
@@ -244,6 +248,13 @@ class SceneController {
     this.enemyManager.relicManager = this.relicManager;
     this.bulletManager.scene = this;
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.applyToCombatScene(this);
+    if (this.woodlandBlessings) {
+      this.woodlandBlessings.reset();
+      this.blessingMods = this.woodlandBlessings.createDefaultMods();
+    }
+    this.pyroFissureCfg = null;
+    this.toxicMiasmaDebuff = 0;
+    this.spellCdrMultiplier = 1.0;
     if (this.bossOverdriveEngine) this.bossOverdriveEngine.reset();
     if (this.combatScreenJuice) this.combatScreenJuice.reset();
     this.earlyCallsCount = 0;
@@ -259,6 +270,8 @@ class SceneController {
     this.hoverTile = { col: -1, row: -1 };
     if (this.ui) {
       this.ui.inspectorOpen = false;
+      this.ui.showTowerDetailBoard = false;
+      this.ui.showBlessingModal = false;
       this.ui.hoveredRadialTowerId = null;
     }
     input.setGridCursor(this.selectedTile.col, this.selectedTile.row, false);
@@ -400,7 +413,8 @@ class SceneController {
 
     if (!chosen) return false;
     if (!this.economy.canAfford(chosen.cost)) {
-      this.ui.showToast(i18n.t('no_spores_hint'));
+      this.ui.showToast(`${i18n.t('no_spores_hint')} (需 ${chosen.cost})`);
+      platform.playSfx('sfx_hurt', 0.45, 0.72);
       return false;
     }
 
@@ -557,7 +571,8 @@ class SceneController {
     }
     if (spellId === 'harvest') {
       sp.timer = sp.cd * (this.spellCdrMultiplier || 1.0);
-      const totalHarvest = sp.gain + (this.extraHarvestSpores || 0);
+      const gainMult = (this.blessingMods && this.blessingMods.sporeGainMult) ? this.blessingMods.sporeGainMult : 1.0;
+      const totalHarvest = Math.round((sp.gain + (this.extraHarvestSpores || 0)) * gainMult);
       this.economy.addSpores(totalHarvest);
       this.fx.showBanner('大地丰收！+' + totalHarvest + ' 黄金孢子', '#FFE58F', '全场真菌共鸣喷涌', 1.5);
       this.fx.spawnParticles(320, 240, 28, ['#FFE58F', '#FFA940', '#FFFFFF'], 60, 180, 0.4, 0.8, 5);
@@ -885,6 +900,10 @@ class SceneController {
           this.selectedTile.row = act.row;
         }
       } else if (act.type === 'select_tower_slot') {
+        if (this.ui && this.ui.showBlessingModal && act.slot >= 0 && act.slot <= 2) {
+          this.pickBlessing(act.slot);
+          continue;
+        }
         const tId = TOWER_ORDER[act.slot];
         if (tId) {
           this.selectBuildTowerType(tId);
@@ -1094,6 +1113,9 @@ class SceneController {
       this.achievements.update(dt, this.fx);
     }
     if (this.ancientKnowledgeTree) this.ancientKnowledgeTree.update(dt, this);
+    if (this.blessingMods && this.blessingMods.heroRegenPerSec > 0 && this.hero && this.hero.state !== 'dead' && this.hero.hp < this.hero.maxHp) {
+      this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + this.blessingMods.heroRegenPerSec * dt);
+    }
     if (this.tacticalTargeting) this.tacticalTargeting.update(dt);
     if (this.combatJuice) this.combatJuice.update(dt);
     if (this.combatScreenJuice) this.combatScreenJuice.update(dt, this.state === 'BATTLE');
@@ -1218,8 +1240,29 @@ class SceneController {
     this.processInputActions();
     this.ui.update(realDt);
 
-    const isPaused = this.state !== 'BATTLE' || this.ui.showGuideModal || this.ui.showSettingsModal;
+    const isPaused = this.state !== 'BATTLE' || this.ui.showGuideModal || this.ui.showSettingsModal || this.ui.showBlessingModal;
     this.fx.update(realDt, this.state === 'BATTLE', isPaused);
+  }
+
+  onWaveCleared(clearedWave) {
+    if (!this.woodlandBlessings) return;
+    const choices = this.woodlandBlessings.rollChoices(clearedWave);
+    if (choices && choices.length > 0 && this.ui) {
+      this.ui.showBlessingModal = true;
+      this.ui.inspectorOpen = false;
+      platform.playSfx('sfx_blessing');
+    }
+  }
+
+  onWaveStarted(waveIdx) {
+    if (this.woodlandBlessings) {
+      this.woodlandBlessings.triggerStormArc(this, 3, 130);
+    }
+  }
+
+  pickBlessing(index) {
+    if (!this.woodlandBlessings) return null;
+    return this.woodlandBlessings.selectChoice(index, this);
   }
 
   /**

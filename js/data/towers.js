@@ -152,7 +152,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.0,
         slow: 0.30,
-        dps: 5,
+        dps: 8,
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -168,7 +168,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5, // 持续时间 +0.5 秒
         slow: 0.35,         // 减速 +5%
-        dps: 5,
+        dps: 10,
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -185,7 +185,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5,
         slow: 0.45,         // 减速 +10%
-        dps: 6,
+        dps: 13,
         residualSlowDuration: 1.0, // 离开雾团后减速残留 1.0 秒
         armorReduction: 0,
         isBurningMist: false,
@@ -202,7 +202,7 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5,
         slow: 0.55,         // 减速 +10%
-        dps: 7,
+        dps: 16,
         residualSlowDuration: 1.5,
         armorReduction: 6,  // 雾团内敌人护甲 -6（最低 0）
         isBurningMist: false,
@@ -219,7 +219,7 @@ const TOWERS = {
         cloudRadius: 2.0,   // 雾团半径 +0.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 11,            // 持续伤害提升
+        dps: 20,            // 持续伤害提升
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -236,7 +236,7 @@ const TOWERS = {
         cloudRadius: 2.5,   // 雾团半径 2.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 18,            // 雾团燃烧，持续伤害 18/s
+        dps: 30,            // 雾团燃烧，持续伤害 30/s
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: true,

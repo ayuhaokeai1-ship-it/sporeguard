@@ -372,13 +372,13 @@ class FxSystem {
     platform.playSfx('sfx_hurt');
   }
 
-  onUpgradeComplete(x, y, branchColor = PALETTE.UPGRADE_LV1) {
+  onUpgradeComplete(x, y, branchColor = PALETTE.UPGRADE_LV1, isBranchEvolve = false) {
     const fb = CONFIG.FEEDBACK.UPGRADE_COMPLETE;
     this.spawnParticles(x, y, fb.particles, [branchColor, PALETTE.UI_SPORE, PALETTE.UI_TEXT], 35, 110, 0.25, 0.50, 4);
     if (fb.flashRing) {
       this.spawnRing(x, y, 28, branchColor, 0.32, true);
     }
-    platform.playSfx('sfx_upgrade');
+    platform.playSfx(isBranchEvolve ? 'sfx_branch_evolve' : 'sfx_upgrade');
   }
 
   /**
@@ -662,7 +662,8 @@ class FxSystem {
       const bh = b.subText ? 52 : 36;
       const bx = (960 - bw) * 0.5;
       const hasBossHud = Boolean(this.scene && this.scene.bossOverdriveEngine && this.scene.bossOverdriveEngine.activeBoss && this.scene.bossOverdriveEngine.activeBoss.hp > 0);
-      const by = hasBossHud ? 144 : 64;
+      const hasAchToast = Boolean(this.scene && this.scene.achievements && this.scene.achievements.currentToast && this.scene.achievements.toastTimer > 0);
+      const by = hasBossHud ? 156 : (hasAchToast ? 76 : 64);
       const bandCenterY = by + (b.subText ? 26 : 18);
       const isAlertBanner = (b.color === PALETTE.CRIMSON_SELL || b.color === '#FF4D4F' || b.color === PALETTE.ENEMY_EYE);
       const ribImg = platform.getImage(isAlertBanner ? 'assets/ui/frames/banner_ribbon_crimson.png' : 'assets/ui/frames/banner_ribbon_gold.png');

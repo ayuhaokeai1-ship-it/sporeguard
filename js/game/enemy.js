@@ -328,7 +328,13 @@ class EnemyManager {
       }
       if (auraCnt >= 2) prismaticBonus = 0.50;
     }
-    const rawDamage = baseDamage * (1 + (bonusSum || 0) + prismaticBonus) * critMul * markMul;
+    let slowVuln = 0;
+    if (this.scene && this.scene.blessingMods && this.scene.blessingMods.slowVulnBonus > 0) {
+      if (enemy.activeSlow > 0 || enemy.residualSlowTimer > 0) {
+        slowVuln = this.scene.blessingMods.slowVulnBonus;
+      }
+    }
+    const rawDamage = baseDamage * (1 + (bonusSum || 0) + prismaticBonus + slowVuln) * critMul * markMul;
     let frontShieldMul = 1.0;
     if (enemy.hasFrontShield && !isCrit) {
       // 穿透前盾机制：圣光魔法、迫击轰炸、烈焰灼烧绕过正面盾牌抗性

@@ -31,6 +31,9 @@ class BossOverdriveEngine {
     this.enragedTimer = 0;
     this.stompCooldown = 6.0;
     this.summonCooldown = 10.0;
+    if (typeof platform !== 'undefined' && typeof platform.playSfx === 'function') {
+      platform.playSfx('sfx_boss_horn');
+    }
   }
 
   clear() {
@@ -206,19 +209,97 @@ class BossOverdriveEngine {
    */
   renderBossHud(ctx) {
     if (!this.activeBoss || this.activeBoss.state === 'death' || this.activeBoss.hp <= 0) return;
-    const auraColor = this.phase === 3 ? '#B37FEB' : (this.phase === 2 ? '#FF4D4F' : '#FFA940');
+    const auraColor = this.phase === 3 ? '#D3ADF7' : (this.phase === 2 ? '#FF7875' : '#FFC069');
     ctx.save();
 
-    // 2. 屏幕顶部史诗级分段 Boss 血条 (严格置于成就吐司 y=10..52 下方 y=62..108 安全带，留足 10px 间距零重叠)
-    const barW = 360;
-    const barH = 16;
-    const barX = (960 - barW) * 0.5;
-    const barY = 86;
     const safeMaxHp = Math.max(1, this.activeBoss.maxHp || this.maxHp || 1);
     const safeCurHp = Math.max(0, this.activeBoss.hp !== undefined ? this.activeBoss.hp : this.currentHp);
     const hpRatio = Math.max(0, Math.min(1.0, safeCurHp / safeMaxHp));
 
-    // 血条底座背框（双层暗木嵌金倒角框，标题与血槽均舒展留白于框内）
+    const bossName = (this.activeBoss.def && this.activeBoss.def.nameKey)
+      ? i18n.t(this.activeBoss.def.nameKey)
+      : (this.activeBoss.name || '林地首领');
+    const phaseLabel = this.phase === 3 ? '阶段 III · 绝境狂暴' : (this.phase === 2 ? '阶段 II · 蜕壳暴走' : '阶段 I · 巨壳护体');
+
+    const frameImg = platform.getImage('assets/ui/frames/boss_hud_frame.png');
+    if (frameImg && frameImg.width) {
+      const fw = 456;
+      const fh = Math.round(fw * (frameImg.height / frameImg.width)); // ~92px
+      const fx = Math.round((960 - fw) * 0.5);
+      const fy = 54;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+      ctx.drawImage(frameImg, fx, fy, fw, fh);
+      ctx.restore();
+      platform.recordDrawCall(1);
+
+      // 内槽精密坐标映射 (严格置入黑曜石金属框槽内)
+      const wellX = fx + Math.round(fw * 0.215);
+      const wellW = Math.round(fw * 0.625);
+      const nameY = fy + Math.round(fh * 0.38);
+      const barY = fy + Math.round(fh * 0.51);
+      const barH = 14;
+
+      ctx.font = `bold 11.5px ${UI_FONT}`;
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = auraColor;
+      ctx.textAlign = 'left';
+      ctx.fillText(`${bossName} · ${phaseLabel}`, wellX, nameY, wellW - 88);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#FFE58F';
+      ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, wellX + wellW, nameY, 84);
+
+      ctx.fillStyle = 'rgba(18, 10, 8, 0.90)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(wellX, barY, wellW, barH, 4) : ctx.rect(wellX, barY, wellW, barH);
+      ctx.fill();
+
+      if (hpRatio > 0) {
+        const grad = ctx.createLinearGradient(wellX, barY, wellX + wellW, barY);
+        if (this.phase === 3) {
+          grad.addColorStop(0, '#722ED1');
+          grad.addColorStop(1, '#F5222D');
+        } else if (this.phase === 2) {
+          grad.addColorStop(0, '#CF1322');
+          grad.addColorStop(1, '#FF7A45');
+        } else {
+          grad.addColorStop(0, '#D46B08');
+          grad.addColorStop(1, '#FFC53D');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(wellX + 1, barY + 1, Math.max(2, (wellW - 2) * hpRatio), barH - 2, 3) : ctx.rect(wellX + 1, barY + 1, Math.max(2, (wellW - 2) * hpRatio), barH - 2);
+        ctx.fill();
+
+        // 顶部柔和光泽高光线
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.fillRect(wellX + 2, barY + 2, Math.max(0, (wellW - 4) * hpRatio), 3);
+      }
+
+      ctx.strokeStyle = 'rgba(255, 229, 143, 0.85)';
+      ctx.lineWidth = 1.4;
+      [0.60, 0.25].forEach((thresh) => {
+        const tx = Math.round(wellX + wellW * thresh);
+        ctx.beginPath();
+        ctx.moveTo(tx, barY);
+        ctx.lineTo(tx, barY + barH);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+      return;
+    }
+
+    // 降级精雕框兜底
+    const barW = 360;
+    const barH = 16;
+    const barX = (960 - barW) * 0.5;
+    const barY = 86;
+
     ctx.fillStyle = 'rgba(20, 14, 9, 0.95)';
     ctx.strokeStyle = '#C68F45';
     ctx.lineWidth = 2.0;
@@ -227,48 +308,26 @@ class BossOverdriveEngine {
     ctx.fill();
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 229, 143, 0.25)';
-    ctx.lineWidth = 1.0;
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(barX - 9, barY - 21, barW + 18, barH + 26, 7) : ctx.rect(barX - 9, barY - 21, barW + 18, barH + 26);
-    ctx.stroke();
-
-    // 首领名称与阶段标识（自动本地化读取腐化蛀王 / 剧毒幽蛾后 / 万巢裂殖母体）
-    const bossName = (this.activeBoss.def && this.activeBoss.def.nameKey)
-      ? i18n.t(this.activeBoss.def.nameKey)
-      : (this.activeBoss.name || '林地首领');
-    const phaseLabel = this.phase === 3 ? '【阶段 III: 绝境狂暴】' : (this.phase === 2 ? '【阶段 II: 蜕壳暴走】' : '【阶段 I: 巨壳护体】');
-
     ctx.font = `bold 12px ${UI_FONT}`;
     ctx.textBaseline = 'middle';
     ctx.fillStyle = auraColor;
     ctx.textAlign = 'left';
-    ctx.fillText(`${bossName} ${phaseLabel}`, barX, barY - 11, barW - 108);
+    ctx.fillText(`${bossName} 【${phaseLabel}】`, barX, barY - 11, barW - 108);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFE58F';
     ctx.fillText(`${Math.ceil(safeCurHp)} / ${safeMaxHp}`, barX + barW, barY - 11, 104);
 
-    // 内部血条充能槽
     ctx.fillStyle = 'rgba(40, 20, 15, 0.85)';
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(barX, barY, barW, barH, 4) : ctx.rect(barX, barY, barW, barH);
     ctx.fill();
 
-    // 动态多段渐变血条
-    if (this.phase === 3) {
-      const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-      grad.addColorStop(0, '#722ED1');
-      grad.addColorStop(1, '#F5222D');
-      ctx.fillStyle = grad;
-    } else {
-      ctx.fillStyle = this.phase === 2 ? '#F5222D' : '#FA8C16';
-    }
+    ctx.fillStyle = this.phase === 3 ? '#9254DE' : (this.phase === 2 ? '#F5222D' : '#FA8C16');
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(barX, barY, barW * hpRatio, barH, 4) : ctx.rect(barX, barY, barW * hpRatio, barH);
     ctx.fill();
 
-    // 阶段分段刻度线 (60% 和 25% 处设金刻度线)
     ctx.strokeStyle = '#FFE58F';
     ctx.lineWidth = 1.5;
     [0.60, 0.25].forEach(thresh => {

@@ -77,28 +77,15 @@ class RelicDropManager {
   }
 
   checkClick(clickX, clickY, scene) {
-    const hitRadius = 88; // 手机端超大触控判定圈 (88px)，极其灵敏容易点击
-    const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-    const scale = mv.SCALE || 1.0;
-    const offX = mv.OFFSET_X || 0;
-    const offY = mv.OFFSET_Y || 0;
+    // 调用方传入地图逻辑坐标 (mx, my)，直接使用单坐标系精准判定，杜绝右侧幽灵误触区
+    const hitRadius = 36;
 
     for (let i = this.relics.length - 1; i >= 0; i--) {
       const r = this.relics[i];
       const ry = r.baseY + r.bounceY + Math.sin(r.animTimer * 4) * 3;
-
-      // 1. 地图坐标系直测
       const distMap = Math.hypot(clickX - r.x, clickY - ry);
-      // 2. 屏幕坐标系映射
-      const screenRx = offX + r.x * scale;
-      const screenRy = offY + ry * scale;
-      const distScreen = Math.hypot(clickX - screenRx, clickY - screenRy);
-      // 3. 屏幕转地图坐标映射
-      const convertedMx = (clickX - offX) / scale;
-      const convertedMy = (clickY - offY) / scale;
-      const distConverted = Math.hypot(convertedMx - r.x, convertedMy - ry);
 
-      if (distMap <= hitRadius || distScreen <= hitRadius || distConverted <= hitRadius) {
+      if (distMap <= hitRadius) {
         this.collect(r, scene, true);
         this.relics.splice(i, 1);
         return true;

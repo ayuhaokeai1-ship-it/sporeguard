@@ -166,7 +166,7 @@ class TowerManager {
       const bColor = tower.branch === 'A'
         ? PALETTE.BRANCH_A
         : (tower.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
-      fx.onUpgradeComplete(tower.x, tower.y, bColor);
+      fx.onUpgradeComplete(tower.x, tower.y, bColor, Boolean(nextNode.branch));
     }
 
     return true;
@@ -229,11 +229,20 @@ class TowerManager {
     return (map.groundRoute && map.groundRoute.totalLengthPx) || 1;
   }
 
+  getEffectiveRange(tower) {
+    if (!tower || !tower.node) return 3.0;
+    let r = tower.node.range || 3.0;
+    if (tower.typeId === 'watch' && this.scene && this.scene.blessingMods && this.scene.blessingMods.watchRangeMult > 1) {
+      r *= this.scene.blessingMods.watchRangeMult;
+    }
+    return r;
+  }
+
   /**
    * 根据炮塔射程、对地/对空能力与索敌优先级筛选最佳目标
    */
   selectTarget(tower, aliveEnemies, map) {
-    const rangePx = tower.node.range * TILE_SIZE;
+    const rangePx = this.getEffectiveRange(tower) * TILE_SIZE;
     const r2 = rangePx * rangePx;
     const canGround = tower.def.canHitGround;
     const canAir = tower.def.canHitAir;
@@ -572,8 +581,9 @@ class TowerManager {
         if (i === j) continue;
         const ot = this.towers[j];
         if (Math.hypot(ot.x - lt.x, ot.y - lt.y) <= auraRangePx) {
+          const extraLuminaAspd = (this.scene && this.scene.blessingMods) ? (this.scene.blessingMods.luminaAspdBonus || 0) : 0;
           if (dmgB > ot.luminaDmgBonus) ot.luminaDmgBonus = dmgB;
-          if (aspdB > ot.luminaAspdBonus) ot.luminaAspdBonus = aspdB;
+          if ((aspdB + extraLuminaAspd) > ot.luminaAspdBonus) ot.luminaAspdBonus = aspdB + extraLuminaAspd;
           if (ward) ot.hasHolyWard = true;
         }
       }
@@ -653,6 +663,9 @@ class TowerManager {
       }
       if (this.scene && this.scene.photosyntheticSurgeBonus && this.towers.length >= 3) {
         speedCoeff *= (1.0 + this.scene.photosyntheticSurgeBonus);
+      }
+      if (this.scene && this.scene.blessingMods && this.scene.blessingMods.globalAspdBonus > 0) {
+        speedCoeff *= (1.0 + this.scene.blessingMods.globalAspdBonus);
       }
       if (t.isAwakened && this.scene && this.scene.awakenedAtkSpeedMod > 1) {
         speedCoeff *= this.scene.awakenedAtkSpeedMod;
@@ -1234,6 +1247,9 @@ class TowerManager {
         fx.spawnFloatingText(tower.x, tower.y - 30, '挣脱! 破茧狂暴+30%!', '#FFD700', 1.4);
       }
       platform.playSfx('sfx_upgrade');
+      if (this.scene && this.scene.woodlandBlessings) {
+        this.scene.woodlandBlessings.triggerStormArc(this.scene, 2, 130);
+      }
     }
     return true;
   }

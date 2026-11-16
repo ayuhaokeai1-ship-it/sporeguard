@@ -201,6 +201,7 @@ class UiManager {
     // 弹窗与动态悬浮面板状态
     this.showSettingsModal = false;
     this.showGuideModal = false;
+    this.showBlessingModal = false;
     this.guideStep = 0;
     this.codexTab = 0; // 0: 守林神卫, 1: 虫潮图鉴, 2: 领袖战术
     this.codexSelectedTower = 'watch';
@@ -208,6 +209,8 @@ class UiManager {
     this.codexEnemyPage = 0;
     this.inspectorOpen = false;
     this.inspectorRect = null;
+    this.radialWheelCircle = null;
+    this.quickRingBounds = null;
     this.showTowerDetailBoard = false;
     this.hoveredRadialTowerId = null;
     this.hoveredUpgradeNodeId = null;
@@ -309,8 +312,11 @@ class UiManager {
     // 手机移动端滑动扫线拾取能量 (Swipe-to-collect)
     if (scene && scene.state === 'BATTLE') {
       // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
-      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
-        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+      if (!this.showGuideModal && !this.showSettingsModal && !this.showBlessingModal && y < 435 && y > 58) {
+        const insideInsp = this.inspectorRect && x >= this.inspectorRect.x && x <= this.inspectorRect.x + this.inspectorRect.w && y >= this.inspectorRect.y && y <= this.inspectorRect.y + this.inspectorRect.h;
+        const insideQuick = this.quickRingBounds && x >= this.quickRingBounds.x && x <= this.quickRingBounds.x + this.quickRingBounds.w && y >= this.quickRingBounds.y && y <= this.quickRingBounds.y + this.quickRingBounds.h;
+        const insideRadial = this.radialWheelCircle && Math.hypot(x - this.radialWheelCircle.x, y - this.radialWheelCircle.y) <= this.radialWheelCircle.r;
+        if (!this.inspectorOpen || (!insideInsp && !insideQuick && !insideRadial)) {
           this.dockTargetExpansion = 0.0;
         }
       }
@@ -351,36 +357,77 @@ class UiManager {
     this.draggingTowerId = null;
     this.pressedSlotButton = null;
 
-    // 若当前开启了图鉴秘典弹窗，优先拦截并处理弹窗内按钮交互与外部点击关闭
-    if (this.showGuideModal) {
+    // 若开启了任意顶层全屏弹窗（林地圣佑抉择 / 系统设置 / 秘典图鉴），最高优先级拦截一切地图误触
+    if (this.showBlessingModal || this.showSettingsModal || this.showGuideModal) {
       for (let i = this.buttons.length - 1; i >= 0; i--) {
         const b = this.buttons[i];
         if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-          if (b.onClick) b.onClick(b);
+          if (b.onClick) {
+            try { b.onClick(b); } catch (btnErr) {}
+          }
           return true;
         }
       }
-      const mw = 800;
-      const mh = 480;
-      const mx = (960 - mw) * 0.5;
-      const my = (540 - mh) * 0.5;
-      if (x < mx || x > mx + mw || y < my || y > my + mh) {
-        this.showGuideModal = false;
-        storage.markGuideSeen();
-        platform.playSfx('sfx_click');
-        return true;
+      if (this.showGuideModal && !this.showBlessingModal && !this.showSettingsModal) {
+        const mw = 800;
+        const mh = 480;
+        const mx = (960 - mw) * 0.5;
+        const my = (540 - mh) * 0.5;
+        if (x < mx || x > mx + mw || y < my || y > my + mh) {
+          this.showGuideModal = false;
+          storage.markGuideSeen();
+          platform.playSfx('sfx_click');
+          return true;
+        }
       }
       return true;
     }
 
     if (scene && scene.state === 'BATTLE') {
+      if (scene.combatAnalytics && scene.combatAnalytics.isOpen) {
+        scene.combatAnalytics.handleClick(x, y);
+        return true;
+      }
+
       // 触碰战场区域时自动让重型UI褪去收缩，保持战场开阔纯净零误触
-      if (!this.showGuideModal && !this.showSettingsModal && y < 435 && y > 58) {
-        if (!this.inspectorOpen || !this.inspectorRect || x < this.inspectorRect.x || x > this.inspectorRect.x + this.inspectorRect.w || y < this.inspectorRect.y || y > this.inspectorRect.y + this.inspectorRect.h) {
+      if (y < 435 && y > 58) {
+        const insideInsp = this.inspectorRect && x >= this.inspectorRect.x && x <= this.inspectorRect.x + this.inspectorRect.w && y >= this.inspectorRect.y && y <= this.inspectorRect.y + this.inspectorRect.h;
+        const insideQuick = this.quickRingBounds && x >= this.quickRingBounds.x && x <= this.quickRingBounds.x + this.quickRingBounds.w && y >= this.quickRingBounds.y && y <= this.quickRingBounds.y + this.quickRingBounds.h;
+        const insideRadial = this.radialWheelCircle && Math.hypot(x - this.radialWheelCircle.x, y - this.radialWheelCircle.y) <= this.radialWheelCircle.r;
+        if (!this.inspectorOpen || (!insideInsp && !insideQuick && !insideRadial)) {
           this.dockTargetExpansion = 0.0;
         }
       }
-      // (0) 实时战斗统计面板开关与点击 (屏幕空间)
+
+      // 最高优先级检测所有已注册 UI 按钮（强化/分支升级环、建造轮盘、顶部栏、英雄微操、底部卡槽），彻底防止下方掉落物或地形机关抢吞点击
+      for (let i = this.buttons.length - 1; i >= 0; i--) {
+        const b = this.buttons[i];
+        if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+          if (b.id && (b.id.indexOf('slot_') === 0 || b.id.indexOf('dock_card_') === 0)) {
+            const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
+            this.draggingTowerId = tId;
+            this.pressedSlotButton = b;
+            if (scene && typeof scene.selectBuildTowerType === 'function') {
+              scene.selectBuildTowerType(tId);
+            }
+            platform.playSfx('sfx_click');
+            return true;
+          } else {
+            if (b.onClick) {
+              try {
+                b.onClick(b);
+              } catch (btnErr) {
+                if (typeof console !== 'undefined' && console.error) {
+                  console.error('[Button Click Recovered]:', btnErr);
+                }
+              }
+            }
+            return true;
+          }
+        }
+      }
+
+      // (0) 实时战斗统计面板开关与英雄战技图标
       if (scene.combatAnalytics && scene.combatAnalytics.handleClick(x, y)) {
         return true;
       }
@@ -393,12 +440,12 @@ class UiManager {
       const mx = (x - mv.OFFSET_X) / (mv.SCALE || 1);
       const my = (y - mv.OFFSET_Y) / (mv.SCALE || 1);
 
-      // (A) 晨露金孢即时触控点击收集 (支持手机大判定区)
+      // (A) 晨露金孢即时触控点击收集
       if (scene.sporeDropManager && scene.sporeDropManager.handlePointerDown(mx, my, scene.economy, scene.fx)) {
         return true;
       }
 
-      // (A2) 精英怪/Boss掉落战利品道具拾取 (Relic Coin/Clover/Shield/Lightning)
+      // (A2) 精英怪/Boss掉落战利品道具拾取
       if (scene.relicManager && scene.relicManager.checkClick(mx, my, scene)) {
         return true;
       }
@@ -413,7 +460,7 @@ class UiManager {
         return true;
       }
 
-      // (C) 茧丝缠绕快速点击救援 (Tap-to-Rescue，统一交由 towerManager.rescueWeb 扣减蛛丝血点)
+      // (C) 茧丝缠绕快速点击救援 (Tap-to-Rescue)
       if (scene.towerManager && scene.towerManager.towers) {
         for (let i = 0; i < scene.towerManager.towers.length; i++) {
           const tw = scene.towerManager.towers[i];
@@ -435,39 +482,35 @@ class UiManager {
     this.draggingTowerId = null;
     this.pressedSlotButton = null;
 
-    // 先检测是否按在底部卡牌插槽上
+    // 非 BATTLE 状态按钮检测
     for (let i = this.buttons.length - 1; i >= 0; i--) {
       const b = this.buttons[i];
       if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-        if (b.id && (b.id.indexOf('slot_') === 0 || b.id.indexOf('dock_card_') === 0)) {
-          const tId = (b.meta && b.meta.towerId) || b.id.replace('slot_', '').replace('dock_card_', '');
-          this.draggingTowerId = tId;
-          this.pressedSlotButton = b;
-          // 手机端关键优化：按下瞬间即时选中卡牌（零延迟响应，告别卡顿感）
-          if (scene && typeof scene.selectBuildTowerType === 'function') {
-            scene.selectBuildTowerType(tId);
-          }
-          platform.playSfx('sfx_click');
-          return true;
-        } else {
-          if (b.onClick) {
-            try {
-              b.onClick(b);
-            } catch (btnErr) {
-              if (typeof console !== 'undefined' && console.error) {
-                console.error('[Button Click Recovered]:', btnErr);
-              }
+        if (b.onClick) {
+          try {
+            b.onClick(b);
+          } catch (btnErr) {
+            if (typeof console !== 'undefined' && console.error) {
+              console.error('[Button Click Recovered]:', btnErr);
             }
           }
-          return true;
         }
+        return true;
       }
     }
 
-    if (this.inspectorOpen && this.inspectorRect) {
-      const r = this.inspectorRect;
-      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
-        return true;
+    if (this.inspectorOpen) {
+      if (this.inspectorRect) {
+        const r = this.inspectorRect;
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+          return true;
+        }
+      }
+      if (this.radialWheelCircle) {
+        const c = this.radialWheelCircle;
+        if (Math.hypot(x - c.x, y - c.y) <= c.r) {
+          return true;
+        }
       }
     }
     return false;
@@ -791,65 +834,98 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
+    // 柔和丁达尔森林晨光斜射光束（呼吸动态光影，增强封面层次感）
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const rayPulse = 0.08 + 0.04 * Math.sin(this.uiAnimTime * 1.4);
+    const rayGrad = ctx.createLinearGradient(180, 0, 540, 420);
+    rayGrad.addColorStop(0, `rgba(255, 236, 150, ${(rayPulse * 1.4).toFixed(3)})`);
+    rayGrad.addColorStop(0.55, `rgba(170, 255, 160, ${(rayPulse * 0.7).toFixed(3)})`);
+    rayGrad.addColorStop(1, 'rgba(255, 220, 110, 0)');
+    ctx.fillStyle = rayGrad;
+    ctx.beginPath();
+    ctx.moveTo(110, 0);
+    ctx.lineTo(340, 0);
+    ctx.lineTo(660, 460);
+    ctx.lineTo(360, 460);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
     // 柔光氛围暗角：聚光于英雄阵线与徽章区域，提升前景可读性
     ctx.save();
-    const botGrad = ctx.createLinearGradient(0, 390, 0, 540);
+    const botGrad = ctx.createLinearGradient(0, 400, 0, 540);
     botGrad.addColorStop(0, 'rgba(8, 12, 8, 0)');
-    botGrad.addColorStop(1, 'rgba(8, 12, 8, 0.62)');
+    botGrad.addColorStop(1, 'rgba(8, 12, 8, 0.58)');
     ctx.fillStyle = botGrad;
-    ctx.fillRect(0, 390, 960, 150);
+    ctx.fillRect(0, 400, 960, 140);
     ctx.restore();
 
     // 森林萤火孢子微粒动画
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 24; i++) {
       const sx = ((i * 97 + Math.floor(this.uiAnimTime * (10 + (i % 5) * 3))) % 920) + 20;
-      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (8 + (i % 4) * 3))) % 440 + 440) % 440 + 18;
-      const pulse = 0.48 + 0.32 * Math.sin(this.uiAnimTime * 2.2 + i);
+      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (8 + (i % 4) * 3))) % 430 + 430) % 430 + 18;
+      const pulse = 0.48 + 0.34 * Math.sin(this.uiAnimTime * 2.2 + i);
       ctx.fillStyle = i % 2 === 0 ? `rgba(255, 228, 130, ${pulse.toFixed(2)})` : `rgba(145, 255, 165, ${(pulse * 0.9).toFixed(2)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, i % 2 === 0 ? 2.2 : 1.5, 0, Math.PI * 2);
+      ctx.arc(sx, sy, i % 3 === 0 ? 2.4 : 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 左上角 AI 精绘冠冕月桂徽章牌（避开右侧树人与菇卫主体构图）
+    // 左上角 AI V4 精雕冠冕翡翠徽章牌（严密避让右侧英雄群像，主标题精准确位内槽）
     const crestImg = platform.getImage('assets/ui/frames/title_crest_plaque.png');
-    const crestW = 376;
-    const crestH = 198;
-    const crestX = 24;
-    const crestY = 16;
+    const crestW = 368;
+    const crestH = 185;
+    const crestX = 22;
+    const crestY = 14 + Math.sin(this.uiAnimTime * 1.6) * 2.0;
     if (crestImg) {
       ctx.save();
       ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
       ctx.shadowBlur = 18;
       ctx.shadowOffsetY = 6;
-      ctx.drawImage(crestImg, crestX, crestY, crestW, crestH);
+      ctx.drawImage(crestImg, crestX, Math.round(crestY), crestW, crestH);
       ctx.restore();
       platform.recordDrawCall(1);
+
+      // 翡翠王冠宝石微光闪烁
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const gemA = 0.22 + 0.14 * Math.sin(this.uiAnimTime * 3.1);
+      const gemX = crestX + crestW * 0.5;
+      const gemY = crestY + crestH * 0.21;
+      const gemGrad = ctx.createRadialGradient(gemX, gemY, 2, gemX, gemY, 22);
+      gemGrad.addColorStop(0, `rgba(110, 255, 175, ${gemA.toFixed(2)})`);
+      gemGrad.addColorStop(1, 'rgba(82, 196, 26, 0)');
+      ctx.fillStyle = gemGrad;
+      ctx.beginPath();
+      ctx.arc(gemX, gemY, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     } else {
       this.drawAiFrame(ctx, 'top_bar', crestX, crestY + 56, crestW, 78, 0.94);
     }
     const crestCx = crestX + crestW * 0.5;
-    const crestCy = crestY + Math.round(crestH * 0.525);
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', crestCx, crestCy - 8, {
+    const plateCy = crestY + crestH * 0.585;
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', crestCx, plateCy - 10, {
       style: 'gold',
-      size: 27,
+      size: i18n.getLang() === 'zh' ? 28 : 22,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 1.6
+      strokeWidth: 1.8
     });
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', crestCx, crestCy + 15, {
+    drawArtText(ctx, i18n.getLang() === 'zh' ? 'SPOREGUARD · 奇幻森林策略塔防' : 'FANTASY FOREST TOWER DEFENSE', crestCx, plateCy + 14, {
       style: 'parchment',
-      size: 10.5,
+      size: 10,
       align: 'center',
       baseline: 'middle',
-      strokeWidth: 0
+      strokeWidth: 0.7
     });
 
-    // 底部 AI 精绘石框青铜嵌槽命令栏（三段水平切分绘制，铆钉石块零拉伸变形）
+    // 底部 AI 精绘石框青铜嵌槽命令栏（三段水平切分绘制）
     const dockX = 96;
-    const dockY = 432;
+    const dockY = 434;
     const dockW = 768;
-    const dockH = 100;
+    const dockH = 98;
     const dockImg = platform.getImage('assets/ui/frames/title_dock_frame.png');
     if (dockImg && dockImg.width >= 900) {
       const capSrcW = 126;
@@ -869,8 +945,14 @@ class UiManager {
       this.drawAiFrame(ctx, 'top_bar', dockX + 10, dockY + 14, dockW - 20, dockH - 22, 0.96);
     }
 
+    const save = storage.getSave();
+    const nextCampaignMap = MAP_ORDER.find((id) => {
+      const rec = save.maps && save.maps[id];
+      return rec && rec.unlocked && !(rec.stars > 0);
+    }) || 'map1';
+
     const btns = [
-      { id: 'title_start', label: i18n.t('btn_start'), icon: 'play', cat: 16, skin: 'btn_green', cb: () => scene.enterLevelSelect() },
+      { id: 'title_start', label: i18n.t('btn_start'), icon: 'play', cat: 16, skin: 'btn_green', cb: () => scene.startLevel(nextCampaignMap) },
       { id: 'title_levels', label: i18n.t('btn_level_select'), icon: 'star_full', cat: 16, skin: 'btn_wood', cb: () => scene.enterLevelSelect() },
       { id: 'title_guide', label: i18n.t('btn_guide'), icon: 'guide', cat: 24, skin: 'btn_wood', cb: () => { this.guideStep = 0; this.showGuideModal = true; } },
       { id: 'title_settings', label: i18n.t('btn_settings'), icon: 'settings', cat: 16, skin: 'btn_wood', cb: () => { this.showSettingsModal = true; } }
@@ -878,16 +960,33 @@ class UiManager {
     for (let i = 0; i < btns.length; i++) {
       const b = btns[i];
       const bx = 154 + i * 166;
-      this.drawPixelButton(ctx, b.id, bx, 460, 154, 44, b.label, {
+      this.drawPixelButton(ctx, b.id, bx, 461, 154, 44, b.label, {
         skin: b.skin,
-        font: `bold 16px ${CN_FONT}`,
+        font: `bold 15.5px ${CN_FONT}`,
         iconCat: b.cat,
-        iconKey: b.icon
+        iconKey: b.icon,
+        iconSize: 20
       }, () => {
         platform.playSfx('sfx_click');
         b.cb();
       });
     }
+
+    // 右上角：战役星徽统计 + 语言切换胶囊
+    let totalStars = 0;
+    const maxStars = MAP_ORDER.length * 3;
+    for (let mi = 0; mi < MAP_ORDER.length; mi++) {
+      totalStars += (save.maps && save.maps[MAP_ORDER[mi]] && save.maps[MAP_ORDER[mi]].stars) || 0;
+    }
+    this.drawAiFrame(ctx, 'top_bar', 688, 20, 128, 34, 0.94);
+    drawUiIcon(ctx, 16, 'star_full', 700, 28, 18);
+    drawArtText(ctx, `${totalStars} / ${maxStars} ★`, 766, 37, {
+      style: 'gold',
+      size: 13,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0.9
+    });
 
     this.drawPixelButton(ctx, 'title_lang', 826, 20, 114, 34, i18n.getLang() === 'zh' ? '语言：中文' : 'Lang: EN', {
       skin: 'btn_wood',
@@ -1269,6 +1368,9 @@ class UiManager {
     // 4. 【彻底释放全屏战场】左下角极简圆盘英雄徽章与3大自然神术法球 (占据极小空间，95%画面完全纯净沉浸！)
     this.renderPvZBottomLeftHeroAndSpells(ctx, scene);
 
+    // 4.5 已获得林地圣佑缩略徽章列（紧贴天气/战报下方 x=16, y=44，悬停可查词条）
+    this.renderActiveBlessingBadges(ctx, scene);
+
     if (scene.achievements) {
       scene.achievements.renderToast(ctx);
     }
@@ -1278,6 +1380,8 @@ class UiManager {
       this.renderTowerInspectorPopup(ctx, scene);
     } else {
       this.inspectorRect = null;
+      this.radialWheelCircle = null;
+      this.quickRingBounds = null;
     }
 
     // 6. 处于战术法术施法瞄准时绘制动态准星与范围环
@@ -1298,14 +1402,18 @@ class UiManager {
     this.renderTowerDragPreview(ctx, scene);
 
     // 6.8 底栏英雄 / 神术 / 顶栏与传送门悬停轻量说明条
-    if (this.bottomHoverTip && !this.inspectorOpen && !this.isDragging && !this.showSettingsModal && !this.showGuideModal && !(scene.combatAnalytics && scene.combatAnalytics.isOpen)) {
+    if (this.bottomHoverTip && !this.inspectorOpen && !this.isDragging && !this.showSettingsModal && !this.showGuideModal && !this.showBlessingModal && !(scene.combatAnalytics && scene.combatAnalytics.isOpen)) {
       this.drawFloatingTooltipPill(ctx, this.bottomHoverTip.x, this.bottomHoverTip.y, this.bottomHoverTip.text, 460);
     }
 
-    // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让首领血条）
+    // 7. 轻量化提示气泡（深橡木底板 + 亮金高对比文字，自动避让成就吐司、首领血条与战地横幅）
     if (this.toastTimer > 0 && this.toastText) {
       const hasBossHud = Boolean(scene.bossOverdriveEngine && scene.bossOverdriveEngine.activeBoss && scene.bossOverdriveEngine.activeBoss.hp > 0);
-      const ty = hasBossHud ? 116 : 64;
+      const hasAchToast = Boolean(scene.achievements && scene.achievements.currentToast && scene.achievements.toastTimer > 0);
+      const hasBanner = Boolean(scene.fx && scene.fx.banner && scene.fx.banner.active);
+      let ty = hasBossHud ? 156 : (hasAchToast ? 76 : 64);
+      if (hasBanner) ty += 62;
+      ty = Math.min(268, ty);
       const tw = 316;
       const tx = (960 - tw) * 0.5;
       ctx.save();
@@ -1328,11 +1436,13 @@ class UiManager {
       ctx.restore();
     }
 
-    // 8. 模态弹窗（暂停、结算、新手引导、设置）
+    // 8. 模态弹窗（林地圣佑抉择、暂停、结算、新手引导、设置）
     if (this.showSettingsModal) {
       this.renderSettingsModal(ctx, scene);
     } else if (this.showGuideModal) {
       this.renderGuideModal(ctx, scene);
+    } else if (this.showBlessingModal) {
+      this.renderBlessingModal(ctx, scene);
     } else if (scene.state === 'PAUSED') {
       this.renderPauseOverlay(ctx, scene);
     } else if (scene.state === 'SETTLEMENT') {
@@ -2542,8 +2652,8 @@ class UiManager {
     // 安全钳制边界：绝不让边缘/底行守卫的快捷环被底部卡槽栏(Y>=474)或屏幕左右边框裁切遮挡
     const minAnchorX = (tileScreenY > 350) ? 252 : 108;
     const anchorX = Math.max(minAnchorX, Math.min(852, tileScreenX));
-    const topY = Math.max(46, Math.min(392, tileScreenY - 50));
-    const botY = Math.min(436, Math.max(108, tileScreenY + 36));
+    const topY = Math.max(46, Math.min(392, tileScreenY - 46));
+    const botY = Math.min(436, Math.max(106, tileScreenY + 32));
 
     ctx.save();
 
@@ -2551,8 +2661,8 @@ class UiManager {
     if (upgrades.length === 1) {
       const up = upgrades[0];
       const canAfford = scene.economy.canAfford(up.cost);
-      const uw = 108;
-      const uh = 28;
+      const uw = 104;
+      const uh = 25;
       const ux = Math.round(anchorX - uw * 0.5);
       const uy = Math.round(topY);
       const isHov = this.isPointHovered(ux, uy, uw, uh);
@@ -2592,8 +2702,8 @@ class UiManager {
       for (let i = 0; i < 2; i++) {
         const up = upgrades[i];
         const canAfford = scene.economy.canAfford(up.cost);
-        const uw = 92;
-        const uh = 28;
+        const uw = 88;
+        const uh = 25;
         const ux = Math.round(i === 0 ? anchorX - uw - 4 : anchorX + 4);
         const uy = Math.round(topY);
         const isHov = this.isPointHovered(ux, uy, uw, uh);
@@ -2656,14 +2766,14 @@ class UiManager {
     }
 
     // 2. 底部：战术微操双按钮（索敌 + 属性详情）
-    const ph = 28;
+    const ph = 24;
     const py = Math.round(botY);
-    const px1 = Math.round(anchorX - 74); // 索敌
+    const px1 = Math.round(anchorX - 72); // 索敌
     const px2 = Math.round(anchorX + 4);  // 详情属性
 
     // (1) 索敌按钮
-    if (!this.drawAiFrame(ctx, 'btn_blue', px1, py, 70, ph, 0.98)) {
-      roundRectPath(ctx, px1, py, 70, ph, 14);
+    if (!this.drawAiFrame(ctx, 'btn_blue', px1, py, 68, ph, 0.98)) {
+      roundRectPath(ctx, px1, py, 68, ph, 12);
       ctx.fillStyle = 'rgba(20, 24, 28, 0.94)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(100, 140, 180, 0.65)';
@@ -2671,18 +2781,18 @@ class UiManager {
       ctx.stroke();
     }
 
-    drawArtText(ctx, `索敌 · ${priStr}`, px1 + 35, py + 14, {
+    drawArtText(ctx, `索敌 · ${priStr}`, px1 + 34, py + 12, {
       style: 'azure',
-      size: 11,
+      size: 10.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.9
     });
 
-    if (this.isPointHovered(px1, py, 70, ph)) {
+    if (this.isPointHovered(px1, py, 68, ph)) {
       quickHoverText = `索敌偏好：${priStr}（点击切换：最前 / 强敌 / 最近 / 密集）`;
     }
-    this.registerButton('quick_pri_btn', px1, py, 70, ph, () => {
+    this.registerButton('quick_pri_btn', px1, py, 68, ph, () => {
       if (scene.towerManager) {
         scene.towerManager.cyclePriority(tower);
       }
@@ -2692,8 +2802,8 @@ class UiManager {
     });
 
     // (2) 详情面板轻量开关
-    if (!this.drawAiFrame(ctx, this.showTowerDetailBoard ? 'btn_green' : 'btn_wood', px2, py, 70, ph, 0.98)) {
-      roundRectPath(ctx, px2, py, 70, ph, 14);
+    if (!this.drawAiFrame(ctx, this.showTowerDetailBoard ? 'btn_green' : 'btn_wood', px2, py, 68, ph, 0.98)) {
+      roundRectPath(ctx, px2, py, 68, ph, 12);
       ctx.fillStyle = this.showTowerDetailBoard ? 'rgba(56, 38, 18, 0.96)' : 'rgba(22, 28, 36, 0.92)';
       ctx.fill();
       ctx.strokeStyle = this.showTowerDetailBoard ? 'rgba(255, 215, 0, 0.85)' : 'rgba(120, 160, 200, 0.60)';
@@ -2701,18 +2811,18 @@ class UiManager {
       ctx.stroke();
     }
 
-    drawArtText(ctx, '详细属性', px2 + 35, py + 14, {
+    drawArtText(ctx, '详细属性', px2 + 34, py + 12, {
       style: this.showTowerDetailBoard ? 'gold' : 'parchment',
-      size: 11,
+      size: 10.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0.9
     });
 
-    if (this.isPointHovered(px2, py, 70, ph)) {
+    if (this.isPointHovered(px2, py, 68, ph)) {
       quickHoverText = '展开详情木框：查看分支数值对比与单塔战功统计';
     }
-    this.registerButton('quick_detail_btn', px2, py, 70, ph, () => {
+    this.registerButton('quick_detail_btn', px2, py, 68, ph, () => {
       this.showTowerDetailBoard = !this.showTowerDetailBoard;
       platform.playSfx('sfx_click');
     });
@@ -2722,6 +2832,12 @@ class UiManager {
       this.drawFloatingTooltipPill(ctx, anchorX, qTipY, quickHoverText, 380);
     }
 
+    this.quickRingBounds = {
+      x: anchorX - 108,
+      y: topY - 4,
+      w: 216,
+      h: Math.max(80, (botY - topY) + 38)
+    };
     ctx.restore();
   }
 
@@ -2730,6 +2846,8 @@ class UiManager {
     const row = scene.selectedTile.row;
     if (!scene.map || !scene.map.inBounds(col, row)) {
       this.inspectorRect = null;
+      this.quickRingBounds = null;
+      this.radialWheelCircle = null;
       return;
     }
 
@@ -2744,16 +2862,12 @@ class UiManager {
       return;
     }
 
-    // 1. 若为已有防御塔且详情面板未展开：呈现轻量战地灵动快捷环（0 遮挡，与详情木板互不重叠）
+    // 1. 若为已有防御塔且详情面板未展开：呈现轻量战地灵动快捷环（0 遮挡；quickRingBounds 仅防底栏自动收起，不阻挡邻格建造/选中）
     if (existingTower) {
       if (!this.showTowerDetailBoard) {
         this.renderTowerTacticalQuickRing(ctx, scene, existingTower, tileScreenX, tileScreenY);
-        this.inspectorRect = {
-          x: tileScreenX - 110,
-          y: tileScreenY - 60,
-          w: 220,
-          h: 128
-        };
+        this.inspectorRect = null;
+        this.radialWheelCircle = null;
         return;
       }
     } else if (canBuild) {
@@ -3300,12 +3414,9 @@ class UiManager {
       ctx.restore();
     }
 
-    this.inspectorRect = {
-      x: ax - 84,
-      y: ay - 84,
-      w: 168,
-      h: 168
-    };
+    this.inspectorRect = null;
+    this.quickRingBounds = null;
+    this.radialWheelCircle = { x: ax, y: ay, r: 72 };
   }
 
   /**
@@ -3741,6 +3852,177 @@ class UiManager {
       platform.playSfx('sfx_click');
       scene.enterLevelSelect();
     });
+  }
+
+  /**
+   * 战场左上角已获【林地圣佑】缩略勋章栏（轻量化零遮挡）
+   */
+  renderActiveBlessingBadges(ctx, scene) {
+    if (!scene || !scene.woodlandBlessings) return;
+    const owned = scene.woodlandBlessings.getOwnedDefs();
+    if (!owned || owned.length === 0) return;
+    const isZh = i18n.getLang() !== 'en';
+    const startX = 16;
+    const y = 44;
+    const sz = 22;
+    const gap = 5;
+
+    for (let i = 0; i < owned.length; i++) {
+      const b = owned[i];
+      const bx = startX + i * (sz + gap);
+      const hov = this.isPointHovered(bx, y, sz, sz);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bx + sz * 0.5, y + sz * 0.5, sz * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = hov ? 'rgba(54, 38, 18, 0.96)' : 'rgba(26, 18, 12, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = hov ? '#FFD700' : (b.accent || '#C68F45');
+      ctx.lineWidth = hov ? 1.8 : 1.3;
+      ctx.stroke();
+
+      const img = platform.getImage(b.icon);
+      if (img && img.width) {
+        ctx.drawImage(img, bx + 3, y + 3, sz - 6, sz - 6);
+      }
+      ctx.restore();
+
+      if (hov) {
+        this.bottomHoverTip = {
+          x: Math.max(150, bx + 110),
+          y: y + 36,
+          text: `✨ ${isZh ? b.nameZh : b.nameEn}：${isZh ? b.descZh : b.descEn}`
+        };
+      }
+    }
+  }
+
+  /**
+   * 远古世界树 · 三选一林地圣佑抉择弹窗（波次里程碑触发）
+   */
+  renderBlessingModal(ctx, scene) {
+    this.clearButtons();
+    const choices = (scene && scene.woodlandBlessings && scene.woodlandBlessings.pendingChoices) || [];
+    if (choices.length === 0) {
+      this.showBlessingModal = false;
+      return;
+    }
+
+    const isZh = i18n.getLang() !== 'en';
+    ctx.save();
+    ctx.fillStyle = 'rgba(6, 12, 8, 0.80)';
+    ctx.fillRect(0, 0, 960, 540);
+
+    // 顶部雕刻木牌标题
+    this.drawAiFrame(ctx, 'top_bar', 260, 34, 440, 54, 0.98);
+    drawArtText(ctx, isZh ? '远古圣树赐福 · 林地圣佑抉择' : 'WORLD TREE BOON · CHOOSE A BLESSING', 480, 54, {
+      style: 'gold',
+      size: 16.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 1.2
+    });
+    drawArtText(ctx, isZh ? '点选一枚祝福卡牌强化本局防线（可按快捷键 1 / 2 / 3）' : 'Pick 1 blessing card for this run (Hotkeys 1 / 2 / 3)', 480, 74, {
+      style: 'parchment',
+      size: 10.5,
+      align: 'center',
+      baseline: 'middle',
+      strokeWidth: 0
+    });
+
+    const cardW = 236;
+    const cardH = 312;
+    const gap = 22;
+    const totalW = choices.length * cardW + (choices.length - 1) * gap;
+    const startX = Math.round((960 - totalW) * 0.5);
+    const cardY = 116;
+
+    for (let i = 0; i < choices.length; i++) {
+      const ch = choices[i];
+      const cx = startX + i * (cardW + gap);
+      const hovered = this.isPointHovered(cx, cardY, cardW, cardH);
+      const liftY = hovered ? -5 : 0;
+      const cy = cardY + liftY;
+
+      this.drawWoodlandPanel(ctx, cx, cy, cardW, cardH, hovered ? '#FFD700' : (ch.accent || THEME.BRONZE_MID), 0.99, 14, true);
+
+      // 卡牌角标快捷键 [1] [2] [3]
+      roundRectPath(ctx, cx + 22, cy + 22, 26, 20, 6);
+      ctx.fillStyle = hovered ? '#D48806' : 'rgba(42, 26, 14, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = hovered ? '#FFF1B8' : '#C68F45';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      drawArtText(ctx, String(i + 1), cx + 35, cy + 32, {
+        style: 'gold',
+        size: 11.5,
+        align: 'center',
+        baseline: 'middle',
+        strokeWidth: 0.8
+      });
+
+      // 分类标签胶囊
+      const tagStr = isZh ? ch.tagZh : ch.tagEn;
+      roundRectPath(ctx, cx + cardW - 102, cy + 22, 78, 20, 10);
+      ctx.fillStyle = 'rgba(48, 30, 14, 0.86)';
+      ctx.fill();
+      ctx.strokeStyle = ch.accent || '#C68F45';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+      ctx.fillStyle = ch.accent || '#FFE58F';
+      ctx.font = `bold 10px ${CN_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tagStr, cx + cardW - 63, cy + 32);
+
+      // 圆形手绘图标法阵底托
+      const icCx = cx + cardW * 0.5;
+      const icCy = cy + 94;
+      ctx.beginPath();
+      ctx.arc(icCx, icCy, 36, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(26, 18, 10, 0.90)';
+      ctx.fill();
+      ctx.strokeStyle = hovered ? '#FFD700' : (ch.accent || '#C68F45');
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      const img = platform.getImage(ch.icon);
+      if (img && img.width) {
+        ctx.drawImage(img, icCx - 24, icCy - 24, 48, 48);
+      }
+
+      // 祝福标题
+      ctx.fillStyle = THEME.INK_DARK;
+      ctx.font = `bold 15.5px ${CN_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isZh ? ch.nameZh : ch.nameEn, icCx, cy + 150, cardW - 44);
+
+      // 羊皮纸分隔细线
+      ctx.strokeStyle = 'rgba(110, 74, 38, 0.25)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 30, cy + 168);
+      ctx.lineTo(cx + cardW - 30, cy + 168);
+      ctx.stroke();
+
+      // 增益说明正文
+      this.drawWrappedText(ctx, isZh ? ch.descZh : ch.descEn, cx + 28, cy + 186, cardW - 56, 18, THEME.INK_MID, `bold 11.5px ${CN_FONT}`);
+
+      // 底部【领受圣佑】按钮
+      const idxCopy = i;
+      this.drawPixelButton(ctx, 'blessing_pick_' + i, cx + 28, cy + cardH - 58, cardW - 56, 36, isZh ? '领受此圣佑' : 'Claim Blessing', {
+        skin: hovered ? 'btn_green' : 'btn_wood',
+        font: `bold 13px ${CN_FONT}`
+      }, () => {
+        scene.pickBlessing(idxCopy);
+      });
+
+      // 点击整张卡片亦可直接领受
+      this.registerButton('blessing_card_' + i, cx + 8, cy + 8, cardW - 16, cardH - 16, () => {
+        scene.pickBlessing(idxCopy);
+      });
+    }
+    ctx.restore();
   }
 
   renderSettlementOverlay(ctx, scene) {
@@ -5409,22 +5691,22 @@ class UiManager {
     }
     ctx.restore();
 
-    // 1. 左侧英雄头像盘与等级微章（严格居中于左安全列 [25..59, 396..450]）
-    const hx = 42;
-    const hy = 417;
-    const hr = 14;
+    // 1. 左侧英雄头像盘与等级微章（严格收束于暗橡木安全内区）
+    const hx = 40;
+    const hy = 419;
+    const hr = 13.5;
 
-    // 1.1 上排右侧双按钮（姿态 [Z] + 大招 [F]）：y = 395..412，严格落于顶框内边下方且热区 100% 吻合
+    // 1.1 上排右侧双按钮（姿态 [Z] + 大招 [F]）：y = 398..414，严格留白不顶框边
     const stanceMeta = {
       guardian: { label: '🛡️守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' },
       aggressive: { label: '⚔️狂暴', skin: 'btn_red', bg: 'rgba(68, 22, 22, 0.92)', bd: '#FF7875', col: '#FFD8BF' },
       scout: { label: '🏹游侠', skin: 'btn_green', bg: 'rgba(20, 56, 26, 0.92)', bd: '#73D13D', col: '#D9F7BE' }
     }[hero.stance || 'guardian'] || { label: '🛡️守卫', skin: 'btn_blue', bg: 'rgba(18, 42, 68, 0.92)', bd: '#69C0FF', col: '#BAE7FF' };
 
-    const stX = 61;
-    const stY = 395;
-    const stW = 49;
-    const stH = 17;
+    const stX = 60;
+    const stY = 398;
+    const stW = 48;
+    const stH = 16;
     ctx.save();
     if (!this.drawAiFrame(ctx, stanceMeta.skin, stX, stY, stW, stH, 0.98)) {
       roundRectPath(ctx, stX, stY, stW, stH, 8);
@@ -5461,10 +5743,10 @@ class UiManager {
     // 1.2 英雄大招 [F]（右侧紧邻姿态，绝不撞右边木框与角钉）
     const ultCd = hero.skillCooldown || 0;
     const ultReady = ultCd <= 0 && hero.state !== 'dead';
-    const ultX = 113;
-    const ultY = 395;
-    const ultW = 53;
-    const ultH = 17;
+    const ultX = 111;
+    const ultY = 398;
+    const ultW = 52;
+    const ultH = 16;
     ctx.save();
     if (!this.drawAiFrame(ctx, ultReady ? 'btn_green' : 'btn_wood', ultX, ultY, ultW, ultH, ultReady ? 1.0 : 0.78)) {
       roundRectPath(ctx, ultX, ultY, ultW, ultH, 8);
@@ -5602,18 +5884,19 @@ class UiManager {
       { id: 'rally', name: '菇精卫集结', key: 'R', cost: 0, tip: '点击巡逻道路派遣双哨菇精卫近战拦截', icon: 'assets/vfx/prop_rally_flag.png', vfx: 'assets/vfx/prop_rally_flag.png' }
     ];
 
-    const orbR = 10.5;
-    const orbStartX = 74;
-    const orbStride = 26;
+    const orbR = 9.5;
+    const orbStartX = 72;
+    const orbStride = 24.5;
 
     for (let sIdx = 0; sIdx < spellList.length; sIdx++) {
       const spItem = spellList[sIdx];
       const sp = scene.spells ? scene.spells[spItem.id] : null;
       const spCd = (sp && sp.timer) || 0;
       const spMaxCd = (sp && sp.cd) || 15;
-      const canCast = spCd <= 0 && scene.economy.spores >= spItem.cost;
+      const effCost = sp ? sp.cost : spItem.cost;
+      const canCast = spCd <= 0 && scene.economy.spores >= effCost;
       const ox = orbStartX + sIdx * orbStride;
-      const oy = 428;
+      const oy = 429;
 
       ctx.save();
       ctx.beginPath();
@@ -5640,10 +5923,10 @@ class UiManager {
         });
       }
 
-      roundRectPath(ctx, ox - 11, 438.5, 22, 10, 3);
+      roundRectPath(ctx, ox - 11, 439, 22, 10, 3);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
       ctx.fill();
-      drawArtText(ctx, spItem.cost > 0 ? (spItem.cost + '') : spItem.key, ox, 443.5, {
+      drawArtText(ctx, effCost > 0 ? (effCost + '') : spItem.key, ox, 444, {
         style: canCast ? 'gold' : 'dim',
         size: 8.5,
         align: 'center',
@@ -5671,7 +5954,7 @@ class UiManager {
       ctx.restore();
 
       if (this.isPointHovered(ox - orbR, oy - orbR, orbR * 2, orbR * 2)) {
-        const costTag = spItem.cost > 0 ? `(${spItem.cost}孢)` : '(免费)';
+        const costTag = effCost > 0 ? `(${effCost}孢)` : '(免费)';
         this.bottomHoverTip = {
           x: 118,
           y: 344,
@@ -5683,7 +5966,7 @@ class UiManager {
           scene.triggerSpell(spItem.id);
           platform.playSfx('sfx_click');
         } else {
-          this.showToast(spCd > 0 ? `冷却中: ${Math.ceil(spCd)}s` : `孢子不足 (需 ${spItem.cost})`);
+          this.showToast(spCd > 0 ? `冷却中: ${Math.ceil(spCd)}s` : `孢子不足 (需 ${effCost})`);
           platform.playSfx('sfx_hurt', 0.45, 0.72);
         }
       });

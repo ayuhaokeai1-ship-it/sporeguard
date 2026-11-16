@@ -87,19 +87,22 @@ class CombatAnalyticsSystem {
     const h = this.toggleBtnRect.h;
 
     ctx.save();
-    ctx.fillStyle = this.isOpen ? 'rgba(38, 92, 18, 0.94)' : 'rgba(28, 20, 12, 0.92)';
+    const oakGrad = ctx.createLinearGradient(x, y, x, y + h);
+    oakGrad.addColorStop(0, this.isOpen ? 'rgba(42, 104, 24, 0.96)' : 'rgba(62, 40, 22, 0.96)');
+    oakGrad.addColorStop(1, this.isOpen ? 'rgba(22, 56, 12, 0.96)' : 'rgba(30, 19, 10, 0.96)');
+    ctx.fillStyle = oakGrad;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, w, h, 12) : ctx.rect(x, y, w, h);
+    ctx.roundRect ? ctx.roundRect(x, y, w, h, 8) : ctx.rect(x, y, w, h);
     ctx.fill();
 
-    ctx.strokeStyle = this.isOpen ? '#95DE64' : 'rgba(198, 143, 69, 0.78)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = this.isOpen ? '#95DE64' : '#C68F45';
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255, 229, 143, 0.28)';
+    ctx.strokeStyle = 'rgba(255, 229, 143, 0.34)';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, w - 4, h - 4, 10) : ctx.rect(x + 2, y + 2, w - 4, h - 4);
+    ctx.roundRect ? ctx.roundRect(x + 2, y + 2, w - 4, h - 4, 6) : ctx.rect(x + 2, y + 2, w - 4, h - 4);
     ctx.stroke();
 
     ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
@@ -252,7 +255,9 @@ class CombatAnalyticsSystem {
   handleClick(x, y) {
     if (x >= this.toggleBtnRect.x && x <= this.toggleBtnRect.x + this.toggleBtnRect.w &&
         y >= this.toggleBtnRect.y && y <= this.toggleBtnRect.y + this.toggleBtnRect.h) {
-      return this.toggle();
+      this.toggle();
+      if (typeof platform !== 'undefined' && platform.playSfx) platform.playSfx('sfx_click');
+      return true;
     }
 
     if (this.isOpen) {

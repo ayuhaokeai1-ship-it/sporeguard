@@ -227,9 +227,9 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m4_name', // 蚀日圣甲皇
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m4_tip',
-    baseHp: 4200,
-    speed: 0.74,
-    armor: 18,
+    baseHp: 3400,
+    speed: 0.76,
+    armor: 16,
     threat: 5,
     reward: 110,
     isFlying: false,

@@ -89,7 +89,7 @@ const CONFIG = {
       map1: 1.0,
       map2: 1.18,
       map3: 1.35,
-      map4: 1.52
+      map4: 1.44
     }
   },
 

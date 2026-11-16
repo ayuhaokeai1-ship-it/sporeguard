@@ -265,6 +265,10 @@ class WaveManager {
         platform.playBgm('bgm_battle');
       }
     }
+
+    if (scene && typeof scene.onWaveStarted === 'function') {
+      scene.onWaveStarted(this.currentWaveIndex);
+    }
   }
 
   /**
@@ -368,9 +372,13 @@ class WaveManager {
               fx.spawnWaveClearCelebration(480, 160, rewardInfo.waveReward);
             }
           }
+          const clearedWave = this.currentWaveIndex;
           this.currentWaveIndex += 1;
           this.phase = 'prep';
-          this.prepTimerSec = CONFIG.ECONOMY.PREP_TIME_NEXT_WAVE; // 之后每波备战 20 秒
+          this.prepTimerSec = CONFIG.ECONOMY.PREP_TIME_NEXT_WAVE; // 之后每波备战 15 秒
+          if (scene && typeof scene.onWaveCleared === 'function') {
+            scene.onWaveCleared(clearedWave);
+          }
         }
       }
     }

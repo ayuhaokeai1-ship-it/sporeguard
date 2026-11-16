@@ -73,7 +73,7 @@ class GameLoop {
   stepFrame(realDt) {
     this.scene.updateRealTime(realDt);
 
-    if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal) {
+    if (this.scene.state === 'BATTLE' && !this.scene.ui.showGuideModal && !this.scene.ui.showSettingsModal && !this.scene.ui.showBlessingModal) {
       const speed = this.scene.speedMultiplier || 1;
       // 顶级性能调优：1x速每帧精准执行 1 次逻辑步，2x速执行 2 次，3x速执行 3 次
       // 彻底消除时间累加器浮动导致的周期性微卡顿 (Micro-stutter) 与螺旋延迟

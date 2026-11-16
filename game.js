@@ -101,7 +101,8 @@ function bootstrapGame() {
     'assets/ui/frames/hud_wave_frame.png',
     'assets/ui/frames/radial_wheel_bg.png',
     'assets/ui/frames/banner_ribbon_gold.png',
-    'assets/ui/frames/banner_ribbon_crimson.png'
+    'assets/ui/frames/banner_ribbon_crimson.png',
+    'assets/ui/frames/boss_hud_frame.png'
   ];
 
   Promise.all([
