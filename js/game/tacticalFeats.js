@@ -14,7 +14,7 @@ class TacticalFeatsSystem {
         id: 'sniper_elite',
         title: '神射无双',
         desc: '在 220 像素以外的超远距离精准击杀 5 只疾行虫',
-        rewardSpores: 80,
+        rewardSpores: 40,
         unlocked: false,
         progress: 0,
         target: 5
@@ -23,7 +23,7 @@ class TacticalFeatsSystem {
         id: 'superconduct_chain',
         title: '超导风暴',
         desc: '单次元素反应引爆至少 6 只敌军',
-        rewardSpores: 120,
+        rewardSpores: 60,
         unlocked: false,
         progress: 0,
         target: 6
@@ -32,7 +32,7 @@ class TacticalFeatsSystem {
         id: 'absolute_zero',
         title: '深度冻结',
         desc: '使用迷雾与玄冰使 8 只敌军减速超过 50%',
-        rewardSpores: 100,
+        rewardSpores: 50,
         unlocked: false,
         progress: 0,
         target: 8
@@ -41,7 +41,7 @@ class TacticalFeatsSystem {
         id: 'iron_bastion',
         title: '钢铁森防',
         desc: '英雄在承受超过 300 点伤害后依然屹立不倒并消灭攻击者',
-        rewardSpores: 110,
+        rewardSpores: 55,
         unlocked: false,
         progress: 0,
         target: 1
@@ -50,7 +50,7 @@ class TacticalFeatsSystem {
         id: 'flawless_sanctuary',
         title: '无暇圣域',
         desc: '连续防守 5 波敌军，生命种子零损耗',
-        rewardSpores: 150,
+        rewardSpores: 75,
         unlocked: false,
         progress: 0,
         target: 5
@@ -59,7 +59,7 @@ class TacticalFeatsSystem {
         id: 'titan_breaker',
         title: '巨神破壁',
         desc: '攻破攻城巨甲虫 (Siege Beetle) 的重型防护并将其消灭',
-        rewardSpores: 160,
+        rewardSpores: 80,
         unlocked: false,
         progress: 0,
         target: 1
@@ -68,7 +68,7 @@ class TacticalFeatsSystem {
         id: 'aerial_hunter',
         title: '截击猎手',
         desc: '在跃击虫 (Leaper) 腾空跳跃期间完成空中截杀',
-        rewardSpores: 130,
+        rewardSpores: 65,
         unlocked: false,
         progress: 0,
         target: 1
@@ -77,7 +77,7 @@ class TacticalFeatsSystem {
         id: 'bountiful_grove',
         title: '始源丰饶',
         desc: '在单局对决中累计收获超过 1,000 点森林孢子',
-        rewardSpores: 200,
+        rewardSpores: 90,
         unlocked: false,
         progress: 0,
         target: 1000

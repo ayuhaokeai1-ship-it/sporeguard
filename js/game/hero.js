@@ -45,19 +45,19 @@ class ForestHero {
     this.targetX = this.x;
     this.targetY = this.y;
     
-    // 基础属性与成长 (PvZ 战术指挥官标准，有挑战有配合)
+    // 基础属性与成长 (前线核心坦克与战术指挥官，与防御塔防线协同推进)
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
-    this.xpToNext = 100;
-    this.baseMaxHp = 420;
+    this.xpToNext = 140;
+    this.baseMaxHp = 360;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 38;
+    this.baseAtk = 25;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;
-    this.atkInterval = 1.05;
+    this.atkInterval = 1.15;
     this.atkCooldown = 0;
     
     // 动作与状态机
@@ -207,11 +207,11 @@ class ForestHero {
     this.xp -= this.xpToNext;
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
-    // 属性飞跃成长（保留远古知识之树生命加成）
-    this.baseMaxHp = 560 + (this.level - 1) * 110;
+    // 属性平滑成长（保留远古知识之树生命加成）
+    this.baseMaxHp = 360 + (this.level - 1) * 95;
     this.maxHp = this.baseMaxHp + (this.bonusHp || 0);
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.baseAtk = 46 + (this.level - 1) * 18;
+    this.baseAtk = 25 + (this.level - 1) * 11;
     this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
 
@@ -260,9 +260,24 @@ class ForestHero {
       finalDamage = this.transcendence.onHeroTakeDamage(finalDamage, enemyManager, fx);
     }
     if (this.stance === 'guardian') {
-      finalDamage = Math.max(1, Math.round(amount * 0.65));
+      finalDamage = Math.max(1, Math.round(finalDamage * 0.65));
     } else if (this.stance === 'aggressive') {
-      finalDamage = Math.round(amount * 1.15);
+      finalDamage = Math.round(finalDamage * 1.15);
+    }
+    if (this.brambleShieldHp > 0 && finalDamage > 0) {
+      const absorbed = Math.min(this.brambleShieldHp, finalDamage);
+      this.brambleShieldHp -= absorbed;
+      finalDamage -= absorbed;
+      if (fx && (this.brambleShieldHp <= 0 || absorbed >= 15)) {
+        fx.spawnFloatingText(
+          this.x,
+          this.y - 24,
+          this.brambleShieldHp <= 0 ? '🛡️ 护盾破碎!' : `🛡️ -${Math.round(absorbed)}`,
+          '#69C0FF',
+          1.05
+        );
+      }
+      if (finalDamage <= 0) return;
     }
 
     // 天赋 1 & 知识树：尖刺重甲与远古树皮近战创伤反弹
@@ -352,7 +367,7 @@ class ForestHero {
     // 震晕周围敌人并造成超高爆发重创
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
-      const skillDmg = Math.round((180 + (this.level - 1) * 60) * (this.stance === 'aggressive' ? 1.25 : 1.0));
+      const skillDmg = Math.round((135 + (this.level - 1) * 45) * (this.stance === 'aggressive' ? 1.25 : 1.0));
 
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];

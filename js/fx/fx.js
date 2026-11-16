@@ -479,6 +479,7 @@ class FxSystem {
         continue;
       }
       t.y += t.vy * fxDt;
+      t.vy *= Math.pow(0.22, fxDt);
     }
 
     // 更新冲击环
@@ -559,8 +560,9 @@ class FxSystem {
       for (let i = 0; i < tList.length; i++) {
         const t = tList[i];
         const alpha = t.life > t.maxLife * 0.7 ? (1 - (t.life - t.maxLife * 0.7) / (t.maxLife * 0.3)) : 1.0;
+        const pop = t.life < 0.14 ? (1.36 - 0.36 * (t.life / 0.14)) : 1.0;
         ctx.globalAlpha = Math.max(0, alpha);
-        const fSize = Math.max(10, Math.min(15, Math.round(11 * (t.scale || 1))));
+        const fSize = Math.max(10, Math.min(18, Math.round(11 * (t.scale || 1) * pop)));
         ctx.font = `bold ${fSize}px "Microsoft YaHei", sans-serif`;
         const rx = Math.round(t.x);
         const ry = Math.round(t.y);

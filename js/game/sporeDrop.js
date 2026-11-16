@@ -51,7 +51,7 @@ class SporeDropManager {
     // 自然掉落晨露金孢 (PvZ 阳光飘落机制，自动避开障碍物、机关与已建防御塔)
     this.naturalSpawnTimer -= dt;
     if (this.naturalSpawnTimer <= 0) {
-      this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
+      this.naturalSpawnTimer = 8.0 + Math.random() * 4.0;
       let rx = 64 + Math.random() * 512;
       let ry = 64 + Math.random() * 316;
       const obstacles = (map && map.obstacles) || [];
@@ -82,7 +82,7 @@ class SporeDropManager {
           break;
         }
       }
-      this.spawnDrop(rx, ry, 15, true, 40);
+      this.spawnDrop(rx, ry, 10, true, 40);
     }
 
     // 英雄战地磁吸范围真空吸附
@@ -121,11 +121,12 @@ class SporeDropManager {
         }
       }
 
-      // 到期自动吸纳保底（绝不丢失战场资源）
+      // 到期微聚保底（主动拾取可获全额 10+ 孢子；未拾取仅留少量余晖）
       if (d.life <= 0) {
-        if (economy) economy.addSpores(d.spores);
+        const passiveVal = Math.max(2, Math.round(d.spores * 0.3));
+        if (economy) economy.addSpores(passiveVal);
         if (fx) {
-          fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 自然归巢`, '#FFE58F', 1.1);
+          fx.spawnFloatingText(d.x, d.y - 18, `+${passiveVal} 余晖归巢`, '#FFE58F', 1.0);
         }
         this.drops.splice(i, 1);
       }

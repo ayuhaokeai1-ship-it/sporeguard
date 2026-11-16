@@ -137,7 +137,7 @@ class GuardianSynergiesSystem {
     // 盖亚之怒自动蓄力
     if (this.synergies.grand_awakening.active) {
       this.gaiaWrathTimer += dt;
-      if (this.gaiaWrathTimer >= 12.0) {
+      if (this.gaiaWrathTimer >= 15.0) {
         this.gaiaWrathTimer = 0;
         this.triggerGaiaWrath(scene);
       }
@@ -187,11 +187,11 @@ class GuardianSynergiesSystem {
         const e = enemies[i];
         if (!e.isFlying) {
           if (typeof scene.enemyManager.applyDamage === 'function') {
-            scene.enemyManager.applyDamage(e, 160, false, 'nature', scene.fx, 'reactions');
+            scene.enemyManager.applyDamage(e, 95, false, 'nature', scene.fx, 'reactions');
           } else {
-            e.takeDamage(160, scene.fx, 'nature', 'reactions');
+            e.takeDamage(95, scene.fx, 'nature', 'reactions');
           }
-          e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
+          e.stunTimer = Math.max(e.stunTimer || 0, 0.9);
           if (scene.fx) {
             scene.fx.spawnParticles(e.x, e.y, 8, ['#B37FEB', '#D3ADF7', '#52C41A'], 15, 35, 0.2, 0.45, 2.5);
             scene.fx.spawnFloatingText(e.x, e.y - 14, '🌍 盖亚重击!', '#D3ADF7', 0.9);

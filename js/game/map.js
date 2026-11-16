@@ -257,13 +257,13 @@ class GameMap {
         scene.targetedObstacle = null;
       }
 
-      // 奖励爆发：大量黄金孢子 + 25%几率掉落远古觉醒种子
-      const rewardSpores = 65 + (obs.variant || 0) * 15;
+      // 奖励爆发：黄金孢子 + 20%几率掉落远古觉醒种子
+      const rewardSpores = 35 + (obs.variant || 0) * 10;
       if (economy) {
         economy.addSpores(rewardSpores);
       }
       let dropAwakening = false;
-      if (scene && Math.random() < 0.25) {
+      if (scene && Math.random() < 0.20) {
         scene.awakeningSeeds = (scene.awakeningSeeds || 0) + 1;
         dropAwakening = true;
       }

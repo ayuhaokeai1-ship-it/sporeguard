@@ -144,9 +144,9 @@ const CONFIG = {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
       map1: 210,               // PvZ 经典战术开局：210 孢子正好支持 1 守望菇(115) + 1 灵光菇(95) 开局
-      map2: 200,
-      map3: 220,
-      map4: 240
+      map2: 215,
+      map3: 230,
+      map4: 255
     },
     TARGET_TOTAL_BUDGET: {
       map1: 1800,
@@ -154,15 +154,15 @@ const CONFIG = {
       map3: 3200,
       map4: 3800
     },
-    WAVE_CLEAR_BASE: 25,       // 波次完成奖励 = 25 + 5 * 波次序号
-    WAVE_CLEAR_PER_WAVE: 5,
-    FLAWLESS_WAVE_BONUS: 15,   // 无损完美波次奖励 15
-    EARLY_CALL_PER_SEC: 2,     // 提前召唤迎战奖励：每秒 +2 孢子（极具诱惑的高风险高回报）
-    EARLY_CALL_MAX: 40,        // 提前召唤迎战奖励上限 40
+    WAVE_CLEAR_BASE: 20,       // 波次完成奖励 = 20 + 4 * 波次序号
+    WAVE_CLEAR_PER_WAVE: 4,
+    FLAWLESS_WAVE_BONUS: 12,   // 无损完美波次奖励 12
+    EARLY_CALL_PER_SEC: 1,     // 提前召唤迎战奖励：每秒 +1 孢子
+    EARLY_CALL_MAX: 20,        // 提前召唤迎战奖励上限 20
     MULTIKILL_WINDOW_SEC: 0.5, // 0.5 秒内击杀 3 只及以上触发群杀
     MULTIKILL_MIN_COUNT: 3,    // 最少 3 只触发群杀
-    MULTIKILL_PER_KILL: 2,     // 群杀奖励：击杀数 * 2
-    MULTIKILL_MAX_BONUS: 40,   // 群杀奖励上限 40
+    MULTIKILL_PER_KILL: 1,     // 群杀奖励：击杀数 * 1
+    MULTIKILL_MAX_BONUS: 18,   // 群杀奖励上限 18
     SELL_REFUND_RATE: 0.60,    // 出售返还 60%
     PREP_TIME_FIRST_WAVE: 25,  // 第一波前倒计时 35 秒
     PREP_TIME_NEXT_WAVE: 15    // 之后每波前倒计时 18 秒
@@ -179,12 +179,12 @@ const CONFIG = {
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
     MAX_ACTIVE_WAVE_ENEMIES: 48,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
-    WAVE_HP_GROWTH_PER_WAVE: 0.20,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
+    WAVE_HP_GROWTH_PER_WAVE: 0.24,// 当前生命倍率 = (1 + 0.24 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
-      map2: 1.15,
-      map3: 1.30,
-      map4: 1.42
+      map2: 1.18,
+      map3: 1.35,
+      map4: 1.52
     }
   },
 
@@ -293,16 +293,16 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 42,
-    maxTotalCost: 480,
+    baseDamage: 33,
+    maxTotalCost: 465,
     nodes: {
       base: {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'watch_base_desc',
         cost: 115,
-        range: 6.2,
-        damage: 42,
+        range: 5.8,
+        damage: 33,
         damageBonus: 0,
         interval: 1.25,
         bulletSpeed: 640,
@@ -318,10 +318,10 @@ const TOWERS = {
         nameKey: 'watch_lv1_name',
         descKey: 'watch_lv1_desc',
         cost: 70,
-        range: 6.6,
-        damage: 52,
-        damageBonus: 0.20, // 伤害 +20%，射程 +0.5
-        interval: 1.25,
+        range: 6.2,
+        damage: 40,
+        damageBonus: 0.21,
+        interval: 1.22,
         bulletSpeed: 640,
         critRate: 0,
         critMultiplier: 1.0,
@@ -336,11 +336,11 @@ const TOWERS = {
         nameKey: 'watch_a2_name',
         descKey: 'watch_a2_desc',
         cost: 105,
-        range: 8.0,        // 射程 +1.5
-        damage: 56,
-        damageBonus: 0.20,
-        interval: 1.125,   // 攻击间隔 -10%
-        bulletSpeed: 800,  // 弹速 +25% (640 * 1.25 = 800)
+        range: 7.2,        // 射程 +1.0
+        damage: 46,        // 33 * 1.39 ≈ 46
+        damageBonus: 0.39,
+        interval: 1.15,    // 攻击间隔缩短
+        bulletSpeed: 800,  // 弹速 +25%
         critRate: 0,
         critMultiplier: 1.0,
         appliesMark: false,
@@ -354,16 +354,16 @@ const TOWERS = {
         nameKey: 'watch_a3_name',
         descKey: 'watch_a3_desc',
         cost: 175,
-        range: 9.0,        // 射程 +1.0
-        damage: 70,
-        damageBonus: 0.20,
-        interval: 1.125,
+        range: 8.2,        // 超视距精准狙击
+        damage: 54,        // 33 * 1.64 ≈ 54
+        damageBonus: 0.64,
+        interval: 1.12,
         bulletSpeed: 800,
         critRate: 0,
         critMultiplier: 1.0,
         appliesMark: true, // 命中后标记目标 3 秒，直接伤害 +15%
         markDuration: 3.0,
-        markBonus: 0.20,
+        markBonus: 0.15,
         armorPierce: 0.35,
         next: []
       },
@@ -373,10 +373,10 @@ const TOWERS = {
         nameKey: 'watch_b2_name',
         descKey: 'watch_b2_desc',
         cost: 105,
-        range: 6.5,
-        damage: 72,        // 40 * (1 + 0.20 + 0.35) = 62
-        damageBonus: 0.55,
-        interval: 1.25,
+        range: 6.2,
+        damage: 52,        // 33 * 1.58 ≈ 52
+        damageBonus: 0.58,
+        interval: 1.20,
         bulletSpeed: 640,
         critRate: 0,
         critMultiplier: 1.0,
@@ -391,13 +391,13 @@ const TOWERS = {
         nameKey: 'watch_b3_name',
         descKey: 'watch_b3_desc',
         cost: 175,
-        range: 6.5,
-        damage: 86,
-        damageBonus: 0.55,
-        interval: 1.25,
+        range: 6.3,
+        damage: 60,        // 33 * 1.82 ≈ 60
+        damageBonus: 0.82,
+        interval: 1.15,
         bulletSpeed: 640,
-        critRate: 0.22,    // 暴击率 15%，暴击伤害 2 倍
-        critMultiplier: 2.2,
+        critRate: 0.24,    // 暴击率 24%，暴击伤害 2.0 倍
+        critMultiplier: 2.0,
         appliesMark: false,
         markDuration: 0,
         markBonus: 0,
@@ -480,9 +480,9 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5,
         slow: 0.55,         // 减速 +10%
-        dps: 4,
+        dps: 7,
         residualSlowDuration: 1.5,
-        armorReduction: 4,  // 雾团内敌人护甲 -2（最低 0）
+        armorReduction: 6,  // 雾团内敌人护甲 -6（最低 0）
         isBurningMist: false,
         next: []
       },
@@ -497,7 +497,7 @@ const TOWERS = {
         cloudRadius: 2.0,   // 雾团半径 +0.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 8,             // 持续伤害 +2
+        dps: 11,            // 持续伤害提升
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -514,7 +514,7 @@ const TOWERS = {
         cloudRadius: 2.5,   // 雾团半径 2.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 14,            // 雾团燃烧，持续伤害 +4（累计 10）
+        dps: 18,            // 雾团燃烧，持续伤害 18/s
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: true,
@@ -534,7 +534,7 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 10,
+    baseDamage: 14,
     maxTotalCost: 375,
     nodes: {
       base: {
@@ -542,11 +542,12 @@ const TOWERS = {
         nameKey: 'node_base',
         descKey: 'thorn_base_desc',
         cost: 80,
-        range: 4.5,
-        damage: 10,
+        range: 4.6,
+        damage: 14,
         damageBonus: 0,
-        interval: 0.45,
-        pierce: 2,
+        interval: 0.44,
+        pierce: 3,
+        armorPierce: 2,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -560,11 +561,12 @@ const TOWERS = {
         nameKey: 'thorn_lv1_name',
         descKey: 'thorn_lv1_desc',
         cost: 55,
-        range: 5.0,        // 射程 +0.5
-        damage: 12,      // 伤害 +20%
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 2,
+        range: 5.0,        // 射程 +0.4
+        damage: 18,        // 14 * 1.29 ≈ 18
+        damageBonus: 0.29,
+        interval: 0.43,
+        pierce: 3,
+        armorPierce: 3,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -579,11 +581,12 @@ const TOWERS = {
         nameKey: 'thorn_a2_name',
         descKey: 'thorn_a2_desc',
         cost: 90,
-        range: 5.0,
-        damage: 12,
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 4,         // 穿透数 +2
+        range: 5.1,
+        damage: 21,        // 14 * 1.50 = 21
+        damageBonus: 0.50,
+        interval: 0.42,
+        pierce: 5,         // 穿透数 5
+        armorPierce: 3,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -598,11 +601,12 @@ const TOWERS = {
         nameKey: 'thorn_a3_name',
         descKey: 'thorn_a3_desc',
         cost: 150,
-        range: 5.0,
-        damage: 13,
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 7,         // 穿透数 7
+        range: 5.2,
+        damage: 24,        // 14 * 1.71 ≈ 24
+        damageBonus: 0.71,
+        interval: 0.40,
+        pierce: 8,         // 穿透数 8
+        armorPierce: 4,
         bulletSpeed: 900,
         sideSpikes: 2,     // 每次齐射增加 2 根侧刺（左右各偏 12°），侧刺伤害 50%
         sideAngleDeg: 12,
@@ -618,10 +622,11 @@ const TOWERS = {
         descKey: 'thorn_b2_desc',
         cost: 90,
         range: 5.0,
-        damage: 15,      // 9 * (1 + 0.20 + 0.30) = 13.5
-        damageBonus: 0.50,
-        interval: 0.45,
-        pierce: 2,
+        damage: 24,        // 14 * 1.71 ≈ 24
+        damageBonus: 0.71,
+        interval: 0.42,
+        pierce: 3,
+        armorPierce: 5,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -637,16 +642,16 @@ const TOWERS = {
         descKey: 'thorn_b3_desc',
         cost: 150,
         range: 5.0,
-        damage: 16,
-        damageBonus: 0.50,
-        interval: 0.41,    // 攻击间隔 -10% (0.45 * 0.9 = 0.405 -> 0.41)
-        pierce: 3,
+        damage: 28,        // 14 * 2.00 = 28
+        damageBonus: 1.00,
+        interval: 0.39,    // 攻击间隔缩短
+        pierce: 4,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
         sideDamageRatio: 0,
         pierceDamageBonusPerHit: 0.25,
-        armorPierce: 6, // 每穿透 1 个目标，后续伤害 +20%（最多 +100%）
+        armorPierce: 10,   // 强力破甲
         pierceDamageBonusMax: 1.00,
         next: []
       }
@@ -664,20 +669,21 @@ const TOWERS = {
     priorities: ['densest'], // 爆裂菇固定“最密集”
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 32,
-    maxTotalCost: 465,
+    baseDamage: 46,
+    maxTotalCost: 455,
     nodes: {
       base: {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'burst_base_desc',
         cost: 110,
-        range: 4.0,        // 射程 4.0 格（全部节点保持不变）
-        damage: 32,
+        range: 4.5,
+        damage: 46,
         damageBonus: 0,
-        interval: 1.55,     // 攻击间隔 1.6 秒（全部节点保持不变）
-        splashRadius: 1.25,
-        flightTime: 0.38,  // 抛物线炮弹飞行时间（秒）
+        interval: 1.45,
+        splashRadius: 1.45,
+        armorPierce: 0.40,
+        flightTime: 0.38,
         burnZone: null,
         next: ['lv1']
       },
@@ -686,11 +692,12 @@ const TOWERS = {
         nameKey: 'burst_lv1_name',
         descKey: 'burst_lv1_desc',
         cost: 65,
-        range: 4.0,
-        damage: 38,        // 伤害 +20%
-        damageBonus: 0.20,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.6,
+        damage: 58,        // 46 * 1.26 ≈ 58
+        damageBonus: 0.26,
+        interval: 1.42,
+        splashRadius: 1.50,
+        armorPierce: 0.45,
         flightTime: 0.38,
         burnZone: null,
         next: ['a2', 'b2']
@@ -701,11 +708,12 @@ const TOWERS = {
         nameKey: 'burst_a2_name',
         descKey: 'burst_a2_desc',
         cost: 105,
-        range: 4.0,
-        damage: 40,
-        damageBonus: 0.20,
-        interval: 1.55,
-        splashRadius: 1.75,// 溅射半径 +0.5
+        range: 4.8,
+        damage: 69,        // 46 * 1.50 = 69
+        damageBonus: 0.50,
+        interval: 1.38,
+        splashRadius: 1.95,// 溅射半径 +0.45
+        armorPierce: 0.50,
         flightTime: 0.38,
         burnZone: null,
         next: ['a3']
@@ -716,11 +724,12 @@ const TOWERS = {
         nameKey: 'burst_a3_name',
         descKey: 'burst_a3_desc',
         cost: 175,
-        range: 4.0,
-        damage: 46,      // 30 * (1 + 0.20 + 0.15) = 40.5
-        damageBonus: 0.35,
-        interval: 1.55,
-        splashRadius: 2.25,// 溅射半径 +0.5
+        range: 5.0,
+        damage: 85,        // 46 * 1.85 = 85
+        damageBonus: 0.85,
+        interval: 1.35,
+        splashRadius: 2.40,// 广域震波溅射
+        armorPierce: 0.55,
         flightTime: 0.38,
         burnZone: null,
         next: []
@@ -731,11 +740,12 @@ const TOWERS = {
         nameKey: 'burst_b2_name',
         descKey: 'burst_b2_desc',
         cost: 105,
-        range: 4.0,
-        damage: 48,        // 30 * (1 + 0.20 + 0.30) = 45
-        damageBonus: 0.50,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.6,
+        damage: 74,        // 46 * 1.61 ≈ 74
+        damageBonus: 0.61,
+        interval: 1.40,
+        splashRadius: 1.50,
+        armorPierce: 0.55,
         flightTime: 0.38,
         burnZone: null,
         next: ['b3']
@@ -746,16 +756,17 @@ const TOWERS = {
         nameKey: 'burst_b3_name',
         descKey: 'burst_b3_desc',
         cost: 175,
-        range: 4.0,
-        damage: 52,
-        damageBonus: 0.50,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.8,
+        damage: 88,        // 46 * 1.91 ≈ 88
+        damageBonus: 0.91,
+        interval: 1.35,
+        splashRadius: 1.55,
+        armorPierce: 0.65,
         flightTime: 0.38,
-        burnZone: {        // 爆心留下灼烧区：半径 1.0 格，持续 3 秒，每秒 8 点伤害
-          radius: 1.0,
-          duration: 3.5,
-          dps: 12
+        burnZone: {        // 爆心留下炽热熔金灼烧区
+          radius: 1.35,
+          duration: 4.0,
+          dps: 22
         },
         next: []
       }
@@ -784,8 +795,8 @@ const TOWERS = {
         range: 4.0,
         damage: 8,
         interval: 2.0,
-        sporeGen: 12,
-        sporeInterval: 10.0,
+        sporeGen: 7,
+        sporeInterval: 11.0,
         auraDmgBonus: 0.10,
         next: ['lv1']
       },
@@ -797,8 +808,8 @@ const TOWERS = {
         range: 4.5,
         damage: 12,
         interval: 1.8,
-        sporeGen: 16,
-        sporeInterval: 9.0,
+        sporeGen: 9,
+        sporeInterval: 10.0,
         auraDmgBonus: 0.12,
         next: ['a2', 'b2']
       },
@@ -841,8 +852,8 @@ const TOWERS = {
         range: 4.2,
         damage: 10,
         interval: 2.0,
-        sporeGen: 24,
-        sporeInterval: 7.0,
+        sporeGen: 13,
+        sporeInterval: 8.0,
         next: ['b3']
       },
       b3: {
@@ -854,8 +865,8 @@ const TOWERS = {
         range: 4.5,
         damage: 14,
         interval: 2.0,
-        sporeGen: 36,
-        sporeInterval: 6.0,
+        sporeGen: 18,
+        sporeInterval: 7.0,
         relicDropBonus: true,
         next: []
       }
@@ -886,11 +897,11 @@ const ENEMIES = {
     nameKey: 'enemy_beetle_name',
     typeKey: 'enemy_type_basic',
     tipKey: 'enemy_beetle_tip',
-    baseHp: 185,          // 基础血量从 40 提升至 95，需狙击菇 3 发击杀，形成有压迫感的步兵行进线
+    baseHp: 145,          // 基础步兵（约瞭望菇 4 箭击倒）
     speed: 1.40,          // 格/秒
-    armor: 4,            // 基础轻甲免伤 4 点
+    armor: 3,
     threat: 1,
-    reward: 4,
+    reward: 3,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 12, height: 12 },
@@ -907,11 +918,11 @@ const ENEMIES = {
     nameKey: 'enemy_swift_name',
     typeKey: 'enemy_type_fast',
     tipKey: 'enemy_swift_tip',
-    baseHp: 140,          // 从 22 提升至 60，不再被 1 枪秒杀，检验减速与多目标拦截
+    baseHp: 120,
     speed: 2.85,         // 格/秒（极速冲锋）
     armor: 1,
     threat: 1,
-    reward: 3,
+    reward: 2,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 10, height: 10 },
@@ -925,11 +936,11 @@ const ENEMIES = {
     nameKey: 'enemy_armored_name',
     typeKey: 'enemy_type_armored',
     tipKey: 'enemy_armored_tip',
-    baseHp: 920,         // 从 220 提升至 380，真正的前排坚盾重装坦克
+    baseHp: 860,         // 前排坚盾重装坦克
     speed: 0.8,         // 格/秒，沉稳推进
-    armor: 22,           // 12 点扎实护甲，大幅抵挡单体针刺，逼出毒雾腐蚀或火炮破甲！
+    armor: 20,           // 厚甲逼出爆裂破甲、迷雾腐蚀或圣光真伤
     threat: 2,
-    reward: 12,
+    reward: 8,
     isFlying: false,
     slowFactor: 0.5,     // 减速抗性 40%
     artSize: { width: 16, height: 16 },
@@ -943,11 +954,11 @@ const ENEMIES = {
     nameKey: 'enemy_moth_name',
     typeKey: 'enemy_type_flying',
     tipKey: 'enemy_moth_tip',
-    baseHp: 260,         // 从 55 提升至 125，需防空塔多轮专注射击
+    baseHp: 235,
     speed: 2.05,          // 格/秒，沿空中航线直穿树冠
     armor: 1,
     threat: 1,
-    reward: 5,
+    reward: 4,
     isFlying: true,
     slowFactor: 1.0,
     shadowOffsetPx: 14,  // 影子单独绘制偏移
@@ -962,11 +973,11 @@ const ENEMIES = {
     nameKey: 'enemy_splitter_name',
     typeKey: 'enemy_type_splitter',
     tipKey: 'enemy_splitter_tip',
-    baseHp: 480,         // 从 90 提升至 210
+    baseHp: 460,
     speed: 1.15,          // 格/秒
     armor: 3,
     threat: 2,
-    reward: 8,
+    reward: 5,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 14, height: 14 },
@@ -983,11 +994,11 @@ const ENEMIES = {
     nameKey: 'enemy_larva_name',
     typeKey: 'enemy_type_larva',
     tipKey: 'enemy_larva_tip',
-    baseHp: 115,          // 从 24 提升至 45
+    baseHp: 105,
     speed: 2.50,          // 格/秒，高速分散奔逃
     armor: 0,
     threat: 1,
-    reward: 2,
+    reward: 1,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 8, height: 8 },
@@ -1002,11 +1013,11 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m1_name', // 腐化蛀王
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m1_tip',
-    baseHp: 1600,        // 从 2400 提升至 4200，带来扣人心弦的守关激战
+    baseHp: 2100,        // 守关重装首领决战压迫感
     speed: 0.78,         // 格/秒
     armor: 14,
     threat: 5,
-    reward: 120,
+    reward: 60,
     isFlying: false,
     slowFactor: 0.8,
     artSize: { width: 32, height: 32 },
@@ -1035,11 +1046,11 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m2_name', // 腐化蛾后
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m2_tip',
-    baseHp: 2200,        // 飞行首领本体中等血量，主打召唤与高速突袭
+    baseHp: 2600,
     speed: 0.90,         // 格/秒（空中航线）
     armor: 10,
     threat: 5,
-    reward: 140,
+    reward: 75,
     isFlying: true,
     slowFactor: 1.0,
     shadowOffsetPx: 20,
@@ -1068,11 +1079,11 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m3_name', // 腐化异变母体
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m3_tip',
-    baseHp: 3200,        // 从 4000 提升至 6500
+    baseHp: 3500,
     speed: 0.78,          // 格/秒
     armor: 15,
     threat: 5,
-    reward: 160,
+    reward: 90,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 32, height: 32 },
@@ -1104,11 +1115,11 @@ const ENEMIES = {
     nameKey: 'enemy_boss_m4_name', // 蚀日圣甲皇
     typeKey: 'enemy_type_boss',
     tipKey: 'enemy_boss_m4_tip',
-    baseHp: 3900,
+    baseHp: 4200,
     speed: 0.74,
     armor: 18,
     threat: 5,
-    reward: 220,
+    reward: 110,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 32, height: 32 },
@@ -1140,11 +1151,11 @@ const ENEMIES = {
     nameKey: 'enemy_burrower_name',
     typeKey: 'enemy_burrower_type',
     tipKey: 'enemy_burrower_tip',
-    baseHp: 580,
+    baseHp: 560,
     speed: 1.5,
     armor: 5,
     threat: 2,
-    reward: 12,
+    reward: 8,
     isFlying: false,
     isBurrower: true,
     slowFactor: 0.9,
@@ -1158,11 +1169,11 @@ const ENEMIES = {
     nameKey: 'enemy_volatile_pod_name',
     typeKey: 'enemy_volatile_pod_type',
     tipKey: 'enemy_volatile_pod_tip',
-    baseHp: 380,
+    baseHp: 350,
     speed: 2.70,
     armor: 0,
     threat: 2,
-    reward: 9,
+    reward: 6,
     isFlying: false,
     isSuicideBomber: true,
     explosionRadius: 42,
@@ -1178,11 +1189,11 @@ const ENEMIES = {
     nameKey: 'enemy_shaman_name',
     typeKey: 'enemy_shaman_type',
     tipKey: 'enemy_shaman_tip',
-    baseHp: 720,
+    baseHp: 680,
     speed: 0.95,
     armor: 4,
     threat: 3,
-    reward: 18,
+    reward: 12,
     isFlying: false,
     isHealerShaman: true,
     healCooldown: 3.5,
@@ -1200,11 +1211,11 @@ const ENEMIES = {
     nameKey: 'enemy_skeletal_name',
     typeKey: 'enemy_skeletal_type',
     tipKey: 'enemy_skeletal_tip',
-    baseHp: 180,
+    baseHp: 165,
     speed: 1.25,
     armor: 2,
     threat: 1,
-    reward: 3,
+    reward: 2,
     isFlying: false,
     slowFactor: 1.0,
     artSize: { width: 12, height: 12 },
@@ -1217,11 +1228,11 @@ const ENEMIES = {
     nameKey: 'enemy_weaver_name',
     typeKey: 'enemy_weaver_type',
     tipKey: 'enemy_weaver_tip',
-    baseHp: 460,
+    baseHp: 440,
     speed: 1.3,
     armor: 2,
     threat: 2,
-    reward: 8,
+    reward: 5,
     isFlying: false,
     slowFactor: 1.0,
     webCooldown: 5.5,
@@ -1238,11 +1249,11 @@ const ENEMIES = {
     nameKey: 'enemy_leaper_name',
     typeKey: 'enemy_leaper_type',
     tipKey: 'enemy_leaper_tip',
-    baseHp: 460,
+    baseHp: 430,
     speed: 2.85,
     armor: 2,
     threat: 2,
-    reward: 9,
+    reward: 6,
     isFlying: false,
     isLeaper: true,
     leapCooldown: 3.8,
@@ -1257,11 +1268,11 @@ const ENEMIES = {
     nameKey: 'enemy_siege_beetle_name',
     typeKey: 'enemy_siege_beetle_type',
     tipKey: 'enemy_siege_beetle_tip',
-    baseHp: 1520,
+    baseHp: 1480,
     speed: 0.9,
     armor: 18,
     threat: 3,
-    reward: 18,
+    reward: 12,
     isFlying: false,
     hasFrontShield: true,
     artSize: { width: 18, height: 18 },
@@ -2986,6 +2997,9 @@ let pendingBgmKey = null;
 let bgmContexts = {};
 let sfxPool = {};
 let webAudioCtx = null;
+let masterCompressor = null;
+let foleyNoiseBuffer = null;
+let lastHoverSfxMs = 0;
 
 // 图片缓存与已加载分包记录
 const imageCache = {};
@@ -3385,6 +3399,72 @@ function unlockAudio() {
  * 多泛音原声乐器物理合成引擎 2.0 (Kalimba / Rosewood Marimba / Harp / Acoustic Pluck)
  * 彻底告别粗糙方波电子音，提供温润、清脆、有质感的森林原声打击乐体验
  */
+function ensureAudioGraph() {
+  if (!webAudioCtx) return null;
+  if (!masterCompressor && typeof webAudioCtx.createDynamicsCompressor === 'function') {
+    masterCompressor = webAudioCtx.createDynamicsCompressor();
+    masterCompressor.threshold.setValueAtTime(-14, webAudioCtx.currentTime);
+    masterCompressor.knee.setValueAtTime(12, webAudioCtx.currentTime);
+    masterCompressor.ratio.setValueAtTime(5, webAudioCtx.currentTime);
+    masterCompressor.attack.setValueAtTime(0.004, webAudioCtx.currentTime);
+    masterCompressor.release.setValueAtTime(0.14, webAudioCtx.currentTime);
+    masterCompressor.connect(webAudioCtx.destination);
+  }
+  if (!foleyNoiseBuffer && typeof webAudioCtx.createBuffer === 'function') {
+    const sr = webAudioCtx.sampleRate || 44100;
+    const len = sr;
+    const buf = webAudioCtx.createBuffer(1, len, sr);
+    const ch = buf.getChannelData(0);
+    // Warm pink-tinted noise texture using deterministic LCG
+    let seed = 0x51A7F3;
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const white = (seed / 0x80000000) - 1.0;
+      b0 = 0.997 * b0 + white * 0.029;
+      b1 = 0.985 * b1 + white * 0.032;
+      b2 = 0.950 * b2 + white * 0.048;
+      ch[i] = Math.max(-1, Math.min(1, (b0 + b1 + b2 + white * 0.22) * 1.35));
+    }
+    foleyNoiseBuffer = buf;
+  }
+  return masterCompressor || webAudioCtx.destination;
+}
+
+function playFilteredNoise(startTime, duration, filterType, freqStart, freqEnd, q, vol) {
+  if (!webAudioCtx || !foleyNoiseBuffer || typeof webAudioCtx.createBiquadFilter !== 'function') return;
+  const out = ensureAudioGraph();
+  if (!out) return;
+  const src = webAudioCtx.createBufferSource();
+  src.buffer = foleyNoiseBuffer;
+  src.loop = true;
+
+  const filter = webAudioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.Q.setValueAtTime(Math.max(0.2, q || 1.0), startTime);
+  filter.frequency.setValueAtTime(Math.max(40, freqStart), startTime);
+  filter.frequency.exponentialRampToValueAtTime(Math.max(40, freqEnd), startTime + Math.max(0.015, duration));
+
+  const g = webAudioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, startTime);
+  g.gain.linearRampToValueAtTime(Math.max(0.001, Math.min(0.45, vol)), startTime + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.max(0.02, duration));
+
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(out);
+  src.start(startTime);
+  src.stop(startTime + duration + 0.02);
+}
+
+function playHoverSfx() {
+  if (!audioUnlocked || !sfxEnabled || !webAudioCtx) return;
+  const now = Date.now();
+  if (now - lastHoverSfxMs < 85) return;
+  lastHoverSfxMs = now;
+  playSfx('sfx_hover', 0.55, 1.0, true);
+}
+
 function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756], decayRatio = 0.35) {
   if (!webAudioCtx) return;
   for (let i = 0; i < harmonics.length; i++) {
@@ -3399,7 +3479,7 @@ function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756]
     gain.gain.linearRampToValueAtTime(hVol, startTime + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.0008, startTime + hDur);
     osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
+    gain.connect(ensureAudioGraph());
     osc.start(startTime);
     osc.stop(startTime + hDur + 0.01);
   }
@@ -3411,8 +3491,30 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
     if (webAudioCtx.state === 'suspended') {
       webAudioCtx.resume().catch(() => {});
     }
+    ensureAudioGraph();
     const t0 = webAudioCtx.currentTime;
     const p = Math.max(0.5, Math.min(3.0, pitchMod || 1.0));
+
+    // 高质感拟音噪声层 (Bandpass/Highpass/Lowpass Noise Foley via Master Limiter)
+    if (sfxKey === 'sfx_hover') {
+      playFilteredNoise(t0, 0.024, 'bandpass', 1850 * p, 980 * p, 2.2, 0.075 * volumeMod);
+      playAcousticNote(740 * p, t0, 0.026, 0.05 * volumeMod, [1, 1.5], 0.18);
+      return true;
+    } else if (sfxKey === 'sfx_click') {
+      playFilteredNoise(t0, 0.028, 'bandpass', 2200 * p, 900 * p, 1.8, 0.11 * volumeMod);
+    } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
+      playFilteredNoise(t0, 0.095, 'highpass', 1600 * p, 420 * p, 1.1, 0.14 * volumeMod);
+    } else if (sfxKey === 'sfx_thorn' || sfxKey === 'sfx_hit') {
+      playFilteredNoise(t0, 0.055, 'bandpass', 2800 * p, 1100 * p, 1.4, 0.13 * volumeMod);
+    } else if (sfxKey === 'sfx_mist' || sfxKey === 'sfx_laser') {
+      playFilteredNoise(t0, 0.19, 'bandpass', 720 * p, 2200 * p, 1.8, 0.10 * volumeMod);
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom' || sfxKey === 'sfx_thunder' || sfxKey === 'sfx_shock') {
+      playFilteredNoise(t0, 0.34, 'lowpass', 950 * p, 130 * p, 0.8, 0.24 * volumeMod);
+    } else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_lose') {
+      playFilteredNoise(t0, 0.14, 'lowpass', 600 * p, 160 * p, 1.0, 0.16 * volumeMod);
+    } else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_win') {
+      playFilteredNoise(t0 + 0.04, 0.16, 'highpass', 3200 * p, 5200 * p, 2.0, 0.07 * volumeMod);
+    }
 
     if (sfxKey === 'sfx_click') {
       // 温润紫檀木琴轻叩 (Rosewood Marimba Tap)
@@ -3445,7 +3547,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.24 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.16);
       return true;
@@ -3459,7 +3561,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.28 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.27);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.28);
       playAcousticNote(220 * p, t0, 0.12, 0.12 * volumeMod, [1, 1.5], 0.4);
@@ -3474,7 +3576,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.14 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.065);
       return true;
@@ -3628,7 +3730,7 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
         const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
         gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
         srcNode.connect(gainNode);
-        gainNode.connect(webAudioCtx.destination);
+        gainNode.connect(ensureAudioGraph());
         srcNode.start(0);
         return;
       } catch (e) {}
@@ -3764,6 +3866,7 @@ module.exports = {
   playBgm,
   stopBgm,
   playSfx,
+  playHoverSfx,
   playMusicalScale,
   registerLifecycle,
   pollGamepadState,
@@ -5254,6 +5357,7 @@ class FxSystem {
         continue;
       }
       t.y += t.vy * fxDt;
+      t.vy *= Math.pow(0.22, fxDt);
     }
 
     // 更新冲击环
@@ -5334,8 +5438,9 @@ class FxSystem {
       for (let i = 0; i < tList.length; i++) {
         const t = tList[i];
         const alpha = t.life > t.maxLife * 0.7 ? (1 - (t.life - t.maxLife * 0.7) / (t.maxLife * 0.3)) : 1.0;
+        const pop = t.life < 0.14 ? (1.36 - 0.36 * (t.life / 0.14)) : 1.0;
         ctx.globalAlpha = Math.max(0, alpha);
-        const fSize = Math.max(10, Math.min(15, Math.round(11 * (t.scale || 1))));
+        const fSize = Math.max(10, Math.min(18, Math.round(11 * (t.scale || 1) * pop)));
         ctx.font = `bold ${fSize}px "Microsoft YaHei", sans-serif`;
         const rx = Math.round(t.x);
         const ry = Math.round(t.y);
@@ -6159,13 +6264,13 @@ class GameMap {
         scene.targetedObstacle = null;
       }
 
-      // 奖励爆发：大量黄金孢子 + 25%几率掉落远古觉醒种子
-      const rewardSpores = 65 + (obs.variant || 0) * 15;
+      // 奖励爆发：黄金孢子 + 20%几率掉落远古觉醒种子
+      const rewardSpores = 35 + (obs.variant || 0) * 10;
       if (economy) {
         economy.addSpores(rewardSpores);
       }
       let dropAwakening = false;
-      if (scene && Math.random() < 0.25) {
+      if (scene && Math.random() < 0.20) {
         scene.awakeningSeeds = (scene.awakeningSeeds || 0) + 1;
         dropAwakening = true;
       }
@@ -7257,7 +7362,8 @@ class EnemyManager {
         }
       } else {
         // Dodged underground
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 12, '潜地回避!', '#A89078', 0.85);
           fx.spawnParticles(enemy.x, enemy.y, 6, ['#8C6842', '#A89078'], 10, 20);
         }
@@ -7282,12 +7388,14 @@ class EnemyManager {
       const isBypass = damageType === 'lumina' || damageType === 'burst' || damageType === 'fire' || damageType === 'magic';
       if (isBypass) {
         frontShieldMul = 0.85; // 绕过盾牌削减
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 14, '穿盾克敌!', '#FAAD14', 1.0);
         }
       } else {
         frontShieldMul = 0.40; // 优化为 60% 减伤（原 75% 减伤过高导致打不动铁甲巨虫）
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -60%!', '#D9D9D9', 0.95);
           fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
         }
@@ -7558,7 +7666,7 @@ class EnemyManager {
     }
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
-      this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+      this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 30);
     } else if (!enemy.isElite && this.relicManager && this.scene && this.scene.towerManager && this.scene.towerManager.towers) {
       // 灵光菇 B3「聚宝金蟾圣堂」relicDropBonus：击杀附近敌怪额外提高战利品遗物掉率
       let hasB3 = false;
@@ -7570,9 +7678,9 @@ class EnemyManager {
           break;
         }
       }
-      if (hasB3 && Math.random() < 0.14) {
+      if (hasB3 && Math.random() < 0.08) {
         const rKind = ['coin', 'coin', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
-        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 50);
+        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 25);
       }
     }
     if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
@@ -7583,7 +7691,7 @@ class EnemyManager {
     // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
     if (this.scene) {
       if (enemy.isElite || enemy.isBoss) {
-        if (Math.random() < 0.65 || enemy.isBoss) {
+        if (Math.random() < 0.40 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');
@@ -8391,19 +8499,19 @@ class ForestHero {
     this.targetX = this.x;
     this.targetY = this.y;
     
-    // 基础属性与成长 (PvZ 战术指挥官标准，有挑战有配合)
+    // 基础属性与成长 (前线核心坦克与战术指挥官，与防御塔防线协同推进)
     this.level = 1;
     this.maxLevel = 5;
     this.xp = 0;
-    this.xpToNext = 100;
-    this.baseMaxHp = 420;
+    this.xpToNext = 140;
+    this.baseMaxHp = 360;
     this.maxHp = this.baseMaxHp;
     this.hp = this.maxHp;
-    this.baseAtk = 38;
+    this.baseAtk = 25;
     this.atkDamage = this.baseAtk;
     this.speed = 110;
     this.atkRange = 46;
-    this.atkInterval = 1.05;
+    this.atkInterval = 1.15;
     this.atkCooldown = 0;
     
     // 动作与状态机
@@ -8553,11 +8661,11 @@ class ForestHero {
     this.xp -= this.xpToNext;
     this.xpToNext = Math.round(this.xpToNext * 1.45);
     
-    // 属性飞跃成长（保留远古知识之树生命加成）
-    this.baseMaxHp = 560 + (this.level - 1) * 110;
+    // 属性平滑成长（保留远古知识之树生命加成）
+    this.baseMaxHp = 360 + (this.level - 1) * 95;
     this.maxHp = this.baseMaxHp + (this.bonusHp || 0);
     this.hp = this.maxHp; // 升级瞬间回满生命！
-    this.baseAtk = 46 + (this.level - 1) * 18;
+    this.baseAtk = 25 + (this.level - 1) * 11;
     this.atkDamage = this.baseAtk;
     this.levelUpGlowTimer = 2.5;
 
@@ -8606,9 +8714,24 @@ class ForestHero {
       finalDamage = this.transcendence.onHeroTakeDamage(finalDamage, enemyManager, fx);
     }
     if (this.stance === 'guardian') {
-      finalDamage = Math.max(1, Math.round(amount * 0.65));
+      finalDamage = Math.max(1, Math.round(finalDamage * 0.65));
     } else if (this.stance === 'aggressive') {
-      finalDamage = Math.round(amount * 1.15);
+      finalDamage = Math.round(finalDamage * 1.15);
+    }
+    if (this.brambleShieldHp > 0 && finalDamage > 0) {
+      const absorbed = Math.min(this.brambleShieldHp, finalDamage);
+      this.brambleShieldHp -= absorbed;
+      finalDamage -= absorbed;
+      if (fx && (this.brambleShieldHp <= 0 || absorbed >= 15)) {
+        fx.spawnFloatingText(
+          this.x,
+          this.y - 24,
+          this.brambleShieldHp <= 0 ? '🛡️ 护盾破碎!' : `🛡️ -${Math.round(absorbed)}`,
+          '#69C0FF',
+          1.05
+        );
+      }
+      if (finalDamage <= 0) return;
     }
 
     // 天赋 1 & 知识树：尖刺重甲与远古树皮近战创伤反弹
@@ -8698,7 +8821,7 @@ class ForestHero {
     // 震晕周围敌人并造成超高爆发重创
     if (enemyManager) {
       const alive = enemyManager.getAliveEnemies();
-      const skillDmg = Math.round((180 + (this.level - 1) * 60) * (this.stance === 'aggressive' ? 1.25 : 1.0));
+      const skillDmg = Math.round((135 + (this.level - 1) * 45) * (this.stance === 'aggressive' ? 1.25 : 1.0));
 
       for (let i = 0; i < alive.length; i++) {
         const e = alive[i];
@@ -9875,7 +9998,7 @@ class SporeDropManager {
     // 自然掉落晨露金孢 (PvZ 阳光飘落机制，自动避开障碍物、机关与已建防御塔)
     this.naturalSpawnTimer -= dt;
     if (this.naturalSpawnTimer <= 0) {
-      this.naturalSpawnTimer = 5.5 + Math.random() * 3.0;
+      this.naturalSpawnTimer = 8.0 + Math.random() * 4.0;
       let rx = 64 + Math.random() * 512;
       let ry = 64 + Math.random() * 316;
       const obstacles = (map && map.obstacles) || [];
@@ -9906,7 +10029,7 @@ class SporeDropManager {
           break;
         }
       }
-      this.spawnDrop(rx, ry, 15, true, 40);
+      this.spawnDrop(rx, ry, 10, true, 40);
     }
 
     // 英雄战地磁吸范围真空吸附
@@ -9945,11 +10068,12 @@ class SporeDropManager {
         }
       }
 
-      // 到期自动吸纳保底（绝不丢失战场资源）
+      // 到期微聚保底（主动拾取可获全额 10+ 孢子；未拾取仅留少量余晖）
       if (d.life <= 0) {
-        if (economy) economy.addSpores(d.spores);
+        const passiveVal = Math.max(2, Math.round(d.spores * 0.3));
+        if (economy) economy.addSpores(passiveVal);
         if (fx) {
-          fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 自然归巢`, '#FFE58F', 1.1);
+          fx.spawnFloatingText(d.x, d.y - 18, `+${passiveVal} 余晖归巢`, '#FFE58F', 1.0);
         }
         this.drops.splice(i, 1);
       }
@@ -10183,9 +10307,12 @@ class RelicDropManager {
         }
       }
 
-      // 超时自动拾取保底
+      // 超时消散（鼓励玩家主动点击/英雄靠近拾取；金币/四叶草仅散落微量余烬）
       if (r.life <= 0) {
-        this.collect(r, scene);
+        if ((r.kind === 'coin' || r.kind === 'clover') && scene && scene.economy) {
+          const dust = Math.max(5, Math.round((r.value || 30) * 0.25));
+          scene.economy.addSpores(dust);
+        }
         this.relics.splice(i, 1);
       }
     }
@@ -10232,9 +10359,10 @@ class RelicDropManager {
       fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 1.0), mv.OFFSET_Y + ry * (mv.SCALE || 1.0), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {
-      scene.economy.addSpores(relic.value || 60);
+      const coinVal = relic.value || 30;
+      scene.economy.addSpores(coinVal);
       if (fx) {
-        fx.spawnFloatingText(relic.x, ry - 18, `+${relic.value || 60} 战利品孢子!`, '#FFD700', 1.3);
+        fx.spawnFloatingText(relic.x, ry - 18, `+${coinVal} 战利品孢子!`, '#FFD700', 1.3);
         fx.spawnParticles(relic.x, ry, 16, ['#FFD700', '#FFF1B8', '#FFA940'], 30, 90, 0.25, 0.5, 3);
       }
       platform.playSfx('sfx_upgrade');
@@ -10259,9 +10387,9 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_laser');
     } else if (relic.kind === 'clover') {
-      // 四叶草神种：立即提供 60 孢子能量 + 1 觉醒神种 + 全场狂暴！
+      // 四叶草神种：立即提供 25 孢子能量 + 1 觉醒神种 + 全场狂暴！
       if (scene.economy) {
-        scene.economy.addSpores(60);
+        scene.economy.addSpores(25);
       }
       scene.awakeningSeeds = Math.min(5, (scene.awakeningSeeds || 0) + 1);
       if (scene.towerManager && scene.towerManager.towers) {
@@ -10270,7 +10398,7 @@ class RelicDropManager {
         }
       }
       if (fx) {
-        fx.spawnFloatingText(relic.x, ry - 18, '+60 能量 & +1 觉醒神种!', '#73D13D', 1.45);
+        fx.spawnFloatingText(relic.x, ry - 18, '+25 能量 & +1 觉醒神种!', '#73D13D', 1.45);
         fx.spawnParticles(relic.x, ry, 22, ['#73D13D', '#D9F7BE', '#FFD700', '#52C41A'], 35, 95, 0.3, 0.6, 4);
       }
       platform.playSfx('sfx_upgrade');
@@ -10831,9 +10959,13 @@ class ElementalReactionSystem {
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature', 'reactions');
     platform.playSfx('sfx_coin');
 
-    // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
-    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 8) {
-      scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 8, true, 24);
+    // 凝结 1 枚黄金能量孢子（每 4.5 秒最多凝结 1 枚，防止群怪刷屏产孢膨胀）
+    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 6) {
+      const nowT = scene.logicalCombatTimeSec || 0;
+      if (this._lastPhotoDropTime === undefined || this._lastPhotoDropTime > nowT || (nowT - this._lastPhotoDropTime) >= 4.5) {
+        this._lastPhotoDropTime = nowT;
+        scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 5, true, 24);
+      }
     }
 
     // 强化周围 96px 防御塔 2.6 秒攻击速度
@@ -12966,7 +13098,7 @@ class ElementalComboEngine {
   triggerCorrosion(enemy, enemyManager, fx, combatJuice) {
     enemy.baseArmor = Math.max(0, enemy.baseArmor * 0.2); // 削减 80% 护甲
     enemy.armorReduction = Math.max(enemy.armorReduction || 0, 8.0);
-    const splashDmg = 160;
+    const splashDmg = 75;
 
     // 范围溅射
     const alive = enemyManager.getAliveEnemies();
@@ -13002,7 +13134,7 @@ class ElementalComboEngine {
    * 2. 触发【蒸气爆鸣】
    */
   triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice) {
-    const shockDmg = 220;
+    const shockDmg = 95;
     const cx = enemy.x;
     const cy = enemy.y;
 
@@ -13060,8 +13192,8 @@ class ElementalComboEngine {
       x: cx,
       y: cy,
       radius: 65,
-      life: 4.0,
-      maxLife: 4.0,
+      life: 3.5,
+      maxLife: 3.5,
       tickTimer: 0
     });
 
@@ -13099,9 +13231,9 @@ class ElementalComboEngine {
     const cx = enemy.x;
     const cy = enemy.y;
 
-    // 战术微额孢子回馈 (+4，内置冷却限制防止无限刷钱)
+    // 战术微额孢子回馈 (+2，内置冷却限制防止无限刷钱)
     if (economy) {
-      economy.addSpores(4);
+      economy.addSpores(2);
     }
 
     // 致盲 1.6 秒
@@ -13116,7 +13248,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光 +4孢', '#FFD700', 1.1);
+      fx.spawnFloatingText(cx, cy - 30, '圣光 +2孢', '#FFD700', 1.1);
       fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -13131,7 +13263,7 @@ class ElementalComboEngine {
     const allAlive = enemyManager.getAliveEnemies();
     const cx = primaryEnemy ? primaryEnemy.x : 320;
     const cy = primaryEnemy ? primaryEnemy.y : 240;
-    const grandDmg = 155;
+    const grandDmg = 115;
 
     let affected = 0;
     for (let i = 0; i < allAlive.length; i++) {
@@ -13180,9 +13312,9 @@ class ElementalComboEngine {
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.0);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.60);
               if (typeof enemyManager.applyDamage === 'function') {
-                enemyManager.applyDamage(tgt, 35, false, 'fire', null, 'reactions');
+                enemyManager.applyDamage(tgt, 18, false, 'fire', null, 'reactions');
               } else {
-                tgt.hp -= 35;
+                tgt.hp -= 18;
                 if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
               }
             }
@@ -13416,7 +13548,7 @@ class GuardianSynergiesSystem {
     // 盖亚之怒自动蓄力
     if (this.synergies.grand_awakening.active) {
       this.gaiaWrathTimer += dt;
-      if (this.gaiaWrathTimer >= 12.0) {
+      if (this.gaiaWrathTimer >= 15.0) {
         this.gaiaWrathTimer = 0;
         this.triggerGaiaWrath(scene);
       }
@@ -13466,11 +13598,11 @@ class GuardianSynergiesSystem {
         const e = enemies[i];
         if (!e.isFlying) {
           if (typeof scene.enemyManager.applyDamage === 'function') {
-            scene.enemyManager.applyDamage(e, 160, false, 'nature', scene.fx, 'reactions');
+            scene.enemyManager.applyDamage(e, 95, false, 'nature', scene.fx, 'reactions');
           } else {
-            e.takeDamage(160, scene.fx, 'nature', 'reactions');
+            e.takeDamage(95, scene.fx, 'nature', 'reactions');
           }
-          e.stunTimer = Math.max(e.stunTimer || 0, 1.2);
+          e.stunTimer = Math.max(e.stunTimer || 0, 0.9);
           if (scene.fx) {
             scene.fx.spawnParticles(e.x, e.y, 8, ['#B37FEB', '#D3ADF7', '#52C41A'], 15, 35, 0.2, 0.45, 2.5);
             scene.fx.spawnFloatingText(e.x, e.y - 14, '🌍 盖亚重击!', '#D3ADF7', 0.9);
@@ -13904,7 +14036,7 @@ class TacticalFeatsSystem {
         id: 'sniper_elite',
         title: '神射无双',
         desc: '在 220 像素以外的超远距离精准击杀 5 只疾行虫',
-        rewardSpores: 80,
+        rewardSpores: 40,
         unlocked: false,
         progress: 0,
         target: 5
@@ -13913,7 +14045,7 @@ class TacticalFeatsSystem {
         id: 'superconduct_chain',
         title: '超导风暴',
         desc: '单次元素反应引爆至少 6 只敌军',
-        rewardSpores: 120,
+        rewardSpores: 60,
         unlocked: false,
         progress: 0,
         target: 6
@@ -13922,7 +14054,7 @@ class TacticalFeatsSystem {
         id: 'absolute_zero',
         title: '深度冻结',
         desc: '使用迷雾与玄冰使 8 只敌军减速超过 50%',
-        rewardSpores: 100,
+        rewardSpores: 50,
         unlocked: false,
         progress: 0,
         target: 8
@@ -13931,7 +14063,7 @@ class TacticalFeatsSystem {
         id: 'iron_bastion',
         title: '钢铁森防',
         desc: '英雄在承受超过 300 点伤害后依然屹立不倒并消灭攻击者',
-        rewardSpores: 110,
+        rewardSpores: 55,
         unlocked: false,
         progress: 0,
         target: 1
@@ -13940,7 +14072,7 @@ class TacticalFeatsSystem {
         id: 'flawless_sanctuary',
         title: '无暇圣域',
         desc: '连续防守 5 波敌军，生命种子零损耗',
-        rewardSpores: 150,
+        rewardSpores: 75,
         unlocked: false,
         progress: 0,
         target: 5
@@ -13949,7 +14081,7 @@ class TacticalFeatsSystem {
         id: 'titan_breaker',
         title: '巨神破壁',
         desc: '攻破攻城巨甲虫 (Siege Beetle) 的重型防护并将其消灭',
-        rewardSpores: 160,
+        rewardSpores: 80,
         unlocked: false,
         progress: 0,
         target: 1
@@ -13958,7 +14090,7 @@ class TacticalFeatsSystem {
         id: 'aerial_hunter',
         title: '截击猎手',
         desc: '在跃击虫 (Leaper) 腾空跳跃期间完成空中截杀',
-        rewardSpores: 130,
+        rewardSpores: 65,
         unlocked: false,
         progress: 0,
         target: 1
@@ -13967,7 +14099,7 @@ class TacticalFeatsSystem {
         id: 'bountiful_grove',
         title: '始源丰饶',
         desc: '在单局对决中累计收获超过 1,000 点森林孢子',
-        rewardSpores: 200,
+        rewardSpores: 90,
         unlocked: false,
         progress: 0,
         target: 1000
@@ -14198,10 +14330,10 @@ const TALENT_DEFS = {
     tier: 1,
     name: '菌丝网络',
     icon: '🌱',
-    desc: '开局额外获得 +30 基础孢子，且每秒自然凝聚 +1 孢子',
+    desc: '开局额外获得 +25 基础孢子，且每 2 秒自然凝聚约 +1.1 孢子',
     maxRank: 3,
     costPerRank: 1,
-    effect: (rank) => ({ startingSpores: rank * 30, sporeTricklePerSec: rank * 1.0 })
+    effect: (rank) => ({ startingSpores: rank * 25, sporeTricklePerSec: rank * 0.55 })
   },
   bountiful_harvest: {
     id: 'bountiful_harvest',
@@ -14507,8 +14639,8 @@ class AncientKnowledgeTree {
     // 1. 菌丝网络：开局额外孢子与自然产出
     const myRank = this.getRank('mycelium_network');
     if (myRank > 0 && scene.economy) {
-      scene.economy.spores += myRank * 30;
-      scene.economy.passiveTrickleBonus = myRank * 1.0;
+      scene.economy.spores += myRank * 25;
+      scene.economy.passiveTrickleBonus = myRank * 0.55;
     }
 
     // 1.5 丰收祝福：大地丰收额外孢子 + 精英双倍掉孢几率
@@ -14603,10 +14735,11 @@ class AncientKnowledgeTree {
     // 菌丝网络：每秒自然凝聚额外孢子
     const myRank = this.getRank('mycelium_network');
     if (myRank > 0 && scene.economy) {
-      this.trickleTimer = (this.trickleTimer || 0) + dt;
+      this.trickleTimer = (this.trickleTimer || 0) + dt * (myRank * 0.55);
       if (this.trickleTimer >= 1.0) {
-        this.trickleTimer -= 1.0;
-        scene.economy.addSpores(Math.round(myRank * 1.0));
+        const addAmt = Math.floor(this.trickleTimer);
+        this.trickleTimer -= addAmt;
+        scene.economy.addSpores(addAmt);
       }
     }
   }
@@ -16212,6 +16345,7 @@ class BulletManager {
     b.flightDuration = node.flightTime || 0.38;
     b.baseDamage = baseDamage;
     b.damageBonus = node.damageBonus || 0;
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0.45;
     b.splashRadiusPx = (node.splashRadius || 1.25) * TILE_SIZE;
     b.burnZoneCfg = node.burnZone || null;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -16671,8 +16805,11 @@ class BulletManager {
             const hz = hazards[hI];
             if (hz.kind === 'mist') {
               if (Math.hypot(b.targetX - hz.x, b.targetY - hz.y) <= b.splashRadiusPx + hz.radiusPx) {
-                hz.radiusPx *= 1.35;
-                hz.dps += 6;
+                if (!hz._expandedByBurst) {
+                  hz._expandedByBurst = true;
+                  hz.radiusPx = Math.min(82, hz.radiusPx * 1.25);
+                  hz.dps += 6;
+                }
                 if (fx) {
                   fx.spawnParticles(b.targetX, b.targetY, 20, ['#52C41A', '#B7EB8F', '#FFD700', '#FFA940'], 45, 130, 0.25, 0.55, 4);
                   fx.spawnFloatingText(b.targetX, b.targetY - 26, '毒爆!', '#52C41A', 1.2);
@@ -16684,6 +16821,8 @@ class BulletManager {
             }
           }
 
+          let burstToxicCount = 0;
+          const burstPierce = b.armorPierceRatio !== undefined ? b.armorPierceRatio : 0.35;
           for (let j = 0; j < aliveEnemies.length; j++) {
             const e = aliveEnemies[j];
             if (e.isFlying || e.state === 'death') continue;
@@ -16695,9 +16834,9 @@ class BulletManager {
               let bonusDmg = b.damageBonus;
               if (isPoisoned) {
                 bonusDmg += b.hasToxicBurst ? 0.90 : 0.50;
-                if (fx) {
-                  fx.spawnFloatingText(e.x, e.y - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
-                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 16 : 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
+                burstToxicCount++;
+                if (fx && burstToxicCount <= 2) {
+                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 12 : 10, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
                 }
               }
               enemyManager.applyDirectDamage(
@@ -16711,12 +16850,15 @@ class BulletManager {
                 economy,
                 fx,
                 'burst',
-                { sourceTower: b.sourceTower }
+                { sourceTower: b.sourceTower, armorPierceRatio: burstPierce }
               );
               if (this.elementalCombos) {
                 this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
               }
             }
+          }
+          if (burstToxicCount > 0 && fx) {
+            fx.spawnFloatingText(b.targetX, b.targetY - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
           }
 
           if (economy) {
@@ -17882,6 +18024,17 @@ class TowerManager {
         ctx.stroke();
         ctx.restore();
       }
+      // 圣光照耀共鸣脚底金芒光环
+      if (t.celestialBuffTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#FFD666';
+        ctx.lineWidth = 1.8;
+        ctx.globalAlpha = 0.65 + Math.sin(t.celestialBuffTimer * 8) * 0.25;
+        ctx.beginPath();
+        ctx.ellipse(t.x, t.y + 11, 17, 7.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // 休眠状态时透明度降低并微偏暗
             // 濒死受损颤抖 (HP <= 35%)
@@ -18047,6 +18200,28 @@ class TowerManager {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚠️ 守卫垂危!', t.x, tileY - 18);
+        ctx.restore();
+      }
+
+      // 进化阶级迷你星钻徽记（1~3枚底座镶嵌宝石，战场无需点击即可直读阶级）
+      const tierCount = (t.nodeId === 'a3' || t.nodeId === 'b3') ? 3 : ((t.nodeId === 'a2' || t.nodeId === 'b2') ? 2 : (t.nodeId === 'lv1' ? 1 : 0));
+      if (tierCount > 0) {
+        ctx.save();
+        const gemColor = t.nodeId.startsWith('a') ? PALETTE.BRANCH_A : (t.nodeId.startsWith('b') ? PALETTE.BRANCH_B : '#FFD666');
+        const gap = 7;
+        const startGx = t.x - ((tierCount - 1) * gap) * 0.5;
+        const gy = tileY + 27;
+        for (let gi = 0; gi < tierCount; gi++) {
+          const gx = startGx + gi * gap;
+          ctx.fillStyle = '#141B12';
+          ctx.beginPath();
+          ctx.arc(gx, gy, 3.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = gemColor;
+          ctx.beginPath();
+          ctx.arc(gx, gy, 2.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
 
@@ -18871,6 +19046,7 @@ class UiManager {
     this.buttons = [];
     this.hoverX = -1;
     this.hoverY = -1;
+    this.lastHoveredBtnId = null;
     this.uiAnimTime = 0;
     this.uiZenMode = false;
     this.zenTransitionAlpha = 0;
@@ -18956,6 +19132,20 @@ class UiManager {
   handlePointerMove(x, y, scene) {
     this.hoverX = x;
     this.hoverY = y;
+    let nowHoveredId = null;
+    for (let i = this.buttons.length - 1; i >= 0; i--) {
+      const b = this.buttons[i];
+      if (b && !(b.meta && b.meta.disabled) && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        nowHoveredId = b.id;
+        break;
+      }
+    }
+    if (nowHoveredId && nowHoveredId !== this.lastHoveredBtnId) {
+      if (typeof platform.playHoverSfx === 'function') {
+        platform.playHoverSfx();
+      }
+    }
+    this.lastHoveredBtnId = nowHoveredId;
     if (this.draggingTowerId) {
       this.dragCurrentX = x;
       this.dragCurrentY = y;
@@ -19454,39 +19644,83 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
+    // 柔光氛围暗角：聚光于英雄阵线与徽章区域，提升前景可读性
+    ctx.save();
+    const botGrad = ctx.createLinearGradient(0, 390, 0, 540);
+    botGrad.addColorStop(0, 'rgba(8, 12, 8, 0)');
+    botGrad.addColorStop(1, 'rgba(8, 12, 8, 0.62)');
+    ctx.fillStyle = botGrad;
+    ctx.fillRect(0, 390, 960, 150);
+    ctx.restore();
+
     // 森林萤火孢子微粒动画
-    for (let i = 0; i < 20; i++) {
-      const sx = ((i * 97 + Math.floor(this.uiAnimTime * (12 + (i % 5) * 4))) % 920) + 20;
-      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (10 + (i % 4) * 3))) % 460 + 460) % 460 + 20;
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 228, 130, 0.72)' : 'rgba(145, 255, 165, 0.65)';
+    for (let i = 0; i < 22; i++) {
+      const sx = ((i * 97 + Math.floor(this.uiAnimTime * (10 + (i % 5) * 3))) % 920) + 20;
+      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (8 + (i % 4) * 3))) % 440 + 440) % 440 + 18;
+      const pulse = 0.48 + 0.32 * Math.sin(this.uiAnimTime * 2.2 + i);
+      ctx.fillStyle = i % 2 === 0 ? `rgba(255, 228, 130, ${pulse.toFixed(2)})` : `rgba(145, 255, 165, ${(pulse * 0.9).toFixed(2)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, i % 2 === 0 ? 2.4 : 1.6, 0, Math.PI * 2);
+      ctx.arc(sx, sy, i % 2 === 0 ? 2.2 : 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 顶部大气手绘木纹金匾标题（纯净无任何图像烘焙文字，支持实时语言切换）
-    const titleBannerW = 430;
-    const titleBannerH = 74;
-    const titleBannerX = (960 - titleBannerW) * 0.5;
-    const titleBannerY = 34;
-    this.drawAiFrame(ctx, 'top_bar', titleBannerX, titleBannerY, titleBannerW, titleBannerH, 0.94);
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', 480, titleBannerY + 29, {
+    // 左上角 AI 精绘冠冕月桂徽章牌（避开右侧树人与菇卫主体构图）
+    const crestImg = platform.getImage('assets/ui/frames/title_crest_plaque.png');
+    const crestW = 376;
+    const crestH = 198;
+    const crestX = 24;
+    const crestY = 16;
+    if (crestImg) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+      ctx.drawImage(crestImg, crestX, crestY, crestW, crestH);
+      ctx.restore();
+      platform.recordDrawCall(1);
+    } else {
+      this.drawAiFrame(ctx, 'top_bar', crestX, crestY + 56, crestW, 78, 0.94);
+    }
+    const crestCx = crestX + crestW * 0.5;
+    const crestCy = crestY + Math.round(crestH * 0.525);
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', crestCx, crestCy - 8, {
       style: 'gold',
-      size: 30,
+      size: 27,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 1.6
     });
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', 480, titleBannerY + 52, {
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', crestCx, crestCy + 15, {
       style: 'parchment',
-      size: 11.5,
+      size: 10.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0
     });
 
-    // 底部雕刻木质命令栏
-    this.drawAiFrame(ctx, 'top_bar', 106, 450, 748, 76, 0.96);
+    // 底部 AI 精绘石框青铜嵌槽命令栏（三段水平切分绘制，铆钉石块零拉伸变形）
+    const dockX = 96;
+    const dockY = 432;
+    const dockW = 768;
+    const dockH = 100;
+    const dockImg = platform.getImage('assets/ui/frames/title_dock_frame.png');
+    if (dockImg && dockImg.width >= 900) {
+      const capSrcW = 126;
+      const capDstW = Math.round(capSrcW * (dockH / dockImg.height));
+      const midSrcW = dockImg.width - capSrcW * 2;
+      const midDstW = dockW - capDstW * 2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 5;
+      ctx.drawImage(dockImg, 0, 0, capSrcW, dockImg.height, dockX, dockY, capDstW, dockH);
+      ctx.drawImage(dockImg, capSrcW, 0, midSrcW, dockImg.height, dockX + capDstW, dockY, midDstW, dockH);
+      ctx.drawImage(dockImg, dockImg.width - capSrcW, 0, capSrcW, dockImg.height, dockX + dockW - capDstW, dockY, capDstW, dockH);
+      ctx.restore();
+      platform.recordDrawCall(3);
+    } else {
+      this.drawAiFrame(ctx, 'top_bar', dockX + 10, dockY + 14, dockW - 20, dockH - 22, 0.96);
+    }
 
     const btns = [
       { id: 'title_start', label: i18n.t('btn_start'), icon: 'play', cat: 16, skin: 'btn_green', cb: () => scene.enterLevelSelect() },
@@ -19496,8 +19730,8 @@ class UiManager {
     ];
     for (let i = 0; i < btns.length; i++) {
       const b = btns[i];
-      const bx = 136 + i * 176;
-      this.drawPixelButton(ctx, b.id, bx, 466, 160, 44, b.label, {
+      const bx = 154 + i * 166;
+      this.drawPixelButton(ctx, b.id, bx, 460, 154, 44, b.label, {
         skin: b.skin,
         font: `bold 16px ${CN_FONT}`,
         iconCat: b.cat,
@@ -19508,7 +19742,7 @@ class UiManager {
       });
     }
 
-    this.drawPixelButton(ctx, 'title_lang', 18, 18, 114, 36, i18n.getLang() === 'zh' ? '语言：中文' : 'Lang: EN', {
+    this.drawPixelButton(ctx, 'title_lang', 826, 20, 114, 34, i18n.getLang() === 'zh' ? '语言：中文' : 'Lang: EN', {
       skin: 'btn_wood',
       font: `bold 13px ${CN_FONT}`
     }, () => {
@@ -19540,15 +19774,15 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
-    // 顶部木质横幅与两侧导航等高同心对齐（centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 260, 12, 292, 48, 0.98);
+    // 顶部木质横幅与两侧导航居中对称对齐（centerX = 480, centerY = 36）
+    this.drawAiFrame(ctx, 'top_bar', 344, 12, 272, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 406, 36);
+    ctx.fillText(i18n.t('btn_level_select'), 480, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 96, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 27, 18, 96, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 14.5px ${CN_FONT}`
     }, () => {
@@ -19556,7 +19790,7 @@ class UiManager {
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 128, 18, 120, 36, i18n.t('btn_guide'), {
+    this.drawPixelButton(ctx, 'lvl_codex', 131, 18, 120, 36, i18n.t('btn_guide'), {
       skin: 'btn_wood',
       iconCat: 24,
       iconKey: 'guide',
@@ -19569,7 +19803,7 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 564, 18, 140, 36, 0.96)) {
+      if (!this.drawAiFrame(ctx, 'top_bar', 645, 18, 148, 36, 0.96)) {
         roundRectPath(ctx, 564, 18, 140, 36, 8);
         ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
         ctx.fill();
@@ -19577,7 +19811,7 @@ class UiManager {
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 634, 36, {
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 719, 36, {
         style: 'gold',
         size: 11.5,
         align: 'center',
@@ -19588,7 +19822,7 @@ class UiManager {
       ctx.restore();
     }
 
-    this.drawPixelButton(ctx, 'lvl_settings', 714, 18, 124, 36, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'lvl_settings', 801, 18, 132, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
       font: `bold 14px ${CN_FONT}`
@@ -24094,6 +24328,7 @@ class UiManager {
         platform.playSfx('sfx_thunder');
       } else {
         this.showToast(hero.state === 'dead' ? '英雄正在复活中' : `大招冷却中: ${Math.ceil(ultCd)}s`);
+        platform.playSfx('sfx_hurt', 0.45, 0.72);
       }
     });
 
@@ -24280,6 +24515,7 @@ class UiManager {
           platform.playSfx('sfx_click');
         } else {
           this.showToast(spCd > 0 ? `冷却中: ${Math.ceil(spCd)}s` : `孢子不足 (需 ${spItem.cost})`);
+          platform.playSfx('sfx_hurt', 0.45, 0.72);
         }
       });
     }
@@ -24430,7 +24666,7 @@ class SceneController {
     this.spells = {
       rain: { id: 'rain', name: '自然甘霖', cost: 45, cd: 25, timer: 0, key: 'Q', radius: 120 },
       shock: { id: 'shock', name: '雷霆震爆', cost: 75, cd: 35, timer: 0, key: 'W', radius: 90 },
-      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 },
+      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 55, timer: 0, key: 'E', gain: 85 },
       rally: { id: 'rally', name: '菇精卫集结', cost: 0, cd: 3, timer: 0, key: 'R' }
     };
     this.isEndlessMode = false;
@@ -25548,7 +25784,7 @@ class SceneController {
     }
 
     if (this.comboKillCount === 8) {
-      this.economy.addSpores(35);
+      this.economy.addSpores(20);
       this.fx.showBanner(i18n.t('banner_spore_frenzy'), '#FFD700', '连杀爆发', 1.6);
       this.fx.triggerScreenShake(4.0, 0.25);
       if (this.towerManager && this.towerManager.towers) {

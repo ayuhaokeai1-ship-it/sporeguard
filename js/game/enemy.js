@@ -309,7 +309,8 @@ class EnemyManager {
         }
       } else {
         // Dodged underground
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 12, '潜地回避!', '#A89078', 0.85);
           fx.spawnParticles(enemy.x, enemy.y, 6, ['#8C6842', '#A89078'], 10, 20);
         }
@@ -334,12 +335,14 @@ class EnemyManager {
       const isBypass = damageType === 'lumina' || damageType === 'burst' || damageType === 'fire' || damageType === 'magic';
       if (isBypass) {
         frontShieldMul = 0.85; // 绕过盾牌削减
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 14, '穿盾克敌!', '#FAAD14', 1.0);
         }
       } else {
         frontShieldMul = 0.40; // 优化为 60% 减伤（原 75% 减伤过高导致打不动铁甲巨虫）
-        if (fx) {
+        if (fx && (!enemy._lastTagCombatTime || (combatTimeSec - enemy._lastTagCombatTime) >= 1.8)) {
+          enemy._lastTagCombatTime = combatTimeSec;
           fx.spawnFloatingText(enemy.x, enemy.y - 14, '铁壁格挡 -60%!', '#D9D9D9', 0.95);
           fx.spawnParticles(enemy.x, enemy.y, 6, ['#D9D9D9', '#FFFDF5', '#8C8C8C'], 20, 35);
         }
@@ -610,7 +613,7 @@ class EnemyManager {
     }
     if (enemy.isElite && this.relicManager) {
       const rKind = ['coin', 'shield', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
-      this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 60);
+      this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 30);
     } else if (!enemy.isElite && this.relicManager && this.scene && this.scene.towerManager && this.scene.towerManager.towers) {
       // 灵光菇 B3「聚宝金蟾圣堂」relicDropBonus：击杀附近敌怪额外提高战利品遗物掉率
       let hasB3 = false;
@@ -622,9 +625,9 @@ class EnemyManager {
           break;
         }
       }
-      if (hasB3 && Math.random() < 0.14) {
+      if (hasB3 && Math.random() < 0.08) {
         const rKind = ['coin', 'coin', 'lightning', 'clover'][Math.floor(Math.random() * 4)];
-        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 50);
+        this.relicManager.spawnDrop(enemy.x, enemy.y, rKind, 25);
       }
     }
     if (enemy.isElite && this.scene && this.scene.eliteDoubleSporeChance > 0 && this.scene.sporeDropManager) {
@@ -635,7 +638,7 @@ class EnemyManager {
     // 击杀敌人为森林英雄累积经验值 & 精英/首领掉落灵能觉醒种子
     if (this.scene) {
       if (enemy.isElite || enemy.isBoss) {
-        if (Math.random() < 0.65 || enemy.isBoss) {
+        if (Math.random() < 0.40 || enemy.isBoss) {
           this.scene.awakeningSeeds = Math.min(5, (this.scene.awakeningSeeds || 0) + 1);
           if (effFx) effFx.spawnFloatingText(enemy.x, enemy.y - 22, '+1 灵能觉醒种子!', '#722ED1', 1.3);
           platform.playSfx('sfx_upgrade');

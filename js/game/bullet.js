@@ -200,6 +200,7 @@ class BulletManager {
     b.flightDuration = node.flightTime || 0.38;
     b.baseDamage = baseDamage;
     b.damageBonus = node.damageBonus || 0;
+    b.armorPierceRatio = (node.armorPierce && node.armorPierce < 1) ? node.armorPierce : 0.45;
     b.splashRadiusPx = (node.splashRadius || 1.25) * TILE_SIZE;
     b.burnZoneCfg = node.burnZone || null;
     b.branchColor = node.branch === 'A' ? PALETTE.BRANCH_A : (node.branch === 'B' ? PALETTE.BRANCH_B : PALETTE.UPGRADE_LV1);
@@ -659,8 +660,11 @@ class BulletManager {
             const hz = hazards[hI];
             if (hz.kind === 'mist') {
               if (Math.hypot(b.targetX - hz.x, b.targetY - hz.y) <= b.splashRadiusPx + hz.radiusPx) {
-                hz.radiusPx *= 1.35;
-                hz.dps += 6;
+                if (!hz._expandedByBurst) {
+                  hz._expandedByBurst = true;
+                  hz.radiusPx = Math.min(82, hz.radiusPx * 1.25);
+                  hz.dps += 6;
+                }
                 if (fx) {
                   fx.spawnParticles(b.targetX, b.targetY, 20, ['#52C41A', '#B7EB8F', '#FFD700', '#FFA940'], 45, 130, 0.25, 0.55, 4);
                   fx.spawnFloatingText(b.targetX, b.targetY - 26, '毒爆!', '#52C41A', 1.2);
@@ -672,6 +676,8 @@ class BulletManager {
             }
           }
 
+          let burstToxicCount = 0;
+          const burstPierce = b.armorPierceRatio !== undefined ? b.armorPierceRatio : 0.35;
           for (let j = 0; j < aliveEnemies.length; j++) {
             const e = aliveEnemies[j];
             if (e.isFlying || e.state === 'death') continue;
@@ -683,9 +689,9 @@ class BulletManager {
               let bonusDmg = b.damageBonus;
               if (isPoisoned) {
                 bonusDmg += b.hasToxicBurst ? 0.90 : 0.50;
-                if (fx) {
-                  fx.spawnFloatingText(e.x, e.y - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
-                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 16 : 14, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
+                burstToxicCount++;
+                if (fx && burstToxicCount <= 2) {
+                  fx.spawnParticles(e.x, e.y, b.hasToxicBurst ? 12 : 10, ['#52C41A', '#FFE58F', '#FFA940'], 40, 120, 0.2, 0.48, 3.5);
                 }
               }
               enemyManager.applyDirectDamage(
@@ -699,12 +705,15 @@ class BulletManager {
                 economy,
                 fx,
                 'burst',
-                { sourceTower: b.sourceTower }
+                { sourceTower: b.sourceTower, armorPierceRatio: burstPierce }
               );
               if (this.elementalCombos) {
                 this.elementalCombos.checkCombo(e, 'fire', enemyManager, economy, fx, this.combatJuice);
               }
             }
+          }
+          if (burstToxicCount > 0 && fx) {
+            fx.spawnFloatingText(b.targetX, b.targetY - 22, b.hasToxicBurst ? '剧毒爆裂!' : '毒爆!', '#52C41A', b.hasToxicBurst ? 1.25 : 1.15);
           }
 
           if (economy) {

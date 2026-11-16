@@ -15,16 +15,16 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 42,
-    maxTotalCost: 480,
+    baseDamage: 33,
+    maxTotalCost: 465,
     nodes: {
       base: {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'watch_base_desc',
         cost: 115,
-        range: 6.2,
-        damage: 42,
+        range: 5.8,
+        damage: 33,
         damageBonus: 0,
         interval: 1.25,
         bulletSpeed: 640,
@@ -40,10 +40,10 @@ const TOWERS = {
         nameKey: 'watch_lv1_name',
         descKey: 'watch_lv1_desc',
         cost: 70,
-        range: 6.6,
-        damage: 52,
-        damageBonus: 0.20, // 伤害 +20%，射程 +0.5
-        interval: 1.25,
+        range: 6.2,
+        damage: 40,
+        damageBonus: 0.21,
+        interval: 1.22,
         bulletSpeed: 640,
         critRate: 0,
         critMultiplier: 1.0,
@@ -58,11 +58,11 @@ const TOWERS = {
         nameKey: 'watch_a2_name',
         descKey: 'watch_a2_desc',
         cost: 105,
-        range: 8.0,        // 射程 +1.5
-        damage: 56,
-        damageBonus: 0.20,
-        interval: 1.125,   // 攻击间隔 -10%
-        bulletSpeed: 800,  // 弹速 +25% (640 * 1.25 = 800)
+        range: 7.2,        // 射程 +1.0
+        damage: 46,        // 33 * 1.39 ≈ 46
+        damageBonus: 0.39,
+        interval: 1.15,    // 攻击间隔缩短
+        bulletSpeed: 800,  // 弹速 +25%
         critRate: 0,
         critMultiplier: 1.0,
         appliesMark: false,
@@ -76,16 +76,16 @@ const TOWERS = {
         nameKey: 'watch_a3_name',
         descKey: 'watch_a3_desc',
         cost: 175,
-        range: 9.0,        // 射程 +1.0
-        damage: 70,
-        damageBonus: 0.20,
-        interval: 1.125,
+        range: 8.2,        // 超视距精准狙击
+        damage: 54,        // 33 * 1.64 ≈ 54
+        damageBonus: 0.64,
+        interval: 1.12,
         bulletSpeed: 800,
         critRate: 0,
         critMultiplier: 1.0,
         appliesMark: true, // 命中后标记目标 3 秒，直接伤害 +15%
         markDuration: 3.0,
-        markBonus: 0.20,
+        markBonus: 0.15,
         armorPierce: 0.35,
         next: []
       },
@@ -95,10 +95,10 @@ const TOWERS = {
         nameKey: 'watch_b2_name',
         descKey: 'watch_b2_desc',
         cost: 105,
-        range: 6.5,
-        damage: 72,        // 40 * (1 + 0.20 + 0.35) = 62
-        damageBonus: 0.55,
-        interval: 1.25,
+        range: 6.2,
+        damage: 52,        // 33 * 1.58 ≈ 52
+        damageBonus: 0.58,
+        interval: 1.20,
         bulletSpeed: 640,
         critRate: 0,
         critMultiplier: 1.0,
@@ -113,13 +113,13 @@ const TOWERS = {
         nameKey: 'watch_b3_name',
         descKey: 'watch_b3_desc',
         cost: 175,
-        range: 6.5,
-        damage: 86,
-        damageBonus: 0.55,
-        interval: 1.25,
+        range: 6.3,
+        damage: 60,        // 33 * 1.82 ≈ 60
+        damageBonus: 0.82,
+        interval: 1.15,
         bulletSpeed: 640,
-        critRate: 0.22,    // 暴击率 15%，暴击伤害 2 倍
-        critMultiplier: 2.2,
+        critRate: 0.24,    // 暴击率 24%，暴击伤害 2.0 倍
+        critMultiplier: 2.0,
         appliesMark: false,
         markDuration: 0,
         markBonus: 0,
@@ -202,9 +202,9 @@ const TOWERS = {
         cloudRadius: 1.5,
         cloudDuration: 3.5,
         slow: 0.55,         // 减速 +10%
-        dps: 4,
+        dps: 7,
         residualSlowDuration: 1.5,
-        armorReduction: 4,  // 雾团内敌人护甲 -2（最低 0）
+        armorReduction: 6,  // 雾团内敌人护甲 -6（最低 0）
         isBurningMist: false,
         next: []
       },
@@ -219,7 +219,7 @@ const TOWERS = {
         cloudRadius: 2.0,   // 雾团半径 +0.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 8,             // 持续伤害 +2
+        dps: 11,            // 持续伤害提升
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: false,
@@ -236,7 +236,7 @@ const TOWERS = {
         cloudRadius: 2.5,   // 雾团半径 2.5
         cloudDuration: 3.5,
         slow: 0.35,
-        dps: 14,            // 雾团燃烧，持续伤害 +4（累计 10）
+        dps: 18,            // 雾团燃烧，持续伤害 18/s
         residualSlowDuration: 0,
         armorReduction: 0,
         isBurningMist: true,
@@ -256,7 +256,7 @@ const TOWERS = {
     priorities: ['first', 'nearest', 'highest_hp'],
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 10,
+    baseDamage: 14,
     maxTotalCost: 375,
     nodes: {
       base: {
@@ -264,11 +264,12 @@ const TOWERS = {
         nameKey: 'node_base',
         descKey: 'thorn_base_desc',
         cost: 80,
-        range: 4.5,
-        damage: 10,
+        range: 4.6,
+        damage: 14,
         damageBonus: 0,
-        interval: 0.45,
-        pierce: 2,
+        interval: 0.44,
+        pierce: 3,
+        armorPierce: 2,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -282,11 +283,12 @@ const TOWERS = {
         nameKey: 'thorn_lv1_name',
         descKey: 'thorn_lv1_desc',
         cost: 55,
-        range: 5.0,        // 射程 +0.5
-        damage: 12,      // 伤害 +20%
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 2,
+        range: 5.0,        // 射程 +0.4
+        damage: 18,        // 14 * 1.29 ≈ 18
+        damageBonus: 0.29,
+        interval: 0.43,
+        pierce: 3,
+        armorPierce: 3,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -301,11 +303,12 @@ const TOWERS = {
         nameKey: 'thorn_a2_name',
         descKey: 'thorn_a2_desc',
         cost: 90,
-        range: 5.0,
-        damage: 12,
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 4,         // 穿透数 +2
+        range: 5.1,
+        damage: 21,        // 14 * 1.50 = 21
+        damageBonus: 0.50,
+        interval: 0.42,
+        pierce: 5,         // 穿透数 5
+        armorPierce: 3,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -320,11 +323,12 @@ const TOWERS = {
         nameKey: 'thorn_a3_name',
         descKey: 'thorn_a3_desc',
         cost: 150,
-        range: 5.0,
-        damage: 13,
-        damageBonus: 0.20,
-        interval: 0.45,
-        pierce: 7,         // 穿透数 7
+        range: 5.2,
+        damage: 24,        // 14 * 1.71 ≈ 24
+        damageBonus: 0.71,
+        interval: 0.40,
+        pierce: 8,         // 穿透数 8
+        armorPierce: 4,
         bulletSpeed: 900,
         sideSpikes: 2,     // 每次齐射增加 2 根侧刺（左右各偏 12°），侧刺伤害 50%
         sideAngleDeg: 12,
@@ -340,10 +344,11 @@ const TOWERS = {
         descKey: 'thorn_b2_desc',
         cost: 90,
         range: 5.0,
-        damage: 15,      // 9 * (1 + 0.20 + 0.30) = 13.5
-        damageBonus: 0.50,
-        interval: 0.45,
-        pierce: 2,
+        damage: 24,        // 14 * 1.71 ≈ 24
+        damageBonus: 0.71,
+        interval: 0.42,
+        pierce: 3,
+        armorPierce: 5,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
@@ -359,16 +364,16 @@ const TOWERS = {
         descKey: 'thorn_b3_desc',
         cost: 150,
         range: 5.0,
-        damage: 16,
-        damageBonus: 0.50,
-        interval: 0.41,    // 攻击间隔 -10% (0.45 * 0.9 = 0.405 -> 0.41)
-        pierce: 3,
+        damage: 28,        // 14 * 2.00 = 28
+        damageBonus: 1.00,
+        interval: 0.39,    // 攻击间隔缩短
+        pierce: 4,
         bulletSpeed: 900,
         sideSpikes: 0,
         sideAngleDeg: 0,
         sideDamageRatio: 0,
         pierceDamageBonusPerHit: 0.25,
-        armorPierce: 6, // 每穿透 1 个目标，后续伤害 +20%（最多 +100%）
+        armorPierce: 10,   // 强力破甲
         pierceDamageBonusMax: 1.00,
         next: []
       }
@@ -386,20 +391,21 @@ const TOWERS = {
     priorities: ['densest'], // 爆裂菇固定“最密集”
     artSize: { width: 16, height: 24, baseSize: 16 },
     animFrames: { idle: 4, attack: 3, upgrade: 6 },
-    baseDamage: 32,
-    maxTotalCost: 465,
+    baseDamage: 46,
+    maxTotalCost: 455,
     nodes: {
       base: {
         nodeId: 'base',
         nameKey: 'node_base',
         descKey: 'burst_base_desc',
         cost: 110,
-        range: 4.0,        // 射程 4.0 格（全部节点保持不变）
-        damage: 32,
+        range: 4.5,
+        damage: 46,
         damageBonus: 0,
-        interval: 1.55,     // 攻击间隔 1.6 秒（全部节点保持不变）
-        splashRadius: 1.25,
-        flightTime: 0.38,  // 抛物线炮弹飞行时间（秒）
+        interval: 1.45,
+        splashRadius: 1.45,
+        armorPierce: 0.40,
+        flightTime: 0.38,
         burnZone: null,
         next: ['lv1']
       },
@@ -408,11 +414,12 @@ const TOWERS = {
         nameKey: 'burst_lv1_name',
         descKey: 'burst_lv1_desc',
         cost: 65,
-        range: 4.0,
-        damage: 38,        // 伤害 +20%
-        damageBonus: 0.20,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.6,
+        damage: 58,        // 46 * 1.26 ≈ 58
+        damageBonus: 0.26,
+        interval: 1.42,
+        splashRadius: 1.50,
+        armorPierce: 0.45,
         flightTime: 0.38,
         burnZone: null,
         next: ['a2', 'b2']
@@ -423,11 +430,12 @@ const TOWERS = {
         nameKey: 'burst_a2_name',
         descKey: 'burst_a2_desc',
         cost: 105,
-        range: 4.0,
-        damage: 40,
-        damageBonus: 0.20,
-        interval: 1.55,
-        splashRadius: 1.75,// 溅射半径 +0.5
+        range: 4.8,
+        damage: 69,        // 46 * 1.50 = 69
+        damageBonus: 0.50,
+        interval: 1.38,
+        splashRadius: 1.95,// 溅射半径 +0.45
+        armorPierce: 0.50,
         flightTime: 0.38,
         burnZone: null,
         next: ['a3']
@@ -438,11 +446,12 @@ const TOWERS = {
         nameKey: 'burst_a3_name',
         descKey: 'burst_a3_desc',
         cost: 175,
-        range: 4.0,
-        damage: 46,      // 30 * (1 + 0.20 + 0.15) = 40.5
-        damageBonus: 0.35,
-        interval: 1.55,
-        splashRadius: 2.25,// 溅射半径 +0.5
+        range: 5.0,
+        damage: 85,        // 46 * 1.85 = 85
+        damageBonus: 0.85,
+        interval: 1.35,
+        splashRadius: 2.40,// 广域震波溅射
+        armorPierce: 0.55,
         flightTime: 0.38,
         burnZone: null,
         next: []
@@ -453,11 +462,12 @@ const TOWERS = {
         nameKey: 'burst_b2_name',
         descKey: 'burst_b2_desc',
         cost: 105,
-        range: 4.0,
-        damage: 48,        // 30 * (1 + 0.20 + 0.30) = 45
-        damageBonus: 0.50,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.6,
+        damage: 74,        // 46 * 1.61 ≈ 74
+        damageBonus: 0.61,
+        interval: 1.40,
+        splashRadius: 1.50,
+        armorPierce: 0.55,
         flightTime: 0.38,
         burnZone: null,
         next: ['b3']
@@ -468,16 +478,17 @@ const TOWERS = {
         nameKey: 'burst_b3_name',
         descKey: 'burst_b3_desc',
         cost: 175,
-        range: 4.0,
-        damage: 52,
-        damageBonus: 0.50,
-        interval: 1.55,
-        splashRadius: 1.25,
+        range: 4.8,
+        damage: 88,        // 46 * 1.91 ≈ 88
+        damageBonus: 0.91,
+        interval: 1.35,
+        splashRadius: 1.55,
+        armorPierce: 0.65,
         flightTime: 0.38,
-        burnZone: {        // 爆心留下灼烧区：半径 1.0 格，持续 3 秒，每秒 8 点伤害
-          radius: 1.0,
-          duration: 3.5,
-          dps: 12
+        burnZone: {        // 爆心留下炽热熔金灼烧区
+          radius: 1.35,
+          duration: 4.0,
+          dps: 22
         },
         next: []
       }
@@ -506,8 +517,8 @@ const TOWERS = {
         range: 4.0,
         damage: 8,
         interval: 2.0,
-        sporeGen: 12,
-        sporeInterval: 10.0,
+        sporeGen: 7,
+        sporeInterval: 11.0,
         auraDmgBonus: 0.10,
         next: ['lv1']
       },
@@ -519,8 +530,8 @@ const TOWERS = {
         range: 4.5,
         damage: 12,
         interval: 1.8,
-        sporeGen: 16,
-        sporeInterval: 9.0,
+        sporeGen: 9,
+        sporeInterval: 10.0,
         auraDmgBonus: 0.12,
         next: ['a2', 'b2']
       },
@@ -563,8 +574,8 @@ const TOWERS = {
         range: 4.2,
         damage: 10,
         interval: 2.0,
-        sporeGen: 24,
-        sporeInterval: 7.0,
+        sporeGen: 13,
+        sporeInterval: 8.0,
         next: ['b3']
       },
       b3: {
@@ -576,8 +587,8 @@ const TOWERS = {
         range: 4.5,
         damage: 14,
         interval: 2.0,
-        sporeGen: 36,
-        sporeInterval: 6.0,
+        sporeGen: 18,
+        sporeInterval: 7.0,
         relicDropBonus: true,
         next: []
       }

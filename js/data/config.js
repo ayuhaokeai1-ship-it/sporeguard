@@ -49,9 +49,9 @@ const CONFIG = {
     INITIAL_SEEDS: 20,         // 开局 20 颗种子
     INITIAL_SPORES: {
       map1: 210,               // PvZ 经典战术开局：210 孢子正好支持 1 守望菇(115) + 1 灵光菇(95) 开局
-      map2: 200,
-      map3: 220,
-      map4: 240
+      map2: 215,
+      map3: 230,
+      map4: 255
     },
     TARGET_TOTAL_BUDGET: {
       map1: 1800,
@@ -59,15 +59,15 @@ const CONFIG = {
       map3: 3200,
       map4: 3800
     },
-    WAVE_CLEAR_BASE: 25,       // 波次完成奖励 = 25 + 5 * 波次序号
-    WAVE_CLEAR_PER_WAVE: 5,
-    FLAWLESS_WAVE_BONUS: 15,   // 无损完美波次奖励 15
-    EARLY_CALL_PER_SEC: 2,     // 提前召唤迎战奖励：每秒 +2 孢子（极具诱惑的高风险高回报）
-    EARLY_CALL_MAX: 40,        // 提前召唤迎战奖励上限 40
+    WAVE_CLEAR_BASE: 20,       // 波次完成奖励 = 20 + 4 * 波次序号
+    WAVE_CLEAR_PER_WAVE: 4,
+    FLAWLESS_WAVE_BONUS: 12,   // 无损完美波次奖励 12
+    EARLY_CALL_PER_SEC: 1,     // 提前召唤迎战奖励：每秒 +1 孢子
+    EARLY_CALL_MAX: 20,        // 提前召唤迎战奖励上限 20
     MULTIKILL_WINDOW_SEC: 0.5, // 0.5 秒内击杀 3 只及以上触发群杀
     MULTIKILL_MIN_COUNT: 3,    // 最少 3 只触发群杀
-    MULTIKILL_PER_KILL: 2,     // 群杀奖励：击杀数 * 2
-    MULTIKILL_MAX_BONUS: 40,   // 群杀奖励上限 40
+    MULTIKILL_PER_KILL: 1,     // 群杀奖励：击杀数 * 1
+    MULTIKILL_MAX_BONUS: 18,   // 群杀奖励上限 18
     SELL_REFUND_RATE: 0.60,    // 出售返还 60%
     PREP_TIME_FIRST_WAVE: 25,  // 第一波前倒计时 35 秒
     PREP_TIME_NEXT_WAVE: 15    // 之后每波前倒计时 18 秒
@@ -84,12 +84,12 @@ const CONFIG = {
     MAX_DOT_SOURCES: 3,           // 同一敌人同时受到的持续伤害来源上限 3 个
     SPAWN_LATERAL_OFFSET_PX: 6,   // 同一组出生带 ±6 像素横向偏移
     MAX_ACTIVE_WAVE_ENEMIES: 48,  // 提升场上最大并发敌人上限至 36，彻底消除波次卡顿与少怪未出  // 同一时刻场上波次出生敌人不超过 12 个
-    WAVE_HP_GROWTH_PER_WAVE: 0.20,// 当前生命倍率 = (1 + 0.10 * (波次序号 - 1)) * 地图系数
+    WAVE_HP_GROWTH_PER_WAVE: 0.24,// 当前生命倍率 = (1 + 0.24 * (波次序号 - 1)) * 地图系数
     MAP_HP_COEFFICIENTS: {
       map1: 1.0,
-      map2: 1.15,
-      map3: 1.30,
-      map4: 1.42
+      map2: 1.18,
+      map3: 1.35,
+      map4: 1.52
     }
   },
 

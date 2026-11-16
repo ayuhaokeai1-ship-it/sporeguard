@@ -193,6 +193,7 @@ class UiManager {
     this.buttons = [];
     this.hoverX = -1;
     this.hoverY = -1;
+    this.lastHoveredBtnId = null;
     this.uiAnimTime = 0;
     this.uiZenMode = false;
     this.zenTransitionAlpha = 0;
@@ -278,6 +279,20 @@ class UiManager {
   handlePointerMove(x, y, scene) {
     this.hoverX = x;
     this.hoverY = y;
+    let nowHoveredId = null;
+    for (let i = this.buttons.length - 1; i >= 0; i--) {
+      const b = this.buttons[i];
+      if (b && !(b.meta && b.meta.disabled) && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        nowHoveredId = b.id;
+        break;
+      }
+    }
+    if (nowHoveredId && nowHoveredId !== this.lastHoveredBtnId) {
+      if (typeof platform.playHoverSfx === 'function') {
+        platform.playHoverSfx();
+      }
+    }
+    this.lastHoveredBtnId = nowHoveredId;
     if (this.draggingTowerId) {
       this.dragCurrentX = x;
       this.dragCurrentY = y;
@@ -776,39 +791,83 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
+    // 柔光氛围暗角：聚光于英雄阵线与徽章区域，提升前景可读性
+    ctx.save();
+    const botGrad = ctx.createLinearGradient(0, 390, 0, 540);
+    botGrad.addColorStop(0, 'rgba(8, 12, 8, 0)');
+    botGrad.addColorStop(1, 'rgba(8, 12, 8, 0.62)');
+    ctx.fillStyle = botGrad;
+    ctx.fillRect(0, 390, 960, 150);
+    ctx.restore();
+
     // 森林萤火孢子微粒动画
-    for (let i = 0; i < 20; i++) {
-      const sx = ((i * 97 + Math.floor(this.uiAnimTime * (12 + (i % 5) * 4))) % 920) + 20;
-      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (10 + (i % 4) * 3))) % 460 + 460) % 460 + 20;
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 228, 130, 0.72)' : 'rgba(145, 255, 165, 0.65)';
+    for (let i = 0; i < 22; i++) {
+      const sx = ((i * 97 + Math.floor(this.uiAnimTime * (10 + (i % 5) * 3))) % 920) + 20;
+      const sy = ((i * 61 - Math.floor(this.uiAnimTime * (8 + (i % 4) * 3))) % 440 + 440) % 440 + 18;
+      const pulse = 0.48 + 0.32 * Math.sin(this.uiAnimTime * 2.2 + i);
+      ctx.fillStyle = i % 2 === 0 ? `rgba(255, 228, 130, ${pulse.toFixed(2)})` : `rgba(145, 255, 165, ${(pulse * 0.9).toFixed(2)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, i % 2 === 0 ? 2.4 : 1.6, 0, Math.PI * 2);
+      ctx.arc(sx, sy, i % 2 === 0 ? 2.2 : 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 顶部大气手绘木纹金匾标题（纯净无任何图像烘焙文字，支持实时语言切换）
-    const titleBannerW = 430;
-    const titleBannerH = 74;
-    const titleBannerX = (960 - titleBannerW) * 0.5;
-    const titleBannerY = 34;
-    this.drawAiFrame(ctx, 'top_bar', titleBannerX, titleBannerY, titleBannerW, titleBannerH, 0.94);
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', 480, titleBannerY + 29, {
+    // 左上角 AI 精绘冠冕月桂徽章牌（避开右侧树人与菇卫主体构图）
+    const crestImg = platform.getImage('assets/ui/frames/title_crest_plaque.png');
+    const crestW = 376;
+    const crestH = 198;
+    const crestX = 24;
+    const crestY = 16;
+    if (crestImg) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+      ctx.drawImage(crestImg, crestX, crestY, crestW, crestH);
+      ctx.restore();
+      platform.recordDrawCall(1);
+    } else {
+      this.drawAiFrame(ctx, 'top_bar', crestX, crestY + 56, crestW, 78, 0.94);
+    }
+    const crestCx = crestX + crestW * 0.5;
+    const crestCy = crestY + Math.round(crestH * 0.525);
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '蘑菇守林' : 'MUSHROOM GUARD', crestCx, crestCy - 8, {
       style: 'gold',
-      size: 30,
+      size: 27,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 1.6
     });
-    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', 480, titleBannerY + 52, {
+    drawArtText(ctx, i18n.getLang() === 'zh' ? '奇幻森林策略塔防 · 双线固守' : 'FANTASY FOREST DEFENSE', crestCx, crestCy + 15, {
       style: 'parchment',
-      size: 11.5,
+      size: 10.5,
       align: 'center',
       baseline: 'middle',
       strokeWidth: 0
     });
 
-    // 底部雕刻木质命令栏
-    this.drawAiFrame(ctx, 'top_bar', 106, 450, 748, 76, 0.96);
+    // 底部 AI 精绘石框青铜嵌槽命令栏（三段水平切分绘制，铆钉石块零拉伸变形）
+    const dockX = 96;
+    const dockY = 432;
+    const dockW = 768;
+    const dockH = 100;
+    const dockImg = platform.getImage('assets/ui/frames/title_dock_frame.png');
+    if (dockImg && dockImg.width >= 900) {
+      const capSrcW = 126;
+      const capDstW = Math.round(capSrcW * (dockH / dockImg.height));
+      const midSrcW = dockImg.width - capSrcW * 2;
+      const midDstW = dockW - capDstW * 2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 5;
+      ctx.drawImage(dockImg, 0, 0, capSrcW, dockImg.height, dockX, dockY, capDstW, dockH);
+      ctx.drawImage(dockImg, capSrcW, 0, midSrcW, dockImg.height, dockX + capDstW, dockY, midDstW, dockH);
+      ctx.drawImage(dockImg, dockImg.width - capSrcW, 0, capSrcW, dockImg.height, dockX + dockW - capDstW, dockY, capDstW, dockH);
+      ctx.restore();
+      platform.recordDrawCall(3);
+    } else {
+      this.drawAiFrame(ctx, 'top_bar', dockX + 10, dockY + 14, dockW - 20, dockH - 22, 0.96);
+    }
 
     const btns = [
       { id: 'title_start', label: i18n.t('btn_start'), icon: 'play', cat: 16, skin: 'btn_green', cb: () => scene.enterLevelSelect() },
@@ -818,8 +877,8 @@ class UiManager {
     ];
     for (let i = 0; i < btns.length; i++) {
       const b = btns[i];
-      const bx = 136 + i * 176;
-      this.drawPixelButton(ctx, b.id, bx, 466, 160, 44, b.label, {
+      const bx = 154 + i * 166;
+      this.drawPixelButton(ctx, b.id, bx, 460, 154, 44, b.label, {
         skin: b.skin,
         font: `bold 16px ${CN_FONT}`,
         iconCat: b.cat,
@@ -830,7 +889,7 @@ class UiManager {
       });
     }
 
-    this.drawPixelButton(ctx, 'title_lang', 18, 18, 114, 36, i18n.getLang() === 'zh' ? '语言：中文' : 'Lang: EN', {
+    this.drawPixelButton(ctx, 'title_lang', 826, 20, 114, 34, i18n.getLang() === 'zh' ? '语言：中文' : 'Lang: EN', {
       skin: 'btn_wood',
       font: `bold 13px ${CN_FONT}`
     }, () => {
@@ -862,15 +921,15 @@ class UiManager {
       ctx.fillRect(0, 0, 960, 540);
     }
 
-    // 顶部木质横幅与两侧导航等高同心对齐（centerY = 36）
-    this.drawAiFrame(ctx, 'top_bar', 260, 12, 292, 48, 0.98);
+    // 顶部木质横幅与两侧导航居中对称对齐（centerX = 480, centerY = 36）
+    this.drawAiFrame(ctx, 'top_bar', 344, 12, 272, 48, 0.98);
     ctx.fillStyle = THEME.BRONZE_BRIGHT;
     ctx.font = 'bold 20px ' + CN_FONT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(i18n.t('btn_level_select'), 406, 36);
+    ctx.fillText(i18n.t('btn_level_select'), 480, 36);
 
-    this.drawPixelButton(ctx, 'lvl_back', 24, 18, 96, 36, i18n.t('btn_back'), {
+    this.drawPixelButton(ctx, 'lvl_back', 27, 18, 96, 36, i18n.t('btn_back'), {
       skin: 'btn_wood',
       font: `bold 14.5px ${CN_FONT}`
     }, () => {
@@ -878,7 +937,7 @@ class UiManager {
       scene.enterTitle();
     });
 
-    this.drawPixelButton(ctx, 'lvl_codex', 128, 18, 120, 36, i18n.t('btn_guide'), {
+    this.drawPixelButton(ctx, 'lvl_codex', 131, 18, 120, 36, i18n.t('btn_guide'), {
       skin: 'btn_wood',
       iconCat: 24,
       iconKey: 'guide',
@@ -891,7 +950,7 @@ class UiManager {
     const save = storage.getSave();
     if (save.endlessRecord && save.endlessRecord.bestWave > 0) {
       ctx.save();
-      if (!this.drawAiFrame(ctx, 'top_bar', 564, 18, 140, 36, 0.96)) {
+      if (!this.drawAiFrame(ctx, 'top_bar', 645, 18, 148, 36, 0.96)) {
         roundRectPath(ctx, 564, 18, 140, 36, 8);
         ctx.fillStyle = 'rgba(28, 18, 10, 0.90)';
         ctx.fill();
@@ -899,7 +958,7 @@ class UiManager {
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 634, 36, {
+      drawArtText(ctx, `无尽最高 第${save.endlessRecord.bestWave}波`, 719, 36, {
         style: 'gold',
         size: 11.5,
         align: 'center',
@@ -910,7 +969,7 @@ class UiManager {
       ctx.restore();
     }
 
-    this.drawPixelButton(ctx, 'lvl_settings', 714, 18, 124, 36, i18n.t('btn_settings'), {
+    this.drawPixelButton(ctx, 'lvl_settings', 801, 18, 132, 36, i18n.t('btn_settings'), {
       skin: 'btn_wood',
       iconKey: 'settings',
       font: `bold 14px ${CN_FONT}`
@@ -5416,6 +5475,7 @@ class UiManager {
         platform.playSfx('sfx_thunder');
       } else {
         this.showToast(hero.state === 'dead' ? '英雄正在复活中' : `大招冷却中: ${Math.ceil(ultCd)}s`);
+        platform.playSfx('sfx_hurt', 0.45, 0.72);
       }
     });
 
@@ -5602,6 +5662,7 @@ class UiManager {
           platform.playSfx('sfx_click');
         } else {
           this.showToast(spCd > 0 ? `冷却中: ${Math.ceil(spCd)}s` : `孢子不足 (需 ${spItem.cost})`);
+          platform.playSfx('sfx_hurt', 0.45, 0.72);
         }
       });
     }

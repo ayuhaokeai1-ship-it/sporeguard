@@ -268,9 +268,13 @@ class ElementalReactionSystem {
     enemy.takeDamage(dmg, scene ? scene.fx : null, 'nature', 'reactions');
     platform.playSfx('sfx_coin');
 
-    // 凝结 1 枚高阶黄金能量孢子 (8孢子，场上上限 8 枚避免堆叠遮挡)
-    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 8) {
-      scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 8, true, 24);
+    // 凝结 1 枚黄金能量孢子（每 4.5 秒最多凝结 1 枚，防止群怪刷屏产孢膨胀）
+    if (scene && scene.sporeDropManager && scene.sporeDropManager.drops.length < 6) {
+      const nowT = scene.logicalCombatTimeSec || 0;
+      if (this._lastPhotoDropTime === undefined || this._lastPhotoDropTime > nowT || (nowT - this._lastPhotoDropTime) >= 4.5) {
+        this._lastPhotoDropTime = nowT;
+        scene.sporeDropManager.spawnDrop(enemy.x, enemy.y, 5, true, 24);
+      }
     }
 
     // 强化周围 96px 防御塔 2.6 秒攻击速度

@@ -150,7 +150,7 @@ class ElementalComboEngine {
   triggerCorrosion(enemy, enemyManager, fx, combatJuice) {
     enemy.baseArmor = Math.max(0, enemy.baseArmor * 0.2); // 削减 80% 护甲
     enemy.armorReduction = Math.max(enemy.armorReduction || 0, 8.0);
-    const splashDmg = 160;
+    const splashDmg = 75;
 
     // 范围溅射
     const alive = enemyManager.getAliveEnemies();
@@ -186,7 +186,7 @@ class ElementalComboEngine {
    * 2. 触发【蒸气爆鸣】
    */
   triggerSteamOverpressure(enemy, enemyManager, fx, combatJuice) {
-    const shockDmg = 220;
+    const shockDmg = 95;
     const cx = enemy.x;
     const cy = enemy.y;
 
@@ -244,8 +244,8 @@ class ElementalComboEngine {
       x: cx,
       y: cy,
       radius: 65,
-      life: 4.0,
-      maxLife: 4.0,
+      life: 3.5,
+      maxLife: 3.5,
       tickTimer: 0
     });
 
@@ -283,9 +283,9 @@ class ElementalComboEngine {
     const cx = enemy.x;
     const cy = enemy.y;
 
-    // 战术微额孢子回馈 (+4，内置冷却限制防止无限刷钱)
+    // 战术微额孢子回馈 (+2，内置冷却限制防止无限刷钱)
     if (economy) {
-      economy.addSpores(4);
+      economy.addSpores(2);
     }
 
     // 致盲 1.6 秒
@@ -300,7 +300,7 @@ class ElementalComboEngine {
     }
 
     if (fx) {
-      fx.spawnFloatingText(cx, cy - 30, '圣光 +4孢', '#FFD700', 1.1);
+      fx.spawnFloatingText(cx, cy - 30, '圣光 +2孢', '#FFD700', 1.1);
       fx.spawnParticles(cx, cy, 24, ['#FFD700', '#FFF1B8', '#FFE58F', '#FFFFFF'], 40, 130, 0.3, 0.65, 4.5);
     }
     if (combatJuice) combatJuice.addTrauma(0.25);
@@ -315,7 +315,7 @@ class ElementalComboEngine {
     const allAlive = enemyManager.getAliveEnemies();
     const cx = primaryEnemy ? primaryEnemy.x : 320;
     const cy = primaryEnemy ? primaryEnemy.y : 240;
-    const grandDmg = 155;
+    const grandDmg = 115;
 
     let affected = 0;
     for (let i = 0; i < allAlive.length; i++) {
@@ -364,9 +364,9 @@ class ElementalComboEngine {
               tgt.residualSlowTimer = Math.max(tgt.residualSlowTimer || 0, 1.0);
               tgt.residualSlowValue = Math.max(tgt.residualSlowValue || 0, 0.60);
               if (typeof enemyManager.applyDamage === 'function') {
-                enemyManager.applyDamage(tgt, 35, false, 'fire', null, 'reactions');
+                enemyManager.applyDamage(tgt, 18, false, 'fire', null, 'reactions');
               } else {
-                tgt.hp -= 35;
+                tgt.hp -= 18;
                 if (tgt.hp <= 0) enemyManager.killEnemy(tgt, fx);
               }
             }

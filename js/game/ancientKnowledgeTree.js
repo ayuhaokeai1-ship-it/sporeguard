@@ -23,10 +23,10 @@ const TALENT_DEFS = {
     tier: 1,
     name: '菌丝网络',
     icon: '🌱',
-    desc: '开局额外获得 +30 基础孢子，且每秒自然凝聚 +1 孢子',
+    desc: '开局额外获得 +25 基础孢子，且每 2 秒自然凝聚约 +1.1 孢子',
     maxRank: 3,
     costPerRank: 1,
-    effect: (rank) => ({ startingSpores: rank * 30, sporeTricklePerSec: rank * 1.0 })
+    effect: (rank) => ({ startingSpores: rank * 25, sporeTricklePerSec: rank * 0.55 })
   },
   bountiful_harvest: {
     id: 'bountiful_harvest',
@@ -332,8 +332,8 @@ class AncientKnowledgeTree {
     // 1. 菌丝网络：开局额外孢子与自然产出
     const myRank = this.getRank('mycelium_network');
     if (myRank > 0 && scene.economy) {
-      scene.economy.spores += myRank * 30;
-      scene.economy.passiveTrickleBonus = myRank * 1.0;
+      scene.economy.spores += myRank * 25;
+      scene.economy.passiveTrickleBonus = myRank * 0.55;
     }
 
     // 1.5 丰收祝福：大地丰收额外孢子 + 精英双倍掉孢几率
@@ -428,10 +428,11 @@ class AncientKnowledgeTree {
     // 菌丝网络：每秒自然凝聚额外孢子
     const myRank = this.getRank('mycelium_network');
     if (myRank > 0 && scene.economy) {
-      this.trickleTimer = (this.trickleTimer || 0) + dt;
+      this.trickleTimer = (this.trickleTimer || 0) + dt * (myRank * 0.55);
       if (this.trickleTimer >= 1.0) {
-        this.trickleTimer -= 1.0;
-        scene.economy.addSpores(Math.round(myRank * 1.0));
+        const addAmt = Math.floor(this.trickleTimer);
+        this.trickleTimer -= addAmt;
+        scene.economy.addSpores(addAmt);
       }
     }
   }

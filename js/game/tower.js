@@ -975,6 +975,17 @@ class TowerManager {
         ctx.stroke();
         ctx.restore();
       }
+      // 圣光照耀共鸣脚底金芒光环
+      if (t.celestialBuffTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#FFD666';
+        ctx.lineWidth = 1.8;
+        ctx.globalAlpha = 0.65 + Math.sin(t.celestialBuffTimer * 8) * 0.25;
+        ctx.beginPath();
+        ctx.ellipse(t.x, t.y + 11, 17, 7.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // 休眠状态时透明度降低并微偏暗
             // 濒死受损颤抖 (HP <= 35%)
@@ -1140,6 +1151,28 @@ class TowerManager {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚠️ 守卫垂危!', t.x, tileY - 18);
+        ctx.restore();
+      }
+
+      // 进化阶级迷你星钻徽记（1~3枚底座镶嵌宝石，战场无需点击即可直读阶级）
+      const tierCount = (t.nodeId === 'a3' || t.nodeId === 'b3') ? 3 : ((t.nodeId === 'a2' || t.nodeId === 'b2') ? 2 : (t.nodeId === 'lv1' ? 1 : 0));
+      if (tierCount > 0) {
+        ctx.save();
+        const gemColor = t.nodeId.startsWith('a') ? PALETTE.BRANCH_A : (t.nodeId.startsWith('b') ? PALETTE.BRANCH_B : '#FFD666');
+        const gap = 7;
+        const startGx = t.x - ((tierCount - 1) * gap) * 0.5;
+        const gy = tileY + 27;
+        for (let gi = 0; gi < tierCount; gi++) {
+          const gx = startGx + gi * gap;
+          ctx.fillStyle = '#141B12';
+          ctx.beginPath();
+          ctx.arc(gx, gy, 3.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = gemColor;
+          ctx.beginPath();
+          ctx.arc(gx, gy, 2.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
 

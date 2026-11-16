@@ -65,9 +65,12 @@ class RelicDropManager {
         }
       }
 
-      // 超时自动拾取保底
+      // 超时消散（鼓励玩家主动点击/英雄靠近拾取；金币/四叶草仅散落微量余烬）
       if (r.life <= 0) {
-        this.collect(r, scene);
+        if ((r.kind === 'coin' || r.kind === 'clover') && scene && scene.economy) {
+          const dust = Math.max(5, Math.round((r.value || 30) * 0.25));
+          scene.economy.addSpores(dust);
+        }
         this.relics.splice(i, 1);
       }
     }
@@ -114,9 +117,10 @@ class RelicDropManager {
       fx.spawnHomingMotes(mv.OFFSET_X + relic.x * (mv.SCALE || 1.0), mv.OFFSET_Y + ry * (mv.SCALE || 1.0), 4, '#FFD700');
     }
     if (relic.kind === 'coin') {
-      scene.economy.addSpores(relic.value || 60);
+      const coinVal = relic.value || 30;
+      scene.economy.addSpores(coinVal);
       if (fx) {
-        fx.spawnFloatingText(relic.x, ry - 18, `+${relic.value || 60} 战利品孢子!`, '#FFD700', 1.3);
+        fx.spawnFloatingText(relic.x, ry - 18, `+${coinVal} 战利品孢子!`, '#FFD700', 1.3);
         fx.spawnParticles(relic.x, ry, 16, ['#FFD700', '#FFF1B8', '#FFA940'], 30, 90, 0.25, 0.5, 3);
       }
       platform.playSfx('sfx_upgrade');
@@ -141,9 +145,9 @@ class RelicDropManager {
       }
       platform.playSfx('sfx_laser');
     } else if (relic.kind === 'clover') {
-      // 四叶草神种：立即提供 60 孢子能量 + 1 觉醒神种 + 全场狂暴！
+      // 四叶草神种：立即提供 25 孢子能量 + 1 觉醒神种 + 全场狂暴！
       if (scene.economy) {
-        scene.economy.addSpores(60);
+        scene.economy.addSpores(25);
       }
       scene.awakeningSeeds = Math.min(5, (scene.awakeningSeeds || 0) + 1);
       if (scene.towerManager && scene.towerManager.towers) {
@@ -152,7 +156,7 @@ class RelicDropManager {
         }
       }
       if (fx) {
-        fx.spawnFloatingText(relic.x, ry - 18, '+60 能量 & +1 觉醒神种!', '#73D13D', 1.45);
+        fx.spawnFloatingText(relic.x, ry - 18, '+25 能量 & +1 觉醒神种!', '#73D13D', 1.45);
         fx.spawnParticles(relic.x, ry, 22, ['#73D13D', '#D9F7BE', '#FFD700', '#52C41A'], 35, 95, 0.3, 0.6, 4);
       }
       platform.playSfx('sfx_upgrade');

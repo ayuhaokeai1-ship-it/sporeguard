@@ -136,7 +136,7 @@ class SceneController {
     this.spells = {
       rain: { id: 'rain', name: '自然甘霖', cost: 45, cd: 25, timer: 0, key: 'Q', radius: 120 },
       shock: { id: 'shock', name: '雷霆震爆', cost: 75, cd: 35, timer: 0, key: 'W', radius: 90 },
-      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 50, timer: 0, key: 'E', gain: 100 },
+      harvest: { id: 'harvest', name: '大地丰收', cost: 0, cd: 55, timer: 0, key: 'E', gain: 85 },
       rally: { id: 'rally', name: '菇精卫集结', cost: 0, cd: 3, timer: 0, key: 'R' }
     };
     this.isEndlessMode = false;
@@ -1254,7 +1254,7 @@ class SceneController {
     }
 
     if (this.comboKillCount === 8) {
-      this.economy.addSpores(35);
+      this.economy.addSpores(20);
       this.fx.showBanner(i18n.t('banner_spore_frenzy'), '#FFD700', '连杀爆发', 1.6);
       this.fx.triggerScreenShake(4.0, 0.25);
       if (this.towerManager && this.towerManager.towers) {

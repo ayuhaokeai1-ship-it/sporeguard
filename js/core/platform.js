@@ -30,6 +30,9 @@ let pendingBgmKey = null;
 let bgmContexts = {};
 let sfxPool = {};
 let webAudioCtx = null;
+let masterCompressor = null;
+let foleyNoiseBuffer = null;
+let lastHoverSfxMs = 0;
 
 // 图片缓存与已加载分包记录
 const imageCache = {};
@@ -429,6 +432,72 @@ function unlockAudio() {
  * 多泛音原声乐器物理合成引擎 2.0 (Kalimba / Rosewood Marimba / Harp / Acoustic Pluck)
  * 彻底告别粗糙方波电子音，提供温润、清脆、有质感的森林原声打击乐体验
  */
+function ensureAudioGraph() {
+  if (!webAudioCtx) return null;
+  if (!masterCompressor && typeof webAudioCtx.createDynamicsCompressor === 'function') {
+    masterCompressor = webAudioCtx.createDynamicsCompressor();
+    masterCompressor.threshold.setValueAtTime(-14, webAudioCtx.currentTime);
+    masterCompressor.knee.setValueAtTime(12, webAudioCtx.currentTime);
+    masterCompressor.ratio.setValueAtTime(5, webAudioCtx.currentTime);
+    masterCompressor.attack.setValueAtTime(0.004, webAudioCtx.currentTime);
+    masterCompressor.release.setValueAtTime(0.14, webAudioCtx.currentTime);
+    masterCompressor.connect(webAudioCtx.destination);
+  }
+  if (!foleyNoiseBuffer && typeof webAudioCtx.createBuffer === 'function') {
+    const sr = webAudioCtx.sampleRate || 44100;
+    const len = sr;
+    const buf = webAudioCtx.createBuffer(1, len, sr);
+    const ch = buf.getChannelData(0);
+    // Warm pink-tinted noise texture using deterministic LCG
+    let seed = 0x51A7F3;
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const white = (seed / 0x80000000) - 1.0;
+      b0 = 0.997 * b0 + white * 0.029;
+      b1 = 0.985 * b1 + white * 0.032;
+      b2 = 0.950 * b2 + white * 0.048;
+      ch[i] = Math.max(-1, Math.min(1, (b0 + b1 + b2 + white * 0.22) * 1.35));
+    }
+    foleyNoiseBuffer = buf;
+  }
+  return masterCompressor || webAudioCtx.destination;
+}
+
+function playFilteredNoise(startTime, duration, filterType, freqStart, freqEnd, q, vol) {
+  if (!webAudioCtx || !foleyNoiseBuffer || typeof webAudioCtx.createBiquadFilter !== 'function') return;
+  const out = ensureAudioGraph();
+  if (!out) return;
+  const src = webAudioCtx.createBufferSource();
+  src.buffer = foleyNoiseBuffer;
+  src.loop = true;
+
+  const filter = webAudioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.Q.setValueAtTime(Math.max(0.2, q || 1.0), startTime);
+  filter.frequency.setValueAtTime(Math.max(40, freqStart), startTime);
+  filter.frequency.exponentialRampToValueAtTime(Math.max(40, freqEnd), startTime + Math.max(0.015, duration));
+
+  const g = webAudioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, startTime);
+  g.gain.linearRampToValueAtTime(Math.max(0.001, Math.min(0.45, vol)), startTime + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.max(0.02, duration));
+
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(out);
+  src.start(startTime);
+  src.stop(startTime + duration + 0.02);
+}
+
+function playHoverSfx() {
+  if (!audioUnlocked || !sfxEnabled || !webAudioCtx) return;
+  const now = Date.now();
+  if (now - lastHoverSfxMs < 85) return;
+  lastHoverSfxMs = now;
+  playSfx('sfx_hover', 0.55, 1.0, true);
+}
+
 function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756], decayRatio = 0.35) {
   if (!webAudioCtx) return;
   for (let i = 0; i < harmonics.length; i++) {
@@ -443,7 +512,7 @@ function playAcousticNote(freq, startTime, duration, vol, harmonics = [1, 2.756]
     gain.gain.linearRampToValueAtTime(hVol, startTime + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.0008, startTime + hDur);
     osc.connect(gain);
-    gain.connect(webAudioCtx.destination);
+    gain.connect(ensureAudioGraph());
     osc.start(startTime);
     osc.stop(startTime + hDur + 0.01);
   }
@@ -455,8 +524,30 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
     if (webAudioCtx.state === 'suspended') {
       webAudioCtx.resume().catch(() => {});
     }
+    ensureAudioGraph();
     const t0 = webAudioCtx.currentTime;
     const p = Math.max(0.5, Math.min(3.0, pitchMod || 1.0));
+
+    // 高质感拟音噪声层 (Bandpass/Highpass/Lowpass Noise Foley via Master Limiter)
+    if (sfxKey === 'sfx_hover') {
+      playFilteredNoise(t0, 0.024, 'bandpass', 1850 * p, 980 * p, 2.2, 0.075 * volumeMod);
+      playAcousticNote(740 * p, t0, 0.026, 0.05 * volumeMod, [1, 1.5], 0.18);
+      return true;
+    } else if (sfxKey === 'sfx_click') {
+      playFilteredNoise(t0, 0.028, 'bandpass', 2200 * p, 900 * p, 1.8, 0.11 * volumeMod);
+    } else if (sfxKey === 'sfx_shoot_arrow' || sfxKey === 'sfx_shoot') {
+      playFilteredNoise(t0, 0.095, 'highpass', 1600 * p, 420 * p, 1.1, 0.14 * volumeMod);
+    } else if (sfxKey === 'sfx_thorn' || sfxKey === 'sfx_hit') {
+      playFilteredNoise(t0, 0.055, 'bandpass', 2800 * p, 1100 * p, 1.4, 0.13 * volumeMod);
+    } else if (sfxKey === 'sfx_mist' || sfxKey === 'sfx_laser') {
+      playFilteredNoise(t0, 0.19, 'bandpass', 720 * p, 2200 * p, 1.8, 0.10 * volumeMod);
+    } else if (sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boom' || sfxKey === 'sfx_thunder' || sfxKey === 'sfx_shock') {
+      playFilteredNoise(t0, 0.34, 'lowpass', 950 * p, 130 * p, 0.8, 0.24 * volumeMod);
+    } else if (sfxKey === 'sfx_hurt' || sfxKey === 'sfx_lose') {
+      playFilteredNoise(t0, 0.14, 'lowpass', 600 * p, 160 * p, 1.0, 0.16 * volumeMod);
+    } else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_win') {
+      playFilteredNoise(t0 + 0.04, 0.16, 'highpass', 3200 * p, 5200 * p, 2.0, 0.07 * volumeMod);
+    }
 
     if (sfxKey === 'sfx_click') {
       // 温润紫檀木琴轻叩 (Rosewood Marimba Tap)
@@ -489,7 +580,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.24 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.16);
       return true;
@@ -503,7 +594,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.28 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.27);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.28);
       playAcousticNote(220 * p, t0, 0.12, 0.12 * volumeMod, [1, 1.5], 0.4);
@@ -518,7 +609,7 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
       gain.gain.setValueAtTime(0.14 * volumeMod, t0);
       gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06);
       osc.connect(gain);
-      gain.connect(webAudioCtx.destination);
+      gain.connect(ensureAudioGraph());
       osc.start(t0);
       osc.stop(t0 + 0.065);
       return true;
@@ -672,7 +763,7 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
         const baseVol = SFX_VOLUMES[sfxKey] || 0.60;
         gainNode.gain.setValueAtTime(Math.min(1.0, baseVol * volumeMod), webAudioCtx.currentTime);
         srcNode.connect(gainNode);
-        gainNode.connect(webAudioCtx.destination);
+        gainNode.connect(ensureAudioGraph());
         srcNode.start(0);
         return;
       } catch (e) {}
@@ -808,6 +899,7 @@ module.exports = {
   playBgm,
   stopBgm,
   playSfx,
+  playHoverSfx,
   playMusicalScale,
   registerLifecycle,
   pollGamepadState,
