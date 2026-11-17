@@ -105,11 +105,21 @@ class CombatAnalyticsSystem {
     ctx.roundRect ? ctx.roundRect(x + 2, y + 2, w - 4, h - 4, 6) : ctx.rect(x + 2, y + 2, w - 4, h - 4);
     ctx.stroke();
 
-    ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
-    ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.isOpen ? '✖ 战报' : '📊 战报', x + w * 0.5, y + h * 0.5);
+    const atkImg = platform.getImage('assets/ui/icons/icon_atk.png');
+    if (atkImg && atkImg.width) {
+      ctx.drawImage(atkImg, x + 8, y + 5, 14, 14);
+      ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.isOpen ? '收起' : '战报', x + 26, y + h * 0.5);
+    } else {
+      ctx.fillStyle = this.isOpen ? '#F6FFED' : '#FFE58F';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.isOpen ? '收起' : '战报', x + w * 0.5, y + h * 0.5);
+    }
     ctx.restore();
   }
 

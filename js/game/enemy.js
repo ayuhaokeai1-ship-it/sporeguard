@@ -522,6 +522,15 @@ class EnemyManager {
    */
 
   /**
+   * 统一控制眩晕接口（地形机关天雷/猪笼草与圣佑闪电调用）
+   */
+  applyStun(enemy, durationSec = 1.5) {
+    if (!enemy || enemy.state === 'death' || enemy.hp <= 0) return false;
+    enemy.stunTimer = Math.max(enemy.stunTimer || 0, durationSec);
+    return true;
+  }
+
+  /**
    * 统一伤害结算接口 (天候雷暴、英雄斩击、反伤震击、法术轰炸、神术惩戒等)
    */
   applyDamage(enemy, amount, isCrit = false, dType = 'physical', fx = null, source = null) {

@@ -132,15 +132,31 @@ class ForestContraptions {
       if (this.pitcher.digestTimer > 0) {
         this.pitcher.digestTimer -= dt;
         if (this.pitcher.digestTimer <= 0) {
-          // 消化完成，爆浆奖励孢子
+          // 消化完成，爆浆奖励高额金孢 + 共振充能 + 英雄经验
+          const baseReward = this.pitcher.swallowedElite ? 70 : 55;
+          this.pitcher.swallowedElite = false;
+          const bMult = (scene && scene.blessingMods && scene.blessingMods.sporeGainMult) ? scene.blessingMods.sporeGainMult : 1.0;
+          const crownBonus = (scene && scene.relicArsenal && scene.relicArsenal.hasRelic('amber_crown')) ? 0.15 : 0;
+          const finalReward = Math.round(baseReward * bMult * (1 + crownBonus));
+
           if (scene && scene.economy) {
-            scene.economy.addSpores(45);
+            scene.economy.addSpores(finalReward);
+          }
+          if (scene && typeof scene.addResonance === 'function') {
+            scene.addResonance(8);
+          }
+          if (scene && scene.hero && scene.hero.state !== 'dead' && typeof scene.hero.gainXp === 'function') {
+            scene.hero.gainXp(15, scene.fx);
           }
           if (scene && scene.fx) {
-            scene.fx.spawnFloatingText(this.pitcher.x, this.pitcher.y - 24, '消化完成 +45 孢子!', '#52C41A', 1.35);
-            scene.fx.spawnParticles(this.pitcher.x, this.pitcher.y, 22, ['#52C41A', '#B7EB8F', '#FFD700'], 40, 95);
+            scene.fx.spawnFloatingText(this.pitcher.x, this.pitcher.y - 24, `消化完满 +${finalReward} 孢子!`, '#73D13D', 1.4);
+            scene.fx.spawnParticles(this.pitcher.x, this.pitcher.y - 10, 24, ['#52C41A', '#B7EB8F', '#FFD700', '#FFF1B8'], 42, 100);
+            if (typeof scene.fx.spawnHomingMotes === 'function') {
+              const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+              scene.fx.spawnHomingMotes(mv.OFFSET_X + this.pitcher.x * (mv.SCALE || 1.0), mv.OFFSET_Y + this.pitcher.y * (mv.SCALE || 1.0), 4, '#FFD700');
+            }
           }
-          platform.playSfx('sfx_mist');
+          platform.playSfx('sfx_pitcher_bloom', 0.95, 1.0, false, this.pitcher.x);
         }
       }
     }
@@ -153,6 +169,15 @@ class ForestContraptions {
       }
       if (this.thunderTree.arcTimer > 0) {
         this.thunderTree.arcTimer -= dt;
+      }
+    }
+
+    // 2.5 雷击古木高频闪电弧寿命更新
+    for (let ai = this.lightningArcs.length - 1; ai >= 0; ai--) {
+      const arc = this.lightningArcs[ai];
+      arc.life -= dt;
+      if (arc.life <= 0) {
+        this.lightningArcs.splice(ai, 1);
       }
     }
 
@@ -259,12 +284,14 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${p.cost})`);
           return true;
         }
-        const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
+        const enemies = (scene.enemyManager && typeof scene.enemyManager.getAliveEnemies === 'function')
+          ? scene.enemyManager.getAliveEnemies()
+          : [];
         let target = null;
         let minDist = 75;
         for (let i = 0; i < enemies.length; i++) {
           const e = enemies[i];
-          if (!e.__active || e.state === 'death' || e.isFlying) continue;
+          if (!e || e.state === 'death' || e.hp <= 0 || e.isFlying) continue;
           const d = Math.hypot(e.x - p.x, e.y - p.y);
           if (d <= minDist) {
             target = e;
@@ -276,10 +303,18 @@ class ForestContraptions {
           scene.economy.spendSpores(p.cost);
           p.cd = p.maxCd;
           p.digestTimer = 4.0;
-          scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
-          scene.fx.spawnFloatingText(p.x, p.y - 20, '巨口吞噬!', '#722ED1', 1.35);
-          scene.fx.spawnParticles(p.x, p.y, 25, ['#722ED1', '#B7EB8F', '#52C41A', '#FFD700'], 35, 80);
-          platform.playSfx('sfx_mist');
+          if (target.isBoss) {
+            p.swallowedElite = true;
+            scene.enemyManager.applyDirectDamage(target, 260, 0, true, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
+            scene.enemyManager.applyStun(target, 1.6);
+            scene.fx.spawnFloatingText(p.x, p.y - 22, '头目抗吞噬·重创 260!', '#B37FEB', 1.35);
+          } else {
+            p.swallowedElite = Boolean(target.isElite);
+            scene.enemyManager.applyDirectDamage(target, 9999, 0, true, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
+            scene.fx.spawnFloatingText(p.x, p.y - 20, p.swallowedElite ? '吞噬精英! 消化孕育+70孢' : '巨口吞噬! 消化+55孢', '#73D13D', 1.32);
+          }
+          scene.fx.spawnParticles(p.x, p.y, 26, ['#722ED1', '#B7EB8F', '#52C41A', '#FFD700'], 35, 85);
+          platform.playSfx('sfx_mist', 0.95, 0.85, false, p.x);
         } else {
           scene.ui.showToast('附近暂无靠近的地面害虫');
         }
@@ -301,20 +336,33 @@ class ForestContraptions {
           scene.ui.showToast(`孢子不足 (需 ${t.cost})`);
           return true;
         }
-        const enemies = scene.enemyManager ? scene.enemyManager.activeEnemies : [];
+        const enemies = (scene.enemyManager && typeof scene.enemyManager.getAliveEnemies === 'function')
+          ? scene.enemyManager.getAliveEnemies()
+          : [];
+        const hasThunderCore = Boolean(scene.relicArsenal && scene.relicArsenal.hasRelic('thunder_core'));
         let hitCount = 0;
-        const maxHits = 4;
+        const maxHits = hasThunderCore ? 5 : 4;
+        const zapDmg = hasThunderCore ? 105 : 85;
         const zapRadius = 140;
 
         for (let i = 0; i < enemies.length; i++) {
           const e = enemies[i];
-          if (!e.__active || e.state === 'death') continue;
+          if (!e || e.state === 'death' || e.hp <= 0) continue;
           if (Math.hypot(e.x - t.x, e.y - t.y) <= zapRadius) {
-            scene.enemyManager.applyDirectDamage(e, 85, 0, false, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
+            scene.enemyManager.applyDirectDamage(e, zapDmg, 0, false, false, 0, scene.map, scene.economy, scene.fx, 'reactions');
             scene.enemyManager.applyStun(e, 2.2);
             if (e.isBoss && scene.bossOverdriveEngine) {
               scene.bossOverdriveEngine.interruptBoss(scene);
             }
+            this.lightningArcs.push({
+              x1: t.x,
+              y1: t.y - 16,
+              x2: e.x,
+              y2: e.y - 8,
+              seed: (hitCount + 1) * 1.9 + e.x * 0.03,
+              life: 0.55,
+              maxLife: 0.55
+            });
             hitCount += 1;
             if (scene.fx) {
               scene.fx.spawnShockwave(e.x, e.y, 28, '#40A9FF');
@@ -328,10 +376,16 @@ class ForestContraptions {
           scene.economy.spendSpores(t.cost);
           t.cd = t.maxCd;
           t.arcTimer = 0.65;
-          platform.playSfx('sfx_laser');
+          if (typeof scene.addResonance === 'function') {
+            scene.addResonance(6);
+          }
+          if (scene.hero && scene.hero.state !== 'dead' && typeof scene.hero.gainXp === 'function') {
+            scene.hero.gainXp(12, scene.fx);
+          }
+          platform.playSfx('sfx_thunder_zap', 0.95, 1.0, false, t.x);
           if (scene.fx) {
-            scene.fx.spawnFloatingText(t.x, t.y - 24, `天雷震击 ×${hitCount}!`, '#40A9FF', 1.35);
-            scene.fx.triggerScreenShake(3.0, 0.25);
+            scene.fx.spawnFloatingText(t.x, t.y - 24, `天雷震击 ×${hitCount}!`, '#69C0FF', 1.38);
+            scene.fx.triggerScreenShake(3.2, 0.25);
           }
         } else {
           scene.ui.showToast('附近暂无害虫');
@@ -458,6 +512,53 @@ class ForestContraptions {
       ctx.restore();
     }
 
+    // 2.5 渲染雷击古木连锁电弧与AI闪火花
+    if (this.lightningArcs.length > 0) {
+      const sparkImg = platform.getImage('assets/vfx/vfx_hit_spark.png');
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let i = 0; i < this.lightningArcs.length; i++) {
+        const arc = this.lightningArcs[i];
+        const alpha = Math.max(0, Math.min(1, arc.life / arc.maxLife));
+        const flicker = 0.72 + Math.sin(time * 42 + arc.seed) * 0.28;
+        ctx.globalAlpha = alpha * flicker;
+
+        const segs = 5;
+        const pts = [[arc.x1, arc.y1]];
+        const dx = arc.x2 - arc.x1;
+        const dy = arc.y2 - arc.y1;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const nx = -dy / len;
+        const ny = dx / len;
+        for (let s = 1; s < segs; s++) {
+          const tFrac = s / segs;
+          const amp = (s % 2 === 0 ? 1 : -1) * (8 + Math.sin(time * 28 + arc.seed + s * 2.1) * 5);
+          pts.push([arc.x1 + dx * tFrac + nx * amp, arc.y1 + dy * tFrac + ny * amp]);
+        }
+        pts.push([arc.x2, arc.y2]);
+
+        // 外层冰蓝电晕
+        ctx.strokeStyle = 'rgba(64, 169, 255, 0.78)';
+        ctx.lineWidth = 4.5 * alpha;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let pIdx = 1; pIdx < pts.length; pIdx++) ctx.lineTo(pts[pIdx][0], pts[pIdx][1]);
+        ctx.stroke();
+
+        // 内核白炽雷芯
+        ctx.strokeStyle = '#E6F7FF';
+        ctx.lineWidth = 1.8 * alpha;
+        ctx.stroke();
+
+        if (sparkImg && sparkImg.width) {
+          const spSize = 24 * alpha + 6;
+          ctx.drawImage(sparkImg, arc.x2 - spSize * 0.5, arc.y2 - spSize * 0.5, spSize, spSize);
+        }
+      }
+      ctx.restore();
+    }
+
 
 
     // 3. 绘制草丛晨露珠 (100% 纯 AI 手绘晶莹剔透四叶草晨露珠)
@@ -484,7 +585,7 @@ class ForestContraptions {
   renderHoverTooltip(ctx, mapX, mapY, time) {
     if (mapX < 0 || mapY < 0) return;
 
-    const drawHoverRingAndPill = (cx, cy, radiusPx, ringCol, titleStr) => {
+    const drawHoverRingAndPill = (cx, cy, radiusPx, ringCol, titleStr, iconPath) => {
       ctx.save();
       ctx.fillStyle = ringCol.fill;
       ctx.beginPath();
@@ -500,7 +601,9 @@ class ForestContraptions {
 
       ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
       const tw = Math.ceil(ctx.measureText(titleStr).width);
-      const pw = tw + 20;
+      const icImg = iconPath ? platform.getImage(iconPath) : null;
+      const hasIc = Boolean(icImg && icImg.width);
+      const pw = tw + (hasIc ? 32 : 20);
       const ph = 22;
       const px = Math.max(8, Math.min(640 - pw - 8, Math.round(cx - pw * 0.5)));
       const py = Math.max(8, Math.round(cy - 44));
@@ -513,31 +616,41 @@ class ForestContraptions {
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      ctx.fillStyle = '#FFF9DB';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(titleStr, px + pw * 0.5, py + ph * 0.5);
+      if (hasIc) {
+        ctx.drawImage(icImg, px + 7, py + 4, 14, 14);
+        ctx.fillStyle = '#FFF9DB';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(titleStr, px + 24, py + ph * 0.5);
+      } else {
+        ctx.fillStyle = '#FFF9DB';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(titleStr, px + pw * 0.5, py + ph * 0.5);
+      }
       ctx.restore();
     };
 
     if (this.pitcher && Math.hypot(mapX - this.pitcher.x, mapY - this.pitcher.y) <= 26) {
       const p = this.pitcher;
-      const status = p.digestTimer > 0 ? '消化产孢中...' : (p.cd > 0 ? `冷却中 ${Math.ceil(p.cd)}s` : `吞噬 (${p.cost}孢) · 瞬杀地面敌+45孢`);
+      const status = p.digestTimer > 0 ? '消化产孢中...' : (p.cd > 0 ? `冷却中 ${Math.ceil(p.cd)}s` : `吞噬 (${p.cost}孢) · 瞬杀地面敌+55孢`);
       drawHoverRingAndPill(
         p.x, p.y, 75,
         { fill: 'rgba(149, 222, 100, 0.10)', stroke: 'rgba(149, 222, 100, 0.78)', border: '#73D13D' },
-        `🌿 巨型猪笼草 · ${status}`
+        `巨型猪笼草 · ${status}`,
+        'assets/vfx/relic_clover.png'
       );
       return;
     }
 
     if (this.thunderTree && Math.hypot(mapX - this.thunderTree.x, mapY - this.thunderTree.y) <= 26) {
       const t = this.thunderTree;
-      const status = t.cd > 0 ? `充能中 ${Math.ceil(t.cd)}s` : `天雷 (${t.cost}孢) · 震击4敌眩晕2.2s`;
+      const status = t.cd > 0 ? `充能中 ${Math.ceil(t.cd)}s` : `天雷 (${t.cost}孢) · 震击群体眩晕2.2s`;
       drawHoverRingAndPill(
         t.x, t.y, 140,
         { fill: 'rgba(64, 169, 255, 0.08)', stroke: 'rgba(105, 192, 255, 0.78)', border: '#69C0FF' },
-        `⚡ 雷击古木 · ${status}`
+        `雷击古木 · ${status}`,
+        'assets/vfx/relic_lightning.png'
       );
     }
   }

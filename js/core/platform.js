@@ -831,6 +831,36 @@ function playSynthesizedSound(sfxKey, volumeMod = 1.0, pitchMod = 1.0) {
         playAcousticNote(bNotes[i] * p, t0 + i * 0.11, 0.34, 0.075 * volumeMod, [1, 2.0], 0.22);
       }
       return true;
+    } else if (sfxKey === 'sfx_thunder_zap') {
+      // 古木天雷震击：高压电弧噼啪击穿+低频震雷余波 (Thunder Stump Arc Discharge)
+      playFilteredNoise(t0, 0.22, 'bandpass', 3200 * p, 680 * p, 1.4, 0.22 * volumeMod);
+      playAcousticNote(110.0 * p, t0, 0.30, 0.24 * volumeMod, [1, 1.5], 0.38);
+      playAcousticNote(880.0 * p, t0 + 0.02, 0.14, 0.14 * volumeMod, [1, 2.756], 0.26);
+      playAcousticNote(1318.5 * p, t0 + 0.06, 0.18, 0.12 * volumeMod, [1, 2.0], 0.22);
+      return true;
+    } else if (sfxKey === 'sfx_pitcher_bloom') {
+      // 猪笼草消化溢金：气泡饱嗝后绽放黄金大三和弦铃音 (Pitcher Digestion Chime)
+      playFilteredNoise(t0, 0.09, 'bandpass', 480, 1100, 2.2, 0.14 * volumeMod);
+      const pNotes = [523.25, 659.25, 783.99, 1046.5];
+      for (let i = 0; i < pNotes.length; i++) {
+        playAcousticNote(pNotes[i] * p, t0 + 0.04 + i * 0.048, 0.28, 0.15 * volumeMod, [1, 2.0, 2.756], 0.24);
+      }
+      return true;
+    } else if (sfxKey === 'sfx_battlecry') {
+      // 英雄集结战吼：林地铜号五度高歌+古木战鼓振奋 (Forest Warhorn Battlecry)
+      playFilteredNoise(t0, 0.16, 'bandpass', 650, 220, 1.3, 0.18 * volumeMod);
+      playAcousticNote(220.0 * p, t0, 0.38, 0.22 * volumeMod, [1, 1.5, 2.0, 3.0], 0.36);
+      playAcousticNote(329.63 * p, t0 + 0.05, 0.36, 0.20 * volumeMod, [1, 2.0, 3.0], 0.30);
+      playAcousticNote(440.0 * p, t0 + 0.11, 0.42, 0.21 * volumeMod, [1, 2.0], 0.28);
+      return true;
+    } else if (sfxKey === 'sfx_leyline_surge') {
+      // 灵脉超载灌注：秘法晶脉流光涌动五度竖琴 (Arcane Leyline Crystal Surge)
+      playFilteredNoise(t0, 0.24, 'highpass', 1800, 4800, 1.9, 0.11 * volumeMod);
+      const lNotes = [587.33, 880.0, 1174.66, 1567.98];
+      for (let i = 0; i < lNotes.length; i++) {
+        playAcousticNote(lNotes[i] * p, t0 + i * 0.045, 0.32, 0.15 * volumeMod, [1, 2.0, 2.756], 0.25);
+      }
+      return true;
     } else {
       playAcousticNote(440 * p, t0, 0.07, 0.12 * volumeMod, [1, 2.0], 0.25);
       return true;
@@ -986,9 +1016,9 @@ function playSfx(sfxKey, volumeMod = 1.0, pitchMod = 1.0, bypassThrottle = false
     try {
       if (sfxKey === 'sfx_click') navigator.vibrate(8);
       else if (sfxKey === 'sfx_build') navigator.vibrate(15);
-      else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_resonate_burst') navigator.vibrate([10, 30, 15]);
+      else if (sfxKey === 'sfx_upgrade' || sfxKey === 'sfx_resonate_burst' || sfxKey === 'sfx_battlecry' || sfxKey === 'sfx_leyline_surge') navigator.vibrate([10, 30, 15]);
       else if (sfxKey === 'sfx_hurt') navigator.vibrate(22);
-      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boss_interrupt') navigator.vibrate(30);
+      else if (sfxKey === 'sfx_boom' || sfxKey === 'sfx_bomb' || sfxKey === 'sfx_boss_interrupt' || sfxKey === 'sfx_thunder_zap') navigator.vibrate(30);
     } catch (e) {}
   }
   if (typeof wx !== 'undefined' && wx.vibrateShort) {

@@ -279,7 +279,7 @@ class ForestHero {
         fx.spawnFloatingText(
           this.x,
           this.y - 24,
-          this.brambleShieldHp <= 0 ? '🛡️ 护盾破碎!' : `🛡️ -${Math.round(absorbed)}`,
+          this.brambleShieldHp <= 0 ? '护盾破碎!' : `护盾 -${Math.round(absorbed)}`,
           '#69C0FF',
           1.05
         );
@@ -314,7 +314,7 @@ class ForestHero {
         platform.playSfx('sfx_thunder');
         if (fx) {
           fx.spawnFloatingText(this.x, this.y - 32, '【不灭战魂】锁血 4 秒!', '#FFD700', 1.8);
-          fx.showBanner('🔥 不灭战魂爆发！', '#FFD700', '树灵圣祖意志觉醒，4 秒完全免死且必定暴击！', 2.0);
+          fx.showBanner('不灭战魂爆发！', '#FFD700', '树灵圣祖意志觉醒，4 秒完全免死且必定暴击！', 2.0);
           fx.spawnParticles(this.x, this.y, 40, ['#FF4D4F', '#FFD700', '#FFFFFF'], 50, 150, 0.4, 0.8, 5);
           if (fx.spawnShockwave) fx.spawnShockwave(this.x, this.y, 75, '#FF4D4F');
         }
@@ -703,8 +703,10 @@ class ForestHero {
           if (mainTarget.x < this.x) this.facingLeft = true;
           else if (mainTarget.x > this.x) this.facingLeft = false;
 
-          // 姿态攻速修正（狂暴姿态攻速提升 30%）
-          const effectiveInterval = this.stance === 'aggressive' ? (this.atkInterval * 0.72) : this.atkInterval;
+          // 姿态攻速与战吼狂热修正（狂暴姿态 +30%，战吼号角再提升 25% 攻速与伤害）
+          const hasBattlecryFervor = Boolean(this.transcendence && this.transcendence.heroBattlecryTimer > 0);
+          let effectiveInterval = this.stance === 'aggressive' ? (this.atkInterval * 0.72) : this.atkInterval;
+          if (hasBattlecryFervor) effectiveInterval *= 0.80;
 
           if (this.atkCooldown <= 0) {
             this.atkCooldown = effectiveInterval;
@@ -712,14 +714,16 @@ class ForestHero {
 
             platform.playSfx('sfx_hit');
 
-            // 基础伤害计算与姿态加成
-            let baseDmg = this.atkDamage;
+            // 基础伤害计算与姿态/战吼加成
+            let baseDmg = this.atkDamage * (hasBattlecryFervor ? 1.25 : 1.0);
             let isCrit = false;
             if (this.undyingTimer > 0) {
               isCrit = true; // 不灭战魂期间必暴击！
             } else if (this.stance === 'aggressive') {
               baseDmg = Math.round(baseDmg * 1.35);
               if (Math.random() < 0.28) isCrit = true;
+            } else {
+              baseDmg = Math.round(baseDmg);
             }
 
             const finalHitDmg = isCrit ? Math.round(baseDmg * 2.0) : baseDmg;
@@ -1035,11 +1039,16 @@ class ForestHero {
     ctx.fillStyle = hpRatio > 0.4 ? '#52C41A' : (hpRatio > 0.2 ? '#FAAD14' : '#FF4D4F');
     ctx.fillRect(barX, barY, Math.round(barW * hpRatio), barH);
 
-    // 战术姿态微标 (🛡️ / ⚔️ / 🏹)
-    const stanceIcons = { guardian: '🛡️', aggressive: '⚔️', scout: '🏹' };
-    ctx.font = '8px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(stanceIcons[this.stance] || '🛡️', barX - 3, barY + 4);
+    // 战术姿态微标（全 AI 手绘 PNG 图标，彻底告别系统 Emoji 方块）
+    const stanceIconMap = {
+      guardian: 'assets/vfx/relic_shield.png',
+      aggressive: 'assets/ui/icons/icon_atk.png',
+      scout: 'assets/ui/icons/icon_range.png'
+    };
+    const stanceImg = platform.getImage(stanceIconMap[this.stance] || stanceIconMap.guardian);
+    if (stanceImg && stanceImg.width) {
+      ctx.drawImage(stanceImg, Math.round(barX - 13), Math.round(barY - 3), 11, 11);
+    }
 
     // 等级微章 (如 Lv.2)
     ctx.fillStyle = '#FFD700';

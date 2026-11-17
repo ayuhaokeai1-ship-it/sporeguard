@@ -1345,7 +1345,7 @@ class SceneController {
       if (danger || this.economy.seeds <= 4) {
         this.crisisSlowMoTriggered = true;
         this.fx.triggerScreenShake(4.5, 0.35);
-        this.fx.showBanner('⚠️ 绝境破釜！圣树受袭，速出技能！', '#FF4D4F', '全场时光缓流 1.5s', 2.0);
+        this.fx.showBanner('绝境破釜！圣树受袭，速出技能！', '#FF4D4F', '全场时光缓流 1.5s', 2.0);
         this.fx.fxSlowMoTimerSec = 1.5;
         this.fx.fxTimeScale = 0.38;
         if (this.speedMultiplier > 1) {

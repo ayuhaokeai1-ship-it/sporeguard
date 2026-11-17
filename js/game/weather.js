@@ -86,11 +86,11 @@ class WeatherManager {
     this.weatherNoticeTimer = 3.5;
 
     const names = {
-      sunny: '☀️ 晨曦初晴 · 丰收晨露',
-      night: '🌙 幽夜微光 · 月华静谧',
-      rain: '🌧️ 林地雷暴 · 雷霆轰顶',
-      mist: '🌫️ 幽林浓雾 · 迷雾隐踪',
-      blood_moon: '🩸 狂暴血月 · 极夜狂澜'
+      sunny: '晨曦初晴 · 丰收晨露',
+      night: '幽夜微光 · 月华静谧',
+      rain: '林地雷暴 · 雷霆轰顶',
+      mist: '幽林浓雾 · 迷雾隐踪',
+      blood_moon: '狂暴血月 · 极夜狂澜'
     };
     const subs = {
       sunny: '全场孢子产出 +25%，神圣大橡树自愈速度 +50%',
@@ -223,7 +223,7 @@ class WeatherManager {
       enemyManager.applyDamage(target, lightningDmg, false, 'magic', fx, null);
 
       if (fx) {
-        fx.spawnFloatingText(target.x, target.y - 18, `⚡ 天罚 -${lightningDmg}!`, '#69C0FF', 1.2);
+        fx.spawnFloatingText(target.x, target.y - 18, `天罚 -${lightningDmg}!`, '#69C0FF', 1.2);
         fx.spawnParticles(target.x, target.y, 14, ['#69C0FF', '#BAE7FF', '#FFD666'], 40, 90, 0.2, 0.4, 4);
         fx.triggerScreenShake(2.5, 0.16);
       }
@@ -375,11 +375,11 @@ class WeatherManager {
   renderWeatherHudBadge(ctx, x, y) {
     ctx.save();
     const badges = {
-      sunny: { icon: '☀️', text: '初晴+25%', color: '#52C41A', border: 'rgba(115, 209, 61, 0.7)' },
-      night: { icon: '🌙', text: '幽夜+15%', color: '#69C0FF', border: 'rgba(105, 192, 255, 0.75)' },
-      rain: { icon: '🌧️', text: '暴雨轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.7)' },
-      mist: { icon: '🌫️', text: '浓雾+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.7)' },
-      blood_moon: { icon: '🩸', text: '血月双倍', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
+      sunny: { iconPath: 'assets/vfx/relic_amber.png', text: '初晴+25%', color: '#52C41A', border: 'rgba(115, 209, 61, 0.7)' },
+      night: { iconPath: 'assets/vfx/vfx_resonance_orb.png', text: '幽夜+15%', color: '#69C0FF', border: 'rgba(105, 192, 255, 0.75)' },
+      rain: { iconPath: 'assets/ui/icons/spell_rain.png', text: '暴雨轰顶', color: '#1890FF', border: 'rgba(105, 192, 255, 0.7)' },
+      mist: { iconPath: 'assets/vfx/vfx_mist.png', text: '浓雾+15%', color: '#13C2C2', border: 'rgba(92, 219, 211, 0.7)' },
+      blood_moon: { iconPath: 'assets/vfx/vfx_explosion.png', text: '血月双倍', color: '#FF4D4F', border: 'rgba(255, 120, 117, 0.8)' }
     };
 
     const b = badges[this.currentWeather] || badges.sunny;
@@ -404,11 +404,21 @@ class WeatherManager {
     ctx.roundRect ? ctx.roundRect(x + 2, y + 2, bw - 4, bh - 4, 6) : ctx.rect(x + 2, y + 2, bw - 4, bh - 4);
     ctx.stroke();
 
-    ctx.fillStyle = '#FFE58F';
-    ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${b.icon} ${b.text}`, x + bw * 0.5, y + bh * 0.5);
+    const wIconImg = platform.getImage(b.iconPath);
+    if (wIconImg && wIconImg.width) {
+      ctx.drawImage(wIconImg, x + 7, y + 4, 15, 15);
+      ctx.fillStyle = '#FFE58F';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.text, x + 26, y + bh * 0.5);
+    } else {
+      ctx.fillStyle = '#FFE58F';
+      ctx.font = 'bold 10.5px "Microsoft YaHei UI", "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.text, x + bw * 0.5, y + bh * 0.5);
+    }
 
     ctx.restore();
   }

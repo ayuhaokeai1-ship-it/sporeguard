@@ -112,7 +112,9 @@ function bootstrapGame() {
     'assets/ui/frames/medallion_ring.png',
     'assets/vfx/vfx_resonance_orb.png',
     'assets/vfx/vfx_synergy_crest.png',
-    'assets/ui/frames/medal_pact_crest.png'
+    'assets/ui/frames/medal_pact_crest.png',
+    'assets/ui/icons/icon_battlecry.png',
+    'assets/ui/icons/icon_leyline.png'
   ];
 
   Promise.all([

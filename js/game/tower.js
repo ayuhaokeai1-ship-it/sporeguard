@@ -445,7 +445,7 @@ class TowerManager {
         attacker.hp -= reflect;
       }
       if (fx) {
-        fx.spawnFloatingText(attacker.x, attacker.y - 12, `⚡ -${reflect}`, PALETTE.BRANCH_B, 1.0);
+        fx.spawnFloatingText(attacker.x, attacker.y - 12, `反伤 -${reflect}`, PALETTE.BRANCH_B, 1.0);
         fx.spawnParticles(attacker.x, attacker.y, 6, [PALETTE.BRANCH_B, '#FFE58F'], 30, 80, 0.2, 0.35, 4);
       }
     }
@@ -454,7 +454,7 @@ class TowerManager {
     if (tower.hp > 0 && tower.hp / tower.maxHp <= 0.35 && (prevHp / tower.maxHp > 0.35 || !tower.dangerWarned)) {
       tower.dangerWarned = true;
       if (fx) {
-        fx.spawnFloatingText(tower.x, tower.y - 24, '⚠️ 守卫垂危！求援！', '#FFA39E', 1.3);
+        fx.spawnFloatingText(tower.x, tower.y - 24, '守卫垂危! 求援!', '#FFA39E', 1.3);
       }
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try { navigator.vibrate([20, 40, 20]); } catch (e) {}
@@ -1233,11 +1233,11 @@ class TowerManager {
       if (isCritical) {
         ctx.save();
         const pulse = 0.8 + Math.sin((t.animTimer || 0) * 10) * 0.2;
-        ctx.fillStyle = `rgba(255, 77, 79, ${0.85 * pulse})`;
+        ctx.fillStyle = `rgba(255, 77, 79, ${0.90 * pulse})`;
         ctx.font = 'bold 10px "Microsoft YaHei UI", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('⚠️ 守卫垂危!', t.x, tileY - 18);
+        ctx.fillText('守卫垂危!', t.x, tileY - 18);
         ctx.restore();
       }
 

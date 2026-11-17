@@ -101,7 +101,7 @@ class SporeDropManager {
         d.scale = Math.min(1.0, d.scale + dt * 4.5);
       }
 
-      // 英雄磁吸微距吸附
+      // 英雄磁吸微距吸附（与手点完全共享连音音阶、圣物加成、共振充能与归巢流光）
       if (hero) {
         const hDist = Math.hypot(d.x - hero.x, d.y - hero.y);
         if (hDist < 85) {
@@ -109,12 +109,7 @@ class SporeDropManager {
           d.y += (hero.y - d.y) * dt * 5.5;
           d.targetY = d.y;
           if (hDist < 26) {
-            if (economy) economy.addSpores(d.spores);
-            if (fx) {
-              fx.spawnFloatingText(d.x, d.y - 18, `+${d.spores} 磁吸孢子!`, '#FFE58F', 1.25);
-              fx.spawnParticles(d.x, d.y, 14, ['#FFE58F', '#FAAD14', '#52C41A'], 25, 65, 0.2, 0.4, 3);
-            }
-            platform.playSfx('sfx_coin');
+            this.collectDrop(d, economy, fx, true);
             this.drops.splice(i, 1);
             continue;
           }
@@ -154,6 +149,74 @@ class SporeDropManager {
   }
 
   /**
+   * 统一结算点击与英雄磁吸收集孢子（五声音阶连击、琥珀王冠、圣佑倍率、共振充能、归巢流光）
+   */
+  collectDrop(d, economy, fx, isMagnet = false) {
+    const bob = Math.sin((d.animTimer || 0) * 4) * 3;
+    const dy = (d.targetY !== undefined && isMagnet) ? d.y : (d.y + bob);
+    const now = Date.now();
+    if (now - this.lastCollectTime < 1600) {
+      this.sporeCombo = Math.min(8, this.sporeCombo + 1);
+    } else {
+      this.sporeCombo = 1;
+    }
+    this.lastCollectTime = now;
+
+    let bonusSpores = 0;
+    if (this.sporeCombo >= 3) {
+      bonusSpores = Math.min(15, (this.sporeCombo - 2) * 3);
+    }
+    const blessingMult = (this.scene && this.scene.blessingMods && this.scene.blessingMods.sporeGainMult) ? this.scene.blessingMods.sporeGainMult : 1.0;
+    const crownBonus = (this.scene && this.scene.relicArsenal && this.scene.relicArsenal.hasRelic('amber_crown')) ? 0.15 : 0;
+    const totalEarned = Math.round((d.spores + bonusSpores) * blessingMult * (1 + crownBonus));
+
+    if (economy) {
+      economy.addSpores(totalEarned);
+    }
+    if (this.scene && typeof this.scene.addResonance === 'function') {
+      this.scene.addResonance(2);
+    }
+    if (isMagnet && this.scene && this.scene.hero && this.scene.hero.state !== 'dead' && typeof this.scene.hero.gainXp === 'function') {
+      this.scene.hero.gainXp(4, fx);
+    }
+
+    // 播放清脆递增的五声音阶水灵音律 (Do -> Re -> Mi -> Sol -> La -> Do' -> Re' -> Mi')
+    if (typeof platform.playMusicalScale === 'function') {
+      platform.playMusicalScale(this.sporeCombo - 1);
+    } else {
+      platform.playSfx('sfx_coin', 1.0, 1.0, false, d.x);
+    }
+
+    if (fx) {
+      const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
+      const screenDx = mv.OFFSET_X + d.x * (mv.SCALE || 1.0);
+      const screenDy = mv.OFFSET_Y + dy * (mv.SCALE || 1.0);
+      const comboText = this.sporeCombo >= 3
+        ? `${this.sporeCombo}连音律动! +${totalEarned}`
+        : (isMagnet ? `+${totalEarned} 磁吸孢子!` : `+${totalEarned} 晨露孢子!`);
+      const textColor = this.sporeCombo >= 5 ? '#FFD700' : (this.sporeCombo >= 3 ? '#52C41A' : '#FFE58F');
+      fx.spawnFloatingText(d.x, dy - 18, comboText, textColor, isMagnet ? 1.3 : 1.45);
+      fx.spawnParticles(d.x, dy, isMagnet ? 14 : 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
+      if (typeof fx.spawnShockwave === 'function') {
+        fx.spawnShockwave(d.x, dy, isMagnet ? 26 : 32, '#FFE58F');
+      }
+      if (typeof fx.spawnHomingMotes === 'function') {
+        fx.spawnHomingMotes(screenDx, screenDy, isMagnet ? 2 : 3, '#FFD700');
+      }
+    }
+
+    // 手机端原生轻微触感振动反馈
+    if (!isMagnet) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(12); } catch (e) {}
+      }
+      if (typeof wx !== 'undefined' && wx.vibrateShort) {
+        try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
+      }
+    }
+  }
+
+  /**
    * 点击/触控检测（PvZ 点击拾取阳光机制，支持双坐标系与手机 72px 超大判定圈）
    * @param {number} inputX 传入的点击 X 坐标（屏幕逻辑坐标或地图坐标）
    * @param {number} inputY 传入的点击 Y 坐标（屏幕逻辑坐标或地图坐标）
@@ -170,57 +233,7 @@ class SporeDropManager {
       const distMap = Math.hypot(inputX - d.x, inputY - dy);
 
       if (distMap <= hitRadius) {
-        // 成功拾取！计算连击与升调音律
-        const now = Date.now();
-        if (now - this.lastCollectTime < 1600) {
-          this.sporeCombo = Math.min(8, this.sporeCombo + 1);
-        } else {
-          this.sporeCombo = 1;
-        }
-        this.lastCollectTime = now;
-
-        let bonusSpores = 0;
-        if (this.sporeCombo >= 3) {
-          bonusSpores = Math.min(15, (this.sporeCombo - 2) * 3);
-        }
-        const gainMult = (this.scene && this.scene.blessingMods && this.scene.blessingMods.sporeGainMult) ? this.scene.blessingMods.sporeGainMult : 1.0;
-        const totalEarned = Math.round((d.spores + bonusSpores) * gainMult);
-
-        if (economy) {
-          economy.addSpores(totalEarned);
-        }
-
-        // 播放清脆递增的五声音阶水灵音律 (Do -> Re -> Mi -> Sol -> La -> Do' -> Re' -> Mi')
-        if (typeof platform.playMusicalScale === 'function') {
-          platform.playMusicalScale(this.sporeCombo - 1);
-        } else {
-          platform.playSfx('sfx_coin');
-        }
-
-        if (fx) {
-          const mv = CONFIG.LAYOUT.MAP_VIEW || { OFFSET_X: 160, OFFSET_Y: 30, SCALE: 1.0 };
-          const screenDx = mv.OFFSET_X + d.x * (mv.SCALE || 1.0);
-          const screenDy = mv.OFFSET_Y + dy * (mv.SCALE || 1.0);
-          const comboText = this.sporeCombo >= 3
-            ? `♫ ${this.sporeCombo}连音律动! +${totalEarned}`
-            : `+${totalEarned} 晨露孢子!`;
-          const textColor = this.sporeCombo >= 5 ? '#FFD700' : (this.sporeCombo >= 3 ? '#52C41A' : '#FFE58F');
-          fx.spawnFloatingText(d.x, dy - 18, comboText, textColor, 1.45);
-          fx.spawnParticles(d.x, dy, 18, ['#FFE58F', '#FAAD14', '#FFFDF5', '#52C41A'], 30, 75, 0.25, 0.5, 4);
-          if (typeof fx.spawnShockwave === 'function') {
-            fx.spawnShockwave(d.x, dy, 32, '#FFE58F');
-          }
-          if (typeof fx.spawnHomingMotes === 'function') {
-            fx.spawnHomingMotes(screenDx, screenDy, 3, '#FFD700');
-          }
-        }
-        // 手机端原生轻微触感振动反馈
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          try { navigator.vibrate(12); } catch (e) {}
-        }
-        if (typeof wx !== 'undefined' && wx.vibrateShort) {
-          try { wx.vibrateShort({ type: 'light' }); } catch (e) {}
-        }
+        this.collectDrop(d, economy, fx, false);
         this.drops.splice(i, 1);
         return true;
       }

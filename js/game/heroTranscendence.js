@@ -14,8 +14,8 @@
  * 
  * 2. 战场主动微操战术号令 (Active Tactical Commands):
  *    - [F] 撼地重击 (Earthshaker Quake): 巨幅范围震击，群体眩晕 2.5s。
- *    - [G] 守卫集结战吼 (Rallying Battlecry): 召集全图孢子小守卫瞬移至身边，获得双倍护甲与狂暴暴击。
- *    - [V] 灵脉过载灌注 (Leyline Overload): 选定一座防御塔灌注远古自然神力，使其 8 秒内攻速与射程提升 50%。
+ *    - [G] 守卫集结战吼 (Rallying Battlecry): 召集全图孢子小守卫瞬移至身边全愈并获双倍护甲与狂暴，英雄同时获 8s 攻速/伤害狂热。
+ *    - [B] 灵脉过载灌注 (Leyline Overload): 选定最近一座防御塔灌注远古自然神力，使其 8 秒内攻速与射程飙升。
  * 
  * 3. 实时战场浮动光冕与战术徽记 (Hero Transcendence HUD & Rune Rings)
  */
@@ -28,17 +28,20 @@ class HeroTranscendence {
     this.hero = hero;
     this.animTime = 0;
     
-    // 登阶天赋状态
+    // 登阶天赋状态（全 AI 徽记图标路径，无任何 OS emoji）
     this.perks = {
-      rootPrison: { unlocked: false, minLevel: 2, name: '荆棘缚魂', icon: '🌿', desc: '近战命中50%定身2秒+流血撕裂' },
-      ancientBark: { unlocked: false, minLevel: 3, name: '古木磐石', icon: '🛡️', desc: '减伤30%且受击反震反弹木刺' },
-      cataclysmicRupture: { unlocked: false, minLevel: 4, name: '天崩地裂', icon: '🌋', desc: '大招范围+45%并生成地脉熔隙' },
-      sanctuaryWilds: { unlocked: false, minLevel: 5, name: '荒野圣域', icon: '✨', desc: '残血触发神圣屏障自愈+守卫狂暴' }
+      rootPrison: { unlocked: false, minLevel: 2, name: '荆棘缚魂', icon: 'assets/vfx/relic_clover.png', desc: '近战命中50%定身2秒+流血撕裂' },
+      ancientBark: { unlocked: false, minLevel: 3, name: '古木磐石', icon: 'assets/vfx/relic_shield.png', desc: '减伤30%且受击反震反弹木刺' },
+      cataclysmicRupture: { unlocked: false, minLevel: 4, name: '天崩地裂', icon: 'assets/vfx/vfx_explosion.png', desc: '大招范围+45%并生成地脉熔隙' },
+      sanctuaryWilds: { unlocked: false, minLevel: 5, name: '荒野圣域', icon: 'assets/vfx/item_awakening_seed.png', desc: '残血触发神圣屏障自愈+守卫狂暴' }
     };
 
-    // 圣域冷却与持续计时
+    // 圣域与战吼/灵脉主动号令状态
     this.sanctuaryCooldown = 0;
     this.sanctuaryActiveTimer = 0;
+    this.heroBattlecryTimer = 0;
+    this.activeLeylineTower = null;
+    this.leylineTimer = 0;
 
     // 地脉熔隙实体队列 (Cataclysmic Fissures)
     this.fissures = [];
@@ -60,17 +63,24 @@ class HeroTranscendence {
       if (curLvl >= perk.minLevel && !perk.unlocked) {
         perk.unlocked = true;
         if (fx && this.hero) {
-          fx.spawnFloatingText(this.hero.x, this.hero.y - 36, `🌟 天赋登阶: ${perk.name}!`, '#FFD700', 1.3);
+          fx.spawnFloatingText(this.hero.x, this.hero.y - 36, `天赋登阶: ${perk.name}!`, '#FFD700', 1.3);
           fx.spawnParticles(this.hero.x, this.hero.y, 24, ['#FFD700', '#52C41A', '#BAE7FF', '#FFFFFF'], 35, 110, 0.3, 0.7, 4.5);
         }
-        platform.playSfx('sfx_upgrade');
+        platform.playSfx('sfx_synergy_link', 0.9, 1.0, false, this.hero ? this.hero.x : null);
       }
     }
 
-    // 冷却倒计时
+    // 冷却与增益计时倒数
     if (this.sanctuaryCooldown > 0) this.sanctuaryCooldown -= dt;
     if (this.commandCooldowns.battlecry > 0) this.commandCooldowns.battlecry -= dt;
     if (this.commandCooldowns.leylineSurge > 0) this.commandCooldowns.leylineSurge -= dt;
+    if (this.heroBattlecryTimer > 0) this.heroBattlecryTimer = Math.max(0, this.heroBattlecryTimer - dt);
+    if (this.leylineTimer > 0) {
+      this.leylineTimer = Math.max(0, this.leylineTimer - dt);
+      if (this.leylineTimer <= 0 || !this.activeLeylineTower || this.activeLeylineTower.hp <= 0) {
+        this.activeLeylineTower = null;
+      }
+    }
 
     // 暂停安全 & 倍速安全的战吼护卫增益计时器递减
     if (sporelingPatrol && sporelingPatrol.guards) {
@@ -262,15 +272,23 @@ class HeroTranscendence {
   castBattlecry(sporelingPatrol, fx = null) {
     if (this.commandCooldowns.battlecry > 0 || !this.hero || this.hero.state === 'dead') return false;
     this.commandCooldowns.battlecry = 25.0; // 25s 冷却
+    this.heroBattlecryTimer = 8.0;
 
-    if (sporelingPatrol) {
+    // 英雄获得战意愈合 + 8秒攻速/攻击狂热
+    const heroHeal = Math.max(15, Math.round((this.hero.maxHp || 360) * 0.15));
+    this.hero.hp = Math.min(this.hero.maxHp, (this.hero.hp || 0) + heroHeal);
+
+    let ralliedGuards = 0;
+    if (sporelingPatrol && sporelingPatrol.guards) {
       const hx = this.hero.x;
       const hy = this.hero.y;
       for (let i = 0; i < sporelingPatrol.guards.length; i++) {
         const g = sporelingPatrol.guards[i];
         if (g.state !== 'dead') {
+          ralliedGuards += 1;
           g.x = hx + (i === 0 ? -22 : 22);
           g.y = hy + 8;
+          g.hp = g.maxHp;
           if (!g._battlecryTimer || g._battlecryTimer <= 0) {
             const addAtk = Math.max(4, Math.round((g.attackDmg || 12) * 0.6));
             g._battlecryArmorBonus = 8;
@@ -284,11 +302,13 @@ class HeroTranscendence {
     }
 
     if (fx && this.hero) {
-      fx.spawnFloatingText(this.hero.x, this.hero.y - 36, '战吼集结! 全军护卫!', '#FFD700', 1.3);
+      const tag = ralliedGuards > 0 ? `战吼集结! 护卫×${ralliedGuards}勇武!` : `号角战吼! 狂攻+${heroHeal}生命!`;
+      fx.spawnFloatingText(this.hero.x, this.hero.y - 36, tag, '#FFD700', 1.32);
+      if (fx.spawnShockwave) fx.spawnShockwave(this.hero.x, this.hero.y, 78, '#FFD700');
       fx.spawnParticles(this.hero.x, this.hero.y, 35, ['#FFD700', '#FFA940', '#52C41A', '#FFFFFF'], 40, 140, 0.35, 0.75, 5);
       if (fx.triggerScreenShake) fx.triggerScreenShake(3.0, 0.3);
     }
-    platform.playSfx('sfx_horn');
+    platform.playSfx('sfx_battlecry', 0.95, 1.0, false, this.hero.x);
     return true;
   }
 
@@ -299,14 +319,15 @@ class HeroTranscendence {
     if (this.commandCooldowns.leylineSurge > 0 || !this.hero || this.hero.state === 'dead') return false;
     if (!towerManager || towerManager.towers.length === 0) return false;
 
-    // 选取距离英雄最近的防御塔进行超载
+    // 选取距离英雄最近且未休眠的防御塔进行超载（全休眠则回退最近塔）
     const hx = this.hero.x;
     const hy = this.hero.y;
     let closestTower = null;
     let minDist = 999999;
     for (let i = 0; i < towerManager.towers.length; i++) {
       const t = towerManager.towers[i];
-      const d = Math.hypot(t.x - hx, t.y - hy);
+      const penalty = (t.isWebbed || (t.dormantTimer || 0) > 0) ? 200 : 0;
+      const d = Math.hypot(t.x - hx, t.y - hy) + penalty;
       if (d < minDist) {
         minDist = d;
         closestTower = t;
@@ -315,20 +336,67 @@ class HeroTranscendence {
 
     if (!closestTower) return false;
     this.commandCooldowns.leylineSurge = 30.0; // 30s 冷却
-    closestTower.superchargeTimer = 8.0;
+    closestTower.superchargeTimer = Math.max(closestTower.superchargeTimer || 0, 8.0);
+    this.activeLeylineTower = closestTower;
+    this.leylineTimer = 8.0;
 
     if (fx) {
-      fx.spawnFloatingText(closestTower.x, closestTower.y - 24, '灵脉超载! 极速狂暴!', '#69C0FF', 1.3);
-      fx.spawnParticles(closestTower.x, closestTower.y, 25, ['#69C0FF', '#BAE7FF', '#FFD700', '#FFFFFF'], 30, 95, 0.3, 0.65, 4);
+      fx.spawnFloatingText(closestTower.x, closestTower.y - 24, '灵脉超载! 极速狂暴8s!', '#69C0FF', 1.32);
+      if (fx.spawnShockwave) fx.spawnShockwave(closestTower.x, closestTower.y, 52, '#69C0FF');
+      fx.spawnParticles(closestTower.x, closestTower.y, 26, ['#69C0FF', '#BAE7FF', '#FFD700', '#FFFFFF'], 30, 95, 0.3, 0.65, 4);
     }
-    platform.playSfx('sfx_shock');
+    platform.playSfx('sfx_leyline_surge', 0.95, 1.0, false, closestTower.x);
     return true;
   }
 
   /**
-   * 渲染地脉裂隙与圣域光环
+   * 渲染地脉裂隙、圣域光环与战吼/灵脉连接能量
    */
   render(ctx) {
+    // 0. 英雄战吼狂热期间的金阳环绕光晕 + 灵脉充能连线
+    if (this.hero && this.hero.state !== 'dead') {
+      if (this.heroBattlecryTimer > 0) {
+        const bAlpha = Math.min(1.0, this.heroBattlecryTimer / 1.0) * (0.45 + Math.sin(this.animTime * 9) * 0.14);
+        const sunImg = platform.getImage('assets/vfx/range_sunburst_gold.png');
+        ctx.save();
+        ctx.translate(this.hero.x, this.hero.y + 8);
+        ctx.scale(1.0, 0.56);
+        ctx.rotate(-this.animTime * 1.1);
+        ctx.globalAlpha = bAlpha;
+        if (sunImg && sunImg.width) {
+          ctx.drawImage(sunImg, -46, -46, 92, 92);
+        } else {
+          const bGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 44);
+          bGrad.addColorStop(0, 'rgba(255, 214, 102, 0.45)');
+          bGrad.addColorStop(1, 'rgba(255, 214, 102, 0)');
+          ctx.fillStyle = bGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, 44, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      if (this.leylineTimer > 0 && this.activeLeylineTower && this.activeLeylineTower.hp > 0) {
+        const tw = this.activeLeylineTower;
+        const lAlpha = Math.min(1.0, this.leylineTimer / 0.8);
+        ctx.save();
+        ctx.globalAlpha = lAlpha * (0.65 + Math.sin(this.animTime * 12) * 0.25);
+        ctx.strokeStyle = '#69C0FF';
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([7, 5]);
+        ctx.lineDashOffset = -this.animTime * 36;
+        ctx.beginPath();
+        ctx.moveTo(this.hero.x, this.hero.y - 10);
+        const mx = (this.hero.x + tw.x) * 0.5;
+        const my = (this.hero.y + tw.y) * 0.5 - 18 + Math.sin(this.animTime * 7) * 5;
+        ctx.quadraticCurveTo(mx, my, tw.x, tw.y - 6);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
     // 1. 渲染地面熔火地脉裂隙
     const fisImg = platform.getImage('assets/vfx/range_earthshaker.png');
     for (let i = 0; i < this.fissures.length; i++) {
@@ -346,9 +414,12 @@ class HeroTranscendence {
         ctx.drawImage(fisImg, -dSize * 0.5, -dSize * 0.5, dSize, dSize);
       } else {
         ctx.globalAlpha = alpha * pulse * 0.40;
-        ctx.fillStyle = '#FF4D4F';
+        const fGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, f.radius);
+        fGrad.addColorStop(0, 'rgba(255, 110, 64, 0.65)');
+        fGrad.addColorStop(1, 'rgba(255, 77, 79, 0)');
+        ctx.fillStyle = fGrad;
         ctx.beginPath();
-        ctx.ellipse(0, 0, f.radius, f.radius * 0.72, 0, 0, Math.PI * 2);
+        ctx.arc(0, 0, f.radius, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
@@ -372,8 +443,11 @@ class HeroTranscendence {
         const aSize = 140;
         ctx.drawImage(auraImg, -aSize * 0.5, -aSize * 0.5, aSize, aSize);
       } else {
-        ctx.globalAlpha = sAlpha * 0.25;
-        ctx.fillStyle = 'rgba(115, 209, 61, 0.35)';
+        ctx.globalAlpha = sAlpha * 0.32;
+        const aGrad = ctx.createRadialGradient(0, 0, 8, 0, 0, 70);
+        aGrad.addColorStop(0, 'rgba(115, 209, 61, 0.45)');
+        aGrad.addColorStop(1, 'rgba(115, 209, 61, 0)');
+        ctx.fillStyle = aGrad;
         ctx.beginPath();
         ctx.arc(0, 0, 70, 0, Math.PI * 2);
         ctx.fill();
